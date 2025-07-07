@@ -1,6 +1,6 @@
 # base32
 --
-    import "github.com/go-i2p/go-i2p/lib/common/base32"
+    import "github.com/go-i2p/common/base32"
 
 ![base32.svg](base32.svg)
 
@@ -38,6 +38,6 @@ EncodeToString encodes []byte to a base32 string using I2PEncoding
 
 base32 
 
-github.com/go-i2p/go-i2p/lib/common/base32
+github.com/go-i2p/common/base32
 
 [go-i2p template file](/template.md)

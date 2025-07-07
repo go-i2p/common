@@ -1,6 +1,6 @@
 # exportable
 --
-    import "github.com/go-i2p/go-i2p/lib/common/fuzz/router_identity"
+    import "github.com/go-i2p/common/fuzz/router_identity"
 
 ![exportable.svg](exportable.svg)
 
@@ -18,6 +18,6 @@ func Fuzz(data []byte) int
 
 exportable 
 
-github.com/go-i2p/go-i2p/lib/common/fuzz/router_identity
+github.com/go-i2p/common/fuzz/router_identity
 
 [go-i2p template file](/template.md)

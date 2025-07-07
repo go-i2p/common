@@ -1,6 +1,6 @@
 # key_certificate
 --
-    import "github.com/go-i2p/go-i2p/lib/common/key_certificate"
+    import "github.com/go-i2p/common/key_certificate"
 
 ![key_certificate.svg](key_certificate.svg)
 
@@ -195,6 +195,6 @@ SigningPublicKeyType returns the signingPublicKey type as a Go integer.
 
 key_certificate 
 
-github.com/go-i2p/go-i2p/lib/common/key_certificate
+github.com/go-i2p/common/key_certificate
 
 [go-i2p template file](/template.md)

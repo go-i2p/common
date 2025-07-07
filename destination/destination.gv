@@ -14,36 +14,36 @@ digraph gocallvis {
     edge [minlen="2"]
 
     subgraph "cluster_focus" {
-        bgcolor="#e6ecfa";
-label="destination";
+        label="destination";
 labelloc="t";
 labeljust="c";
 fontsize="18";
+bgcolor="#e6ecfa";
         
-        "github.com/go-i2p/go-i2p/lib/common/base64.EncodeToString" [ fillcolor="moccasin" label="base64\nEncodeToString" penwidth="1.5" tooltip="github.com/go-i2p/go-i2p/lib/common/base64.EncodeToString | defined in base64.go:16" ]
-        "github.com/go-i2p/go-i2p/lib/common/destination.init" [ fillcolor="lightblue" label="init" penwidth="0.5" tooltip="github.com/go-i2p/go-i2p/lib/common/destination.init | defined in .:0\nat destination.go:17: calling [github.com/go-i2p/logger.GetGoI2PLogger]" ]
-        "github.com/go-i2p/logger.GetGoI2PLogger" [ fillcolor="moccasin" label="logger\nGetGoI2PLogger" penwidth="1.5" tooltip="github.com/go-i2p/logger.GetGoI2PLogger | defined in log.go:120" ]
-        "github.com/go-i2p/go-i2p/lib/common/base32.EncodeToString" [ penwidth="1.5" tooltip="github.com/go-i2p/go-i2p/lib/common/base32.EncodeToString | defined in base32.go:16" fillcolor="moccasin" label="base32\nEncodeToString" ]
-        "github.com/go-i2p/go-i2p/lib/common/destination.ReadDestination" [ fillcolor="lightblue" label="ReadDestination" penwidth="1.5" tooltip="github.com/go-i2p/go-i2p/lib/common/destination.ReadDestination | defined in destination.go:72\nat destination.go:77: calling [github.com/go-i2p/go-i2p/lib/common/keys_and_cert.ReadKeysAndCert]\nat destination.go:73: calling [(*github.com/go-i2p/logger.Logger).WithFields]\nat destination.go:82: calling [(*github.com/go-i2p/logger.Logger).WithFields]\nat destination.go:75: calling [(*github.com/sirupsen/logrus.Logger).Debug]\nat destination.go:84: calling [(*github.com/sirupsen/logrus.Logger).Debug]" ]
-        "github.com/go-i2p/go-i2p/lib/common/keys_and_cert.ReadKeysAndCert" [ fillcolor="moccasin" label="keys_and_cert\nReadKeysAndCert" penwidth="1.5" tooltip="github.com/go-i2p/go-i2p/lib/common/keys_and_cert.ReadKeysAndCert | defined in keys_and_cert.go:145" ]
+        "github.com/go-i2p/common/base64.EncodeToString" [ fillcolor="moccasin" label="base64\nEncodeToString" penwidth="1.5" tooltip="github.com/go-i2p/common/base64.EncodeToString | defined in base64.go:16" ]
+        "github.com/go-i2p/common/destination.init" [ fillcolor="lightblue" label="init" penwidth="0.5" tooltip="github.com/go-i2p/common/destination.init | defined in .:0\nat destination.go:17: calling [github.com/go-i2p/logger.GetGoI2PLogger]" ]
+        "github.com/go-i2p/logger.GetGoI2PLogger" [ penwidth="1.5" tooltip="github.com/go-i2p/logger.GetGoI2PLogger | defined in log.go:120" fillcolor="moccasin" label="logger\nGetGoI2PLogger" ]
+        "github.com/go-i2p/common/destination.ReadDestination" [ penwidth="1.5" tooltip="github.com/go-i2p/common/destination.ReadDestination | defined in destination.go:72\nat destination.go:77: calling [github.com/go-i2p/common/keys_and_cert.ReadKeysAndCert]\nat destination.go:73: calling [(*github.com/go-i2p/logger.Logger).WithFields]\nat destination.go:82: calling [(*github.com/go-i2p/logger.Logger).WithFields]\nat destination.go:75: calling [(*github.com/sirupsen/logrus.Logger).Debug]\nat destination.go:84: calling [(*github.com/sirupsen/logrus.Logger).Debug]" fillcolor="lightblue" label="ReadDestination" ]
+        "github.com/go-i2p/common/keys_and_cert.ReadKeysAndCert" [ fillcolor="moccasin" label="keys_and_cert\nReadKeysAndCert" penwidth="1.5" tooltip="github.com/go-i2p/common/keys_and_cert.ReadKeysAndCert | defined in keys_and_cert.go:145" ]
+        "github.com/go-i2p/common/base32.EncodeToString" [ label="base32\nEncodeToString" penwidth="1.5" tooltip="github.com/go-i2p/common/base32.EncodeToString | defined in base32.go:16" fillcolor="moccasin" ]
         
-        subgraph "cluster_*github.com/go-i2p/go-i2p/lib/common/certificate.Certificate" {
+        subgraph "cluster_*github.com/go-i2p/common/certificate.Certificate" {
         fillcolor="wheat2";
 label="(*Certificate)";
-tooltip="type: *github.com/go-i2p/go-i2p/lib/common/certificate.Certificate";
+tooltip="type: *github.com/go-i2p/common/certificate.Certificate";
 penwidth="0.5";
 fontsize="15";
 fontcolor="#222222";
 labelloc="b";
 style="rounded,filled";
         
-        "(*github.com/go-i2p/go-i2p/lib/common/certificate.Certificate).Bytes" [ penwidth="1.5" tooltip="(*github.com/go-i2p/go-i2p/lib/common/certificate.Certificate).Bytes | defined in certificate.go:100" fillcolor="moccasin" label="certificate\nBytes" ]
+        "(*github.com/go-i2p/common/certificate.Certificate).Bytes" [ fillcolor="moccasin" label="certificate\nBytes" penwidth="1.5" tooltip="(*github.com/go-i2p/common/certificate.Certificate).Bytes | defined in certificate.go:100" ]
         
     }
 
-        subgraph "cluster_*github.com/go-i2p/go-i2p/lib/common/keys_and_cert.KeysAndCert" {
+        subgraph "cluster_*github.com/go-i2p/common/keys_and_cert.KeysAndCert" {
         label="(*KeysAndCert)";
-tooltip="type: *github.com/go-i2p/go-i2p/lib/common/keys_and_cert.KeysAndCert";
+tooltip="type: *github.com/go-i2p/common/keys_and_cert.KeysAndCert";
 penwidth="0.5";
 fontsize="15";
 fontcolor="#222222";
@@ -51,19 +51,19 @@ labelloc="b";
 style="rounded,filled";
 fillcolor="wheat2";
         
-        "(*github.com/go-i2p/go-i2p/lib/common/keys_and_cert.KeysAndCert).Certificate" [ fillcolor="moccasin" label="keys_and_cert\nCertificate" penwidth="1.5" tooltip="(*github.com/go-i2p/go-i2p/lib/common/keys_and_cert.KeysAndCert).Certificate | defined in keys_and_cert.go:139" ]
+        "(*github.com/go-i2p/common/keys_and_cert.KeysAndCert).Certificate" [ fillcolor="moccasin" label="keys_and_cert\nCertificate" penwidth="1.5" tooltip="(*github.com/go-i2p/common/keys_and_cert.KeysAndCert).Certificate | defined in keys_and_cert.go:139" ]
         
     }
 
         subgraph "cluster_*github.com/go-i2p/logger.Logger" {
-        fontcolor="#222222";
+        tooltip="type: *github.com/go-i2p/logger.Logger";
+penwidth="0.5";
+fontsize="15";
+fontcolor="#222222";
 labelloc="b";
 style="rounded,filled";
 fillcolor="wheat2";
 label="(*Logger)";
-tooltip="type: *github.com/go-i2p/logger.Logger";
-penwidth="0.5";
-fontsize="15";
         
         "(*github.com/go-i2p/logger.Logger).WithFields" [ fillcolor="moccasin" label="logger\nWithFields" penwidth="1.5" tooltip="(*github.com/go-i2p/logger.Logger).WithFields | defined in log.go:60" ]
         
@@ -79,39 +79,39 @@ fillcolor="wheat2";
 label="(*Logger)";
 tooltip="type: *github.com/sirupsen/logrus.Logger";
         
-        "(*github.com/sirupsen/logrus.Logger).Debug" [ fillcolor="moccasin" label="logrus\nDebug" penwidth="1.5" tooltip="(*github.com/sirupsen/logrus.Logger).Debug | defined in logger.go:221" ]
+        "(*github.com/sirupsen/logrus.Logger).Debug" [ penwidth="1.5" tooltip="(*github.com/sirupsen/logrus.Logger).Debug | defined in logger.go:221" fillcolor="moccasin" label="logrus\nDebug" ]
         
     }
 
-        subgraph "cluster_github.com/go-i2p/go-i2p/lib/common/destination.Destination" {
-        penwidth="0.5";
-fontsize="15";
+        subgraph "cluster_github.com/go-i2p/common/destination.Destination" {
+        fontsize="15";
 fontcolor="#222222";
 labelloc="b";
+penwidth="0.5";
 style="rounded,filled";
-tooltip="type: github.com/go-i2p/go-i2p/lib/common/destination.Destination";
 fillcolor="lightsteelblue";
 label="(Destination)";
+tooltip="type: github.com/go-i2p/common/destination.Destination";
         
-        "(github.com/go-i2p/go-i2p/lib/common/destination.Destination).Base64" [ fillcolor="lightblue" label="Base64" penwidth="1.5" tooltip="(github.com/go-i2p/go-i2p/lib/common/destination.Destination).Base64 | defined in destination.go:55\nat destination.go:56: calling [(*github.com/sirupsen/logrus.Logger).Debug]\nat destination.go:64: calling [(*github.com/sirupsen/logrus.Logger).Debug]\nat destination.go:58: calling [(*github.com/go-i2p/go-i2p/lib/common/keys_and_cert.KeysAndCert).Certificate]\nat destination.go:62: calling [(*github.com/go-i2p/logger.Logger).WithFields]\nat destination.go:59: calling [(*github.com/go-i2p/go-i2p/lib/common/certificate.Certificate).Bytes]\nat destination.go:60: calling [github.com/go-i2p/go-i2p/lib/common/base64.EncodeToString]" ]
-        "(github.com/go-i2p/go-i2p/lib/common/destination.Destination).Base32Address" [ fillcolor="lightblue" label="Base32Address" penwidth="1.5" tooltip="(github.com/go-i2p/go-i2p/lib/common/destination.Destination).Base32Address | defined in destination.go:38\nat destination.go:39: calling [(*github.com/sirupsen/logrus.Logger).Debug]\nat destination.go:49: calling [(*github.com/sirupsen/logrus.Logger).Debug]\nat destination.go:47: calling [(*github.com/go-i2p/logger.Logger).WithFields]\nat destination.go:41: calling [(*github.com/go-i2p/go-i2p/lib/common/keys_and_cert.KeysAndCert).Certificate]\nat destination.go:42: calling [(*github.com/go-i2p/go-i2p/lib/common/certificate.Certificate).Bytes]\nat destination.go:44: calling [github.com/go-i2p/go-i2p/lib/common/base32.EncodeToString]" ]
+        "(github.com/go-i2p/common/destination.Destination).Base64" [ fillcolor="lightblue" label="Base64" penwidth="1.5" tooltip="(github.com/go-i2p/common/destination.Destination).Base64 | defined in destination.go:55\nat destination.go:62: calling [(*github.com/go-i2p/logger.Logger).WithFields]\nat destination.go:56: calling [(*github.com/sirupsen/logrus.Logger).Debug]\nat destination.go:64: calling [(*github.com/sirupsen/logrus.Logger).Debug]\nat destination.go:58: calling [(*github.com/go-i2p/common/keys_and_cert.KeysAndCert).Certificate]\nat destination.go:59: calling [(*github.com/go-i2p/common/certificate.Certificate).Bytes]\nat destination.go:60: calling [github.com/go-i2p/common/base64.EncodeToString]" ]
+        "(github.com/go-i2p/common/destination.Destination).Base32Address" [ fillcolor="lightblue" label="Base32Address" penwidth="1.5" tooltip="(github.com/go-i2p/common/destination.Destination).Base32Address | defined in destination.go:38\nat destination.go:39: calling [(*github.com/sirupsen/logrus.Logger).Debug]\nat destination.go:49: calling [(*github.com/sirupsen/logrus.Logger).Debug]\nat destination.go:41: calling [(*github.com/go-i2p/common/keys_and_cert.KeysAndCert).Certificate]\nat destination.go:42: calling [(*github.com/go-i2p/common/certificate.Certificate).Bytes]\nat destination.go:44: calling [github.com/go-i2p/common/base32.EncodeToString]\nat destination.go:47: calling [(*github.com/go-i2p/logger.Logger).WithFields]" ]
         
     }
 
     }
 
-    "(github.com/go-i2p/go-i2p/lib/common/destination.Destination).Base32Address" -> "(*github.com/sirupsen/logrus.Logger).Debug" [ color="saddlebrown" tooltip="at destination.go:39: calling [(*github.com/sirupsen/logrus.Logger).Debug]\nat destination.go:49: calling [(*github.com/sirupsen/logrus.Logger).Debug]" ]
-    "(github.com/go-i2p/go-i2p/lib/common/destination.Destination).Base32Address" -> "(*github.com/go-i2p/logger.Logger).WithFields" [ color="saddlebrown" tooltip="at destination.go:47: calling [(*github.com/go-i2p/logger.Logger).WithFields]" ]
-    "github.com/go-i2p/go-i2p/lib/common/destination.ReadDestination" -> "github.com/go-i2p/go-i2p/lib/common/keys_and_cert.ReadKeysAndCert" [ color="saddlebrown" tooltip="at destination.go:77: calling [github.com/go-i2p/go-i2p/lib/common/keys_and_cert.ReadKeysAndCert]" ]
-    "(github.com/go-i2p/go-i2p/lib/common/destination.Destination).Base64" -> "(*github.com/sirupsen/logrus.Logger).Debug" [ color="saddlebrown" tooltip="at destination.go:56: calling [(*github.com/sirupsen/logrus.Logger).Debug]\nat destination.go:64: calling [(*github.com/sirupsen/logrus.Logger).Debug]" ]
-    "(github.com/go-i2p/go-i2p/lib/common/destination.Destination).Base64" -> "(*github.com/go-i2p/go-i2p/lib/common/keys_and_cert.KeysAndCert).Certificate" [ color="saddlebrown" tooltip="at destination.go:58: calling [(*github.com/go-i2p/go-i2p/lib/common/keys_and_cert.KeysAndCert).Certificate]" ]
-    "(github.com/go-i2p/go-i2p/lib/common/destination.Destination).Base64" -> "(*github.com/go-i2p/logger.Logger).WithFields" [ tooltip="at destination.go:62: calling [(*github.com/go-i2p/logger.Logger).WithFields]" color="saddlebrown" ]
-    "(github.com/go-i2p/go-i2p/lib/common/destination.Destination).Base32Address" -> "(*github.com/go-i2p/go-i2p/lib/common/keys_and_cert.KeysAndCert).Certificate" [ color="saddlebrown" tooltip="at destination.go:41: calling [(*github.com/go-i2p/go-i2p/lib/common/keys_and_cert.KeysAndCert).Certificate]" ]
-    "(github.com/go-i2p/go-i2p/lib/common/destination.Destination).Base32Address" -> "(*github.com/go-i2p/go-i2p/lib/common/certificate.Certificate).Bytes" [ tooltip="at destination.go:42: calling [(*github.com/go-i2p/go-i2p/lib/common/certificate.Certificate).Bytes]" color="saddlebrown" ]
-    "(github.com/go-i2p/go-i2p/lib/common/destination.Destination).Base32Address" -> "github.com/go-i2p/go-i2p/lib/common/base32.EncodeToString" [ color="saddlebrown" tooltip="at destination.go:44: calling [github.com/go-i2p/go-i2p/lib/common/base32.EncodeToString]" ]
-    "github.com/go-i2p/go-i2p/lib/common/destination.ReadDestination" -> "(*github.com/go-i2p/logger.Logger).WithFields" [ tooltip="at destination.go:73: calling [(*github.com/go-i2p/logger.Logger).WithFields]\nat destination.go:82: calling [(*github.com/go-i2p/logger.Logger).WithFields]" color="saddlebrown" ]
-    "github.com/go-i2p/go-i2p/lib/common/destination.ReadDestination" -> "(*github.com/sirupsen/logrus.Logger).Debug" [ color="saddlebrown" tooltip="at destination.go:75: calling [(*github.com/sirupsen/logrus.Logger).Debug]\nat destination.go:84: calling [(*github.com/sirupsen/logrus.Logger).Debug]" ]
-    "(github.com/go-i2p/go-i2p/lib/common/destination.Destination).Base64" -> "(*github.com/go-i2p/go-i2p/lib/common/certificate.Certificate).Bytes" [ color="saddlebrown" tooltip="at destination.go:59: calling [(*github.com/go-i2p/go-i2p/lib/common/certificate.Certificate).Bytes]" ]
-    "(github.com/go-i2p/go-i2p/lib/common/destination.Destination).Base64" -> "github.com/go-i2p/go-i2p/lib/common/base64.EncodeToString" [ color="saddlebrown" tooltip="at destination.go:60: calling [github.com/go-i2p/go-i2p/lib/common/base64.EncodeToString]" ]
-    "github.com/go-i2p/go-i2p/lib/common/destination.init" -> "github.com/go-i2p/logger.GetGoI2PLogger" [ color="saddlebrown" tooltip="at destination.go:17: calling [github.com/go-i2p/logger.GetGoI2PLogger]" ]
+    "github.com/go-i2p/common/destination.init" -> "github.com/go-i2p/logger.GetGoI2PLogger" [ color="saddlebrown" tooltip="at destination.go:17: calling [github.com/go-i2p/logger.GetGoI2PLogger]" ]
+    "github.com/go-i2p/common/destination.ReadDestination" -> "github.com/go-i2p/common/keys_and_cert.ReadKeysAndCert" [ color="saddlebrown" tooltip="at destination.go:77: calling [github.com/go-i2p/common/keys_and_cert.ReadKeysAndCert]" ]
+    "(github.com/go-i2p/common/destination.Destination).Base32Address" -> "(*github.com/sirupsen/logrus.Logger).Debug" [ color="saddlebrown" tooltip="at destination.go:39: calling [(*github.com/sirupsen/logrus.Logger).Debug]\nat destination.go:49: calling [(*github.com/sirupsen/logrus.Logger).Debug]" ]
+    "(github.com/go-i2p/common/destination.Destination).Base32Address" -> "(*github.com/go-i2p/common/keys_and_cert.KeysAndCert).Certificate" [ color="saddlebrown" tooltip="at destination.go:41: calling [(*github.com/go-i2p/common/keys_and_cert.KeysAndCert).Certificate]" ]
+    "(github.com/go-i2p/common/destination.Destination).Base64" -> "(*github.com/go-i2p/logger.Logger).WithFields" [ color="saddlebrown" tooltip="at destination.go:62: calling [(*github.com/go-i2p/logger.Logger).WithFields]" ]
+    "github.com/go-i2p/common/destination.ReadDestination" -> "(*github.com/go-i2p/logger.Logger).WithFields" [ color="saddlebrown" tooltip="at destination.go:73: calling [(*github.com/go-i2p/logger.Logger).WithFields]\nat destination.go:82: calling [(*github.com/go-i2p/logger.Logger).WithFields]" ]
+    "github.com/go-i2p/common/destination.ReadDestination" -> "(*github.com/sirupsen/logrus.Logger).Debug" [ color="saddlebrown" tooltip="at destination.go:75: calling [(*github.com/sirupsen/logrus.Logger).Debug]\nat destination.go:84: calling [(*github.com/sirupsen/logrus.Logger).Debug]" ]
+    "(github.com/go-i2p/common/destination.Destination).Base32Address" -> "(*github.com/go-i2p/common/certificate.Certificate).Bytes" [ tooltip="at destination.go:42: calling [(*github.com/go-i2p/common/certificate.Certificate).Bytes]" color="saddlebrown" ]
+    "(github.com/go-i2p/common/destination.Destination).Base32Address" -> "github.com/go-i2p/common/base32.EncodeToString" [ color="saddlebrown" tooltip="at destination.go:44: calling [github.com/go-i2p/common/base32.EncodeToString]" ]
+    "(github.com/go-i2p/common/destination.Destination).Base32Address" -> "(*github.com/go-i2p/logger.Logger).WithFields" [ color="saddlebrown" tooltip="at destination.go:47: calling [(*github.com/go-i2p/logger.Logger).WithFields]" ]
+    "(github.com/go-i2p/common/destination.Destination).Base64" -> "(*github.com/sirupsen/logrus.Logger).Debug" [ color="saddlebrown" tooltip="at destination.go:56: calling [(*github.com/sirupsen/logrus.Logger).Debug]\nat destination.go:64: calling [(*github.com/sirupsen/logrus.Logger).Debug]" ]
+    "(github.com/go-i2p/common/destination.Destination).Base64" -> "(*github.com/go-i2p/common/keys_and_cert.KeysAndCert).Certificate" [ color="saddlebrown" tooltip="at destination.go:58: calling [(*github.com/go-i2p/common/keys_and_cert.KeysAndCert).Certificate]" ]
+    "(github.com/go-i2p/common/destination.Destination).Base64" -> "(*github.com/go-i2p/common/certificate.Certificate).Bytes" [ tooltip="at destination.go:59: calling [(*github.com/go-i2p/common/certificate.Certificate).Bytes]" color="saddlebrown" ]
+    "(github.com/go-i2p/common/destination.Destination).Base64" -> "github.com/go-i2p/common/base64.EncodeToString" [ color="saddlebrown" tooltip="at destination.go:60: calling [github.com/go-i2p/common/base64.EncodeToString]" ]
 }

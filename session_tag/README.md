@@ -1,6 +1,6 @@
 # session_tag
 --
-    import "github.com/go-i2p/go-i2p/lib/common/session_tag"
+    import "github.com/go-i2p/common/session_tag"
 
 ![session_tag.svg](session_tag.svg)
 
@@ -39,6 +39,6 @@ during parsing.
 
 session_tag 
 
-github.com/go-i2p/go-i2p/lib/common/session_tag
+github.com/go-i2p/common/session_tag
 
 [go-i2p template file](/template.md)

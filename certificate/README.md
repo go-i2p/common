@@ -1,6 +1,6 @@
 # certificate
 --
-    import "github.com/go-i2p/go-i2p/lib/common/certificate"
+    import "github.com/go-i2p/common/certificate"
 
 ![certificate.svg](certificate.svg)
 
@@ -122,6 +122,6 @@ Certificate,
 
 certificate 
 
-github.com/go-i2p/go-i2p/lib/common/certificate
+github.com/go-i2p/common/certificate
 
 [go-i2p template file](/template.md)

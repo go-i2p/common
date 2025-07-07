@@ -1,6 +1,6 @@
 # lease_set
 --
-    import "github.com/go-i2p/go-i2p/lib/common/lease_set"
+    import "github.com/go-i2p/common/lease_set"
 
 ![lease_set.svg](lease_set.svg)
 
@@ -136,6 +136,6 @@ Verify returns nil
 
 lease_set 
 
-github.com/go-i2p/go-i2p/lib/common/lease_set
+github.com/go-i2p/common/lease_set
 
 [go-i2p template file](/template.md)

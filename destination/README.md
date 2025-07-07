@@ -1,6 +1,6 @@
 # destination
 --
-    import "github.com/go-i2p/go-i2p/lib/common/destination"
+    import "github.com/go-i2p/common/destination"
 
 ![destination.svg](destination.svg)
 
@@ -47,6 +47,6 @@ Base64 returns the I2P base64 address for this Destination.
 
 destination 
 
-github.com/go-i2p/go-i2p/lib/common/destination
+github.com/go-i2p/common/destination
 
 [go-i2p template file](/template.md)

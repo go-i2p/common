@@ -1,6 +1,6 @@
 # router_identity
 --
-    import "github.com/go-i2p/go-i2p/lib/common/router_identity"
+    import "github.com/go-i2p/common/router_identity"
 
 ![router_identity.svg](router_identity.svg)
 
@@ -45,6 +45,6 @@ func (router_identity *RouterIdentity) AsDestination() destination.Destination
 
 router_identity 
 
-github.com/go-i2p/go-i2p/lib/common/router_identity
+github.com/go-i2p/common/router_identity
 
 [go-i2p template file](/template.md)

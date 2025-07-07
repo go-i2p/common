@@ -1,6 +1,6 @@
 # lease
 --
-    import "github.com/go-i2p/go-i2p/lib/common/lease"
+    import "github.com/go-i2p/common/lease"
 
 ![lease.svg](lease.svg)
 
@@ -72,6 +72,6 @@ TunnelID returns the tunnel id as a uint23.
 
 lease 
 
-github.com/go-i2p/go-i2p/lib/common/lease
+github.com/go-i2p/common/lease
 
 [go-i2p template file](/template.md)

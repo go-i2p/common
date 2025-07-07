@@ -1,6 +1,6 @@
 # keys_and_cert
 --
-    import "github.com/go-i2p/go-i2p/lib/common/keys_and_cert"
+    import "github.com/go-i2p/common/keys_and_cert"
 
 ![keys_and_cert.svg](keys_and_cert.svg)
 
@@ -113,6 +113,6 @@ func NewPrivateKeysAndCert() (*PrivateKeysAndCert, error)
 
 keys_and_cert 
 
-github.com/go-i2p/go-i2p/lib/common/keys_and_cert
+github.com/go-i2p/common/keys_and_cert
 
 [go-i2p template file](/template.md)

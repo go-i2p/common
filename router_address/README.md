@@ -1,6 +1,6 @@
 # router_address
 --
-    import "github.com/go-i2p/go-i2p/lib/common/router_address"
+    import "github.com/go-i2p/common/router_address"
 
 ![router_address.svg](router_address.svg)
 
@@ -217,6 +217,6 @@ func (router_address *RouterAddress) UDP() bool
 
 router_address 
 
-github.com/go-i2p/go-i2p/lib/common/router_address
+github.com/go-i2p/common/router_address
 
 [go-i2p template file](/template.md)
