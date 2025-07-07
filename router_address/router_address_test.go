@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"testing"
 
-	. "github.com/go-i2p/go-i2p/lib/common/data"
+	. "github.com/go-i2p/common/data"
 	"github.com/stretchr/testify/assert"
 )
 

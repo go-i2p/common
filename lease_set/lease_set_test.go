@@ -6,22 +6,22 @@ import (
 	"testing"
 	"time"
 
-	"github.com/go-i2p/go-i2p/lib/common/destination"
-	"github.com/go-i2p/go-i2p/lib/common/key_certificate"
-	"github.com/go-i2p/go-i2p/lib/common/router_address"
-	"github.com/go-i2p/go-i2p/lib/common/router_info"
-	"github.com/go-i2p/go-i2p/lib/common/signature"
+	"github.com/go-i2p/common/destination"
+	"github.com/go-i2p/common/key_certificate"
+	"github.com/go-i2p/common/router_address"
+	"github.com/go-i2p/common/router_info"
+	"github.com/go-i2p/common/signature"
 	"github.com/go-i2p/go-i2p/lib/crypto/types"
 	"github.com/samber/oops"
 
-	"github.com/go-i2p/go-i2p/lib/common/data"
-	"github.com/go-i2p/go-i2p/lib/common/keys_and_cert"
+	"github.com/go-i2p/common/data"
+	"github.com/go-i2p/common/keys_and_cert"
 	"github.com/go-i2p/go-i2p/lib/crypto/ed25519"
 	elgamal "github.com/go-i2p/go-i2p/lib/crypto/elg"
 
-	"github.com/go-i2p/go-i2p/lib/common/certificate"
-	"github.com/go-i2p/go-i2p/lib/common/lease"
-	"github.com/go-i2p/go-i2p/lib/common/router_identity"
+	"github.com/go-i2p/common/certificate"
+	"github.com/go-i2p/common/lease"
+	"github.com/go-i2p/common/router_identity"
 	"github.com/stretchr/testify/assert"
 )
 

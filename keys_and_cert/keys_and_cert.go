@@ -7,8 +7,8 @@ import (
 	"github.com/go-i2p/logger"
 	"github.com/samber/oops"
 
-	. "github.com/go-i2p/go-i2p/lib/common/certificate"
-	. "github.com/go-i2p/go-i2p/lib/common/key_certificate"
+	. "github.com/go-i2p/common/certificate"
+	. "github.com/go-i2p/common/key_certificate"
 	elgamal "github.com/go-i2p/go-i2p/lib/crypto/elg"
 	"github.com/go-i2p/go-i2p/lib/crypto/types"
 	"github.com/sirupsen/logrus"

@@ -1,6 +1,6 @@
 package exportable
 
-import common "github.com/go-i2p/go-i2p/lib/common/data"
+import common "github.com/go-i2p/common/data"
 
 func Fuzz(data []byte) int {
 	str := common.I2PString(data)

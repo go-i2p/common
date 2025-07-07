@@ -4,12 +4,12 @@ package lease_set
 import (
 	"fmt"
 
-	"github.com/go-i2p/go-i2p/lib/common/certificate"
-	"github.com/go-i2p/go-i2p/lib/common/data"
-	"github.com/go-i2p/go-i2p/lib/common/destination"
-	"github.com/go-i2p/go-i2p/lib/common/key_certificate"
-	"github.com/go-i2p/go-i2p/lib/common/lease"
-	"github.com/go-i2p/go-i2p/lib/common/signature"
+	"github.com/go-i2p/common/certificate"
+	"github.com/go-i2p/common/data"
+	"github.com/go-i2p/common/destination"
+	"github.com/go-i2p/common/key_certificate"
+	"github.com/go-i2p/common/lease"
+	"github.com/go-i2p/common/signature"
 	"github.com/go-i2p/go-i2p/lib/crypto/dsa"
 	elgamal "github.com/go-i2p/go-i2p/lib/crypto/elg"
 	"github.com/go-i2p/go-i2p/lib/crypto/types"
@@ -18,7 +18,7 @@ import (
 	"github.com/go-i2p/logger"
 	"github.com/sirupsen/logrus"
 
-	"github.com/go-i2p/go-i2p/lib/common/keys_and_cert"
+	"github.com/go-i2p/common/keys_and_cert"
 )
 
 var log = logger.GetGoI2PLogger()

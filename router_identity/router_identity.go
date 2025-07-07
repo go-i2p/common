@@ -2,10 +2,10 @@
 package router_identity
 
 import (
-	"github.com/go-i2p/go-i2p/lib/common/certificate"
-	"github.com/go-i2p/go-i2p/lib/common/destination"
-	"github.com/go-i2p/go-i2p/lib/common/key_certificate"
-	. "github.com/go-i2p/go-i2p/lib/common/keys_and_cert"
+	"github.com/go-i2p/common/certificate"
+	"github.com/go-i2p/common/destination"
+	"github.com/go-i2p/common/key_certificate"
+	. "github.com/go-i2p/common/keys_and_cert"
 	"github.com/go-i2p/go-i2p/lib/crypto/types"
 	"github.com/go-i2p/logger"
 	"github.com/sirupsen/logrus"

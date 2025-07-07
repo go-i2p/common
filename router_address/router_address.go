@@ -12,7 +12,7 @@ import (
 	"github.com/samber/oops"
 	"github.com/sirupsen/logrus"
 
-	. "github.com/go-i2p/go-i2p/lib/common/data"
+	. "github.com/go-i2p/common/data"
 )
 
 // Minimum number of bytes in a valid RouterAddress

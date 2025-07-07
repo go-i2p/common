@@ -12,7 +12,7 @@ import (
 	// log "github.com/sirupsen/logrus"
 	"github.com/go-i2p/logger"
 
-	. "github.com/go-i2p/go-i2p/lib/common/data"
+	. "github.com/go-i2p/common/data"
 )
 
 var log = logger.GetGoI2PLogger()

@@ -7,11 +7,11 @@ import (
 	"github.com/go-i2p/logger"
 	"github.com/sirupsen/logrus"
 
-	. "github.com/go-i2p/go-i2p/lib/common/keys_and_cert"
+	. "github.com/go-i2p/common/keys_and_cert"
 	"github.com/go-i2p/go-i2p/lib/crypto/types"
 
-	"github.com/go-i2p/go-i2p/lib/common/base32"
-	"github.com/go-i2p/go-i2p/lib/common/base64"
+	"github.com/go-i2p/common/base32"
+	"github.com/go-i2p/common/base64"
 )
 
 var log = logger.GetGoI2PLogger()

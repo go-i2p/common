@@ -30,7 +30,7 @@ payload :: data
 import (
 	"fmt"
 
-	"github.com/go-i2p/go-i2p/lib/common/signature"
+	"github.com/go-i2p/common/signature"
 	"github.com/go-i2p/go-i2p/lib/crypto/dsa"
 	"github.com/go-i2p/go-i2p/lib/crypto/ecdsa"
 	"github.com/go-i2p/go-i2p/lib/crypto/ed25519"
@@ -41,8 +41,8 @@ import (
 	"github.com/go-i2p/logger"
 	"github.com/sirupsen/logrus"
 
-	. "github.com/go-i2p/go-i2p/lib/common/certificate"
-	. "github.com/go-i2p/go-i2p/lib/common/data"
+	. "github.com/go-i2p/common/certificate"
+	. "github.com/go-i2p/common/data"
 )
 
 var log = logger.GetGoI2PLogger()

@@ -1,6 +1,6 @@
 package exportable
 
-import common "github.com/go-i2p/go-i2p/lib/common/keys_and_cert"
+import common "github.com/go-i2p/common/keys_and_cert"
 
 func Fuzz(data []byte) int {
 	keys_and_cert, _, _ := common.ReadKeysAndCert(data)

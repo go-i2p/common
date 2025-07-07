@@ -5,7 +5,7 @@ import (
 	"encoding/binary"
 	"time"
 
-	. "github.com/go-i2p/go-i2p/lib/common/data"
+	. "github.com/go-i2p/common/data"
 	"github.com/go-i2p/logger"
 	"github.com/samber/oops"
 	"github.com/sirupsen/logrus"

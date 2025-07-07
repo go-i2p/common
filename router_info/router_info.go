@@ -9,18 +9,18 @@ import (
 
 	"github.com/go-i2p/go-i2p/lib/crypto/ed25519"
 
-	"github.com/go-i2p/go-i2p/lib/common/certificate"
-	"github.com/go-i2p/go-i2p/lib/common/signature"
+	"github.com/go-i2p/common/certificate"
+	"github.com/go-i2p/common/signature"
 	"github.com/go-i2p/go-i2p/lib/crypto/types"
 	"github.com/samber/oops"
 
 	"github.com/go-i2p/logger"
 	"github.com/sirupsen/logrus"
 
-	. "github.com/go-i2p/go-i2p/lib/common/data"
-	. "github.com/go-i2p/go-i2p/lib/common/router_address"
-	. "github.com/go-i2p/go-i2p/lib/common/router_identity"
-	. "github.com/go-i2p/go-i2p/lib/common/signature"
+	. "github.com/go-i2p/common/data"
+	. "github.com/go-i2p/common/router_address"
+	. "github.com/go-i2p/common/router_identity"
+	. "github.com/go-i2p/common/signature"
 )
 
 var log = logger.GetGoI2PLogger()
