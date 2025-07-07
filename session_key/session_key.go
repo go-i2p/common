@@ -1,7 +1,12 @@
 // Package session_key implements the I2P SessionKey common data structure
 package session_key
 
-import log "github.com/sirupsen/logrus"
+import (
+	"github.com/samber/oops"
+	"github.com/sirupsen/logrus"
+
+	log "github.com/sirupsen/logrus"
+)
 
 /*
 [SessionKey]
@@ -23,8 +28,23 @@ type SessionKey [32]byte
 // The remaining bytes after the specified length are also returned.
 // Returns a list of errors that occurred during parsing.
 func ReadSessionKey(bytes []byte) (info SessionKey, remainder []byte, err error) {
-	// TODO: stub
-	log.Warn("ReadSessionKey is not implemented")
+	if len(bytes) < 32 {
+		log.WithFields(logrus.Fields{
+			"at":          "(SessionKey) ReadSessionKey",
+			"data_length": len(bytes),
+			"required":    32,
+		}).Error("data too short for SessionKey")
+		err = oops.Errorf("ReadSessionKey: data too short, need 32 bytes, got %d", len(bytes))
+		return
+	}
+
+	copy(info[:], bytes[:32])
+	remainder = bytes[32:]
+
+	log.WithFields(logrus.Fields{
+		"remainder_length": len(remainder),
+	}).Debug("Successfully read SessionKey from data")
+
 	return
 }
 

@@ -3,6 +3,7 @@ package session_tag
 
 import (
 	"github.com/go-i2p/logger"
+	"github.com/samber/oops"
 	"github.com/sirupsen/logrus"
 )
 
@@ -28,8 +29,23 @@ type SessionTag [32]byte
 // The remaining bytes after the specified length are also returned.
 // Returns a list of errors that occurred during parsing.
 func ReadSessionTag(bytes []byte) (info SessionTag, remainder []byte, err error) {
-	// TODO: stub
-	log.Warn("ReadSessionTag is not implemented")
+	if len(bytes) < 32 {
+		log.WithFields(logrus.Fields{
+			"at":          "(SessionTag) ReadSessionTag",
+			"data_length": len(bytes),
+			"required":    32,
+		}).Error("data too short for SessionTag")
+		err = oops.Errorf("ReadSessionTag: data too short, need 32 bytes, got %d", len(bytes))
+		return
+	}
+
+	copy(info[:], bytes[:32])
+	remainder = bytes[32:]
+
+	log.WithFields(logrus.Fields{
+		"remainder_length": len(remainder),
+	}).Debug("Successfully read SessionTag from data")
+
 	return
 }
 
