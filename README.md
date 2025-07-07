@@ -1,6 +1,6 @@
 # go-i2p/common
 
-A comprehensive Go library implementing I2P (Invisible Internet Project) network protocol common data structures and utilities. This library provides type-safe implementations of the I2P specification (version 0.9.49) common structures, factored out from the main I2P router to enable reusable components for parsing, encoding, and manipulating I2P network data.
+A comprehensive Go library implementing I2P (Invisible Internet Project) network protocol common data structures and utilities. This library provides type-safe implementations of the I2P specification common structures, factored out from the main I2P router to enable reusable components for parsing, encoding, and manipulating I2P network data.
 
 ---
 
