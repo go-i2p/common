@@ -1,0 +1,50 @@
+digraph gocallvis {
+    label="";
+    labeljust="l";
+    fontname="Arial";
+    fontsize="14";
+    rankdir="LR";
+    bgcolor="lightgray";
+    style="solid";
+    penwidth="0.5";
+    pad="0.0";
+    nodesep="0.35";
+
+    node [shape="box" style="filled,rounded" fillcolor="honeydew" fontname="Verdana" penwidth="1.0" margin="0.16,0.0"];
+    edge [minlen="2"]
+
+    subgraph "cluster_focus" {
+        labeljust="c";
+fontsize="18";
+bgcolor="#e6ecfa";
+label="exportable";
+labelloc="t";
+        
+        "github.com/go-i2p/go-i2p/lib/common/fuzz/router_address.Fuzz" [ tooltip="github.com/go-i2p/go-i2p/lib/common/fuzz/router_address.Fuzz | defined in fuzz.go:5\nat fuzz.go:10: calling [(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).TransportStyle]\nat fuzz.go:6: calling [github.com/go-i2p/go-i2p/lib/common/router_address.ReadRouterAddress]\nat fuzz.go:7: calling [(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).Cost]\nat fuzz.go:8: calling [(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).Expiration]\nat fuzz.go:9: calling [(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).Options]" fillcolor="lightblue" label="Fuzz" penwidth="1.5" ]
+        "github.com/go-i2p/go-i2p/lib/common/router_address.ReadRouterAddress" [ fillcolor="moccasin" label="router_address\nReadRouterAddress" penwidth="1.5" tooltip="github.com/go-i2p/go-i2p/lib/common/router_address.ReadRouterAddress | defined in router_address.go:345" ]
+        
+        subgraph "cluster_github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress" {
+        fillcolor="wheat2";
+label="(RouterAddress)";
+tooltip="type: github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress";
+penwidth="0.5";
+fontsize="15";
+fontcolor="#222222";
+labelloc="b";
+style="rounded,filled";
+        
+        "(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).Cost" [ penwidth="1.5" tooltip="(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).Cost | defined in router_address.go:163" fillcolor="moccasin" label="router_address\nCost" ]
+        "(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).Expiration" [ penwidth="1.5" tooltip="(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).Expiration | defined in router_address.go:168" fillcolor="moccasin" label="router_address\nExpiration" ]
+        "(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).Options" [ fillcolor="moccasin" label="router_address\nOptions" penwidth="1.5" tooltip="(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).Options | defined in router_address.go:323" ]
+        "(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).TransportStyle" [ tooltip="(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).TransportStyle | defined in router_address.go:173" fillcolor="moccasin" label="router_address\nTransportStyle" penwidth="1.5" ]
+        
+    }
+
+    }
+
+    "github.com/go-i2p/go-i2p/lib/common/fuzz/router_address.Fuzz" -> "(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).TransportStyle" [ color="saddlebrown" tooltip="at fuzz.go:10: calling [(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).TransportStyle]" ]
+    "github.com/go-i2p/go-i2p/lib/common/fuzz/router_address.Fuzz" -> "github.com/go-i2p/go-i2p/lib/common/router_address.ReadRouterAddress" [ color="saddlebrown" tooltip="at fuzz.go:6: calling [github.com/go-i2p/go-i2p/lib/common/router_address.ReadRouterAddress]" ]
+    "github.com/go-i2p/go-i2p/lib/common/fuzz/router_address.Fuzz" -> "(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).Cost" [ color="saddlebrown" tooltip="at fuzz.go:7: calling [(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).Cost]" ]
+    "github.com/go-i2p/go-i2p/lib/common/fuzz/router_address.Fuzz" -> "(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).Expiration" [ tooltip="at fuzz.go:8: calling [(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).Expiration]" color="saddlebrown" ]
+    "github.com/go-i2p/go-i2p/lib/common/fuzz/router_address.Fuzz" -> "(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).Options" [ color="saddlebrown" tooltip="at fuzz.go:9: calling [(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).Options]" ]
+}

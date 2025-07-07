@@ -1,0 +1,140 @@
+digraph gocallvis {
+    label="";
+    labeljust="l";
+    fontname="Arial";
+    fontsize="14";
+    rankdir="LR";
+    bgcolor="lightgray";
+    style="solid";
+    penwidth="0.5";
+    pad="0.0";
+    nodesep="0.35";
+
+    node [shape="box" style="filled,rounded" fillcolor="honeydew" fontname="Verdana" penwidth="1.0" margin="0.16,0.0"];
+    edge [minlen="2"]
+
+    subgraph "cluster_focus" {
+        bgcolor="#e6ecfa";
+label="certificate";
+labelloc="t";
+labeljust="c";
+fontsize="18";
+        
+        "github.com/go-i2p/go-i2p/lib/common/certificate.init" [ fillcolor="lightblue" label="init" penwidth="0.5" tooltip="github.com/go-i2p/go-i2p/lib/common/certificate.init | defined in .:0\nat certificate.go:18: calling [github.com/go-i2p/logger.GetGoI2PLogger]" ]
+        "github.com/go-i2p/logger.GetGoI2PLogger" [ penwidth="1.5" tooltip="github.com/go-i2p/logger.GetGoI2PLogger | defined in log.go:120" fillcolor="moccasin" label="logger\nGetGoI2PLogger" ]
+        "github.com/go-i2p/go-i2p/lib/common/certificate.readCertificate" [ label="readCertificate" penwidth="0.5" tooltip="github.com/go-i2p/go-i2p/lib/common/certificate.readCertificate | defined in certificate.go:150\nat certificate.go:156: calling [(*github.com/go-i2p/logger.Logger).WithFields]\nat certificate.go:166: calling [(*github.com/go-i2p/logger.Logger).WithFields]\nat certificate.go:180: calling [(*github.com/go-i2p/logger.Logger).WithFields]\nat certificate.go:191: calling [(*github.com/go-i2p/logger.Logger).WithFields]\nat certificate.go:160: calling [(*github.com/go-i2p/logger.Logger).Error]\nat certificate.go:170: calling [(*github.com/go-i2p/logger.Logger).Error]\nat certificate.go:188: calling [(*github.com/go-i2p/logger.Logger).Error]\nat certificate.go:161: calling [github.com/samber/oops.Errorf]\nat certificate.go:171: calling [github.com/samber/oops.Errorf]\nat certificate.go:179: calling [github.com/samber/oops.Errorf]\nat certificate.go:159: calling [(github.com/go-i2p/go-i2p/lib/common/data.Integer).Int]\nat certificate.go:169: calling [(github.com/go-i2p/go-i2p/lib/common/data.Integer).Int]\nat certificate.go:178: calling [(github.com/go-i2p/go-i2p/lib/common/data.Integer).Int]\nat certificate.go:182: calling [(github.com/go-i2p/go-i2p/lib/common/data.Integer).Int]\nat certificate.go:192: calling [(github.com/go-i2p/go-i2p/lib/common/data.Integer).Int]\nat certificate.go:193: calling [(github.com/go-i2p/go-i2p/lib/common/data.Integer).Int]\nat certificate.go:194: calling [(*github.com/sirupsen/logrus.Logger).Debug]" fillcolor="lightblue" ]
+        "github.com/samber/oops.Errorf" [ fillcolor="moccasin" label="oops\nErrorf" penwidth="1.5" tooltip="github.com/samber/oops.Errorf | defined in oops.go:34" ]
+        "github.com/go-i2p/go-i2p/lib/common/certificate.ReadCertificate" [ fillcolor="lightblue" label="ReadCertificate" penwidth="1.5" tooltip="github.com/go-i2p/go-i2p/lib/common/certificate.ReadCertificate | defined in certificate.go:201\nat certificate.go:202: calling [github.com/go-i2p/go-i2p/lib/common/certificate.readCertificate]\nat certificate.go:207: calling [(*github.com/go-i2p/go-i2p/lib/common/certificate.Certificate).ExcessBytes]\nat certificate.go:208: calling [(*github.com/go-i2p/logger.Logger).WithFields]\nat certificate.go:210: calling [(*github.com/sirupsen/logrus.Logger).Debug]\nat certificate.go:204: calling [(*github.com/go-i2p/logger.Logger).Warn]" ]
+        "github.com/go-i2p/go-i2p/lib/common/certificate.NewCertificateWithType" [ fillcolor="lightblue" label="NewCertificateWithType" penwidth="1.5" tooltip="github.com/go-i2p/go-i2p/lib/common/certificate.NewCertificateWithType | defined in certificate.go:252\nat certificate.go:258: calling [github.com/samber/oops.Errorf]\nat certificate.go:263: calling [github.com/samber/oops.Errorf]\nat certificate.go:265: calling [github.com/go-i2p/go-i2p/lib/common/data.NewIntegerFromInt]" ]
+        "github.com/go-i2p/go-i2p/lib/common/data.NewIntegerFromInt" [ tooltip="github.com/go-i2p/go-i2p/lib/common/data.NewIntegerFromInt | defined in integer.go:68" fillcolor="moccasin" label="data\nNewIntegerFromInt" penwidth="1.5" ]
+        "github.com/go-i2p/go-i2p/lib/common/certificate.GetSignatureTypeFromCertificate" [ fillcolor="lightblue" label="GetSignatureTypeFromCertificate" penwidth="1.5" tooltip="github.com/go-i2p/go-i2p/lib/common/certificate.GetSignatureTypeFromCertificate | defined in certificate.go:281\nat certificate.go:283: calling [github.com/samber/oops.Errorf]\nat certificate.go:286: calling [github.com/samber/oops.Errorf]\nat certificate.go:282: calling [(*github.com/go-i2p/go-i2p/lib/common/certificate.Certificate).Type]\nat certificate.go:283: calling [(*github.com/go-i2p/go-i2p/lib/common/certificate.Certificate).Type]" ]
+        "github.com/go-i2p/go-i2p/lib/common/certificate.NewCertificateDeux" [ penwidth="1.5" tooltip="github.com/go-i2p/go-i2p/lib/common/certificate.NewCertificateDeux | defined in certificate.go:223\nat certificate.go:225: calling [github.com/samber/oops.Errorf]\nat certificate.go:230: calling [github.com/samber/oops.Errorf]\nat certificate.go:233: calling [github.com/go-i2p/go-i2p/lib/common/data.NewIntegerFromInt]\nat certificate.go:246: calling [(*github.com/sirupsen/logrus.Logger).Debug]\nat certificate.go:243: calling [(*github.com/go-i2p/logger.Logger).WithFields]" fillcolor="lightblue" label="NewCertificateDeux" ]
+        
+        subgraph "cluster_*github.com/go-i2p/go-i2p/lib/common/certificate.Certificate" {
+        fontsize="15";
+labelloc="b";
+style="rounded,filled";
+penwidth="0.5";
+fontcolor="#222222";
+fillcolor="lightsteelblue";
+label="(*Certificate)";
+tooltip="type: *github.com/go-i2p/go-i2p/lib/common/certificate.Certificate";
+        
+        "(*github.com/go-i2p/go-i2p/lib/common/certificate.Certificate).Length" [ fillcolor="lightblue" label="Length" penwidth="1.5" tooltip="(*github.com/go-i2p/go-i2p/lib/common/certificate.Certificate).Length | defined in certificate.go:125\nat certificate.go:127: calling [(*github.com/go-i2p/logger.Logger).WithFields]\nat certificate.go:129: calling [(*github.com/sirupsen/logrus.Logger).Debug]\nat certificate.go:126: calling [(github.com/go-i2p/go-i2p/lib/common/data.Integer).Int]" ]
+        "(*github.com/go-i2p/go-i2p/lib/common/certificate.Certificate).Data" [ fillcolor="lightblue" label="Data" penwidth="1.5" tooltip="(*github.com/go-i2p/go-i2p/lib/common/certificate.Certificate).Data | defined in certificate.go:134\nat certificate.go:135: calling [(*github.com/go-i2p/go-i2p/lib/common/certificate.Certificate).Length]\nat certificate.go:144: calling [(*github.com/sirupsen/logrus.Logger).Debug]\nat certificate.go:138: calling [(*github.com/go-i2p/logger.Logger).Warn]\nat certificate.go:142: calling [(*github.com/go-i2p/logger.Logger).WithFields]" ]
+        "(*github.com/go-i2p/go-i2p/lib/common/certificate.Certificate).Bytes" [ label="Bytes" penwidth="1.5" tooltip="(*github.com/go-i2p/go-i2p/lib/common/certificate.Certificate).Bytes | defined in certificate.go:100\nat certificate.go:101: calling [(github.com/go-i2p/go-i2p/lib/common/data.Integer).Bytes]\nat certificate.go:102: calling [(github.com/go-i2p/go-i2p/lib/common/data.Integer).Bytes]\nat certificate.go:103: calling [(*github.com/go-i2p/go-i2p/lib/common/certificate.Certificate).Data]\nat certificate.go:104: calling [(*github.com/go-i2p/logger.Logger).WithFields]\nat certificate.go:106: calling [(*github.com/sirupsen/logrus.Logger).Debug]" fillcolor="lightblue" ]
+        "(*github.com/go-i2p/go-i2p/lib/common/certificate.Certificate).length" [ fillcolor="lightblue" label="length" penwidth="0.5" tooltip="(*github.com/go-i2p/go-i2p/lib/common/certificate.Certificate).length | defined in certificate.go:110\nat certificate.go:111: calling [(*github.com/go-i2p/go-i2p/lib/common/certificate.Certificate).Bytes]" ]
+        "(*github.com/go-i2p/go-i2p/lib/common/certificate.Certificate).ExcessBytes" [ fillcolor="lightblue" label="ExcessBytes" penwidth="1.5" tooltip="(*github.com/go-i2p/go-i2p/lib/common/certificate.Certificate).ExcessBytes | defined in certificate.go:87\nat certificate.go:92: calling [(*github.com/sirupsen/logrus.Logger).Debug]\nat certificate.go:95: calling [(*github.com/sirupsen/logrus.Logger).Debug]\nat certificate.go:88: calling [(github.com/go-i2p/go-i2p/lib/common/data.Integer).Int]\nat certificate.go:89: calling [(github.com/go-i2p/go-i2p/lib/common/data.Integer).Int]\nat certificate.go:90: calling [(*github.com/go-i2p/logger.Logger).WithFields]" ]
+        "(*github.com/go-i2p/go-i2p/lib/common/certificate.Certificate).Type" [ label="Type" penwidth="1.5" tooltip="(*github.com/go-i2p/go-i2p/lib/common/certificate.Certificate).Type | defined in certificate.go:116\nat certificate.go:117: calling [(github.com/go-i2p/go-i2p/lib/common/data.Integer).Int]\nat certificate.go:118: calling [(*github.com/go-i2p/logger.Logger).WithFields]\nat certificate.go:120: calling [(*github.com/sirupsen/logrus.Logger).Debug]" fillcolor="lightblue" ]
+        "(*github.com/go-i2p/go-i2p/lib/common/certificate.Certificate).RawBytes" [ fillcolor="lightblue" label="RawBytes" penwidth="1.5" tooltip="(*github.com/go-i2p/go-i2p/lib/common/certificate.Certificate).RawBytes | defined in certificate.go:76\nat certificate.go:82: calling [(*github.com/sirupsen/logrus.Logger).Debug]\nat certificate.go:77: calling [(github.com/go-i2p/go-i2p/lib/common/data.Integer).Bytes]\nat certificate.go:78: calling [(github.com/go-i2p/go-i2p/lib/common/data.Integer).Bytes]\nat certificate.go:80: calling [(*github.com/go-i2p/logger.Logger).WithFields]" ]
+        
+    }
+
+        subgraph "cluster_*github.com/go-i2p/logger.Logger" {
+        label="(*Logger)";
+tooltip="type: *github.com/go-i2p/logger.Logger";
+penwidth="0.5";
+fontsize="15";
+fontcolor="#222222";
+labelloc="b";
+style="rounded,filled";
+fillcolor="wheat2";
+        
+        "(*github.com/go-i2p/logger.Logger).WithFields" [ fillcolor="moccasin" label="logger\nWithFields" penwidth="1.5" tooltip="(*github.com/go-i2p/logger.Logger).WithFields | defined in log.go:60" ]
+        "(*github.com/go-i2p/logger.Logger).Warn" [ fillcolor="moccasin" label="logger\nWarn" penwidth="1.5" tooltip="(*github.com/go-i2p/logger.Logger).Warn | defined in log.go:30" ]
+        "(*github.com/go-i2p/logger.Logger).Error" [ fillcolor="moccasin" label="logger\nError" penwidth="1.5" tooltip="(*github.com/go-i2p/logger.Logger).Error | defined in log.go:42" ]
+        
+    }
+
+        subgraph "cluster_*github.com/sirupsen/logrus.Logger" {
+        penwidth="0.5";
+fontsize="15";
+fontcolor="#222222";
+labelloc="b";
+style="rounded,filled";
+fillcolor="wheat2";
+label="(*Logger)";
+tooltip="type: *github.com/sirupsen/logrus.Logger";
+        
+        "(*github.com/sirupsen/logrus.Logger).Debug" [ tooltip="(*github.com/sirupsen/logrus.Logger).Debug | defined in logger.go:221" fillcolor="moccasin" label="logrus\nDebug" penwidth="1.5" ]
+        
+    }
+
+        subgraph "cluster_github.com/go-i2p/go-i2p/lib/common/data.Integer" {
+        style="rounded,filled";
+fillcolor="wheat2";
+label="(Integer)";
+tooltip="type: github.com/go-i2p/go-i2p/lib/common/data.Integer";
+penwidth="0.5";
+fontsize="15";
+fontcolor="#222222";
+labelloc="b";
+        
+        "(github.com/go-i2p/go-i2p/lib/common/data.Integer).Int" [ fillcolor="moccasin" label="data\nInt" penwidth="1.5" tooltip="(github.com/go-i2p/go-i2p/lib/common/data.Integer).Int | defined in integer.go:32" ]
+        "(github.com/go-i2p/go-i2p/lib/common/data.Integer).Bytes" [ fillcolor="moccasin" label="data\nBytes" penwidth="1.5" tooltip="(github.com/go-i2p/go-i2p/lib/common/data.Integer).Bytes | defined in integer.go:27" ]
+        
+    }
+
+    }
+
+    "github.com/go-i2p/go-i2p/lib/common/certificate.NewCertificateWithType" -> "github.com/samber/oops.Errorf" [ color="saddlebrown" tooltip="at certificate.go:258: calling [github.com/samber/oops.Errorf]\nat certificate.go:263: calling [github.com/samber/oops.Errorf]" ]
+    "(*github.com/go-i2p/go-i2p/lib/common/certificate.Certificate).length" -> "(*github.com/go-i2p/go-i2p/lib/common/certificate.Certificate).Bytes" [ tooltip="at certificate.go:111: calling [(*github.com/go-i2p/go-i2p/lib/common/certificate.Certificate).Bytes]" ]
+    "github.com/go-i2p/go-i2p/lib/common/certificate.readCertificate" -> "(*github.com/go-i2p/logger.Logger).WithFields" [ tooltip="at certificate.go:156: calling [(*github.com/go-i2p/logger.Logger).WithFields]\nat certificate.go:166: calling [(*github.com/go-i2p/logger.Logger).WithFields]\nat certificate.go:180: calling [(*github.com/go-i2p/logger.Logger).WithFields]\nat certificate.go:191: calling [(*github.com/go-i2p/logger.Logger).WithFields]" color="saddlebrown" ]
+    "github.com/go-i2p/go-i2p/lib/common/certificate.readCertificate" -> "(*github.com/go-i2p/logger.Logger).Error" [ color="saddlebrown" tooltip="at certificate.go:160: calling [(*github.com/go-i2p/logger.Logger).Error]\nat certificate.go:170: calling [(*github.com/go-i2p/logger.Logger).Error]\nat certificate.go:188: calling [(*github.com/go-i2p/logger.Logger).Error]" ]
+    "github.com/go-i2p/go-i2p/lib/common/certificate.readCertificate" -> "github.com/samber/oops.Errorf" [ color="saddlebrown" tooltip="at certificate.go:161: calling [github.com/samber/oops.Errorf]\nat certificate.go:171: calling [github.com/samber/oops.Errorf]\nat certificate.go:179: calling [github.com/samber/oops.Errorf]" ]
+    "(*github.com/go-i2p/go-i2p/lib/common/certificate.Certificate).ExcessBytes" -> "(*github.com/sirupsen/logrus.Logger).Debug" [ tooltip="at certificate.go:92: calling [(*github.com/sirupsen/logrus.Logger).Debug]\nat certificate.go:95: calling [(*github.com/sirupsen/logrus.Logger).Debug]" color="saddlebrown" ]
+    "github.com/go-i2p/go-i2p/lib/common/certificate.NewCertificateDeux" -> "github.com/samber/oops.Errorf" [ color="saddlebrown" tooltip="at certificate.go:225: calling [github.com/samber/oops.Errorf]\nat certificate.go:230: calling [github.com/samber/oops.Errorf]" ]
+    "(*github.com/go-i2p/go-i2p/lib/common/certificate.Certificate).Length" -> "(*github.com/go-i2p/logger.Logger).WithFields" [ color="saddlebrown" tooltip="at certificate.go:127: calling [(*github.com/go-i2p/logger.Logger).WithFields]" ]
+    "(*github.com/go-i2p/go-i2p/lib/common/certificate.Certificate).Data" -> "(*github.com/go-i2p/go-i2p/lib/common/certificate.Certificate).Length" [ tooltip="at certificate.go:135: calling [(*github.com/go-i2p/go-i2p/lib/common/certificate.Certificate).Length]" ]
+    "github.com/go-i2p/go-i2p/lib/common/certificate.ReadCertificate" -> "github.com/go-i2p/go-i2p/lib/common/certificate.readCertificate" [ tooltip="at certificate.go:202: calling [github.com/go-i2p/go-i2p/lib/common/certificate.readCertificate]" ]
+    "github.com/go-i2p/go-i2p/lib/common/certificate.ReadCertificate" -> "(*github.com/go-i2p/go-i2p/lib/common/certificate.Certificate).ExcessBytes" [ tooltip="at certificate.go:207: calling [(*github.com/go-i2p/go-i2p/lib/common/certificate.Certificate).ExcessBytes]" ]
+    "github.com/go-i2p/go-i2p/lib/common/certificate.NewCertificateWithType" -> "github.com/go-i2p/go-i2p/lib/common/data.NewIntegerFromInt" [ color="saddlebrown" tooltip="at certificate.go:265: calling [github.com/go-i2p/go-i2p/lib/common/data.NewIntegerFromInt]" ]
+    "github.com/go-i2p/go-i2p/lib/common/certificate.GetSignatureTypeFromCertificate" -> "github.com/samber/oops.Errorf" [ color="saddlebrown" tooltip="at certificate.go:283: calling [github.com/samber/oops.Errorf]\nat certificate.go:286: calling [github.com/samber/oops.Errorf]" ]
+    "github.com/go-i2p/go-i2p/lib/common/certificate.NewCertificateDeux" -> "github.com/go-i2p/go-i2p/lib/common/data.NewIntegerFromInt" [ color="saddlebrown" tooltip="at certificate.go:233: calling [github.com/go-i2p/go-i2p/lib/common/data.NewIntegerFromInt]" ]
+    "(*github.com/go-i2p/go-i2p/lib/common/certificate.Certificate).Length" -> "(*github.com/sirupsen/logrus.Logger).Debug" [ color="saddlebrown" tooltip="at certificate.go:129: calling [(*github.com/sirupsen/logrus.Logger).Debug]" ]
+    "(*github.com/go-i2p/go-i2p/lib/common/certificate.Certificate).Data" -> "(*github.com/sirupsen/logrus.Logger).Debug" [ color="saddlebrown" tooltip="at certificate.go:144: calling [(*github.com/sirupsen/logrus.Logger).Debug]" ]
+    "(*github.com/go-i2p/go-i2p/lib/common/certificate.Certificate).Bytes" -> "(github.com/go-i2p/go-i2p/lib/common/data.Integer).Bytes" [ color="saddlebrown" tooltip="at certificate.go:101: calling [(github.com/go-i2p/go-i2p/lib/common/data.Integer).Bytes]\nat certificate.go:102: calling [(github.com/go-i2p/go-i2p/lib/common/data.Integer).Bytes]" ]
+    "(*github.com/go-i2p/go-i2p/lib/common/certificate.Certificate).Bytes" -> "(*github.com/go-i2p/go-i2p/lib/common/certificate.Certificate).Data" [ tooltip="at certificate.go:103: calling [(*github.com/go-i2p/go-i2p/lib/common/certificate.Certificate).Data]" ]
+    "github.com/go-i2p/go-i2p/lib/common/certificate.readCertificate" -> "(github.com/go-i2p/go-i2p/lib/common/data.Integer).Int" [ color="saddlebrown" tooltip="at certificate.go:159: calling [(github.com/go-i2p/go-i2p/lib/common/data.Integer).Int]\nat certificate.go:169: calling [(github.com/go-i2p/go-i2p/lib/common/data.Integer).Int]\nat certificate.go:178: calling [(github.com/go-i2p/go-i2p/lib/common/data.Integer).Int]\nat certificate.go:182: calling [(github.com/go-i2p/go-i2p/lib/common/data.Integer).Int]\nat certificate.go:192: calling [(github.com/go-i2p/go-i2p/lib/common/data.Integer).Int]\nat certificate.go:193: calling [(github.com/go-i2p/go-i2p/lib/common/data.Integer).Int]" ]
+    "(*github.com/go-i2p/go-i2p/lib/common/certificate.Certificate).ExcessBytes" -> "(github.com/go-i2p/go-i2p/lib/common/data.Integer).Int" [ color="saddlebrown" tooltip="at certificate.go:88: calling [(github.com/go-i2p/go-i2p/lib/common/data.Integer).Int]\nat certificate.go:89: calling [(github.com/go-i2p/go-i2p/lib/common/data.Integer).Int]" ]
+    "(*github.com/go-i2p/go-i2p/lib/common/certificate.Certificate).Bytes" -> "(*github.com/go-i2p/logger.Logger).WithFields" [ color="saddlebrown" tooltip="at certificate.go:104: calling [(*github.com/go-i2p/logger.Logger).WithFields]" ]
+    "github.com/go-i2p/go-i2p/lib/common/certificate.readCertificate" -> "(*github.com/sirupsen/logrus.Logger).Debug" [ color="saddlebrown" tooltip="at certificate.go:194: calling [(*github.com/sirupsen/logrus.Logger).Debug]" ]
+    "github.com/go-i2p/go-i2p/lib/common/certificate.ReadCertificate" -> "(*github.com/go-i2p/logger.Logger).WithFields" [ color="saddlebrown" tooltip="at certificate.go:208: calling [(*github.com/go-i2p/logger.Logger).WithFields]" ]
+    "(*github.com/go-i2p/go-i2p/lib/common/certificate.Certificate).RawBytes" -> "(*github.com/sirupsen/logrus.Logger).Debug" [ color="saddlebrown" tooltip="at certificate.go:82: calling [(*github.com/sirupsen/logrus.Logger).Debug]" ]
+    "(*github.com/go-i2p/go-i2p/lib/common/certificate.Certificate).Bytes" -> "(*github.com/sirupsen/logrus.Logger).Debug" [ tooltip="at certificate.go:106: calling [(*github.com/sirupsen/logrus.Logger).Debug]" color="saddlebrown" ]
+    "github.com/go-i2p/go-i2p/lib/common/certificate.ReadCertificate" -> "(*github.com/sirupsen/logrus.Logger).Debug" [ tooltip="at certificate.go:210: calling [(*github.com/sirupsen/logrus.Logger).Debug]" color="saddlebrown" ]
+    "github.com/go-i2p/go-i2p/lib/common/certificate.NewCertificateDeux" -> "(*github.com/sirupsen/logrus.Logger).Debug" [ color="saddlebrown" tooltip="at certificate.go:246: calling [(*github.com/sirupsen/logrus.Logger).Debug]" ]
+    "github.com/go-i2p/go-i2p/lib/common/certificate.init" -> "github.com/go-i2p/logger.GetGoI2PLogger" [ tooltip="at certificate.go:18: calling [github.com/go-i2p/logger.GetGoI2PLogger]" color="saddlebrown" ]
+    "github.com/go-i2p/go-i2p/lib/common/certificate.ReadCertificate" -> "(*github.com/go-i2p/logger.Logger).Warn" [ color="saddlebrown" tooltip="at certificate.go:204: calling [(*github.com/go-i2p/logger.Logger).Warn]" ]
+    "(*github.com/go-i2p/go-i2p/lib/common/certificate.Certificate).ExcessBytes" -> "(*github.com/go-i2p/logger.Logger).WithFields" [ color="saddlebrown" tooltip="at certificate.go:90: calling [(*github.com/go-i2p/logger.Logger).WithFields]" ]
+    "(*github.com/go-i2p/go-i2p/lib/common/certificate.Certificate).Type" -> "(github.com/go-i2p/go-i2p/lib/common/data.Integer).Int" [ tooltip="at certificate.go:117: calling [(github.com/go-i2p/go-i2p/lib/common/data.Integer).Int]" color="saddlebrown" ]
+    "(*github.com/go-i2p/go-i2p/lib/common/certificate.Certificate).Type" -> "(*github.com/go-i2p/logger.Logger).WithFields" [ tooltip="at certificate.go:118: calling [(*github.com/go-i2p/logger.Logger).WithFields]" color="saddlebrown" ]
+    "(*github.com/go-i2p/go-i2p/lib/common/certificate.Certificate).Type" -> "(*github.com/sirupsen/logrus.Logger).Debug" [ color="saddlebrown" tooltip="at certificate.go:120: calling [(*github.com/sirupsen/logrus.Logger).Debug]" ]
+    "github.com/go-i2p/go-i2p/lib/common/certificate.GetSignatureTypeFromCertificate" -> "(*github.com/go-i2p/go-i2p/lib/common/certificate.Certificate).Type" [ tooltip="at certificate.go:282: calling [(*github.com/go-i2p/go-i2p/lib/common/certificate.Certificate).Type]\nat certificate.go:283: calling [(*github.com/go-i2p/go-i2p/lib/common/certificate.Certificate).Type]" ]
+    "(*github.com/go-i2p/go-i2p/lib/common/certificate.Certificate).RawBytes" -> "(github.com/go-i2p/go-i2p/lib/common/data.Integer).Bytes" [ color="saddlebrown" tooltip="at certificate.go:77: calling [(github.com/go-i2p/go-i2p/lib/common/data.Integer).Bytes]\nat certificate.go:78: calling [(github.com/go-i2p/go-i2p/lib/common/data.Integer).Bytes]" ]
+    "(*github.com/go-i2p/go-i2p/lib/common/certificate.Certificate).Length" -> "(github.com/go-i2p/go-i2p/lib/common/data.Integer).Int" [ tooltip="at certificate.go:126: calling [(github.com/go-i2p/go-i2p/lib/common/data.Integer).Int]" color="saddlebrown" ]
+    "(*github.com/go-i2p/go-i2p/lib/common/certificate.Certificate).Data" -> "(*github.com/go-i2p/logger.Logger).Warn" [ tooltip="at certificate.go:138: calling [(*github.com/go-i2p/logger.Logger).Warn]" color="saddlebrown" ]
+    "(*github.com/go-i2p/go-i2p/lib/common/certificate.Certificate).Data" -> "(*github.com/go-i2p/logger.Logger).WithFields" [ color="saddlebrown" tooltip="at certificate.go:142: calling [(*github.com/go-i2p/logger.Logger).WithFields]" ]
+    "github.com/go-i2p/go-i2p/lib/common/certificate.NewCertificateDeux" -> "(*github.com/go-i2p/logger.Logger).WithFields" [ color="saddlebrown" tooltip="at certificate.go:243: calling [(*github.com/go-i2p/logger.Logger).WithFields]" ]
+    "(*github.com/go-i2p/go-i2p/lib/common/certificate.Certificate).RawBytes" -> "(*github.com/go-i2p/logger.Logger).WithFields" [ color="saddlebrown" tooltip="at certificate.go:80: calling [(*github.com/go-i2p/logger.Logger).WithFields]" ]
+}

@@ -1,0 +1,46 @@
+digraph gocallvis {
+    label="";
+    labeljust="l";
+    fontname="Arial";
+    fontsize="14";
+    rankdir="LR";
+    bgcolor="lightgray";
+    style="solid";
+    penwidth="0.5";
+    pad="0.0";
+    nodesep="0.35";
+
+    node [shape="box" style="filled,rounded" fillcolor="honeydew" fontname="Verdana" penwidth="1.0" margin="0.16,0.0"];
+    edge [minlen="2"]
+
+    subgraph "cluster_focus" {
+        labeljust="c";
+fontsize="18";
+bgcolor="#e6ecfa";
+label="exportable";
+labelloc="t";
+        
+        "github.com/go-i2p/go-i2p/lib/common/fuzz/string.Fuzz" [ fillcolor="lightblue" label="Fuzz" penwidth="1.5" tooltip="github.com/go-i2p/go-i2p/lib/common/fuzz/string.Fuzz | defined in fuzz.go:5\nat fuzz.go:8: calling [(github.com/go-i2p/go-i2p/lib/common/data.I2PString).Length]\nat fuzz.go:11: calling [(github.com/go-i2p/go-i2p/lib/common/data.I2PString).Length]\nat fuzz.go:9: calling [github.com/go-i2p/go-i2p/lib/common/data.ToI2PString]\nat fuzz.go:7: calling [(github.com/go-i2p/go-i2p/lib/common/data.I2PString).Data]\nat fuzz.go:10: calling [(github.com/go-i2p/go-i2p/lib/common/data.I2PString).Data]" ]
+        "github.com/go-i2p/go-i2p/lib/common/data.ToI2PString" [ fillcolor="moccasin" label="data\nToI2PString" penwidth="1.5" tooltip="github.com/go-i2p/go-i2p/lib/common/data.ToI2PString | defined in string.go:114" ]
+        
+        subgraph "cluster_github.com/go-i2p/go-i2p/lib/common/data.I2PString" {
+        fontsize="15";
+fontcolor="#222222";
+labelloc="b";
+style="rounded,filled";
+fillcolor="wheat2";
+label="(I2PString)";
+tooltip="type: github.com/go-i2p/go-i2p/lib/common/data.I2PString";
+penwidth="0.5";
+        
+        "(github.com/go-i2p/go-i2p/lib/common/data.I2PString).Data" [ fillcolor="moccasin" label="data\nData" penwidth="1.5" tooltip="(github.com/go-i2p/go-i2p/lib/common/data.I2PString).Data | defined in string.go:73" ]
+        "(github.com/go-i2p/go-i2p/lib/common/data.I2PString).Length" [ fillcolor="moccasin" label="data\nLength" penwidth="1.5" tooltip="(github.com/go-i2p/go-i2p/lib/common/data.I2PString).Length | defined in string.go:31" ]
+        
+    }
+
+    }
+
+    "github.com/go-i2p/go-i2p/lib/common/fuzz/string.Fuzz" -> "(github.com/go-i2p/go-i2p/lib/common/data.I2PString).Length" [ color="saddlebrown" tooltip="at fuzz.go:8: calling [(github.com/go-i2p/go-i2p/lib/common/data.I2PString).Length]\nat fuzz.go:11: calling [(github.com/go-i2p/go-i2p/lib/common/data.I2PString).Length]" ]
+    "github.com/go-i2p/go-i2p/lib/common/fuzz/string.Fuzz" -> "github.com/go-i2p/go-i2p/lib/common/data.ToI2PString" [ color="saddlebrown" tooltip="at fuzz.go:9: calling [github.com/go-i2p/go-i2p/lib/common/data.ToI2PString]" ]
+    "github.com/go-i2p/go-i2p/lib/common/fuzz/string.Fuzz" -> "(github.com/go-i2p/go-i2p/lib/common/data.I2PString).Data" [ color="saddlebrown" tooltip="at fuzz.go:7: calling [(github.com/go-i2p/go-i2p/lib/common/data.I2PString).Data]\nat fuzz.go:10: calling [(github.com/go-i2p/go-i2p/lib/common/data.I2PString).Data]" ]
+}

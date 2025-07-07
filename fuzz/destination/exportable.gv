@@ -1,0 +1,46 @@
+digraph gocallvis {
+    label="";
+    labeljust="l";
+    fontname="Arial";
+    fontsize="14";
+    rankdir="LR";
+    bgcolor="lightgray";
+    style="solid";
+    penwidth="0.5";
+    pad="0.0";
+    nodesep="0.35";
+
+    node [shape="box" style="filled,rounded" fillcolor="honeydew" fontname="Verdana" penwidth="1.0" margin="0.16,0.0"];
+    edge [minlen="2"]
+
+    subgraph "cluster_focus" {
+        bgcolor="#e6ecfa";
+label="exportable";
+labelloc="t";
+labeljust="c";
+fontsize="18";
+        
+        "github.com/go-i2p/go-i2p/lib/common/fuzz/destination.Fuzz" [ fillcolor="lightblue" label="Fuzz" penwidth="1.5" tooltip="github.com/go-i2p/go-i2p/lib/common/fuzz/destination.Fuzz | defined in fuzz.go:5\nat fuzz.go:6: calling [github.com/go-i2p/go-i2p/lib/common/destination.ReadDestination]\nat fuzz.go:7: calling [(github.com/go-i2p/go-i2p/lib/common/destination.Destination).Base32Address]\nat fuzz.go:8: calling [(github.com/go-i2p/go-i2p/lib/common/destination.Destination).Base64]" ]
+        "github.com/go-i2p/go-i2p/lib/common/destination.ReadDestination" [ fillcolor="moccasin" label="destination\nReadDestination" penwidth="1.5" tooltip="github.com/go-i2p/go-i2p/lib/common/destination.ReadDestination | defined in destination.go:72" ]
+        
+        subgraph "cluster_github.com/go-i2p/go-i2p/lib/common/destination.Destination" {
+        tooltip="type: github.com/go-i2p/go-i2p/lib/common/destination.Destination";
+penwidth="0.5";
+fontsize="15";
+fontcolor="#222222";
+labelloc="b";
+style="rounded,filled";
+fillcolor="wheat2";
+label="(Destination)";
+        
+        "(github.com/go-i2p/go-i2p/lib/common/destination.Destination).Base32Address" [ fillcolor="moccasin" label="destination\nBase32Address" penwidth="1.5" tooltip="(github.com/go-i2p/go-i2p/lib/common/destination.Destination).Base32Address | defined in destination.go:38" ]
+        "(github.com/go-i2p/go-i2p/lib/common/destination.Destination).Base64" [ fillcolor="moccasin" label="destination\nBase64" penwidth="1.5" tooltip="(github.com/go-i2p/go-i2p/lib/common/destination.Destination).Base64 | defined in destination.go:55" ]
+        
+    }
+
+    }
+
+    "github.com/go-i2p/go-i2p/lib/common/fuzz/destination.Fuzz" -> "github.com/go-i2p/go-i2p/lib/common/destination.ReadDestination" [ color="saddlebrown" tooltip="at fuzz.go:6: calling [github.com/go-i2p/go-i2p/lib/common/destination.ReadDestination]" ]
+    "github.com/go-i2p/go-i2p/lib/common/fuzz/destination.Fuzz" -> "(github.com/go-i2p/go-i2p/lib/common/destination.Destination).Base32Address" [ tooltip="at fuzz.go:7: calling [(github.com/go-i2p/go-i2p/lib/common/destination.Destination).Base32Address]" color="saddlebrown" ]
+    "github.com/go-i2p/go-i2p/lib/common/fuzz/destination.Fuzz" -> "(github.com/go-i2p/go-i2p/lib/common/destination.Destination).Base64" [ color="saddlebrown" tooltip="at fuzz.go:8: calling [(github.com/go-i2p/go-i2p/lib/common/destination.Destination).Base64]" ]
+}

@@ -1,0 +1,44 @@
+digraph gocallvis {
+    label="";
+    labeljust="l";
+    fontname="Arial";
+    fontsize="14";
+    rankdir="LR";
+    bgcolor="lightgray";
+    style="solid";
+    penwidth="0.5";
+    pad="0.0";
+    nodesep="0.35";
+
+    node [shape="box" style="filled,rounded" fillcolor="honeydew" fontname="Verdana" penwidth="1.0" margin="0.16,0.0"];
+    edge [minlen="2"]
+
+    subgraph "cluster_focus" {
+        bgcolor="#e6ecfa";
+label="exportable";
+labelloc="t";
+labeljust="c";
+fontsize="18";
+        
+        "github.com/go-i2p/go-i2p/lib/common/fuzz/router_identity.Fuzz" [ label="Fuzz" penwidth="1.5" tooltip="github.com/go-i2p/go-i2p/lib/common/fuzz/router_identity.Fuzz | defined in fuzz.go:5\nat fuzz.go:7: calling [(*github.com/go-i2p/go-i2p/lib/common/keys_and_cert.KeysAndCert).Certificate]\nat fuzz.go:6: calling [github.com/go-i2p/go-i2p/lib/common/router_identity.ReadRouterIdentity]" fillcolor="lightblue" ]
+        "github.com/go-i2p/go-i2p/lib/common/router_identity.ReadRouterIdentity" [ fillcolor="moccasin" label="router_identity\nReadRouterIdentity" penwidth="1.5" tooltip="github.com/go-i2p/go-i2p/lib/common/router_identity.ReadRouterIdentity | defined in router_identity.go:37" ]
+        
+        subgraph "cluster_*github.com/go-i2p/go-i2p/lib/common/keys_and_cert.KeysAndCert" {
+        tooltip="type: *github.com/go-i2p/go-i2p/lib/common/keys_and_cert.KeysAndCert";
+penwidth="0.5";
+fontsize="15";
+fontcolor="#222222";
+labelloc="b";
+style="rounded,filled";
+fillcolor="wheat2";
+label="(*KeysAndCert)";
+        
+        "(*github.com/go-i2p/go-i2p/lib/common/keys_and_cert.KeysAndCert).Certificate" [ tooltip="(*github.com/go-i2p/go-i2p/lib/common/keys_and_cert.KeysAndCert).Certificate | defined in keys_and_cert.go:139" fillcolor="moccasin" label="keys_and_cert\nCertificate" penwidth="1.5" ]
+        
+    }
+
+    }
+
+    "github.com/go-i2p/go-i2p/lib/common/fuzz/router_identity.Fuzz" -> "(*github.com/go-i2p/go-i2p/lib/common/keys_and_cert.KeysAndCert).Certificate" [ color="saddlebrown" tooltip="at fuzz.go:7: calling [(*github.com/go-i2p/go-i2p/lib/common/keys_and_cert.KeysAndCert).Certificate]" ]
+    "github.com/go-i2p/go-i2p/lib/common/fuzz/router_identity.Fuzz" -> "github.com/go-i2p/go-i2p/lib/common/router_identity.ReadRouterIdentity" [ color="saddlebrown" tooltip="at fuzz.go:6: calling [github.com/go-i2p/go-i2p/lib/common/router_identity.ReadRouterIdentity]" ]
+}

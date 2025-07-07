@@ -1,0 +1,180 @@
+digraph gocallvis {
+    label="";
+    labeljust="l";
+    fontname="Arial";
+    fontsize="14";
+    rankdir="LR";
+    bgcolor="lightgray";
+    style="solid";
+    penwidth="0.5";
+    pad="0.0";
+    nodesep="0.35";
+
+    node [shape="box" style="filled,rounded" fillcolor="honeydew" fontname="Verdana" penwidth="1.0" margin="0.16,0.0"];
+    edge [minlen="2"]
+
+    subgraph "cluster_focus" {
+        labeljust="c";
+fontsize="18";
+bgcolor="#e6ecfa";
+label="key_certificate";
+labelloc="t";
+        
+        "github.com/go-i2p/go-i2p/lib/common/key_certificate.NewKeyCertificate" [ penwidth="1.5" tooltip="github.com/go-i2p/go-i2p/lib/common/key_certificate.NewKeyCertificate | defined in key_certificate.go:360\nat key_certificate.go:379: calling [(*github.com/sirupsen/logrus.Logger).Println]\nat key_certificate.go:388: calling [(*github.com/sirupsen/logrus.Logger).Println]\nat key_certificate.go:361: calling [(*github.com/go-i2p/logger.Logger).WithFields]\nat key_certificate.go:390: calling [(*github.com/go-i2p/logger.Logger).WithFields]\nat key_certificate.go:388: calling [(github.com/go-i2p/go-i2p/lib/common/data.Integer).Int]\nat key_certificate.go:388: calling [(github.com/go-i2p/go-i2p/lib/common/data.Integer).Int]\nat key_certificate.go:391: calling [(github.com/go-i2p/go-i2p/lib/common/data.Integer).Int]\nat key_certificate.go:392: calling [(github.com/go-i2p/go-i2p/lib/common/data.Integer).Int]\nat key_certificate.go:373: calling [github.com/samber/oops.Errorf]\nat key_certificate.go:377: calling [github.com/samber/oops.Errorf]\nat key_certificate.go:376: calling [(*github.com/go-i2p/go-i2p/lib/common/certificate.Certificate).Data]\nat key_certificate.go:379: calling [(*github.com/go-i2p/go-i2p/lib/common/certificate.Certificate).Data]\nat key_certificate.go:379: calling [(*github.com/go-i2p/go-i2p/lib/common/certificate.Certificate).Data]\nat key_certificate.go:381: calling [(*github.com/go-i2p/go-i2p/lib/common/certificate.Certificate).Data]\nat key_certificate.go:382: calling [(*github.com/go-i2p/go-i2p/lib/common/certificate.Certificate).Data]\nat key_certificate.go:363: calling [(*github.com/sirupsen/logrus.Logger).Debug]\nat key_certificate.go:394: calling [(*github.com/sirupsen/logrus.Logger).Debug]\nat key_certificate.go:381: calling [github.com/go-i2p/go-i2p/lib/common/data.ReadInteger]\nat key_certificate.go:382: calling [github.com/go-i2p/go-i2p/lib/common/data.ReadInteger]\nat key_certificate.go:368: calling [(*github.com/go-i2p/logger.Logger).WithError]\nat key_certificate.go:366: calling [github.com/go-i2p/go-i2p/lib/common/certificate.ReadCertificate]\nat key_certificate.go:368: calling [(*github.com/go-i2p/logger.Logger).Error]\nat key_certificate.go:372: calling [(*github.com/go-i2p/go-i2p/lib/common/certificate.Certificate).Type]\nat key_certificate.go:373: calling [(*github.com/go-i2p/go-i2p/lib/common/certificate.Certificate).Type]" fillcolor="lightblue" label="NewKeyCertificate" ]
+        "github.com/go-i2p/go-i2p/lib/common/certificate.ReadCertificate" [ fillcolor="moccasin" label="certificate\nReadCertificate" penwidth="1.5" tooltip="github.com/go-i2p/go-i2p/lib/common/certificate.ReadCertificate | defined in certificate.go:201" ]
+        "github.com/samber/oops.Errorf" [ penwidth="1.5" tooltip="github.com/samber/oops.Errorf | defined in oops.go:34" fillcolor="moccasin" label="oops\nErrorf" ]
+        "github.com/go-i2p/go-i2p/lib/common/data.ReadInteger" [ fillcolor="moccasin" label="data\nReadInteger" penwidth="1.5" tooltip="github.com/go-i2p/go-i2p/lib/common/data.ReadInteger | defined in integer.go:51" ]
+        "github.com/go-i2p/go-i2p/lib/common/key_certificate.KeyCertificateFromCertificate" [ tooltip="github.com/go-i2p/go-i2p/lib/common/key_certificate.KeyCertificateFromCertificate | defined in key_certificate.go:399\nat key_certificate.go:400: calling [(*github.com/go-i2p/go-i2p/lib/common/certificate.Certificate).Type]\nat key_certificate.go:401: calling [(*github.com/go-i2p/go-i2p/lib/common/certificate.Certificate).Type]\nat key_certificate.go:404: calling [(*github.com/go-i2p/go-i2p/lib/common/certificate.Certificate).Data]\nat key_certificate.go:421: calling [(github.com/go-i2p/go-i2p/lib/common/data.Integer).Int]\nat key_certificate.go:422: calling [(github.com/go-i2p/go-i2p/lib/common/data.Integer).Int]\nat key_certificate.go:401: calling [github.com/samber/oops.Errorf]\nat key_certificate.go:409: calling [github.com/samber/oops.Errorf]" fillcolor="lightblue" label="KeyCertificateFromCertificate" penwidth="1.5" ]
+        "github.com/go-i2p/go-i2p/lib/common/key_certificate.init" [ label="init" penwidth="0.5" tooltip="github.com/go-i2p/go-i2p/lib/common/key_certificate.init | defined in .:0\nat key_certificate.go:48: calling [github.com/go-i2p/logger.GetGoI2PLogger]" fillcolor="lightblue" ]
+        "github.com/go-i2p/logger.GetGoI2PLogger" [ label="logger\nGetGoI2PLogger" penwidth="1.5" tooltip="github.com/go-i2p/logger.GetGoI2PLogger | defined in log.go:120" fillcolor="moccasin" ]
+        
+        subgraph "cluster_*github.com/go-i2p/go-i2p/lib/common/certificate.Certificate" {
+        tooltip="type: *github.com/go-i2p/go-i2p/lib/common/certificate.Certificate";
+penwidth="0.5";
+fontsize="15";
+fontcolor="#222222";
+labelloc="b";
+style="rounded,filled";
+fillcolor="wheat2";
+label="(*Certificate)";
+        
+        "(*github.com/go-i2p/go-i2p/lib/common/certificate.Certificate).RawBytes" [ fillcolor="moccasin" label="certificate\nRawBytes" penwidth="1.5" tooltip="(*github.com/go-i2p/go-i2p/lib/common/certificate.Certificate).RawBytes | defined in certificate.go:76" ]
+        "(*github.com/go-i2p/go-i2p/lib/common/certificate.Certificate).Type" [ fillcolor="moccasin" label="certificate\nType" penwidth="1.5" tooltip="(*github.com/go-i2p/go-i2p/lib/common/certificate.Certificate).Type | defined in certificate.go:116" ]
+        "(*github.com/go-i2p/go-i2p/lib/common/certificate.Certificate).Data" [ label="certificate\nData" penwidth="1.5" tooltip="(*github.com/go-i2p/go-i2p/lib/common/certificate.Certificate).Data | defined in certificate.go:134" fillcolor="moccasin" ]
+        
+    }
+
+        subgraph "cluster_*github.com/go-i2p/go-i2p/lib/common/key_certificate.KeyCertificate" {
+        label="(*KeyCertificate)";
+penwidth="0.5";
+labelloc="b";
+style="rounded,filled";
+tooltip="type: *github.com/go-i2p/go-i2p/lib/common/key_certificate.KeyCertificate";
+fontsize="15";
+fontcolor="#222222";
+fillcolor="lightsteelblue";
+        
+        "(*github.com/go-i2p/go-i2p/lib/common/key_certificate.KeyCertificate).SigningPublicKeySize" [ label="SigningPublicKeySize" penwidth="1.5" tooltip="(*github.com/go-i2p/go-i2p/lib/common/key_certificate.KeyCertificate).SigningPublicKeySize | defined in key_certificate.go:204\nat key_certificate.go:208: calling [(*github.com/sirupsen/logrus.Logger).Debug]\nat key_certificate.go:211: calling [(*github.com/sirupsen/logrus.Logger).Debug]\nat key_certificate.go:206: calling [(github.com/go-i2p/go-i2p/lib/common/data.Integer).Int]" fillcolor="lightblue" ]
+        "(*github.com/go-i2p/go-i2p/lib/common/key_certificate.KeyCertificate).CryptoPublicKeySize" [ fillcolor="lightblue" label="CryptoPublicKeySize" penwidth="1.5" tooltip="(*github.com/go-i2p/go-i2p/lib/common/key_certificate.KeyCertificate).CryptoPublicKeySize | defined in key_certificate.go:196\nat key_certificate.go:199: calling [github.com/samber/oops.Errorf]\nat key_certificate.go:197: calling [(github.com/go-i2p/go-i2p/lib/common/data.Integer).Int]\nat key_certificate.go:199: calling [(github.com/go-i2p/go-i2p/lib/common/data.Integer).Int]" ]
+        
+    }
+
+        subgraph "cluster_*github.com/go-i2p/logger.Logger" {
+        label="(*Logger)";
+tooltip="type: *github.com/go-i2p/logger.Logger";
+penwidth="0.5";
+fontsize="15";
+fontcolor="#222222";
+labelloc="b";
+style="rounded,filled";
+fillcolor="wheat2";
+        
+        "(*github.com/go-i2p/logger.Logger).WithFields" [ tooltip="(*github.com/go-i2p/logger.Logger).WithFields | defined in log.go:60" fillcolor="moccasin" label="logger\nWithFields" penwidth="1.5" ]
+        "(*github.com/go-i2p/logger.Logger).WithError" [ fillcolor="moccasin" label="logger\nWithError" penwidth="1.5" tooltip="(*github.com/go-i2p/logger.Logger).WithError | defined in log.go:66" ]
+        "(*github.com/go-i2p/logger.Logger).Error" [ penwidth="1.5" tooltip="(*github.com/go-i2p/logger.Logger).Error | defined in log.go:42" fillcolor="moccasin" label="logger\nError" ]
+        "(*github.com/go-i2p/logger.Logger).Warn" [ penwidth="1.5" tooltip="(*github.com/go-i2p/logger.Logger).Warn | defined in log.go:30" fillcolor="moccasin" label="logger\nWarn" ]
+        
+    }
+
+        subgraph "cluster_*github.com/sirupsen/logrus.Logger" {
+        labelloc="b";
+style="rounded,filled";
+fillcolor="wheat2";
+label="(*Logger)";
+tooltip="type: *github.com/sirupsen/logrus.Logger";
+penwidth="0.5";
+fontsize="15";
+fontcolor="#222222";
+        
+        "(*github.com/sirupsen/logrus.Logger).Debug" [ fillcolor="moccasin" label="logrus\nDebug" penwidth="1.5" tooltip="(*github.com/sirupsen/logrus.Logger).Debug | defined in logger.go:221" ]
+        "(*github.com/sirupsen/logrus.Logger).Println" [ fillcolor="moccasin" label="logrus\nPrintln" penwidth="1.5" tooltip="(*github.com/sirupsen/logrus.Logger).Println | defined in logger.go:315" ]
+        
+    }
+
+        subgraph "cluster_github.com/go-i2p/go-i2p/lib/common/data.Integer" {
+        style="rounded,filled";
+fillcolor="wheat2";
+label="(Integer)";
+tooltip="type: github.com/go-i2p/go-i2p/lib/common/data.Integer";
+penwidth="0.5";
+fontsize="15";
+fontcolor="#222222";
+labelloc="b";
+        
+        "(github.com/go-i2p/go-i2p/lib/common/data.Integer).Int" [ fillcolor="moccasin" label="data\nInt" penwidth="1.5" tooltip="(github.com/go-i2p/go-i2p/lib/common/data.Integer).Int | defined in integer.go:32" ]
+        
+    }
+
+        subgraph "cluster_github.com/go-i2p/go-i2p/lib/common/key_certificate.KeyCertificate" {
+        labelloc="b";
+tooltip="type: github.com/go-i2p/go-i2p/lib/common/key_certificate.KeyCertificate";
+penwidth="0.5";
+fontcolor="#222222";
+style="rounded,filled";
+fillcolor="lightsteelblue";
+label="(KeyCertificate)";
+fontsize="15";
+        
+        "(github.com/go-i2p/go-i2p/lib/common/key_certificate.KeyCertificate).Data" [ fillcolor="lightblue" label="Data" penwidth="1.5" tooltip="(github.com/go-i2p/go-i2p/lib/common/key_certificate.KeyCertificate).Data | defined in key_certificate.go:112\nat key_certificate.go:114: calling [(*github.com/go-i2p/logger.Logger).WithFields]\nat key_certificate.go:116: calling [(*github.com/sirupsen/logrus.Logger).Debug]\nat key_certificate.go:113: calling [(*github.com/go-i2p/go-i2p/lib/common/certificate.Certificate).RawBytes]\nat key_certificate.go:117: calling [(*github.com/go-i2p/go-i2p/lib/common/certificate.Certificate).RawBytes]" ]
+        "(github.com/go-i2p/go-i2p/lib/common/key_certificate.KeyCertificate).SigningPublicKeyType" [ fillcolor="lightblue" label="SigningPublicKeyType" penwidth="1.5" tooltip="(github.com/go-i2p/go-i2p/lib/common/key_certificate.KeyCertificate).SigningPublicKeyType | defined in key_certificate.go:121\nat key_certificate.go:123: calling [(*github.com/go-i2p/logger.Logger).WithFields]\nat key_certificate.go:125: calling [(*github.com/sirupsen/logrus.Logger).Debug]\nat key_certificate.go:122: calling [(github.com/go-i2p/go-i2p/lib/common/data.Integer).Int]\nat key_certificate.go:126: calling [(github.com/go-i2p/go-i2p/lib/common/data.Integer).Int]" ]
+        "(github.com/go-i2p/go-i2p/lib/common/key_certificate.KeyCertificate).SignatureSize" [ fillcolor="lightblue" label="SignatureSize" penwidth="1.5" tooltip="(github.com/go-i2p/go-i2p/lib/common/key_certificate.KeyCertificate).SignatureSize | defined in key_certificate.go:312\nat key_certificate.go:324: calling [(github.com/go-i2p/go-i2p/lib/common/key_certificate.KeyCertificate).SigningPublicKeyType]\nat key_certificate.go:329: calling [(*github.com/go-i2p/logger.Logger).Warn]\nat key_certificate.go:335: calling [(*github.com/sirupsen/logrus.Logger).Debug]\nat key_certificate.go:327: calling [(*github.com/go-i2p/logger.Logger).WithFields]\nat key_certificate.go:332: calling [(*github.com/go-i2p/logger.Logger).WithFields]" ]
+        "(github.com/go-i2p/go-i2p/lib/common/key_certificate.KeyCertificate).ConstructSigningPublicKey" [ fillcolor="lightblue" label="ConstructSigningPublicKey" penwidth="1.5" tooltip="(github.com/go-i2p/go-i2p/lib/common/key_certificate.KeyCertificate).ConstructSigningPublicKey | defined in key_certificate.go:232\nat key_certificate.go:248: calling [github.com/samber/oops.Errorf]\nat key_certificate.go:305: calling [github.com/samber/oops.Errorf]\nat key_certificate.go:247: calling [(*github.com/go-i2p/logger.Logger).Error]\nat key_certificate.go:304: calling [(*github.com/go-i2p/logger.Logger).Warn]\nat key_certificate.go:233: calling [(*github.com/go-i2p/logger.Logger).WithFields]\nat key_certificate.go:242: calling [(*github.com/go-i2p/logger.Logger).WithFields]\nat key_certificate.go:302: calling [(*github.com/go-i2p/logger.Logger).WithFields]\nat key_certificate.go:235: calling [(*github.com/sirupsen/logrus.Logger).Debug]\nat key_certificate.go:256: calling [(*github.com/sirupsen/logrus.Logger).Debug]\nat key_certificate.go:261: calling [(*github.com/sirupsen/logrus.Logger).Debug]\nat key_certificate.go:266: calling [(*github.com/sirupsen/logrus.Logger).Debug]\nat key_certificate.go:295: calling [(*github.com/sirupsen/logrus.Logger).Debug]\nat key_certificate.go:300: calling [(*github.com/sirupsen/logrus.Logger).Debug]\nat key_certificate.go:241: calling [(github.com/go-i2p/go-i2p/lib/common/key_certificate.KeyCertificate).SignatureSize]\nat key_certificate.go:236: calling [(github.com/go-i2p/go-i2p/lib/common/key_certificate.KeyCertificate).SigningPublicKeyType]" ]
+        "(github.com/go-i2p/go-i2p/lib/common/key_certificate.KeyCertificate).PublicKeyType" [ fillcolor="lightblue" label="PublicKeyType" penwidth="1.5" tooltip="(github.com/go-i2p/go-i2p/lib/common/key_certificate.KeyCertificate).PublicKeyType | defined in key_certificate.go:130\nat key_certificate.go:131: calling [(github.com/go-i2p/go-i2p/lib/common/data.Integer).Int]\nat key_certificate.go:135: calling [(github.com/go-i2p/go-i2p/lib/common/data.Integer).Int]\nat key_certificate.go:132: calling [(*github.com/go-i2p/logger.Logger).WithFields]\nat key_certificate.go:134: calling [(*github.com/sirupsen/logrus.Logger).Debug]" ]
+        "(github.com/go-i2p/go-i2p/lib/common/key_certificate.KeyCertificate).CryptoSize" [ fillcolor="lightblue" label="CryptoSize" penwidth="1.5" tooltip="(github.com/go-i2p/go-i2p/lib/common/key_certificate.KeyCertificate).CryptoSize | defined in key_certificate.go:340\nat key_certificate.go:353: calling [(*github.com/sirupsen/logrus.Logger).Debug]\nat key_certificate.go:348: calling [(github.com/go-i2p/go-i2p/lib/common/key_certificate.KeyCertificate).PublicKeyType]\nat key_certificate.go:350: calling [(*github.com/go-i2p/logger.Logger).WithFields]" ]
+        "(github.com/go-i2p/go-i2p/lib/common/key_certificate.KeyCertificate).ConstructPublicKey" [ fillcolor="lightblue" label="ConstructPublicKey" penwidth="1.5" tooltip="(github.com/go-i2p/go-i2p/lib/common/key_certificate.KeyCertificate).ConstructPublicKey | defined in key_certificate.go:140\nat key_certificate.go:143: calling [(*github.com/sirupsen/logrus.Logger).Debug]\nat key_certificate.go:164: calling [(*github.com/sirupsen/logrus.Logger).Debug]\nat key_certificate.go:169: calling [(*github.com/sirupsen/logrus.Logger).Debug]\nat key_certificate.go:173: calling [(*github.com/go-i2p/logger.Logger).Warn]\nat key_certificate.go:141: calling [(*github.com/go-i2p/logger.Logger).WithFields]\nat key_certificate.go:150: calling [(*github.com/go-i2p/logger.Logger).WithFields]\nat key_certificate.go:171: calling [(*github.com/go-i2p/logger.Logger).WithFields]\nat key_certificate.go:144: calling [(github.com/go-i2p/go-i2p/lib/common/key_certificate.KeyCertificate).PublicKeyType]\nat key_certificate.go:149: calling [(github.com/go-i2p/go-i2p/lib/common/key_certificate.KeyCertificate).CryptoSize]\nat key_certificate.go:155: calling [(*github.com/go-i2p/logger.Logger).Error]\nat key_certificate.go:156: calling [github.com/samber/oops.Errorf]" ]
+        
+    }
+
+    }
+
+    "github.com/go-i2p/go-i2p/lib/common/key_certificate.NewKeyCertificate" -> "(*github.com/sirupsen/logrus.Logger).Println" [ tooltip="at key_certificate.go:379: calling [(*github.com/sirupsen/logrus.Logger).Println]\nat key_certificate.go:388: calling [(*github.com/sirupsen/logrus.Logger).Println]" color="saddlebrown" ]
+    "(*github.com/go-i2p/go-i2p/lib/common/key_certificate.KeyCertificate).SigningPublicKeySize" -> "(*github.com/sirupsen/logrus.Logger).Debug" [ color="saddlebrown" tooltip="at key_certificate.go:208: calling [(*github.com/sirupsen/logrus.Logger).Debug]\nat key_certificate.go:211: calling [(*github.com/sirupsen/logrus.Logger).Debug]" ]
+    "github.com/go-i2p/go-i2p/lib/common/key_certificate.KeyCertificateFromCertificate" -> "(*github.com/go-i2p/go-i2p/lib/common/certificate.Certificate).Type" [ color="saddlebrown" tooltip="at key_certificate.go:400: calling [(*github.com/go-i2p/go-i2p/lib/common/certificate.Certificate).Type]\nat key_certificate.go:401: calling [(*github.com/go-i2p/go-i2p/lib/common/certificate.Certificate).Type]" ]
+    "(*github.com/go-i2p/go-i2p/lib/common/key_certificate.KeyCertificate).CryptoPublicKeySize" -> "github.com/samber/oops.Errorf" [ color="saddlebrown" tooltip="at key_certificate.go:199: calling [github.com/samber/oops.Errorf]" ]
+    "(github.com/go-i2p/go-i2p/lib/common/key_certificate.KeyCertificate).ConstructPublicKey" -> "(*github.com/sirupsen/logrus.Logger).Debug" [ color="saddlebrown" tooltip="at key_certificate.go:143: calling [(*github.com/sirupsen/logrus.Logger).Debug]\nat key_certificate.go:164: calling [(*github.com/sirupsen/logrus.Logger).Debug]\nat key_certificate.go:169: calling [(*github.com/sirupsen/logrus.Logger).Debug]" ]
+    "github.com/go-i2p/go-i2p/lib/common/key_certificate.init" -> "github.com/go-i2p/logger.GetGoI2PLogger" [ tooltip="at key_certificate.go:48: calling [github.com/go-i2p/logger.GetGoI2PLogger]" color="saddlebrown" ]
+    "github.com/go-i2p/go-i2p/lib/common/key_certificate.NewKeyCertificate" -> "(*github.com/go-i2p/logger.Logger).WithFields" [ color="saddlebrown" tooltip="at key_certificate.go:361: calling [(*github.com/go-i2p/logger.Logger).WithFields]\nat key_certificate.go:390: calling [(*github.com/go-i2p/logger.Logger).WithFields]" ]
+    "github.com/go-i2p/go-i2p/lib/common/key_certificate.KeyCertificateFromCertificate" -> "(*github.com/go-i2p/go-i2p/lib/common/certificate.Certificate).Data" [ color="saddlebrown" tooltip="at key_certificate.go:404: calling [(*github.com/go-i2p/go-i2p/lib/common/certificate.Certificate).Data]" ]
+    "github.com/go-i2p/go-i2p/lib/common/key_certificate.KeyCertificateFromCertificate" -> "(github.com/go-i2p/go-i2p/lib/common/data.Integer).Int" [ color="saddlebrown" tooltip="at key_certificate.go:421: calling [(github.com/go-i2p/go-i2p/lib/common/data.Integer).Int]\nat key_certificate.go:422: calling [(github.com/go-i2p/go-i2p/lib/common/data.Integer).Int]" ]
+    "(github.com/go-i2p/go-i2p/lib/common/key_certificate.KeyCertificate).SigningPublicKeyType" -> "(*github.com/go-i2p/logger.Logger).WithFields" [ color="saddlebrown" tooltip="at key_certificate.go:123: calling [(*github.com/go-i2p/logger.Logger).WithFields]" ]
+    "(github.com/go-i2p/go-i2p/lib/common/key_certificate.KeyCertificate).SigningPublicKeyType" -> "(*github.com/sirupsen/logrus.Logger).Debug" [ color="saddlebrown" tooltip="at key_certificate.go:125: calling [(*github.com/sirupsen/logrus.Logger).Debug]" ]
+    "(github.com/go-i2p/go-i2p/lib/common/key_certificate.KeyCertificate).SignatureSize" -> "(github.com/go-i2p/go-i2p/lib/common/key_certificate.KeyCertificate).SigningPublicKeyType" [ tooltip="at key_certificate.go:324: calling [(github.com/go-i2p/go-i2p/lib/common/key_certificate.KeyCertificate).SigningPublicKeyType]" ]
+    "(github.com/go-i2p/go-i2p/lib/common/key_certificate.KeyCertificate).SignatureSize" -> "(*github.com/go-i2p/logger.Logger).Warn" [ color="saddlebrown" tooltip="at key_certificate.go:329: calling [(*github.com/go-i2p/logger.Logger).Warn]" ]
+    "(github.com/go-i2p/go-i2p/lib/common/key_certificate.KeyCertificate).ConstructSigningPublicKey" -> "github.com/samber/oops.Errorf" [ color="saddlebrown" tooltip="at key_certificate.go:248: calling [github.com/samber/oops.Errorf]\nat key_certificate.go:305: calling [github.com/samber/oops.Errorf]" ]
+    "(*github.com/go-i2p/go-i2p/lib/common/key_certificate.KeyCertificate).SigningPublicKeySize" -> "(github.com/go-i2p/go-i2p/lib/common/data.Integer).Int" [ color="saddlebrown" tooltip="at key_certificate.go:206: calling [(github.com/go-i2p/go-i2p/lib/common/data.Integer).Int]" ]
+    "github.com/go-i2p/go-i2p/lib/common/key_certificate.NewKeyCertificate" -> "(github.com/go-i2p/go-i2p/lib/common/data.Integer).Int" [ color="saddlebrown" tooltip="at key_certificate.go:388: calling [(github.com/go-i2p/go-i2p/lib/common/data.Integer).Int]\nat key_certificate.go:388: calling [(github.com/go-i2p/go-i2p/lib/common/data.Integer).Int]\nat key_certificate.go:391: calling [(github.com/go-i2p/go-i2p/lib/common/data.Integer).Int]\nat key_certificate.go:392: calling [(github.com/go-i2p/go-i2p/lib/common/data.Integer).Int]" ]
+    "(github.com/go-i2p/go-i2p/lib/common/key_certificate.KeyCertificate).PublicKeyType" -> "(github.com/go-i2p/go-i2p/lib/common/data.Integer).Int" [ color="saddlebrown" tooltip="at key_certificate.go:131: calling [(github.com/go-i2p/go-i2p/lib/common/data.Integer).Int]\nat key_certificate.go:135: calling [(github.com/go-i2p/go-i2p/lib/common/data.Integer).Int]" ]
+    "(github.com/go-i2p/go-i2p/lib/common/key_certificate.KeyCertificate).CryptoSize" -> "(*github.com/sirupsen/logrus.Logger).Debug" [ color="saddlebrown" tooltip="at key_certificate.go:353: calling [(*github.com/sirupsen/logrus.Logger).Debug]" ]
+    "(github.com/go-i2p/go-i2p/lib/common/key_certificate.KeyCertificate).ConstructPublicKey" -> "(*github.com/go-i2p/logger.Logger).Warn" [ color="saddlebrown" tooltip="at key_certificate.go:173: calling [(*github.com/go-i2p/logger.Logger).Warn]" ]
+    "github.com/go-i2p/go-i2p/lib/common/key_certificate.NewKeyCertificate" -> "github.com/samber/oops.Errorf" [ color="saddlebrown" tooltip="at key_certificate.go:373: calling [github.com/samber/oops.Errorf]\nat key_certificate.go:377: calling [github.com/samber/oops.Errorf]" ]
+    "github.com/go-i2p/go-i2p/lib/common/key_certificate.NewKeyCertificate" -> "(*github.com/go-i2p/go-i2p/lib/common/certificate.Certificate).Data" [ color="saddlebrown" tooltip="at key_certificate.go:376: calling [(*github.com/go-i2p/go-i2p/lib/common/certificate.Certificate).Data]\nat key_certificate.go:379: calling [(*github.com/go-i2p/go-i2p/lib/common/certificate.Certificate).Data]\nat key_certificate.go:379: calling [(*github.com/go-i2p/go-i2p/lib/common/certificate.Certificate).Data]\nat key_certificate.go:381: calling [(*github.com/go-i2p/go-i2p/lib/common/certificate.Certificate).Data]\nat key_certificate.go:382: calling [(*github.com/go-i2p/go-i2p/lib/common/certificate.Certificate).Data]" ]
+    "(*github.com/go-i2p/go-i2p/lib/common/key_certificate.KeyCertificate).CryptoPublicKeySize" -> "(github.com/go-i2p/go-i2p/lib/common/data.Integer).Int" [ color="saddlebrown" tooltip="at key_certificate.go:197: calling [(github.com/go-i2p/go-i2p/lib/common/data.Integer).Int]\nat key_certificate.go:199: calling [(github.com/go-i2p/go-i2p/lib/common/data.Integer).Int]" ]
+    "(github.com/go-i2p/go-i2p/lib/common/key_certificate.KeyCertificate).ConstructSigningPublicKey" -> "(*github.com/go-i2p/logger.Logger).Error" [ color="saddlebrown" tooltip="at key_certificate.go:247: calling [(*github.com/go-i2p/logger.Logger).Error]" ]
+    "(github.com/go-i2p/go-i2p/lib/common/key_certificate.KeyCertificate).ConstructSigningPublicKey" -> "(*github.com/go-i2p/logger.Logger).Warn" [ color="saddlebrown" tooltip="at key_certificate.go:304: calling [(*github.com/go-i2p/logger.Logger).Warn]" ]
+    "(github.com/go-i2p/go-i2p/lib/common/key_certificate.KeyCertificate).CryptoSize" -> "(github.com/go-i2p/go-i2p/lib/common/key_certificate.KeyCertificate).PublicKeyType" [ tooltip="at key_certificate.go:348: calling [(github.com/go-i2p/go-i2p/lib/common/key_certificate.KeyCertificate).PublicKeyType]" ]
+    "(github.com/go-i2p/go-i2p/lib/common/key_certificate.KeyCertificate).Data" -> "(*github.com/go-i2p/logger.Logger).WithFields" [ color="saddlebrown" tooltip="at key_certificate.go:114: calling [(*github.com/go-i2p/logger.Logger).WithFields]" ]
+    "github.com/go-i2p/go-i2p/lib/common/key_certificate.NewKeyCertificate" -> "(*github.com/sirupsen/logrus.Logger).Debug" [ color="saddlebrown" tooltip="at key_certificate.go:363: calling [(*github.com/sirupsen/logrus.Logger).Debug]\nat key_certificate.go:394: calling [(*github.com/sirupsen/logrus.Logger).Debug]" ]
+    "github.com/go-i2p/go-i2p/lib/common/key_certificate.NewKeyCertificate" -> "github.com/go-i2p/go-i2p/lib/common/data.ReadInteger" [ tooltip="at key_certificate.go:381: calling [github.com/go-i2p/go-i2p/lib/common/data.ReadInteger]\nat key_certificate.go:382: calling [github.com/go-i2p/go-i2p/lib/common/data.ReadInteger]" color="saddlebrown" ]
+    "(github.com/go-i2p/go-i2p/lib/common/key_certificate.KeyCertificate).SigningPublicKeyType" -> "(github.com/go-i2p/go-i2p/lib/common/data.Integer).Int" [ color="saddlebrown" tooltip="at key_certificate.go:122: calling [(github.com/go-i2p/go-i2p/lib/common/data.Integer).Int]\nat key_certificate.go:126: calling [(github.com/go-i2p/go-i2p/lib/common/data.Integer).Int]" ]
+    "(github.com/go-i2p/go-i2p/lib/common/key_certificate.KeyCertificate).SignatureSize" -> "(*github.com/sirupsen/logrus.Logger).Debug" [ color="saddlebrown" tooltip="at key_certificate.go:335: calling [(*github.com/sirupsen/logrus.Logger).Debug]" ]
+    "(github.com/go-i2p/go-i2p/lib/common/key_certificate.KeyCertificate).PublicKeyType" -> "(*github.com/go-i2p/logger.Logger).WithFields" [ tooltip="at key_certificate.go:132: calling [(*github.com/go-i2p/logger.Logger).WithFields]" color="saddlebrown" ]
+    "(github.com/go-i2p/go-i2p/lib/common/key_certificate.KeyCertificate).CryptoSize" -> "(*github.com/go-i2p/logger.Logger).WithFields" [ color="saddlebrown" tooltip="at key_certificate.go:350: calling [(*github.com/go-i2p/logger.Logger).WithFields]" ]
+    "(github.com/go-i2p/go-i2p/lib/common/key_certificate.KeyCertificate).ConstructPublicKey" -> "(*github.com/go-i2p/logger.Logger).WithFields" [ color="saddlebrown" tooltip="at key_certificate.go:141: calling [(*github.com/go-i2p/logger.Logger).WithFields]\nat key_certificate.go:150: calling [(*github.com/go-i2p/logger.Logger).WithFields]\nat key_certificate.go:171: calling [(*github.com/go-i2p/logger.Logger).WithFields]" ]
+    "github.com/go-i2p/go-i2p/lib/common/key_certificate.NewKeyCertificate" -> "(*github.com/go-i2p/logger.Logger).WithError" [ color="saddlebrown" tooltip="at key_certificate.go:368: calling [(*github.com/go-i2p/logger.Logger).WithError]" ]
+    "github.com/go-i2p/go-i2p/lib/common/key_certificate.KeyCertificateFromCertificate" -> "github.com/samber/oops.Errorf" [ color="saddlebrown" tooltip="at key_certificate.go:401: calling [github.com/samber/oops.Errorf]\nat key_certificate.go:409: calling [github.com/samber/oops.Errorf]" ]
+    "(github.com/go-i2p/go-i2p/lib/common/key_certificate.KeyCertificate).SignatureSize" -> "(*github.com/go-i2p/logger.Logger).WithFields" [ color="saddlebrown" tooltip="at key_certificate.go:327: calling [(*github.com/go-i2p/logger.Logger).WithFields]\nat key_certificate.go:332: calling [(*github.com/go-i2p/logger.Logger).WithFields]" ]
+    "(github.com/go-i2p/go-i2p/lib/common/key_certificate.KeyCertificate).ConstructPublicKey" -> "(github.com/go-i2p/go-i2p/lib/common/key_certificate.KeyCertificate).PublicKeyType" [ tooltip="at key_certificate.go:144: calling [(github.com/go-i2p/go-i2p/lib/common/key_certificate.KeyCertificate).PublicKeyType]" ]
+    "(github.com/go-i2p/go-i2p/lib/common/key_certificate.KeyCertificate).ConstructPublicKey" -> "(github.com/go-i2p/go-i2p/lib/common/key_certificate.KeyCertificate).CryptoSize" [ tooltip="at key_certificate.go:149: calling [(github.com/go-i2p/go-i2p/lib/common/key_certificate.KeyCertificate).CryptoSize]" ]
+    "(github.com/go-i2p/go-i2p/lib/common/key_certificate.KeyCertificate).Data" -> "(*github.com/sirupsen/logrus.Logger).Debug" [ tooltip="at key_certificate.go:116: calling [(*github.com/sirupsen/logrus.Logger).Debug]" color="saddlebrown" ]
+    "github.com/go-i2p/go-i2p/lib/common/key_certificate.NewKeyCertificate" -> "github.com/go-i2p/go-i2p/lib/common/certificate.ReadCertificate" [ color="saddlebrown" tooltip="at key_certificate.go:366: calling [github.com/go-i2p/go-i2p/lib/common/certificate.ReadCertificate]" ]
+    "github.com/go-i2p/go-i2p/lib/common/key_certificate.NewKeyCertificate" -> "(*github.com/go-i2p/logger.Logger).Error" [ color="saddlebrown" tooltip="at key_certificate.go:368: calling [(*github.com/go-i2p/logger.Logger).Error]" ]
+    "github.com/go-i2p/go-i2p/lib/common/key_certificate.NewKeyCertificate" -> "(*github.com/go-i2p/go-i2p/lib/common/certificate.Certificate).Type" [ tooltip="at key_certificate.go:372: calling [(*github.com/go-i2p/go-i2p/lib/common/certificate.Certificate).Type]\nat key_certificate.go:373: calling [(*github.com/go-i2p/go-i2p/lib/common/certificate.Certificate).Type]" color="saddlebrown" ]
+    "(github.com/go-i2p/go-i2p/lib/common/key_certificate.KeyCertificate).ConstructSigningPublicKey" -> "(*github.com/go-i2p/logger.Logger).WithFields" [ color="saddlebrown" tooltip="at key_certificate.go:233: calling [(*github.com/go-i2p/logger.Logger).WithFields]\nat key_certificate.go:242: calling [(*github.com/go-i2p/logger.Logger).WithFields]\nat key_certificate.go:302: calling [(*github.com/go-i2p/logger.Logger).WithFields]" ]
+    "(github.com/go-i2p/go-i2p/lib/common/key_certificate.KeyCertificate).ConstructSigningPublicKey" -> "(*github.com/sirupsen/logrus.Logger).Debug" [ tooltip="at key_certificate.go:235: calling [(*github.com/sirupsen/logrus.Logger).Debug]\nat key_certificate.go:256: calling [(*github.com/sirupsen/logrus.Logger).Debug]\nat key_certificate.go:261: calling [(*github.com/sirupsen/logrus.Logger).Debug]\nat key_certificate.go:266: calling [(*github.com/sirupsen/logrus.Logger).Debug]\nat key_certificate.go:295: calling [(*github.com/sirupsen/logrus.Logger).Debug]\nat key_certificate.go:300: calling [(*github.com/sirupsen/logrus.Logger).Debug]" color="saddlebrown" ]
+    "(github.com/go-i2p/go-i2p/lib/common/key_certificate.KeyCertificate).ConstructSigningPublicKey" -> "(github.com/go-i2p/go-i2p/lib/common/key_certificate.KeyCertificate).SignatureSize" [ tooltip="at key_certificate.go:241: calling [(github.com/go-i2p/go-i2p/lib/common/key_certificate.KeyCertificate).SignatureSize]" ]
+    "(github.com/go-i2p/go-i2p/lib/common/key_certificate.KeyCertificate).PublicKeyType" -> "(*github.com/sirupsen/logrus.Logger).Debug" [ color="saddlebrown" tooltip="at key_certificate.go:134: calling [(*github.com/sirupsen/logrus.Logger).Debug]" ]
+    "(github.com/go-i2p/go-i2p/lib/common/key_certificate.KeyCertificate).Data" -> "(*github.com/go-i2p/go-i2p/lib/common/certificate.Certificate).RawBytes" [ color="saddlebrown" tooltip="at key_certificate.go:113: calling [(*github.com/go-i2p/go-i2p/lib/common/certificate.Certificate).RawBytes]\nat key_certificate.go:117: calling [(*github.com/go-i2p/go-i2p/lib/common/certificate.Certificate).RawBytes]" ]
+    "(github.com/go-i2p/go-i2p/lib/common/key_certificate.KeyCertificate).ConstructSigningPublicKey" -> "(github.com/go-i2p/go-i2p/lib/common/key_certificate.KeyCertificate).SigningPublicKeyType" [ tooltip="at key_certificate.go:236: calling [(github.com/go-i2p/go-i2p/lib/common/key_certificate.KeyCertificate).SigningPublicKeyType]" ]
+    "(github.com/go-i2p/go-i2p/lib/common/key_certificate.KeyCertificate).ConstructPublicKey" -> "(*github.com/go-i2p/logger.Logger).Error" [ color="saddlebrown" tooltip="at key_certificate.go:155: calling [(*github.com/go-i2p/logger.Logger).Error]" ]
+    "(github.com/go-i2p/go-i2p/lib/common/key_certificate.KeyCertificate).ConstructPublicKey" -> "github.com/samber/oops.Errorf" [ color="saddlebrown" tooltip="at key_certificate.go:156: calling [github.com/samber/oops.Errorf]" ]
+}

@@ -1,0 +1,304 @@
+digraph gocallvis {
+    label="";
+    labeljust="l";
+    fontname="Arial";
+    fontsize="14";
+    rankdir="LR";
+    bgcolor="lightgray";
+    style="solid";
+    penwidth="0.5";
+    pad="0.0";
+    nodesep="0.35";
+
+    node [shape="box" style="filled,rounded" fillcolor="honeydew" fontname="Verdana" penwidth="1.0" margin="0.16,0.0"];
+    edge [minlen="2"]
+
+    subgraph "cluster_focus" {
+        labelloc="t";
+labeljust="c";
+fontsize="18";
+bgcolor="#e6ecfa";
+label="router_address";
+        
+        "github.com/go-i2p/go-i2p/lib/common/data.ToI2PString" [ tooltip="github.com/go-i2p/go-i2p/lib/common/data.ToI2PString | defined in string.go:114" fillcolor="moccasin" label="data\nToI2PString" penwidth="1.5" ]
+        "github.com/go-i2p/go-i2p/lib/common/router_address.init" [ fillcolor="lightblue" label="init" penwidth="0.5" tooltip="github.com/go-i2p/go-i2p/lib/common/router_address.init | defined in .:0\nat router_address.go:23: calling [github.com/go-i2p/logger.GetGoI2PLogger]" ]
+        "github.com/go-i2p/logger.GetGoI2PLogger" [ label="logger\nGetGoI2PLogger" penwidth="1.5" tooltip="github.com/go-i2p/logger.GetGoI2PLogger | defined in log.go:120" fillcolor="moccasin" ]
+        "github.com/samber/oops.Errorf" [ fillcolor="moccasin" label="oops\nErrorf" penwidth="1.5" tooltip="github.com/samber/oops.Errorf | defined in oops.go:34" ]
+        "github.com/go-i2p/go-i2p/lib/common/router_address.NewRouterAddress" [ fillcolor="lightblue" label="NewRouterAddress" penwidth="1.5" tooltip="github.com/go-i2p/go-i2p/lib/common/router_address.NewRouterAddress | defined in router_address.go:387\nat router_address.go:401: calling [github.com/go-i2p/go-i2p/lib/common/data.NewDate]\nat router_address.go:393: calling [(*github.com/go-i2p/logger.Logger).WithError]\nat router_address.go:403: calling [(*github.com/go-i2p/logger.Logger).WithError]\nat router_address.go:410: calling [(*github.com/go-i2p/logger.Logger).WithError]\nat router_address.go:417: calling [(*github.com/go-i2p/logger.Logger).WithError]\nat router_address.go:388: calling [(*github.com/sirupsen/logrus.Logger).Debug]\nat router_address.go:434: calling [(*github.com/sirupsen/logrus.Logger).Debug]\nat router_address.go:415: calling [github.com/go-i2p/go-i2p/lib/common/data.GoMapToMapping]\nat router_address.go:393: calling [(*github.com/go-i2p/logger.Logger).Error]\nat router_address.go:403: calling [(*github.com/go-i2p/logger.Logger).Error]\nat router_address.go:410: calling [(*github.com/go-i2p/logger.Logger).Error]\nat router_address.go:417: calling [(*github.com/go-i2p/logger.Logger).Error]\nat router_address.go:391: calling [github.com/go-i2p/go-i2p/lib/common/data.NewIntegerFromInt]\nat router_address.go:429: calling [(*github.com/go-i2p/logger.Logger).WithFields]\nat router_address.go:408: calling [github.com/go-i2p/go-i2p/lib/common/data.ToI2PString]" ]
+        "github.com/go-i2p/go-i2p/lib/common/data.NewIntegerFromInt" [ penwidth="1.5" tooltip="github.com/go-i2p/go-i2p/lib/common/data.NewIntegerFromInt | defined in integer.go:68" fillcolor="moccasin" label="data\nNewIntegerFromInt" ]
+        "github.com/go-i2p/go-i2p/lib/common/data.NewDate" [ fillcolor="moccasin" label="data\nNewDate" penwidth="1.5" tooltip="github.com/go-i2p/go-i2p/lib/common/data.NewDate | defined in date.go:74" ]
+        "github.com/go-i2p/go-i2p/lib/common/data.GoMapToMapping" [ label="data\nGoMapToMapping" penwidth="1.5" tooltip="github.com/go-i2p/go-i2p/lib/common/data.GoMapToMapping | defined in mapping.go:99" fillcolor="moccasin" ]
+        "github.com/go-i2p/go-i2p/lib/common/router_address.ReadRouterAddress" [ penwidth="1.5" tooltip="github.com/go-i2p/go-i2p/lib/common/router_address.ReadRouterAddress | defined in router_address.go:345\nat router_address.go:348: calling [(*github.com/go-i2p/logger.Logger).Error]\nat router_address.go:364: calling [(*github.com/go-i2p/logger.Logger).Error]\nat router_address.go:371: calling [(*github.com/go-i2p/logger.Logger).Error]\nat router_address.go:380: calling [(*github.com/go-i2p/logger.Logger).Error]\nat router_address.go:346: calling [(*github.com/sirupsen/logrus.Logger).Debug]\nat router_address.go:349: calling [github.com/samber/oops.Errorf]\nat router_address.go:354: calling [(*github.com/go-i2p/logger.Logger).WithFields]\nat router_address.go:361: calling [(*github.com/go-i2p/logger.Logger).WithFields]\nat router_address.go:368: calling [(*github.com/go-i2p/logger.Logger).WithFields]\nat router_address.go:376: calling [(*github.com/go-i2p/logger.Logger).WithFields]\nat router_address.go:374: calling [github.com/go-i2p/go-i2p/lib/common/data.NewMapping]\nat router_address.go:346: calling [(*github.com/go-i2p/logger.Logger).WithField]\nat router_address.go:348: calling [(*github.com/go-i2p/logger.Logger).WithField]\nat router_address.go:357: calling [(*github.com/go-i2p/logger.Logger).Warn]\nat router_address.go:366: calling [github.com/go-i2p/go-i2p/lib/common/data.ReadI2PString]\nat router_address.go:352: calling [github.com/go-i2p/go-i2p/lib/common/data.NewInteger]\nat router_address.go:359: calling [github.com/go-i2p/go-i2p/lib/common/data.NewDate]" fillcolor="lightblue" label="ReadRouterAddress" ]
+        "github.com/go-i2p/go-i2p/lib/common/data.NewInteger" [ tooltip="github.com/go-i2p/go-i2p/lib/common/data.NewInteger | defined in integer.go:61" fillcolor="moccasin" label="data\nNewInteger" penwidth="1.5" ]
+        "github.com/go-i2p/go-i2p/lib/common/data.ReadI2PString" [ fillcolor="moccasin" label="data\nReadI2PString" penwidth="1.5" tooltip="github.com/go-i2p/go-i2p/lib/common/data.ReadI2PString | defined in string.go:146" ]
+        "github.com/go-i2p/go-i2p/lib/common/data.NewMapping" [ fillcolor="moccasin" label="data\nNewMapping" penwidth="1.5" tooltip="github.com/go-i2p/go-i2p/lib/common/data.NewMapping | defined in mapping.go:246" ]
+        
+        subgraph "cluster_*github.com/go-i2p/go-i2p/lib/common/data.Mapping" {
+        labelloc="b";
+style="rounded,filled";
+fillcolor="wheat2";
+label="(*Mapping)";
+tooltip="type: *github.com/go-i2p/go-i2p/lib/common/data.Mapping";
+penwidth="0.5";
+fontsize="15";
+fontcolor="#222222";
+        
+        "(*github.com/go-i2p/go-i2p/lib/common/data.Mapping).Data" [ penwidth="1.5" tooltip="(*github.com/go-i2p/go-i2p/lib/common/data.Mapping).Data | defined in mapping.go:60" fillcolor="moccasin" label="data\nData" ]
+        
+    }
+
+        subgraph "cluster_*github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress" {
+        penwidth="0.5";
+labelloc="b";
+style="rounded,filled";
+fillcolor="lightsteelblue";
+label="(*RouterAddress)";
+tooltip="type: *github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress";
+fontsize="15";
+fontcolor="#222222";
+        
+        "(*github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).UDP" [ fillcolor="lightblue" label="UDP" penwidth="1.5" tooltip="(*github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).UDP | defined in router_address.go:114\nat router_address.go:116: calling [(*github.com/sirupsen/logrus.Logger).Debug]\nat router_address.go:118: calling [(*github.com/sirupsen/logrus.Logger).Debug]\nat router_address.go:118: calling [(*github.com/go-i2p/logger.Logger).WithField]\nat router_address.go:117: calling [(*github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).Network]" ]
+        "(*github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).Network" [ penwidth="1.5" tooltip="(*github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).Network | defined in router_address.go:82\nat router_address.go:93: calling [(*github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).IPVersion]\nat router_address.go:88: calling [(github.com/go-i2p/go-i2p/lib/common/data.I2PString).Data]\nat router_address.go:85: calling [(*github.com/go-i2p/logger.Logger).Warn]\nat router_address.go:90: calling [(*github.com/go-i2p/logger.Logger).WithError]\nat router_address.go:90: calling [(*github.com/go-i2p/logger.Logger).Error]\nat router_address.go:83: calling [(*github.com/sirupsen/logrus.Logger).Debug]\nat router_address.go:94: calling [(*github.com/sirupsen/logrus.Logger).Debug]\nat router_address.go:94: calling [(*github.com/go-i2p/logger.Logger).WithField]" fillcolor="lightblue" label="Network" ]
+        "(*github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).IPVersion" [ penwidth="1.5" tooltip="(*github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).IPVersion | defined in router_address.go:99\nat router_address.go:103: calling [(*github.com/go-i2p/logger.Logger).WithError]\nat router_address.go:101: calling [(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).CapsString]\nat router_address.go:103: calling [(*github.com/go-i2p/logger.Logger).Error]\nat router_address.go:101: calling [(github.com/go-i2p/go-i2p/lib/common/data.I2PString).Data]\nat router_address.go:100: calling [(*github.com/sirupsen/logrus.Logger).Debug]\nat router_address.go:107: calling [(*github.com/sirupsen/logrus.Logger).Debug]\nat router_address.go:110: calling [(*github.com/sirupsen/logrus.Logger).Debug]" fillcolor="lightblue" label="IPVersion" ]
+        "(*github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).String" [ fillcolor="lightblue" label="String" penwidth="1.5" tooltip="(*github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).String | defined in router_address.go:123\nat router_address.go:126: calling [(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).TransportStyle]\nat router_address.go:132: calling [(*github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).UDP]\nat router_address.go:128: calling [(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).PortString]\nat router_address.go:144: calling [(*github.com/go-i2p/logger.Logger).WithField]\nat router_address.go:129: calling [(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).StaticKeyString]\nat router_address.go:133: calling [(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).IntroducerHashString]\nat router_address.go:136: calling [(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).IntroducerHashString]\nat router_address.go:139: calling [(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).IntroducerHashString]\nat router_address.go:127: calling [(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).HostString]\nat router_address.go:130: calling [(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).InitializationVectorString]\nat router_address.go:135: calling [(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).IntroducerTagString]\nat router_address.go:138: calling [(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).IntroducerTagString]\nat router_address.go:141: calling [(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).IntroducerTagString]\nat router_address.go:131: calling [(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).ProtocolVersionString]\nat router_address.go:134: calling [(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).IntroducerExpirationString]\nat router_address.go:137: calling [(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).IntroducerExpirationString]\nat router_address.go:140: calling [(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).IntroducerExpirationString]\nat router_address.go:124: calling [(*github.com/sirupsen/logrus.Logger).Debug]\nat router_address.go:144: calling [(*github.com/sirupsen/logrus.Logger).Debug]" ]
+        
+    }
+
+        subgraph "cluster_*github.com/go-i2p/logger.Logger" {
+        tooltip="type: *github.com/go-i2p/logger.Logger";
+penwidth="0.5";
+fontsize="15";
+fontcolor="#222222";
+labelloc="b";
+style="rounded,filled";
+fillcolor="wheat2";
+label="(*Logger)";
+        
+        "(*github.com/go-i2p/logger.Logger).Warn" [ fillcolor="moccasin" label="logger\nWarn" penwidth="1.5" tooltip="(*github.com/go-i2p/logger.Logger).Warn | defined in log.go:30" ]
+        "(*github.com/go-i2p/logger.Logger).WithError" [ tooltip="(*github.com/go-i2p/logger.Logger).WithError | defined in log.go:66" fillcolor="moccasin" label="logger\nWithError" penwidth="1.5" ]
+        "(*github.com/go-i2p/logger.Logger).Error" [ fillcolor="moccasin" label="logger\nError" penwidth="1.5" tooltip="(*github.com/go-i2p/logger.Logger).Error | defined in log.go:42" ]
+        "(*github.com/go-i2p/logger.Logger).WithField" [ fillcolor="moccasin" label="logger\nWithField" penwidth="1.5" tooltip="(*github.com/go-i2p/logger.Logger).WithField | defined in log.go:54" ]
+        "(*github.com/go-i2p/logger.Logger).WithFields" [ fillcolor="moccasin" label="logger\nWithFields" penwidth="1.5" tooltip="(*github.com/go-i2p/logger.Logger).WithFields | defined in log.go:60" ]
+        
+    }
+
+        subgraph "cluster_*github.com/sirupsen/logrus.Logger" {
+        fontcolor="#222222";
+labelloc="b";
+style="rounded,filled";
+fillcolor="wheat2";
+label="(*Logger)";
+tooltip="type: *github.com/sirupsen/logrus.Logger";
+penwidth="0.5";
+fontsize="15";
+        
+        "(*github.com/sirupsen/logrus.Logger).Debug" [ fillcolor="moccasin" label="logrus\nDebug" penwidth="1.5" tooltip="(*github.com/sirupsen/logrus.Logger).Debug | defined in logger.go:221" ]
+        
+    }
+
+        subgraph "cluster_github.com/go-i2p/go-i2p/lib/common/data.Date" {
+        style="rounded,filled";
+fillcolor="wheat2";
+label="(Date)";
+tooltip="type: github.com/go-i2p/go-i2p/lib/common/data.Date";
+penwidth="0.5";
+fontsize="15";
+fontcolor="#222222";
+labelloc="b";
+        
+        "(github.com/go-i2p/go-i2p/lib/common/data.Date).Bytes" [ label="data\nBytes" penwidth="1.5" tooltip="(github.com/go-i2p/go-i2p/lib/common/data.Date).Bytes | defined in date.go:35" fillcolor="moccasin" ]
+        
+    }
+
+        subgraph "cluster_github.com/go-i2p/go-i2p/lib/common/data.I2PString" {
+        labelloc="b";
+style="rounded,filled";
+fillcolor="wheat2";
+label="(I2PString)";
+tooltip="type: github.com/go-i2p/go-i2p/lib/common/data.I2PString";
+penwidth="0.5";
+fontsize="15";
+fontcolor="#222222";
+        
+        "(github.com/go-i2p/go-i2p/lib/common/data.I2PString).Data" [ tooltip="(github.com/go-i2p/go-i2p/lib/common/data.I2PString).Data | defined in string.go:73" fillcolor="moccasin" label="data\nData" penwidth="1.5" ]
+        
+    }
+
+        subgraph "cluster_github.com/go-i2p/go-i2p/lib/common/data.Integer" {
+        style="rounded,filled";
+fillcolor="wheat2";
+label="(Integer)";
+tooltip="type: github.com/go-i2p/go-i2p/lib/common/data.Integer";
+penwidth="0.5";
+fontsize="15";
+fontcolor="#222222";
+labelloc="b";
+        
+        "(github.com/go-i2p/go-i2p/lib/common/data.Integer).Int" [ fillcolor="moccasin" label="data\nInt" penwidth="1.5" tooltip="(github.com/go-i2p/go-i2p/lib/common/data.Integer).Int | defined in integer.go:32" ]
+        "(github.com/go-i2p/go-i2p/lib/common/data.Integer).Bytes" [ fillcolor="moccasin" label="data\nBytes" penwidth="1.5" tooltip="(github.com/go-i2p/go-i2p/lib/common/data.Integer).Bytes | defined in integer.go:27" ]
+        
+    }
+
+        subgraph "cluster_github.com/go-i2p/go-i2p/lib/common/data.Mapping" {
+        labelloc="b";
+style="rounded,filled";
+fillcolor="wheat2";
+label="(Mapping)";
+tooltip="type: github.com/go-i2p/go-i2p/lib/common/data.Mapping";
+penwidth="0.5";
+fontsize="15";
+fontcolor="#222222";
+        
+        "(github.com/go-i2p/go-i2p/lib/common/data.Mapping).Values" [ fillcolor="moccasin" label="data\nValues" penwidth="1.5" tooltip="(github.com/go-i2p/go-i2p/lib/common/data.Mapping).Values | defined in mapping.go:48" ]
+        
+    }
+
+        subgraph "cluster_github.com/go-i2p/go-i2p/lib/common/data.MappingValues" {
+        tooltip="type: github.com/go-i2p/go-i2p/lib/common/data.MappingValues";
+penwidth="0.5";
+fontsize="15";
+fontcolor="#222222";
+labelloc="b";
+style="rounded,filled";
+fillcolor="wheat2";
+label="(MappingValues)";
+        
+        "(github.com/go-i2p/go-i2p/lib/common/data.MappingValues).Get" [ tooltip="(github.com/go-i2p/go-i2p/lib/common/data.MappingValues).Get | defined in mapping_values.go:13" fillcolor="moccasin" label="data\nGet" penwidth="1.5" ]
+        
+    }
+
+        subgraph "cluster_github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress" {
+        tooltip="type: github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress";
+fontcolor="#222222";
+fillcolor="lightsteelblue";
+penwidth="0.5";
+fontsize="15";
+labelloc="b";
+style="rounded,filled";
+label="(RouterAddress)";
+        
+        "(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).HostString" [ fillcolor="lightblue" label="HostString" penwidth="1.5" tooltip="(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).HostString | defined in router_address.go:192\nat router_address.go:193: calling [github.com/go-i2p/go-i2p/lib/common/data.ToI2PString]\nat router_address.go:194: calling [(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).GetOption]" ]
+        "(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).Options" [ fillcolor="lightblue" label="Options" penwidth="1.5" tooltip="(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).Options | defined in router_address.go:323\nat router_address.go:325: calling [(*github.com/go-i2p/logger.Logger).Warn]" ]
+        "(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).GetOption" [ fillcolor="lightblue" label="GetOption" penwidth="1.5" tooltip="(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).GetOption | defined in router_address.go:178\nat router_address.go:179: calling [(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).Options]\nat router_address.go:179: calling [(github.com/go-i2p/go-i2p/lib/common/data.MappingValues).Get]\nat router_address.go:179: calling [(github.com/go-i2p/go-i2p/lib/common/data.Mapping).Values]" ]
+        "(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).Cost" [ tooltip="(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).Cost | defined in router_address.go:163\nat router_address.go:164: calling [(github.com/go-i2p/go-i2p/lib/common/data.Integer).Int]" fillcolor="lightblue" label="Cost" penwidth="1.5" ]
+        "(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).CapsString" [ fillcolor="lightblue" label="CapsString" penwidth="1.5" tooltip="(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).CapsString | defined in router_address.go:202\nat router_address.go:204: calling [(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).GetOption]\nat router_address.go:203: calling [github.com/go-i2p/go-i2p/lib/common/data.ToI2PString]" ]
+        "(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).InitializationVectorString" [ penwidth="1.5" tooltip="(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).InitializationVectorString | defined in router_address.go:212\nat router_address.go:213: calling [github.com/go-i2p/go-i2p/lib/common/data.ToI2PString]\nat router_address.go:214: calling [(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).GetOption]" fillcolor="lightblue" label="InitializationVectorString" ]
+        "(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).InitializationVector" [ fillcolor="lightblue" label="InitializationVector" penwidth="1.5" tooltip="(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).InitializationVector | defined in router_address.go:310\nat router_address.go:311: calling [(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).InitializationVectorString]\nat router_address.go:313: calling [github.com/samber/oops.Errorf]" ]
+        "(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).PortString" [ penwidth="1.5" tooltip="(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).PortString | defined in router_address.go:197\nat router_address.go:199: calling [(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).GetOption]\nat router_address.go:198: calling [github.com/go-i2p/go-i2p/lib/common/data.ToI2PString]" fillcolor="lightblue" label="PortString" ]
+        "(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).ProtocolVersionString" [ fillcolor="lightblue" label="ProtocolVersionString" penwidth="1.5" tooltip="(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).ProtocolVersionString | defined in router_address.go:217\nat router_address.go:219: calling [(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).GetOption]\nat router_address.go:218: calling [github.com/go-i2p/go-i2p/lib/common/data.ToI2PString]" ]
+        "(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).ProtocolVersion" [ fillcolor="lightblue" label="ProtocolVersion" penwidth="1.5" tooltip="(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).ProtocolVersion | defined in router_address.go:318\nat router_address.go:319: calling [(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).ProtocolVersionString]\nat router_address.go:319: calling [(github.com/go-i2p/go-i2p/lib/common/data.I2PString).Data]" ]
+        "(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).CheckOption" [ fillcolor="lightblue" label="CheckOption" penwidth="1.5" tooltip="(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).CheckOption | defined in router_address.go:187\nat router_address.go:188: calling [github.com/go-i2p/go-i2p/lib/common/data.ToI2PString]\nat router_address.go:189: calling [(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).HasOption]" ]
+        "(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).HasOption" [ fillcolor="lightblue" label="HasOption" penwidth="1.5" tooltip="(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).HasOption | defined in router_address.go:182\nat router_address.go:183: calling [(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).GetOption]" ]
+        "(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).checkValid" [ fillcolor="lightblue" label="checkValid" penwidth="0.5" tooltip="(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).checkValid | defined in router_address.go:332\nat router_address.go:334: calling [github.com/samber/oops.Errorf]\nat router_address.go:337: calling [github.com/samber/oops.Errorf]" ]
+        "(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).TransportStyle" [ penwidth="1.5" tooltip="(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).TransportStyle | defined in router_address.go:173" fillcolor="lightblue" label="TransportStyle" ]
+        "(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).StaticKeyString" [ fillcolor="lightblue" label="StaticKeyString" penwidth="1.5" tooltip="(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).StaticKeyString | defined in router_address.go:207\nat router_address.go:209: calling [(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).GetOption]\nat router_address.go:208: calling [github.com/go-i2p/go-i2p/lib/common/data.ToI2PString]" ]
+        "(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).IntroducerHashString" [ fillcolor="lightblue" label="IntroducerHashString" penwidth="1.5" tooltip="(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).IntroducerHashString | defined in router_address.go:222\nat router_address.go:226: calling [(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).GetOption]\nat router_address.go:229: calling [(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).GetOption]\nat router_address.go:225: calling [github.com/go-i2p/go-i2p/lib/common/data.ToI2PString]\nat router_address.go:228: calling [github.com/go-i2p/go-i2p/lib/common/data.ToI2PString]" ]
+        "(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).IntroducerExpirationString" [ fillcolor="lightblue" label="IntroducerExpirationString" penwidth="1.5" tooltip="(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).IntroducerExpirationString | defined in router_address.go:232\nat router_address.go:236: calling [(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).GetOption]\nat router_address.go:239: calling [(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).GetOption]\nat router_address.go:235: calling [github.com/go-i2p/go-i2p/lib/common/data.ToI2PString]\nat router_address.go:238: calling [github.com/go-i2p/go-i2p/lib/common/data.ToI2PString]" ]
+        "(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).IntroducerTagString" [ label="IntroducerTagString" penwidth="1.5" tooltip="(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).IntroducerTagString | defined in router_address.go:242\nat router_address.go:245: calling [github.com/go-i2p/go-i2p/lib/common/data.ToI2PString]\nat router_address.go:248: calling [github.com/go-i2p/go-i2p/lib/common/data.ToI2PString]\nat router_address.go:246: calling [(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).GetOption]\nat router_address.go:249: calling [(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).GetOption]" fillcolor="lightblue" ]
+        "(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).Bytes" [ penwidth="1.5" tooltip="(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).Bytes | defined in router_address.go:151\nat router_address.go:152: calling [(*github.com/sirupsen/logrus.Logger).Debug]\nat router_address.go:158: calling [(*github.com/sirupsen/logrus.Logger).Debug]\nat router_address.go:158: calling [(*github.com/go-i2p/logger.Logger).WithField]\nat router_address.go:157: calling [(*github.com/go-i2p/go-i2p/lib/common/data.Mapping).Data]\nat router_address.go:154: calling [(github.com/go-i2p/go-i2p/lib/common/data.Integer).Bytes]\nat router_address.go:155: calling [(github.com/go-i2p/go-i2p/lib/common/data.Date).Bytes]" fillcolor="lightblue" label="Bytes" ]
+        "(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).Host" [ penwidth="1.5" tooltip="(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).Host | defined in router_address.go:252\nat router_address.go:263: calling [github.com/samber/oops.Errorf]\nat router_address.go:254: calling [(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).HostString]\nat router_address.go:253: calling [(*github.com/sirupsen/logrus.Logger).Debug]\nat router_address.go:270: calling [(*github.com/sirupsen/logrus.Logger).Debug]\nat router_address.go:255: calling [(github.com/go-i2p/go-i2p/lib/common/data.I2PString).Data]\nat router_address.go:270: calling [(*github.com/go-i2p/logger.Logger).WithField]\nat router_address.go:257: calling [(*github.com/go-i2p/logger.Logger).WithError]\nat router_address.go:268: calling [(*github.com/go-i2p/logger.Logger).WithError]\nat router_address.go:257: calling [(*github.com/go-i2p/logger.Logger).Error]\nat router_address.go:262: calling [(*github.com/go-i2p/logger.Logger).Error]\nat router_address.go:268: calling [(*github.com/go-i2p/logger.Logger).Error]" fillcolor="lightblue" label="Host" ]
+        "(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).Port" [ fillcolor="lightblue" label="Port" penwidth="1.5" tooltip="(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).Port | defined in router_address.go:275\nat router_address.go:278: calling [(github.com/go-i2p/go-i2p/lib/common/data.I2PString).Data]\nat router_address.go:280: calling [(*github.com/go-i2p/logger.Logger).WithError]\nat router_address.go:285: calling [(*github.com/go-i2p/logger.Logger).WithError]\nat router_address.go:280: calling [(*github.com/go-i2p/logger.Logger).Error]\nat router_address.go:285: calling [(*github.com/go-i2p/logger.Logger).Error]\nat router_address.go:276: calling [(*github.com/sirupsen/logrus.Logger).Debug]\nat router_address.go:290: calling [(*github.com/sirupsen/logrus.Logger).Debug]\nat router_address.go:277: calling [(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).PortString]\nat router_address.go:290: calling [(*github.com/go-i2p/logger.Logger).WithField]" ]
+        "(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).StaticKey" [ fillcolor="lightblue" label="StaticKey" penwidth="1.5" tooltip="(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).StaticKey | defined in router_address.go:294\nat router_address.go:295: calling [(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).StaticKeyString]\nat router_address.go:297: calling [github.com/samber/oops.Errorf]\nat router_address.go:302: calling [github.com/samber/oops.Errorf]" ]
+        
+    }
+
+    }
+
+    "(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).IntroducerExpirationString" -> "(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).GetOption" [ tooltip="at router_address.go:236: calling [(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).GetOption]\nat router_address.go:239: calling [(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).GetOption]" ]
+    "(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).Bytes" -> "(*github.com/sirupsen/logrus.Logger).Debug" [ color="saddlebrown" tooltip="at router_address.go:152: calling [(*github.com/sirupsen/logrus.Logger).Debug]\nat router_address.go:158: calling [(*github.com/sirupsen/logrus.Logger).Debug]" ]
+    "github.com/go-i2p/go-i2p/lib/common/router_address.ReadRouterAddress" -> "(*github.com/go-i2p/logger.Logger).Error" [ color="saddlebrown" tooltip="at router_address.go:348: calling [(*github.com/go-i2p/logger.Logger).Error]\nat router_address.go:364: calling [(*github.com/go-i2p/logger.Logger).Error]\nat router_address.go:371: calling [(*github.com/go-i2p/logger.Logger).Error]\nat router_address.go:380: calling [(*github.com/go-i2p/logger.Logger).Error]" ]
+    "(*github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).Network" -> "(*github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).IPVersion" [ tooltip="at router_address.go:93: calling [(*github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).IPVersion]" ]
+    "github.com/go-i2p/go-i2p/lib/common/router_address.init" -> "github.com/go-i2p/logger.GetGoI2PLogger" [ color="saddlebrown" tooltip="at router_address.go:23: calling [github.com/go-i2p/logger.GetGoI2PLogger]" ]
+    "github.com/go-i2p/go-i2p/lib/common/router_address.NewRouterAddress" -> "github.com/go-i2p/go-i2p/lib/common/data.NewDate" [ color="saddlebrown" tooltip="at router_address.go:401: calling [github.com/go-i2p/go-i2p/lib/common/data.NewDate]" ]
+    "(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).Bytes" -> "(*github.com/go-i2p/logger.Logger).WithField" [ color="saddlebrown" tooltip="at router_address.go:158: calling [(*github.com/go-i2p/logger.Logger).WithField]" ]
+    "(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).Host" -> "github.com/samber/oops.Errorf" [ color="saddlebrown" tooltip="at router_address.go:263: calling [github.com/samber/oops.Errorf]" ]
+    "(*github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).UDP" -> "(*github.com/sirupsen/logrus.Logger).Debug" [ color="saddlebrown" tooltip="at router_address.go:116: calling [(*github.com/sirupsen/logrus.Logger).Debug]\nat router_address.go:118: calling [(*github.com/sirupsen/logrus.Logger).Debug]" ]
+    "(*github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).IPVersion" -> "(*github.com/go-i2p/logger.Logger).WithError" [ color="saddlebrown" tooltip="at router_address.go:103: calling [(*github.com/go-i2p/logger.Logger).WithError]" ]
+    "github.com/go-i2p/go-i2p/lib/common/router_address.NewRouterAddress" -> "(*github.com/go-i2p/logger.Logger).WithError" [ color="saddlebrown" tooltip="at router_address.go:393: calling [(*github.com/go-i2p/logger.Logger).WithError]\nat router_address.go:403: calling [(*github.com/go-i2p/logger.Logger).WithError]\nat router_address.go:410: calling [(*github.com/go-i2p/logger.Logger).WithError]\nat router_address.go:417: calling [(*github.com/go-i2p/logger.Logger).WithError]" ]
+    "(*github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).String" -> "(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).TransportStyle" [ tooltip="at router_address.go:126: calling [(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).TransportStyle]" ]
+    "(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).IntroducerExpirationString" -> "github.com/go-i2p/go-i2p/lib/common/data.ToI2PString" [ color="saddlebrown" tooltip="at router_address.go:235: calling [github.com/go-i2p/go-i2p/lib/common/data.ToI2PString]\nat router_address.go:238: calling [github.com/go-i2p/go-i2p/lib/common/data.ToI2PString]" ]
+    "(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).Bytes" -> "(*github.com/go-i2p/go-i2p/lib/common/data.Mapping).Data" [ color="saddlebrown" tooltip="at router_address.go:157: calling [(*github.com/go-i2p/go-i2p/lib/common/data.Mapping).Data]" ]
+    "(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).Host" -> "(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).HostString" [ tooltip="at router_address.go:254: calling [(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).HostString]" ]
+    "github.com/go-i2p/go-i2p/lib/common/router_address.ReadRouterAddress" -> "(*github.com/sirupsen/logrus.Logger).Debug" [ color="saddlebrown" tooltip="at router_address.go:346: calling [(*github.com/sirupsen/logrus.Logger).Debug]" ]
+    "(*github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).Network" -> "(github.com/go-i2p/go-i2p/lib/common/data.I2PString).Data" [ color="saddlebrown" tooltip="at router_address.go:88: calling [(github.com/go-i2p/go-i2p/lib/common/data.I2PString).Data]" ]
+    "(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).CapsString" -> "(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).GetOption" [ tooltip="at router_address.go:204: calling [(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).GetOption]" ]
+    "(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).InitializationVector" -> "(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).InitializationVectorString" [ tooltip="at router_address.go:311: calling [(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).InitializationVectorString]" ]
+    "github.com/go-i2p/go-i2p/lib/common/router_address.NewRouterAddress" -> "(*github.com/sirupsen/logrus.Logger).Debug" [ color="saddlebrown" tooltip="at router_address.go:388: calling [(*github.com/sirupsen/logrus.Logger).Debug]\nat router_address.go:434: calling [(*github.com/sirupsen/logrus.Logger).Debug]" ]
+    "(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).Bytes" -> "(github.com/go-i2p/go-i2p/lib/common/data.Integer).Bytes" [ color="saddlebrown" tooltip="at router_address.go:154: calling [(github.com/go-i2p/go-i2p/lib/common/data.Integer).Bytes]" ]
+    "(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).Host" -> "(*github.com/sirupsen/logrus.Logger).Debug" [ color="saddlebrown" tooltip="at router_address.go:253: calling [(*github.com/sirupsen/logrus.Logger).Debug]\nat router_address.go:270: calling [(*github.com/sirupsen/logrus.Logger).Debug]" ]
+    "(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).Host" -> "(github.com/go-i2p/go-i2p/lib/common/data.I2PString).Data" [ color="saddlebrown" tooltip="at router_address.go:255: calling [(github.com/go-i2p/go-i2p/lib/common/data.I2PString).Data]" ]
+    "(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).Host" -> "(*github.com/go-i2p/logger.Logger).WithField" [ color="saddlebrown" tooltip="at router_address.go:270: calling [(*github.com/go-i2p/logger.Logger).WithField]" ]
+    "(*github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).Network" -> "(*github.com/go-i2p/logger.Logger).Warn" [ color="saddlebrown" tooltip="at router_address.go:85: calling [(*github.com/go-i2p/logger.Logger).Warn]" ]
+    "(*github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).Network" -> "(*github.com/go-i2p/logger.Logger).WithError" [ color="saddlebrown" tooltip="at router_address.go:90: calling [(*github.com/go-i2p/logger.Logger).WithError]" ]
+    "(*github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).UDP" -> "(*github.com/go-i2p/logger.Logger).WithField" [ color="saddlebrown" tooltip="at router_address.go:118: calling [(*github.com/go-i2p/logger.Logger).WithField]" ]
+    "(*github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).String" -> "(*github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).UDP" [ tooltip="at router_address.go:132: calling [(*github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).UDP]" ]
+    "(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).IntroducerHashString" -> "(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).GetOption" [ tooltip="at router_address.go:226: calling [(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).GetOption]\nat router_address.go:229: calling [(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).GetOption]" ]
+    "(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).Port" -> "(github.com/go-i2p/go-i2p/lib/common/data.I2PString).Data" [ color="saddlebrown" tooltip="at router_address.go:278: calling [(github.com/go-i2p/go-i2p/lib/common/data.I2PString).Data]" ]
+    "(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).Port" -> "(*github.com/go-i2p/logger.Logger).WithError" [ color="saddlebrown" tooltip="at router_address.go:280: calling [(*github.com/go-i2p/logger.Logger).WithError]\nat router_address.go:285: calling [(*github.com/go-i2p/logger.Logger).WithError]" ]
+    "(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).StaticKey" -> "(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).StaticKeyString" [ tooltip="at router_address.go:295: calling [(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).StaticKeyString]" ]
+    "(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).Cost" -> "(github.com/go-i2p/go-i2p/lib/common/data.Integer).Int" [ color="saddlebrown" tooltip="at router_address.go:164: calling [(github.com/go-i2p/go-i2p/lib/common/data.Integer).Int]" ]
+    "(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).PortString" -> "(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).GetOption" [ tooltip="at router_address.go:199: calling [(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).GetOption]" ]
+    "(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).HasOption" -> "(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).GetOption" [ tooltip="at router_address.go:183: calling [(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).GetOption]" ]
+    "(*github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).String" -> "(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).PortString" [ tooltip="at router_address.go:128: calling [(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).PortString]" ]
+    "(*github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).String" -> "(*github.com/go-i2p/logger.Logger).WithField" [ color="saddlebrown" tooltip="at router_address.go:144: calling [(*github.com/go-i2p/logger.Logger).WithField]" ]
+    "(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).Port" -> "(*github.com/go-i2p/logger.Logger).Error" [ color="saddlebrown" tooltip="at router_address.go:280: calling [(*github.com/go-i2p/logger.Logger).Error]\nat router_address.go:285: calling [(*github.com/go-i2p/logger.Logger).Error]" ]
+    "(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).StaticKey" -> "github.com/samber/oops.Errorf" [ tooltip="at router_address.go:297: calling [github.com/samber/oops.Errorf]\nat router_address.go:302: calling [github.com/samber/oops.Errorf]" color="saddlebrown" ]
+    "(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).GetOption" -> "(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).Options" [ tooltip="at router_address.go:179: calling [(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).Options]" ]
+    "(*github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).Network" -> "(*github.com/go-i2p/logger.Logger).Error" [ tooltip="at router_address.go:90: calling [(*github.com/go-i2p/logger.Logger).Error]" color="saddlebrown" ]
+    "github.com/go-i2p/go-i2p/lib/common/router_address.NewRouterAddress" -> "github.com/go-i2p/go-i2p/lib/common/data.GoMapToMapping" [ color="saddlebrown" tooltip="at router_address.go:415: calling [github.com/go-i2p/go-i2p/lib/common/data.GoMapToMapping]" ]
+    "(*github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).String" -> "(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).StaticKeyString" [ tooltip="at router_address.go:129: calling [(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).StaticKeyString]" ]
+    "(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).IntroducerHashString" -> "github.com/go-i2p/go-i2p/lib/common/data.ToI2PString" [ color="saddlebrown" tooltip="at router_address.go:225: calling [github.com/go-i2p/go-i2p/lib/common/data.ToI2PString]\nat router_address.go:228: calling [github.com/go-i2p/go-i2p/lib/common/data.ToI2PString]" ]
+    "(*github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).String" -> "(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).IntroducerHashString" [ tooltip="at router_address.go:133: calling [(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).IntroducerHashString]\nat router_address.go:136: calling [(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).IntroducerHashString]\nat router_address.go:139: calling [(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).IntroducerHashString]" ]
+    "(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).Port" -> "(*github.com/sirupsen/logrus.Logger).Debug" [ color="saddlebrown" tooltip="at router_address.go:276: calling [(*github.com/sirupsen/logrus.Logger).Debug]\nat router_address.go:290: calling [(*github.com/sirupsen/logrus.Logger).Debug]" ]
+    "(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).Port" -> "(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).PortString" [ tooltip="at router_address.go:277: calling [(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).PortString]" ]
+    "(*github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).String" -> "(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).HostString" [ tooltip="at router_address.go:127: calling [(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).HostString]" ]
+    "(*github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).IPVersion" -> "(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).CapsString" [ tooltip="at router_address.go:101: calling [(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).CapsString]" ]
+    "(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).CheckOption" -> "github.com/go-i2p/go-i2p/lib/common/data.ToI2PString" [ color="saddlebrown" tooltip="at router_address.go:188: calling [github.com/go-i2p/go-i2p/lib/common/data.ToI2PString]" ]
+    "(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).StaticKeyString" -> "(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).GetOption" [ tooltip="at router_address.go:209: calling [(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).GetOption]" ]
+    "(*github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).String" -> "(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).InitializationVectorString" [ tooltip="at router_address.go:130: calling [(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).InitializationVectorString]" ]
+    "github.com/go-i2p/go-i2p/lib/common/router_address.ReadRouterAddress" -> "github.com/samber/oops.Errorf" [ color="saddlebrown" tooltip="at router_address.go:349: calling [github.com/samber/oops.Errorf]" ]
+    "(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).GetOption" -> "(github.com/go-i2p/go-i2p/lib/common/data.MappingValues).Get" [ tooltip="at router_address.go:179: calling [(github.com/go-i2p/go-i2p/lib/common/data.MappingValues).Get]" color="saddlebrown" ]
+    "(*github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).Network" -> "(*github.com/sirupsen/logrus.Logger).Debug" [ tooltip="at router_address.go:83: calling [(*github.com/sirupsen/logrus.Logger).Debug]\nat router_address.go:94: calling [(*github.com/sirupsen/logrus.Logger).Debug]" color="saddlebrown" ]
+    "(*github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).IPVersion" -> "(*github.com/go-i2p/logger.Logger).Error" [ color="saddlebrown" tooltip="at router_address.go:103: calling [(*github.com/go-i2p/logger.Logger).Error]" ]
+    "(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).CheckOption" -> "(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).HasOption" [ tooltip="at router_address.go:189: calling [(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).HasOption]" ]
+    "(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).IntroducerTagString" -> "github.com/go-i2p/go-i2p/lib/common/data.ToI2PString" [ tooltip="at router_address.go:245: calling [github.com/go-i2p/go-i2p/lib/common/data.ToI2PString]\nat router_address.go:248: calling [github.com/go-i2p/go-i2p/lib/common/data.ToI2PString]" color="saddlebrown" ]
+    "(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).Host" -> "(*github.com/go-i2p/logger.Logger).WithError" [ color="saddlebrown" tooltip="at router_address.go:257: calling [(*github.com/go-i2p/logger.Logger).WithError]\nat router_address.go:268: calling [(*github.com/go-i2p/logger.Logger).WithError]" ]
+    "github.com/go-i2p/go-i2p/lib/common/router_address.ReadRouterAddress" -> "(*github.com/go-i2p/logger.Logger).WithFields" [ color="saddlebrown" tooltip="at router_address.go:354: calling [(*github.com/go-i2p/logger.Logger).WithFields]\nat router_address.go:361: calling [(*github.com/go-i2p/logger.Logger).WithFields]\nat router_address.go:368: calling [(*github.com/go-i2p/logger.Logger).WithFields]\nat router_address.go:376: calling [(*github.com/go-i2p/logger.Logger).WithFields]" ]
+    "(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).HostString" -> "github.com/go-i2p/go-i2p/lib/common/data.ToI2PString" [ tooltip="at router_address.go:193: calling [github.com/go-i2p/go-i2p/lib/common/data.ToI2PString]" color="saddlebrown" ]
+    "(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).HostString" -> "(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).GetOption" [ tooltip="at router_address.go:194: calling [(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).GetOption]" ]
+    "(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).ProtocolVersion" -> "(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).ProtocolVersionString" [ tooltip="at router_address.go:319: calling [(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).ProtocolVersionString]" ]
+    "(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).IntroducerTagString" -> "(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).GetOption" [ tooltip="at router_address.go:246: calling [(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).GetOption]\nat router_address.go:249: calling [(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).GetOption]" ]
+    "(*github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).IPVersion" -> "(github.com/go-i2p/go-i2p/lib/common/data.I2PString).Data" [ color="saddlebrown" tooltip="at router_address.go:101: calling [(github.com/go-i2p/go-i2p/lib/common/data.I2PString).Data]" ]
+    "(*github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).UDP" -> "(*github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).Network" [ tooltip="at router_address.go:117: calling [(*github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).Network]" ]
+    "(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).InitializationVectorString" -> "github.com/go-i2p/go-i2p/lib/common/data.ToI2PString" [ tooltip="at router_address.go:213: calling [github.com/go-i2p/go-i2p/lib/common/data.ToI2PString]" color="saddlebrown" ]
+    "(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).Host" -> "(*github.com/go-i2p/logger.Logger).Error" [ color="saddlebrown" tooltip="at router_address.go:257: calling [(*github.com/go-i2p/logger.Logger).Error]\nat router_address.go:262: calling [(*github.com/go-i2p/logger.Logger).Error]\nat router_address.go:268: calling [(*github.com/go-i2p/logger.Logger).Error]" ]
+    "github.com/go-i2p/go-i2p/lib/common/router_address.ReadRouterAddress" -> "github.com/go-i2p/go-i2p/lib/common/data.NewMapping" [ color="saddlebrown" tooltip="at router_address.go:374: calling [github.com/go-i2p/go-i2p/lib/common/data.NewMapping]" ]
+    "(*github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).IPVersion" -> "(*github.com/sirupsen/logrus.Logger).Debug" [ tooltip="at router_address.go:100: calling [(*github.com/sirupsen/logrus.Logger).Debug]\nat router_address.go:107: calling [(*github.com/sirupsen/logrus.Logger).Debug]\nat router_address.go:110: calling [(*github.com/sirupsen/logrus.Logger).Debug]" color="saddlebrown" ]
+    "(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).PortString" -> "github.com/go-i2p/go-i2p/lib/common/data.ToI2PString" [ color="saddlebrown" tooltip="at router_address.go:198: calling [github.com/go-i2p/go-i2p/lib/common/data.ToI2PString]" ]
+    "(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).checkValid" -> "github.com/samber/oops.Errorf" [ color="saddlebrown" tooltip="at router_address.go:334: calling [github.com/samber/oops.Errorf]\nat router_address.go:337: calling [github.com/samber/oops.Errorf]" ]
+    "github.com/go-i2p/go-i2p/lib/common/router_address.NewRouterAddress" -> "(*github.com/go-i2p/logger.Logger).Error" [ color="saddlebrown" tooltip="at router_address.go:393: calling [(*github.com/go-i2p/logger.Logger).Error]\nat router_address.go:403: calling [(*github.com/go-i2p/logger.Logger).Error]\nat router_address.go:410: calling [(*github.com/go-i2p/logger.Logger).Error]\nat router_address.go:417: calling [(*github.com/go-i2p/logger.Logger).Error]" ]
+    "(*github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).String" -> "(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).IntroducerTagString" [ tooltip="at router_address.go:135: calling [(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).IntroducerTagString]\nat router_address.go:138: calling [(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).IntroducerTagString]\nat router_address.go:141: calling [(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).IntroducerTagString]" ]
+    "(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).Bytes" -> "(github.com/go-i2p/go-i2p/lib/common/data.Date).Bytes" [ color="saddlebrown" tooltip="at router_address.go:155: calling [(github.com/go-i2p/go-i2p/lib/common/data.Date).Bytes]" ]
+    "github.com/go-i2p/go-i2p/lib/common/router_address.ReadRouterAddress" -> "(*github.com/go-i2p/logger.Logger).WithField" [ color="saddlebrown" tooltip="at router_address.go:346: calling [(*github.com/go-i2p/logger.Logger).WithField]\nat router_address.go:348: calling [(*github.com/go-i2p/logger.Logger).WithField]" ]
+    "github.com/go-i2p/go-i2p/lib/common/router_address.ReadRouterAddress" -> "(*github.com/go-i2p/logger.Logger).Warn" [ color="saddlebrown" tooltip="at router_address.go:357: calling [(*github.com/go-i2p/logger.Logger).Warn]" ]
+    "(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).InitializationVectorString" -> "(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).GetOption" [ tooltip="at router_address.go:214: calling [(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).GetOption]" ]
+    "(*github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).String" -> "(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).ProtocolVersionString" [ tooltip="at router_address.go:131: calling [(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).ProtocolVersionString]" ]
+    "github.com/go-i2p/go-i2p/lib/common/router_address.ReadRouterAddress" -> "github.com/go-i2p/go-i2p/lib/common/data.ReadI2PString" [ tooltip="at router_address.go:366: calling [github.com/go-i2p/go-i2p/lib/common/data.ReadI2PString]" color="saddlebrown" ]
+    "(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).CapsString" -> "github.com/go-i2p/go-i2p/lib/common/data.ToI2PString" [ color="saddlebrown" tooltip="at router_address.go:203: calling [github.com/go-i2p/go-i2p/lib/common/data.ToI2PString]" ]
+    "(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).InitializationVector" -> "github.com/samber/oops.Errorf" [ color="saddlebrown" tooltip="at router_address.go:313: calling [github.com/samber/oops.Errorf]" ]
+    "(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).ProtocolVersionString" -> "(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).GetOption" [ tooltip="at router_address.go:219: calling [(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).GetOption]" ]
+    "(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).ProtocolVersion" -> "(github.com/go-i2p/go-i2p/lib/common/data.I2PString).Data" [ color="saddlebrown" tooltip="at router_address.go:319: calling [(github.com/go-i2p/go-i2p/lib/common/data.I2PString).Data]" ]
+    "github.com/go-i2p/go-i2p/lib/common/router_address.NewRouterAddress" -> "github.com/go-i2p/go-i2p/lib/common/data.NewIntegerFromInt" [ color="saddlebrown" tooltip="at router_address.go:391: calling [github.com/go-i2p/go-i2p/lib/common/data.NewIntegerFromInt]" ]
+    "github.com/go-i2p/go-i2p/lib/common/router_address.NewRouterAddress" -> "(*github.com/go-i2p/logger.Logger).WithFields" [ color="saddlebrown" tooltip="at router_address.go:429: calling [(*github.com/go-i2p/logger.Logger).WithFields]" ]
+    "(*github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).String" -> "(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).IntroducerExpirationString" [ tooltip="at router_address.go:134: calling [(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).IntroducerExpirationString]\nat router_address.go:137: calling [(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).IntroducerExpirationString]\nat router_address.go:140: calling [(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).IntroducerExpirationString]" ]
+    "(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).Port" -> "(*github.com/go-i2p/logger.Logger).WithField" [ tooltip="at router_address.go:290: calling [(*github.com/go-i2p/logger.Logger).WithField]" color="saddlebrown" ]
+    "(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).Options" -> "(*github.com/go-i2p/logger.Logger).Warn" [ color="saddlebrown" tooltip="at router_address.go:325: calling [(*github.com/go-i2p/logger.Logger).Warn]" ]
+    "(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).ProtocolVersionString" -> "github.com/go-i2p/go-i2p/lib/common/data.ToI2PString" [ color="saddlebrown" tooltip="at router_address.go:218: calling [github.com/go-i2p/go-i2p/lib/common/data.ToI2PString]" ]
+    "github.com/go-i2p/go-i2p/lib/common/router_address.NewRouterAddress" -> "github.com/go-i2p/go-i2p/lib/common/data.ToI2PString" [ tooltip="at router_address.go:408: calling [github.com/go-i2p/go-i2p/lib/common/data.ToI2PString]" color="saddlebrown" ]
+    "(*github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).String" -> "(*github.com/sirupsen/logrus.Logger).Debug" [ color="saddlebrown" tooltip="at router_address.go:124: calling [(*github.com/sirupsen/logrus.Logger).Debug]\nat router_address.go:144: calling [(*github.com/sirupsen/logrus.Logger).Debug]" ]
+    "github.com/go-i2p/go-i2p/lib/common/router_address.ReadRouterAddress" -> "github.com/go-i2p/go-i2p/lib/common/data.NewInteger" [ color="saddlebrown" tooltip="at router_address.go:352: calling [github.com/go-i2p/go-i2p/lib/common/data.NewInteger]" ]
+    "github.com/go-i2p/go-i2p/lib/common/router_address.ReadRouterAddress" -> "github.com/go-i2p/go-i2p/lib/common/data.NewDate" [ color="saddlebrown" tooltip="at router_address.go:359: calling [github.com/go-i2p/go-i2p/lib/common/data.NewDate]" ]
+    "(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).GetOption" -> "(github.com/go-i2p/go-i2p/lib/common/data.Mapping).Values" [ color="saddlebrown" tooltip="at router_address.go:179: calling [(github.com/go-i2p/go-i2p/lib/common/data.Mapping).Values]" ]
+    "(*github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).Network" -> "(*github.com/go-i2p/logger.Logger).WithField" [ color="saddlebrown" tooltip="at router_address.go:94: calling [(*github.com/go-i2p/logger.Logger).WithField]" ]
+    "(github.com/go-i2p/go-i2p/lib/common/router_address.RouterAddress).StaticKeyString" -> "github.com/go-i2p/go-i2p/lib/common/data.ToI2PString" [ color="saddlebrown" tooltip="at router_address.go:208: calling [github.com/go-i2p/go-i2p/lib/common/data.ToI2PString]" ]
+}

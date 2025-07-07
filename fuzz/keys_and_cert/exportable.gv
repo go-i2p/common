@@ -1,0 +1,48 @@
+digraph gocallvis {
+    label="";
+    labeljust="l";
+    fontname="Arial";
+    fontsize="14";
+    rankdir="LR";
+    bgcolor="lightgray";
+    style="solid";
+    penwidth="0.5";
+    pad="0.0";
+    nodesep="0.35";
+
+    node [shape="box" style="filled,rounded" fillcolor="honeydew" fontname="Verdana" penwidth="1.0" margin="0.16,0.0"];
+    edge [minlen="2"]
+
+    subgraph "cluster_focus" {
+        label="exportable";
+labelloc="t";
+labeljust="c";
+fontsize="18";
+bgcolor="#e6ecfa";
+        
+        "github.com/go-i2p/go-i2p/lib/common/fuzz/keys_and_cert.Fuzz" [ fillcolor="lightblue" label="Fuzz" penwidth="1.5" tooltip="github.com/go-i2p/go-i2p/lib/common/fuzz/keys_and_cert.Fuzz | defined in fuzz.go:5\nat fuzz.go:9: calling [(*github.com/go-i2p/go-i2p/lib/common/keys_and_cert.KeysAndCert).SigningPublicKey]\nat fuzz.go:6: calling [github.com/go-i2p/go-i2p/lib/common/keys_and_cert.ReadKeysAndCert]\nat fuzz.go:7: calling [(*github.com/go-i2p/go-i2p/lib/common/keys_and_cert.KeysAndCert).Certificate]\nat fuzz.go:8: calling [(*github.com/go-i2p/go-i2p/lib/common/keys_and_cert.KeysAndCert).PublicKey]" ]
+        "github.com/go-i2p/go-i2p/lib/common/keys_and_cert.ReadKeysAndCert" [ fillcolor="moccasin" label="keys_and_cert\nReadKeysAndCert" penwidth="1.5" tooltip="github.com/go-i2p/go-i2p/lib/common/keys_and_cert.ReadKeysAndCert | defined in keys_and_cert.go:145" ]
+        
+        subgraph "cluster_*github.com/go-i2p/go-i2p/lib/common/keys_and_cert.KeysAndCert" {
+        labelloc="b";
+style="rounded,filled";
+fillcolor="wheat2";
+label="(*KeysAndCert)";
+tooltip="type: *github.com/go-i2p/go-i2p/lib/common/keys_and_cert.KeysAndCert";
+penwidth="0.5";
+fontsize="15";
+fontcolor="#222222";
+        
+        "(*github.com/go-i2p/go-i2p/lib/common/keys_and_cert.KeysAndCert).Certificate" [ fillcolor="moccasin" label="keys_and_cert\nCertificate" penwidth="1.5" tooltip="(*github.com/go-i2p/go-i2p/lib/common/keys_and_cert.KeysAndCert).Certificate | defined in keys_and_cert.go:139" ]
+        "(*github.com/go-i2p/go-i2p/lib/common/keys_and_cert.KeysAndCert).PublicKey" [ tooltip="(*github.com/go-i2p/go-i2p/lib/common/keys_and_cert.KeysAndCert).PublicKey | defined in keys_and_cert.go:129" fillcolor="moccasin" label="keys_and_cert\nPublicKey" penwidth="1.5" ]
+        "(*github.com/go-i2p/go-i2p/lib/common/keys_and_cert.KeysAndCert).SigningPublicKey" [ fillcolor="moccasin" label="keys_and_cert\nSigningPublicKey" penwidth="1.5" tooltip="(*github.com/go-i2p/go-i2p/lib/common/keys_and_cert.KeysAndCert).SigningPublicKey | defined in keys_and_cert.go:134" ]
+        
+    }
+
+    }
+
+    "github.com/go-i2p/go-i2p/lib/common/fuzz/keys_and_cert.Fuzz" -> "(*github.com/go-i2p/go-i2p/lib/common/keys_and_cert.KeysAndCert).SigningPublicKey" [ color="saddlebrown" tooltip="at fuzz.go:9: calling [(*github.com/go-i2p/go-i2p/lib/common/keys_and_cert.KeysAndCert).SigningPublicKey]" ]
+    "github.com/go-i2p/go-i2p/lib/common/fuzz/keys_and_cert.Fuzz" -> "github.com/go-i2p/go-i2p/lib/common/keys_and_cert.ReadKeysAndCert" [ color="saddlebrown" tooltip="at fuzz.go:6: calling [github.com/go-i2p/go-i2p/lib/common/keys_and_cert.ReadKeysAndCert]" ]
+    "github.com/go-i2p/go-i2p/lib/common/fuzz/keys_and_cert.Fuzz" -> "(*github.com/go-i2p/go-i2p/lib/common/keys_and_cert.KeysAndCert).Certificate" [ color="saddlebrown" tooltip="at fuzz.go:7: calling [(*github.com/go-i2p/go-i2p/lib/common/keys_and_cert.KeysAndCert).Certificate]" ]
+    "github.com/go-i2p/go-i2p/lib/common/fuzz/keys_and_cert.Fuzz" -> "(*github.com/go-i2p/go-i2p/lib/common/keys_and_cert.KeysAndCert).PublicKey" [ color="saddlebrown" tooltip="at fuzz.go:8: calling [(*github.com/go-i2p/go-i2p/lib/common/keys_and_cert.KeysAndCert).PublicKey]" ]
+}
