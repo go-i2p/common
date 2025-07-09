@@ -5,13 +5,13 @@ import (
 	"crypto/rand"
 	"testing"
 
-	"github.com/go-i2p/go-i2p/lib/crypto/ed25519"
-	"github.com/go-i2p/go-i2p/lib/crypto/types"
+	"github.com/go-i2p/crypto/ed25519"
+	"github.com/go-i2p/crypto/types"
 
 	"github.com/go-i2p/common/certificate"
 	"github.com/go-i2p/common/data"
 	"github.com/go-i2p/common/key_certificate"
-	elgamal "github.com/go-i2p/go-i2p/lib/crypto/elg"
+	elgamal "github.com/go-i2p/crypto/elg"
 
 	"github.com/stretchr/testify/assert"
 )

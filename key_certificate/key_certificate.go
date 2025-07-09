@@ -31,11 +31,11 @@ import (
 	"fmt"
 
 	"github.com/go-i2p/common/signature"
-	"github.com/go-i2p/go-i2p/lib/crypto/dsa"
-	"github.com/go-i2p/go-i2p/lib/crypto/ecdsa"
-	"github.com/go-i2p/go-i2p/lib/crypto/ed25519"
-	elgamal "github.com/go-i2p/go-i2p/lib/crypto/elg"
-	"github.com/go-i2p/go-i2p/lib/crypto/types"
+	"github.com/go-i2p/crypto/curve25519"
+	"github.com/go-i2p/crypto/dsa"
+	"github.com/go-i2p/crypto/ecdsa"
+	"github.com/go-i2p/crypto/ed25519"
+	"github.com/go-i2p/crypto/types"
 	"github.com/samber/oops"
 
 	"github.com/go-i2p/logger"
@@ -137,7 +137,7 @@ func (keyCertificate KeyCertificate) PublicKeyType() (pubkey_type int) {
 
 // ConstructPublicKey returns a publicKey constructed using any excess data that may be stored in the KeyCertififcate.
 // Returns enr errors encountered while parsing.
-func (keyCertificate KeyCertificate) ConstructPublicKey(data []byte) (public_key types.RecievingPublicKey, err error) {
+func (keyCertificate KeyCertificate) ConstructPublicKey(data []byte) (public_key types.SigningPublicKey, err error) {
 	log.WithFields(logrus.Fields{
 		"input_length": len(data),
 	}).Debug("Constructing publicKey from keyCertificate")
@@ -157,16 +157,16 @@ func (keyCertificate KeyCertificate) ConstructPublicKey(data []byte) (public_key
 		return
 	}
 	switch key_type {
-	case KEYCERT_CRYPTO_ELG:
-		var elg_key elgamal.ElgPublicKey
-		copy(elg_key[:], data[KEYCERT_PUBKEY_SIZE-KEYCERT_CRYPTO_ELG_SIZE:KEYCERT_PUBKEY_SIZE])
-		public_key = elg_key
+	case KEYCERT_SIGN_DSA_SHA1:
+		var dsa_key dsa.DSAPublicKey
+		copy(dsa_key[:], data[KEYCERT_PUBKEY_SIZE-KEYCERT_SIGN_DSA_SHA1_SIZE:KEYCERT_PUBKEY_SIZE])
+		public_key = dsa_key
 		log.Debug("Constructed ElgPublicKey")
 	case KEYCERT_CRYPTO_X25519:
-		var ed25519_key ed25519.Ed25519PublicKey
-		copy(ed25519_key[:], data[KEYCERT_PUBKEY_SIZE-KEYCERT_CRYPTO_ELG_SIZE:KEYCERT_PUBKEY_SIZE])
-		public_key = ed25519_key
-		log.Debug("Constructed Ed25519PublicKey")
+		var curve25519_key curve25519.Curve25519PublicKey
+		copy(curve25519_key[:], data[KEYCERT_PUBKEY_SIZE-KEYCERT_CRYPTO_X25519_SIZE:KEYCERT_PUBKEY_SIZE])
+		public_key = curve25519_key
+		log.Debug("Constructed Curve25519PublicKey")
 	default:
 		log.WithFields(logrus.Fields{
 			"key_type": key_type,

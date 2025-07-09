@@ -2,15 +2,15 @@
 package keys_and_cert
 
 import (
-	"github.com/go-i2p/go-i2p/lib/crypto/ed25519"
+	"github.com/go-i2p/crypto/ed25519"
 
 	"github.com/go-i2p/logger"
 	"github.com/samber/oops"
 
 	. "github.com/go-i2p/common/certificate"
 	. "github.com/go-i2p/common/key_certificate"
-	elgamal "github.com/go-i2p/go-i2p/lib/crypto/elg"
-	"github.com/go-i2p/go-i2p/lib/crypto/types"
+	elgamal "github.com/go-i2p/crypto/elg"
+	"github.com/go-i2p/crypto/types"
 	"github.com/sirupsen/logrus"
 )
 

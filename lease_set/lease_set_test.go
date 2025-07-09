@@ -11,13 +11,13 @@ import (
 	"github.com/go-i2p/common/router_address"
 	"github.com/go-i2p/common/router_info"
 	"github.com/go-i2p/common/signature"
-	"github.com/go-i2p/go-i2p/lib/crypto/types"
+	"github.com/go-i2p/crypto/types"
 	"github.com/samber/oops"
 
 	"github.com/go-i2p/common/data"
 	"github.com/go-i2p/common/keys_and_cert"
-	"github.com/go-i2p/go-i2p/lib/crypto/ed25519"
-	elgamal "github.com/go-i2p/go-i2p/lib/crypto/elg"
+	"github.com/go-i2p/crypto/ed25519"
+	elgamal "github.com/go-i2p/crypto/elg"
 
 	"github.com/go-i2p/common/certificate"
 	"github.com/go-i2p/common/lease"

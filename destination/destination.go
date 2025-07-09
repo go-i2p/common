@@ -8,7 +8,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	. "github.com/go-i2p/common/keys_and_cert"
-	"github.com/go-i2p/go-i2p/lib/crypto/types"
+	"github.com/go-i2p/crypto/types"
 
 	"github.com/go-i2p/common/base32"
 	"github.com/go-i2p/common/base64"

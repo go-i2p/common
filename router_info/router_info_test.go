@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/go-i2p/go-i2p/lib/crypto/ed25519"
-	"github.com/go-i2p/go-i2p/lib/crypto/types"
+	"github.com/go-i2p/crypto/ed25519"
+	"github.com/go-i2p/crypto/types"
 
 	"github.com/go-i2p/common/keys_and_cert"
 
@@ -16,7 +16,7 @@ import (
 	"github.com/go-i2p/common/key_certificate"
 	"github.com/go-i2p/common/router_identity"
 	"github.com/go-i2p/common/signature"
-	elgamal "github.com/go-i2p/go-i2p/lib/crypto/elg"
+	elgamal "github.com/go-i2p/crypto/elg"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/go-i2p/common/router_address"

@@ -10,9 +10,9 @@ import (
 	"github.com/go-i2p/common/key_certificate"
 	"github.com/go-i2p/common/lease"
 	"github.com/go-i2p/common/signature"
-	"github.com/go-i2p/go-i2p/lib/crypto/dsa"
-	elgamal "github.com/go-i2p/go-i2p/lib/crypto/elg"
-	"github.com/go-i2p/go-i2p/lib/crypto/types"
+	"github.com/go-i2p/crypto/dsa"
+	elgamal "github.com/go-i2p/crypto/elg"
+	"github.com/go-i2p/crypto/types"
 	"github.com/samber/oops"
 
 	"github.com/go-i2p/logger"

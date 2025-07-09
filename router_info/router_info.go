@@ -7,11 +7,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/go-i2p/go-i2p/lib/crypto/ed25519"
+	"github.com/go-i2p/crypto/ed25519"
 
 	"github.com/go-i2p/common/certificate"
 	"github.com/go-i2p/common/signature"
-	"github.com/go-i2p/go-i2p/lib/crypto/types"
+	"github.com/go-i2p/crypto/types"
 	"github.com/samber/oops"
 
 	"github.com/go-i2p/logger"

@@ -8,8 +8,8 @@ import (
 
 	"github.com/go-i2p/common/key_certificate"
 	"github.com/go-i2p/common/keys_and_cert"
-	elgamal "github.com/go-i2p/go-i2p/lib/crypto/elg"
-	"github.com/go-i2p/go-i2p/lib/crypto/types"
+	elgamal "github.com/go-i2p/crypto/elg"
+	"github.com/go-i2p/crypto/types"
 
 	"github.com/go-i2p/common/signature"
 
@@ -17,7 +17,7 @@ import (
 	"github.com/go-i2p/common/data"
 	"github.com/go-i2p/common/router_address"
 	"github.com/go-i2p/common/router_identity"
-	"github.com/go-i2p/go-i2p/lib/crypto/ed25519"
+	"github.com/go-i2p/crypto/ed25519"
 )
 
 func TestCreateRouterInfo(t *testing.T) {
