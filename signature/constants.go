@@ -1,0 +1,30 @@
+// Package signature implements the I2P Signature common data structure
+package signature
+
+// Lengths of signature keys
+const (
+	DSA_SHA1_SIZE               = 40
+	ECDSA_SHA256_P256_SIZE      = 64
+	ECDSA_SHA384_P384_SIZE      = 96
+	ECDSA_SHA512_P512_SIZE      = 132
+	RSA_SHA256_2048_SIZE        = 256
+	RSA_SHA384_3072_SIZE        = 384
+	RSA_SHA512_4096_SIZE        = 512
+	EdDSA_SHA512_Ed25519_SIZE   = 64
+	EdDSA_SHA512_Ed25519ph_SIZE = 64
+	RedDSA_SHA512_Ed25519_SIZE  = 64
+)
+
+// Signature type constants for I2P signature algorithms
+const (
+	SIGNATURE_TYPE_DSA_SHA1               = 0
+	SIGNATURE_TYPE_ECDSA_SHA256_P256      = 1
+	SIGNATURE_TYPE_ECDSA_SHA384_P384      = 2
+	SIGNATURE_TYPE_ECDSA_SHA512_P521      = 3
+	SIGNATURE_TYPE_RSA_SHA256_2048        = 4
+	SIGNATURE_TYPE_RSA_SHA384_3072        = 5
+	SIGNATURE_TYPE_RSA_SHA512_4096        = 6
+	SIGNATURE_TYPE_EDDSA_SHA512_ED25519   = 7
+	SIGNATURE_TYPE_EDDSA_SHA512_ED25519PH = 8
+	SIGNATURE_TYPE_REDDSA_SHA512_ED25519  = 11
+)
