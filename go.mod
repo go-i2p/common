@@ -3,7 +3,7 @@ module github.com/go-i2p/common
 go 1.24.2
 
 require (
-	github.com/go-i2p/crypto v0.0.0-20250707195413-aa97bf7a0927
+	github.com/go-i2p/crypto v0.0.0-20250709015313-e8c1d28892d7
 	github.com/go-i2p/logger v0.0.0-20241123010126-3050657e5d0c
 	github.com/samber/oops v1.19.0
 	github.com/sirupsen/logrus v1.9.3
