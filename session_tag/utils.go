@@ -9,38 +9,22 @@ import (
 
 var log = logger.GetGoI2PLogger()
 
-/*
-[SessionKey]
-Accurate for version 0.9.49
-
-Description
-A random number
-
-Contents
-32 bytes
-*/
-
-// SessionTag is the represenation of an I2P SessionTag.
-//
-// https://geti2p.net/spec/common-structures#session-tag
-type SessionTag [32]byte
-
 // ReadSessionTag returns SessionTag from a []byte.
 // The remaining bytes after the specified length are also returned.
 // Returns a list of errors that occurred during parsing.
 func ReadSessionTag(bytes []byte) (info SessionTag, remainder []byte, err error) {
-	if len(bytes) < 32 {
+	if len(bytes) < SessionTagSize {
 		log.WithFields(logrus.Fields{
 			"at":          "(SessionTag) ReadSessionTag",
 			"data_length": len(bytes),
-			"required":    32,
+			"required":    SessionTagSize,
 		}).Error("data too short for SessionTag")
-		err = oops.Errorf("ReadSessionTag: data too short, need 32 bytes, got %d", len(bytes))
+		err = oops.Errorf("ReadSessionTag: data too short, need %d bytes, got %d", SessionTagSize, len(bytes))
 		return
 	}
 
-	copy(info[:], bytes[:32])
-	remainder = bytes[32:]
+	copy(info[:], bytes[:SessionTagSize])
+	remainder = bytes[SessionTagSize:]
 
 	log.WithFields(logrus.Fields{
 		"remainder_length": len(remainder),
