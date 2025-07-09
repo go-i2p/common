@@ -22,31 +22,7 @@ Contents
 // SessionKey is the represenation of an I2P SessionKey.
 //
 // https://geti2p.net/spec/common-structures#sessionkey
-type SessionKey [32]byte
-
-// ReadSessionKey returns SessionKey from a []byte.
-// The remaining bytes after the specified length are also returned.
-// Returns a list of errors that occurred during parsing.
-func ReadSessionKey(bytes []byte) (info SessionKey, remainder []byte, err error) {
-	if len(bytes) < 32 {
-		log.WithFields(logrus.Fields{
-			"at":          "(SessionKey) ReadSessionKey",
-			"data_length": len(bytes),
-			"required":    32,
-		}).Error("data too short for SessionKey")
-		err = oops.Errorf("ReadSessionKey: data too short, need 32 bytes, got %d", len(bytes))
-		return
-	}
-
-	copy(info[:], bytes[:32])
-	remainder = bytes[32:]
-
-	log.WithFields(logrus.Fields{
-		"remainder_length": len(remainder),
-	}).Debug("Successfully read SessionKey from data")
-
-	return
-}
+type SessionKey [SESSION_KEY_SIZE]byte
 
 // NewSessionKey creates a new *SessionKey from []byte using ReadSessionKey.
 // Returns a pointer to SessionKey unlike ReadSessionKey.
@@ -59,5 +35,29 @@ func NewSessionKey(data []byte) (session_key *SessionKey, remainder []byte, err 
 	}
 	session_key = &sessionKey
 	log.Debug("Successfully created new SessionKey")
+	return
+}
+
+// ReadSessionKey returns SessionKey from a []byte.
+// The remaining bytes after the specified length are also returned.
+// Returns a list of errors that occurred during parsing.
+func ReadSessionKey(bytes []byte) (info SessionKey, remainder []byte, err error) {
+	if len(bytes) < SESSION_KEY_SIZE {
+		log.WithFields(logrus.Fields{
+			"at":          "(SessionKey) ReadSessionKey",
+			"data_length": len(bytes),
+			"required":    SESSION_KEY_SIZE,
+		}).Error("data too short for SessionKey")
+		err = oops.Errorf("ReadSessionKey: data too short, need %d bytes, got %d", SESSION_KEY_SIZE, len(bytes))
+		return
+	}
+
+	copy(info[:], bytes[:SESSION_KEY_SIZE])
+	remainder = bytes[SESSION_KEY_SIZE:]
+
+	log.WithFields(logrus.Fields{
+		"remainder_length": len(remainder),
+	}).Debug("Successfully read SessionKey from data")
+
 	return
 }
