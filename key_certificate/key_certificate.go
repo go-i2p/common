@@ -35,6 +35,7 @@ import (
 	"github.com/go-i2p/crypto/dsa"
 	"github.com/go-i2p/crypto/ecdsa"
 	"github.com/go-i2p/crypto/ed25519"
+	elgamal "github.com/go-i2p/crypto/elg"
 	"github.com/go-i2p/crypto/types"
 	"github.com/samber/oops"
 
@@ -137,7 +138,7 @@ func (keyCertificate KeyCertificate) PublicKeyType() (pubkey_type int) {
 
 // ConstructPublicKey returns a publicKey constructed using any excess data that may be stored in the KeyCertififcate.
 // Returns enr errors encountered while parsing.
-func (keyCertificate KeyCertificate) ConstructPublicKey(data []byte) (public_key types.SigningPublicKey, err error) {
+func (keyCertificate KeyCertificate) ConstructPublicKey(data []byte) (public_key types.RecievingPublicKey, err error) {
 	log.WithFields(logrus.Fields{
 		"input_length": len(data),
 	}).Debug("Constructing publicKey from keyCertificate")
@@ -157,10 +158,10 @@ func (keyCertificate KeyCertificate) ConstructPublicKey(data []byte) (public_key
 		return
 	}
 	switch key_type {
-	case KEYCERT_SIGN_DSA_SHA1:
-		var dsa_key dsa.DSAPublicKey
-		copy(dsa_key[:], data[KEYCERT_PUBKEY_SIZE-KEYCERT_SIGN_DSA_SHA1_SIZE:KEYCERT_PUBKEY_SIZE])
-		public_key = dsa_key
+	case KEYCERT_CRYPTO_ELG:
+		var elg_key elgamal.ElgPublicKey
+		copy(elg_key[:], data[KEYCERT_PUBKEY_SIZE-KEYCERT_CRYPTO_ELG_SIZE:KEYCERT_PUBKEY_SIZE])
+		public_key = elg_key
 		log.Debug("Constructed ElgPublicKey")
 	case KEYCERT_CRYPTO_X25519:
 		var curve25519_key curve25519.Curve25519PublicKey
