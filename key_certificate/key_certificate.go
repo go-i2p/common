@@ -379,8 +379,8 @@ func NewKeyCertificate(bytes []byte) (key_certificate *KeyCertificate, remainder
 	}
 	log.Println("Certificate Data in NewKeyCertificate: ", certificate.Data()[0:2], certificate.Data()[2:4])
 
-	cpkType, _ := ReadInteger(certificate.Data()[2:4], 2)
-	spkType, _ := ReadInteger(certificate.Data()[0:2], 2)
+	cpkType, _ := ReadInteger(certificate.Data()[0:2], 2)
+	spkType, _ := ReadInteger(certificate.Data()[2:4], 2)
 	key_certificate = &KeyCertificate{
 		Certificate: certificate,
 		CpkType:     cpkType,
