@@ -10,6 +10,7 @@ import (
 // MappingValues represents the parsed key value pairs inside of an I2P Mapping.
 type MappingValues [][2]I2PString
 
+// Get retrieves the value for a given key from MappingValues.
 func (m MappingValues) Get(key I2PString) I2PString {
 	keyBytes, _ := key.Data()
 	log.WithFields(logrus.Fields{

@@ -4,15 +4,9 @@ package data
 import (
 	"time"
 
-	"github.com/go-i2p/logger"
 	"github.com/samber/oops"
 	"github.com/sirupsen/logrus"
 )
-
-var log = logger.GetGoI2PLogger()
-
-// DATE_SIZE is the length in bytes of an I2P Date.
-const DATE_SIZE = 8
 
 /*
 [I2P Date]

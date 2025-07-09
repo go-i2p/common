@@ -5,9 +5,6 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// STRING_MAX_SIZE is the maximum number of bytes that can be stored in an I2P string
-const STRING_MAX_SIZE = 255
-
 /*
 [I2P String]
 Accurate for version 0.9.49
@@ -135,11 +132,6 @@ func ToI2PString(data string) (str I2PString, err error) {
 	return
 }
 
-//
-// Read a string from a slice of bytes, returning any extra data on the end
-// of the slice and any errors encountered parsing the I2PString.
-//
-
 // ReadI2PString returns I2PString from a []byte.
 // The remaining bytes after the specified length are also returned.
 // Returns a list of errors that occurred during parsing.
@@ -181,11 +173,3 @@ func ReadI2PString(data []byte) (str I2PString, remainder []byte, err error) {
 	}).Debug("Successfully read I2PString from bytes")
 	return
 }
-
-// NewI2PString creates a new *I2PString from []byte using ReadI2PString.
-// Returns a pointer to I2PString unlike ReadI2PString.
-/*func NewI2PString(data []byte) (str *I2PString, remainder []byte, err error) {
-	objstr, remainder, err := ReadI2PString(data)
-	str = &objstr
-	return
-}*/

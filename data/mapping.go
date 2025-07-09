@@ -126,31 +126,6 @@ func GoMapToMapping(gomap map[string]string) (mapping *Mapping, err error) {
 	return
 }
 
-// Check if the string parsing error indicates that the Mapping
-// should no longer be parsed.
-func stopValueRead(err error) bool {
-	result := err.Error() == "error parsing string: zero length"
-	if result {
-		log.WithError(err).Debug("Stopping value read due to zero length error")
-	}
-	return result
-}
-
-// Determine if the first byte in a slice of bytes is the provided byte.
-func beginsWith(bytes []byte, chr byte) bool {
-	/*
-		return len(bytes) != 0 &&
-			bytes[0] == chr
-	*/
-	result := len(bytes) != 0 && bytes[0] == chr
-	log.WithFields(logrus.Fields{
-		"bytes_length":  len(bytes),
-		"expected_char": string(chr),
-		"result":        result,
-	}).Debug("Checked if bytes begin with specific character")
-	return result
-}
-
 // ReadMapping returns Mapping from a []byte.
 // The remaining bytes after the specified length are also returned.
 // Returns a list of errors that occurred during parsing.

@@ -4,11 +4,8 @@ import (
 	"encoding/binary"
 )
 
-// MAX_INTEGER_SIZE is the maximum length of an I2P integer in bytes.
-const MAX_INTEGER_SIZE = 8
-
 /*
-[I2P Hash]
+[I2P Integer]
 Accurate for version 0.9.49
 
 Description
@@ -31,19 +28,6 @@ func (i Integer) Bytes() []byte {
 // Int returns the Integer as a Go integer
 func (i Integer) Int() int {
 	return intFromBytes(i.Bytes())
-}
-
-// Interpret a slice of bytes from length 0 to length 8 as a big-endian
-// integer and return an int representation.
-func intFromBytes(number []byte) (value int) {
-	numLen := len(number)
-	if numLen < MAX_INTEGER_SIZE {
-		paddedNumber := make([]byte, MAX_INTEGER_SIZE)
-		copy(paddedNumber[MAX_INTEGER_SIZE-numLen:], number)
-		number = paddedNumber
-	}
-	value = int(binary.BigEndian.Uint64(number))
-	return
 }
 
 // ReadInteger returns an Integer from a []byte of specified length.

@@ -14,8 +14,6 @@ Represents the SHA256 of some data.
 
 Contents
 32 bytes
-
-[I2P Hash]:
 */
 
 // Hash is the represenation of an I2P Hash.
@@ -23,6 +21,7 @@ Contents
 // https://geti2p.net/spec/common-structures#hash
 type Hash [32]byte
 
+// Bytes returns the raw []byte content of a Hash.
 func (h Hash) Bytes() [32]byte {
 	return h
 }
