@@ -5,7 +5,6 @@ import (
 )
 
 // bytesToString converts a byte slice into a string like [1, 2, 3] -> "1, 2, 3"
-// Moved from: router_info.go
 func bytesToString(bytes []byte) string {
 	str := "["
 	for i, b := range bytes {

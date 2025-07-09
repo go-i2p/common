@@ -104,7 +104,6 @@ signature :: Signature
 // RouterInfo is the represenation of an I2P RouterInfo.
 //
 // https://geti2p.net/spec/common-structures#routerinfo
-// Moved from: router_info.go
 type RouterInfo struct {
 	router_identity *RouterIdentity
 	published       *Date
@@ -116,7 +115,6 @@ type RouterInfo struct {
 }
 
 // NewRouterInfo creates a new RouterInfo with the specified parameters.
-// Moved from: router_info.go
 func NewRouterInfo(
 	routerIdentity *RouterIdentity,
 	publishedTime time.Time,
@@ -227,7 +225,6 @@ func NewRouterInfo(
 }
 
 // Bytes returns the RouterInfo as a []byte suitable for writing to a stream.
-// Moved from: router_info.go
 func (router_info RouterInfo) Bytes() (bytes []byte, err error) {
 	log.Debug("Converting RouterInfo to bytes")
 	bytes = append(bytes, router_info.router_identity.Bytes()...)
@@ -244,7 +241,6 @@ func (router_info RouterInfo) Bytes() (bytes []byte, err error) {
 }
 
 // String returns a string representation of the RouterInfo.
-// Moved from: router_info.go
 func (router_info RouterInfo) String() string {
 	log.Debug("Converting RouterInfo to string")
 	str := "Certificate: " + bytesToString(router_info.router_identity.Bytes()) + "\n"
@@ -261,13 +257,11 @@ func (router_info RouterInfo) String() string {
 }
 
 // RouterIdentity returns the router identity as *RouterIdentity.
-// Moved from: router_info.go
 func (router_info *RouterInfo) RouterIdentity() *RouterIdentity {
 	return router_info.router_identity
 }
 
 // IdentHash returns the identity hash (sha256 sum) for this RouterInfo.
-// Moved from: router_info.go
 func (router_info *RouterInfo) IdentHash() Hash {
 	log.Debug("Calculating IdentHash for RouterInfo")
 	// data, _ := router_info.RouterIdentity().keyCertificate.Data()
@@ -279,13 +273,11 @@ func (router_info *RouterInfo) IdentHash() Hash {
 }
 
 // Published returns the date this RouterInfo was published as an I2P Date.
-// Moved from: router_info.go
 func (router_info *RouterInfo) Published() *Date {
 	return router_info.published
 }
 
 // RouterAddressCount returns the count of RouterAddress in this RouterInfo as a Go integer.
-// Moved from: router_info.go
 func (router_info *RouterInfo) RouterAddressCount() int {
 	count := router_info.size.Int()
 	log.WithField("count", count).Debug("Retrieved RouterAddressCount from RouterInfo")
@@ -293,14 +285,12 @@ func (router_info *RouterInfo) RouterAddressCount() int {
 }
 
 // RouterAddresses returns all RouterAddresses for this RouterInfo as []*RouterAddress.
-// Moved from: router_info.go
 func (router_info *RouterInfo) RouterAddresses() []*RouterAddress {
 	log.WithField("address_count", len(router_info.addresses)).Debug("Retrieved RouterAddresses from RouterInfo")
 	return router_info.addresses
 }
 
 // PeerSize returns the peer size as a Go integer.
-// Moved from: router_info.go
 func (router_info *RouterInfo) PeerSize() int {
 	// Peer size is unused:
 	// https://geti2p.net/spec/common-structures#routeraddress
@@ -308,31 +298,26 @@ func (router_info *RouterInfo) PeerSize() int {
 }
 
 // Options returns the options for this RouterInfo as an I2P Mapping.
-// Moved from: router_info.go
 func (router_info RouterInfo) Options() (mapping Mapping) {
 	return *router_info.options
 }
 
 // Signature returns the signature for this RouterInfo as an I2P Signature.
-// Moved from: router_info.go
 func (router_info RouterInfo) Signature() (signature Signature) {
 	return *router_info.signature
 }
 
 // Network implements net.Addr
-// Moved from: router_info.go
 func (router_info RouterInfo) Network() string {
 	return "i2p"
 }
 
 // AddAddress adds a RouterAddress to this RouterInfo.
-// Moved from: router_info.go
 func (router_info *RouterInfo) AddAddress(address *RouterAddress) {
 	router_info.addresses = append(router_info.addresses, address)
 }
 
 // RouterCapabilities returns the capabilities string for this RouterInfo.
-// Moved from: router_info.go
 func (router_info *RouterInfo) RouterCapabilities() string {
 	log.Debug("Retrieving RouterCapabilities")
 	str, err := ToI2PString("caps")
@@ -347,7 +332,6 @@ func (router_info *RouterInfo) RouterCapabilities() string {
 }
 
 // RouterVersion returns the version string for this RouterInfo.
-// Moved from: router_info.go
 func (router_info *RouterInfo) RouterVersion() string {
 	log.Debug("Retrieving RouterVersion")
 	str, err := ToI2PString("router.version")
@@ -362,7 +346,6 @@ func (router_info *RouterInfo) RouterVersion() string {
 }
 
 // GoodVersion checks if the RouterInfo version is acceptable.
-// Moved from: router_info.go
 func (router_info *RouterInfo) GoodVersion() bool {
 	log.Debug("Checking if RouterVersion is good")
 	version := router_info.RouterVersion()
@@ -384,7 +367,6 @@ func (router_info *RouterInfo) GoodVersion() bool {
 }
 
 // UnCongested checks if the RouterInfo indicates the router is not congested.
-// Moved from: router_info.go
 func (router_info *RouterInfo) UnCongested() bool {
 	log.Debug("Checking if RouterInfo is uncongested")
 	caps := router_info.RouterCapabilities()
@@ -405,7 +387,6 @@ func (router_info *RouterInfo) UnCongested() bool {
 }
 
 // Reachable checks if the RouterInfo indicates the router is reachable.
-// Moved from: router_info.go
 func (router_info *RouterInfo) Reachable() bool {
 	log.Debug("Checking if RouterInfo is reachable")
 	caps := router_info.RouterCapabilities()
@@ -423,7 +404,6 @@ func (router_info *RouterInfo) Reachable() bool {
 }
 
 // serializeWithoutSignature serializes the RouterInfo up to (but not including) the signature.
-// Moved from: router_info.go
 func (ri *RouterInfo) serializeWithoutSignature() []byte {
 	var bytes []byte
 	// Serialize RouterIdentity
@@ -452,7 +432,6 @@ func (ri *RouterInfo) serializeWithoutSignature() []byte {
 // ReadRouterInfo returns RouterInfo from a []byte.
 // The remaining bytes after the specified length are also returned.
 // Returns a list of errors that occurred during parsing.
-// Moved from: router_info.go
 func ReadRouterInfo(bytes []byte) (info RouterInfo, remainder []byte, err error) {
 	log.WithField("input_length", len(bytes)).Debug("Reading RouterInfo from bytes")
 
