@@ -107,8 +107,8 @@ func KeyCertificateFromCertificate(cert Certificate) (*KeyCertificate, error) {
 		return nil, oops.Errorf("certificate payload too short in KeyCertificateFromCertificate")
 	}
 
-	cpkTypeBytes := data[0:2]
-	spkTypeBytes := data[2:4]
+	spkTypeBytes := data[0:2]
+	cpkTypeBytes := data[2:4]
 
 	fmt.Printf("cpkTypeBytes in KeyCertificateFromCertificate: %v\n", cpkTypeBytes)
 	fmt.Printf("spkTypeBytes in KeyCertificateFromCertificate: %v\n", spkTypeBytes)
