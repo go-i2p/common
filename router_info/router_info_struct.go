@@ -125,7 +125,48 @@ func NewRouterInfo(
 ) (*RouterInfo, error) {
 	log.Debug("Creating new RouterInfo")
 
-	// 1. Create Published Date
+	publishedDate, err := createPublishedDate(publishedTime)
+	if err != nil {
+		return nil, err
+	}
+
+	sizeInt, peerSizeInt, err := createSizeIntegers(addresses)
+	if err != nil {
+		return nil, err
+	}
+
+	mapping, err := convertOptionsToMapping(options)
+	if err != nil {
+		return nil, err
+	}
+
+	routerInfo := assembleRouterInfoWithoutSignature(routerIdentity, publishedDate, sizeInt, addresses, peerSizeInt, mapping)
+
+	signer, err := createSignerFromPrivateKey(signingPrivateKey, sigType)
+	if err != nil {
+		return nil, err
+	}
+
+	signature, err := signRouterInfoData(routerInfo, signer, sigType)
+	if err != nil {
+		return nil, err
+	}
+
+	routerInfo.signature = signature
+
+	log.WithFields(logrus.Fields{
+		"router_identity": routerIdentity,
+		"published":       publishedDate,
+		"address_count":   len(addresses),
+		"options":         options,
+		"signature":       signature,
+	}).Debug("Successfully created RouterInfo")
+
+	return routerInfo, nil
+}
+
+// createPublishedDate converts a time.Time to an I2P Date structure.
+func createPublishedDate(publishedTime time.Time) (*Date, error) {
 	millis := publishedTime.UnixNano() / int64(time.Millisecond)
 	dateBytes := make([]byte, DATE_SIZE)
 	binary.BigEndian.PutUint64(dateBytes, uint64(millis))
@@ -134,49 +175,65 @@ func NewRouterInfo(
 		log.WithError(err).Error("Failed to create Published Date")
 		return nil, oops.Errorf("failed to create published date: %v", err)
 	}
+	return &publishedDate, nil
+}
 
-	// 2. Create Size Integer
+// createSizeIntegers creates the size and peer size integer fields for RouterInfo.
+func createSizeIntegers(addresses []*RouterAddress) (*Integer, *Integer, error) {
 	sizeInt, err := NewIntegerFromInt(len(addresses), 1)
 	if err != nil {
 		log.WithError(err).Error("Failed to create Size Integer")
-		return nil, oops.Errorf("failed to create size integer: %v", err)
+		return nil, nil, oops.Errorf("failed to create size integer: %v", err)
 	}
 
-	// 3. Create PeerSize Integer (always 0)
 	peerSizeInt, err := NewIntegerFromInt(0, 1)
 	if err != nil {
 		log.WithError(err).Error("Failed to create PeerSize Integer")
-		return nil, oops.Errorf("failed to create peer size integer: %v", err)
+		return nil, nil, oops.Errorf("failed to create peer size integer: %v", err)
 	}
 
-	// 4. Convert options map to Mapping
+	return sizeInt, peerSizeInt, nil
+}
+
+// convertOptionsToMapping converts a Go map to an I2P Mapping structure.
+func convertOptionsToMapping(options map[string]string) (*Mapping, error) {
 	mapping, err := GoMapToMapping(options)
 	if err != nil {
 		log.WithError(err).Error("Failed to convert options map to Mapping")
 		return nil, oops.Errorf("failed to convert options to mapping: %v", err)
 	}
+	return mapping, nil
+}
 
-	// 5. Assemble RouterInfo without signature
-	routerInfo := &RouterInfo{
+// assembleRouterInfoWithoutSignature creates a RouterInfo structure without the signature field.
+func assembleRouterInfoWithoutSignature(
+	routerIdentity *RouterIdentity,
+	publishedDate *Date,
+	sizeInt *Integer,
+	addresses []*RouterAddress,
+	peerSizeInt *Integer,
+	mapping *Mapping,
+) *RouterInfo {
+	return &RouterInfo{
 		router_identity: routerIdentity,
-		published:       &publishedDate,
+		published:       publishedDate,
 		size:            sizeInt,
 		addresses:       addresses,
 		peer_size:       peerSizeInt,
 		options:         mapping,
 		signature:       nil, // To be set after signing
 	}
+}
 
-	// 6. Serialize RouterInfo without signature
-	dataBytes := routerInfo.serializeWithoutSignature()
-
-	// 7. Verify signingPrivateKey is valid
+// createSignerFromPrivateKey validates the private key and creates an appropriate signer.
+func createSignerFromPrivateKey(signingPrivateKey types.SigningPrivateKey, sigType int) (types.Signer, error) {
 	if signingPrivateKey == nil {
 		return nil, oops.Errorf("signing private key is nil")
 	}
 
-	// 8. Create new signer based on signature type
 	var signer types.Signer
+	var err error
+
 	switch sigType {
 	case signature.SIGNATURE_TYPE_EDDSA_SHA512_ED25519:
 		ed25519Key, ok := signingPrivateKey.(*ed25519.Ed25519PrivateKey)
@@ -196,32 +253,26 @@ func NewRouterInfo(
 		return nil, oops.Errorf("failed to create signer: %v", err)
 	}
 
-	// 9. Sign the data
+	return signer, nil
+}
+
+// signRouterInfoData serializes RouterInfo data and creates a signature.
+func signRouterInfoData(routerInfo *RouterInfo, signer types.Signer, sigType int) (*Signature, error) {
+	dataBytes := routerInfo.serializeWithoutSignature()
+
 	signatureBytes, err := signer.Sign(dataBytes)
 	if err != nil {
 		log.WithError(err).Error("Failed to sign RouterInfo data")
 		return nil, oops.Errorf("failed to sign data: %v", err)
 	}
 
-	// 10. Create Signature struct from signature bytes
 	sig, _, err := ReadSignature(signatureBytes, sigType)
 	if err != nil {
 		log.WithError(err).Error("Failed to create Signature from signature bytes")
 		return nil, oops.Errorf("failed to create signature: %v", err)
 	}
 
-	// 11. Attach signature to RouterInfo
-	routerInfo.signature = &sig
-
-	log.WithFields(logrus.Fields{
-		"router_identity": routerIdentity,
-		"published":       publishedDate,
-		"address_count":   len(addresses),
-		"options":         options,
-		"signature":       sig,
-	}).Debug("Successfully created RouterInfo")
-
-	return routerInfo, nil
+	return &sig, nil
 }
 
 // Bytes returns the RouterInfo as a []byte suitable for writing to a stream.
