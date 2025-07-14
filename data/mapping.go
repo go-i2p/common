@@ -58,19 +58,18 @@ func (mapping Mapping) Values() MappingValues {
 
 // Data returns a Mapping in its []byte form.
 func (mapping *Mapping) Data() []byte {
-	keyOrValIntegerLength := 1
 	bytes := mapping.size.Bytes()
 	for _, pair := range mapping.Values() {
 		klen, _ := pair[0].Length()
-		keylen, _ := NewIntegerFromInt(klen, keyOrValIntegerLength)
+		keylen, _ := NewIntegerFromInt(klen, KEY_VAL_INTEGER_LENGTH)
 		bytes = append(bytes, keylen.Bytes()...)
 		bytes = append(bytes, pair[0][1:]...)
-		bytes = append(bytes, 0x3d)
+		bytes = append(bytes, MAPPING_EQUALS_DELIMITER)
 		vlen, _ := pair[1].Length()
-		vallen, _ := NewIntegerFromInt(vlen, keyOrValIntegerLength)
+		vallen, _ := NewIntegerFromInt(vlen, KEY_VAL_INTEGER_LENGTH)
 		bytes = append(bytes, vallen.Bytes()...)
 		bytes = append(bytes, pair[1][1:]...)
-		bytes = append(bytes, 0x3b)
+		bytes = append(bytes, MAPPING_SEMICOLON_DELIMITER)
 	}
 	return bytes
 }
@@ -155,7 +154,7 @@ func ReadMapping(bytes []byte) (mapping Mapping, remainder []byte, err []error) 
 
 // validateMappingInputData checks if the input data meets minimum requirements.
 func validateMappingInputData(bytes []byte) error {
-	if len(bytes) < 3 {
+	if len(bytes) < MAPPING_MIN_SIZE {
 		log.WithFields(logrus.Fields{
 			"at":     "ReadMapping",
 			"reason": "zero length",
@@ -167,7 +166,7 @@ func validateMappingInputData(bytes []byte) error {
 
 // parseMappingSize extracts the size field from the beginning of the mapping data.
 func parseMappingSize(bytes []byte) (*Integer, []byte, error) {
-	size, remainder, err := NewInteger(bytes, 2)
+	size, remainder, err := NewInteger(bytes, MAPPING_SIZE_FIELD_LENGTH)
 	if err != nil {
 		log.WithError(err).Error("Failed to read Mapping size")
 	}

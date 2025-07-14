@@ -59,7 +59,7 @@ func NewIntegerFromInt(value int, size int) (integer *Integer, err error) {
 	}
 
 	// Calculate maximum value that can fit in the specified size
-	maxValue := uint64(1<<(size*8)) - 1
+	maxValue := uint64(1<<(size*BITS_PER_BYTE)) - 1
 	if uint64(value) > maxValue {
 		err = oops.Errorf("value %d exceeds maximum for %d bytes (max: %d)", value, size, maxValue)
 		return

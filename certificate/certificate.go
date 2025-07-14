@@ -78,8 +78,8 @@ func handleShortCertificateData(certificate Certificate, data []byte) (Certifica
 
 // handleValidCertificateData processes the case where sufficient data is available.
 func handleValidCertificateData(certificate Certificate, data []byte) (Certificate, error) {
-	certificate.kind = Integer(data[0:1])
-	certificate.len = Integer(data[1:3])
+	certificate.kind = Integer(data[0:CERT_TYPE_FIELD_END])
+	certificate.len = Integer(data[CERT_LENGTH_FIELD_START:CERT_LENGTH_FIELD_END])
 	payloadLength := len(data) - CERT_MIN_SIZE
 	certificate.payload = data[CERT_MIN_SIZE:]
 
@@ -104,8 +104,8 @@ func validateCertificatePayloadLength(certificate Certificate, data []byte, payl
 			"certificate_bytes_length":   certificate.len.Int(),
 			"certificate_payload_length": payloadLength,
 			"data_bytes:":                string(data),
-			"kind_bytes":                 data[0:1],
-			"len_bytes":                  data[1:3],
+			"kind_bytes":                 data[0:CERT_TYPE_FIELD_END],
+			"len_bytes":                  data[CERT_LENGTH_FIELD_START:CERT_LENGTH_FIELD_END],
 			"reason":                     err.Error(),
 		}).Error("invalid certificate, shorter than specified by length")
 		return err
@@ -149,6 +149,6 @@ func GetSignatureTypeFromCertificate(cert Certificate) (int, error) {
 	if len(cert.payload) < 4 {
 		return 0, oops.Errorf("certificate payload too short to contain signature type")
 	}
-	sigType := int(binary.BigEndian.Uint16(cert.payload[0:2])) // Read signing public key type from correct offset
+	sigType := int(binary.BigEndian.Uint16(cert.payload[0:CERT_SIGNING_KEY_TYPE_SIZE])) // Read signing public key type from correct offset
 	return sigType, nil
 }
