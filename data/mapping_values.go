@@ -156,48 +156,104 @@ func parseKeyValuePairs(remainder []byte, map_values MappingValues, errs []error
 			break
 		}
 
-		var key_str, val_str I2PString
+		var keyValuePair [2]I2PString
 		var err error
 
-		remainder, key_str, err = parseKeyFromRemainder(remainder)
+		remainder, keyValuePair, err = parseSingleKeyValuePair(remainder, encounteredKeysMap)
 		if err != nil {
-			if stopValueRead(err) {
-				errs = append(errs, err)
+			errs = append(errs, err)
+			if shouldStopParsing(err) {
+				break
 			}
 		}
 
-		if err := checkForDuplicateKey(key_str, encounteredKeysMap); err != nil {
-			errs = append(errs, err)
-		}
-
-		remainder, err = validateAndConsumeDelimiter(remainder, 0x3d, "=")
-		if err != nil {
-			errs = append(errs, err)
-			break
-		}
-
-		remainder, val_str, err = parseValueFromRemainder(remainder)
-		if err != nil {
-			if stopValueRead(err) {
-				errs = append(errs, err)
-			}
-		}
-
-		remainder, err = validateAndConsumeDelimiter(remainder, 0x3b, ";")
-		if err != nil {
-			errs = append(errs, err)
-			break
-		}
-
-		map_values = append(map_values, [2]I2PString{key_str, val_str})
+		// Always add the key-value pair even if there were errors (preserves original behavior)
+		map_values = append(map_values, keyValuePair)
 		if len(remainder) == 0 {
 			break
 		}
 
-		storeEncounteredKey(key_str, encounteredKeysMap)
+		storeEncounteredKey(keyValuePair[0], encounteredKeysMap)
 	}
 
 	return remainder, map_values, errs
+}
+
+// parseSingleKeyValuePair extracts one complete key-value pair from the remainder data.
+func parseSingleKeyValuePair(remainder []byte, encounteredKeysMap map[string]bool) ([]byte, [2]I2PString, error) {
+	var keyValuePair [2]I2PString
+	var accumulatedErrors []error
+
+	// Parse key
+	remainder, key_str, err := parseAndValidateKey(remainder, encounteredKeysMap)
+	if err != nil {
+		accumulatedErrors = append(accumulatedErrors, err)
+	}
+	keyValuePair[0] = key_str
+
+	// Parse equals delimiter
+	remainder, err = validateAndConsumeDelimiter(remainder, 0x3d, "=")
+	if err != nil {
+		// Delimiter errors are critical, return immediately
+		return remainder, keyValuePair, err
+	}
+
+	// Parse value
+	remainder, val_str, err := parseAndValidateValue(remainder)
+	if err != nil {
+		accumulatedErrors = append(accumulatedErrors, err)
+	}
+	keyValuePair[1] = val_str
+
+	// Parse semicolon delimiter
+	remainder, err = validateAndConsumeDelimiter(remainder, 0x3b, ";")
+	if err != nil {
+		// Delimiter errors are critical, return immediately
+		return remainder, keyValuePair, err
+	}
+
+	// Return the first accumulated error if any, but still return the parsed data
+	if len(accumulatedErrors) > 0 {
+		return remainder, keyValuePair, accumulatedErrors[0]
+	}
+
+	return remainder, keyValuePair, nil
+}
+
+// parseAndValidateKey extracts a key string and validates it for duplicates.
+func parseAndValidateKey(remainder []byte, encounteredKeysMap map[string]bool) ([]byte, I2PString, error) {
+	remainder, key_str, err := parseKeyFromRemainder(remainder)
+
+	// Check for string parsing errors that should stop value reading
+	if err != nil && stopValueRead(err) {
+		return remainder, key_str, err
+	}
+
+	// Check for duplicate keys (this generates an error but doesn't stop parsing)
+	if dupErr := checkForDuplicateKey(key_str, encounteredKeysMap); dupErr != nil {
+		return remainder, key_str, dupErr
+	}
+
+	return remainder, key_str, err
+}
+
+// parseAndValidateValue extracts a value string from the remainder data.
+func parseAndValidateValue(remainder []byte) ([]byte, I2PString, error) {
+	remainder, val_str, err := parseValueFromRemainder(remainder)
+
+	// Check for string parsing errors that should stop value reading
+	if err != nil && stopValueRead(err) {
+		return remainder, val_str, err
+	}
+
+	return remainder, val_str, err
+}
+
+// shouldStopParsing determines if parsing should halt based on the error type.
+func shouldStopParsing(err error) bool {
+	// Stop parsing on delimiter validation errors which indicate format corruption
+	errStr := err.Error()
+	return errStr == "mapping format violation, expected =" || errStr == "mapping format violation, expected ;"
 }
 
 // hasMinimumBytesForKeyValuePair checks if there are enough bytes for another key-value pair.
