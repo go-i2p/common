@@ -78,25 +78,54 @@ func mappingOrder(values MappingValues) {
 // The remaining bytes after the specified length are also returned.
 // Returns a list of errors that occurred during parsing.
 func ReadMappingValues(remainder []byte, map_length Integer) (values *MappingValues, remainder_bytes []byte, errs []error) {
-	// mapping := remainder
-	// var remainder = mapping
-	// var err error
 	log.WithFields(logrus.Fields{
 		"input_length": len(remainder),
 		"map_length":   map_length.Int(),
 	}).Debug("Reading MappingValues")
 
-	if remainder == nil || len(remainder) < 1 {
+	if err := validateMappingInput(remainder); err != nil {
+		errs = []error{err}
+		return
+	}
+
+	map_values := make(MappingValues, 0)
+	if errs = validateMappingLength(remainder, map_length); len(errs) > 0 {
+		log.WithFields(logrus.Fields{
+			"error_count": len(errs),
+		}).Warn("Mapping length validation warnings")
+	}
+
+	var remainder_updated []byte
+	remainder_updated, map_values, errs = parseKeyValuePairs(remainder, map_values, errs)
+	values = &map_values
+
+	log.WithFields(logrus.Fields{
+		"values_count":     len(map_values),
+		"remainder_length": len(remainder_updated),
+		"error_count":      len(errs),
+	}).Debug("Finished reading MappingValues")
+
+	return
+}
+
+// validateMappingInput checks if the input data is valid for mapping parsing.
+func validateMappingInput(remainder []byte) error {
+	if len(remainder) < 1 {
 		log.WithFields(logrus.Fields{
 			"at":     "(Mapping) Values",
 			"reason": "data shorter than expected",
 		}).Error("mapping contained no data")
-		errs = []error{oops.Errorf("mapping contained no data")}
-		return
+		return oops.Errorf("mapping contained no data")
 	}
-	map_values := make(MappingValues, 0)
+	return nil
+}
+
+// validateMappingLength validates the expected mapping length against actual data length.
+func validateMappingLength(remainder []byte, map_length Integer) []error {
+	var errs []error
 	int_map_length := map_length.Int()
 	mapping_len := len(remainder)
+
 	if mapping_len > int_map_length {
 		log.WithFields(logrus.Fields{
 			"at":                   "(Mapping) Values",
@@ -115,111 +144,122 @@ func ReadMappingValues(remainder []byte, map_length Integer) (values *MappingVal
 		errs = append(errs, oops.Errorf("warning parsing mapping: mapping length exceeds provided data"))
 	}
 
+	return errs
+}
+
+// parseKeyValuePairs iterates through the remainder data parsing key-value pairs.
+func parseKeyValuePairs(remainder []byte, map_values MappingValues, errs []error) ([]byte, MappingValues, []error) {
 	encounteredKeysMap := map[string]bool{}
-	// pop off length bytes before parsing kv pairs
-	// remainder = remainder[2:]
 
 	for {
-		// Read a key, breaking on fatal errors
-		// and appending warnings
-
-		// Minimum byte length required for another KV pair.
-		// Two bytes for each string length
-		// At least 1 byte per string
-		// One byte for =
-		// One byte for ;
-		if len(remainder) < 6 {
-			// Not returning an error here as the issue is already flagged by mapping length being wrong.
-			log.WithFields(logrus.Fields{
-				"at":     "(Mapping) Values",
-				"reason": "mapping format violation",
-			}).Warn("mapping format violation, too few bytes for a kv pair")
+		if !hasMinimumBytesForKeyValuePair(remainder) {
 			break
 		}
 
-		key_str, more, err := ReadI2PString(remainder)
+		var key_str, val_str I2PString
+		var err error
+
+		remainder, key_str, err = parseKeyFromRemainder(remainder)
 		if err != nil {
 			if stopValueRead(err) {
 				errs = append(errs, err)
-				// return
 			}
 		}
-		// overwriting remainder with more as another var to prevent memory weirdness in loops
-		remainder = more
-		// log.Printf("(MAPPING VALUES DEBUG) Remainder: %s\n", remainder)
 
-		// Check if key has already been encountered in this mapping
-		keyBytes, _ := key_str.Data()
-		keyAsString := string(keyBytes)
-		_, ok := encounteredKeysMap[keyAsString]
-		if ok {
-			log.WithFields(logrus.Fields{
-				"at":     "(Mapping) Values",
-				"reason": "duplicate key in mapping",
-				"key":    string(key_str),
-			}).Error("mapping format violation")
-			log.Printf("DUPE: %s", key_str)
-			errs = append(errs, oops.Errorf("mapping format violation, duplicate key in mapping"))
-			// Based on other implementations this does not seem to happen often?
-			// Java throws an exception in this case, the base object is a Hashmap so the value is overwritten and an exception is thrown.
-			// i2pd  as far as I can tell just overwrites the original value
-			// Continue on, we can check if the Mapping contains duplicate keys later.
+		if err := checkForDuplicateKey(key_str, encounteredKeysMap); err != nil {
+			errs = append(errs, err)
 		}
 
-		if !beginsWith(remainder, 0x3d) {
-			log.WithFields(logrus.Fields{
-				"at":     "(Mapping) Values",
-				"reason": "expected =",
-				"value:": string(remainder),
-			}).Warn("mapping format violation")
-			errs = append(errs, oops.Errorf("mapping format violation, expected ="))
-			log.Printf("ERRVAL: %s", remainder)
+		remainder, err = validateAndConsumeDelimiter(remainder, 0x3d, "=")
+		if err != nil {
+			errs = append(errs, err)
 			break
-		} else {
-			remainder = remainder[1:]
 		}
 
-		// Read a value, breaking on fatal errors
-		// and appending warnings
-		val_str, more, err := ReadI2PString(remainder)
+		remainder, val_str, err = parseValueFromRemainder(remainder)
 		if err != nil {
 			if stopValueRead(err) {
 				errs = append(errs, err)
-				// return
 			}
 		}
-		// overwriting remainder with more as another var to prevent memory weirdness in loops
-		remainder = more
-		// log.Printf("(MAPPING VALUES DEBUG) Remainder: %s\n", remainder)
-		// log.Printf("(MAPPING VALUES DEBUG) String: value: %s", val_str)
-		if !beginsWith(remainder, 0x3b) {
-			log.WithFields(logrus.Fields{
-				"at":     "(Mapping) Values",
-				"reason": "expected ;",
-				"value:": string(remainder),
-			}).Warn("mapping format violation")
-			errs = append(errs, oops.Errorf("mapping format violation, expected ;"))
+
+		remainder, err = validateAndConsumeDelimiter(remainder, 0x3b, ";")
+		if err != nil {
+			errs = append(errs, err)
 			break
-		} else {
-			remainder = remainder[1:]
 		}
 
-		// Append the key-value pair and break if there is no more data to read
 		map_values = append(map_values, [2]I2PString{key_str, val_str})
 		if len(remainder) == 0 {
 			break
 		}
 
-		// Store the encountered key with arbitrary data
-		encounteredKeysMap[keyAsString] = true
+		storeEncounteredKey(key_str, encounteredKeysMap)
 	}
-	values = &map_values
 
-	log.WithFields(logrus.Fields{
-		"values_count":     len(map_values),
-		"remainder_length": len(remainder_bytes),
-		"error_count":      len(errs),
-	}).Debug("Finished reading MappingValues")
+	return remainder, map_values, errs
+}
 
-	return
+// hasMinimumBytesForKeyValuePair checks if there are enough bytes for another key-value pair.
+func hasMinimumBytesForKeyValuePair(remainder []byte) bool {
+	// Minimum byte length required: 2 bytes for each string length,
+	// at least 1 byte per string, one byte for =, one byte for ;
+	if len(remainder) < 6 {
+		log.WithFields(logrus.Fields{
+			"at":     "(Mapping) Values",
+			"reason": "mapping format violation",
+		}).Warn("mapping format violation, too few bytes for a kv pair")
+		return false
+	}
+	return true
+}
+
+// parseKeyFromRemainder extracts a key string from the remainder data.
+func parseKeyFromRemainder(remainder []byte) ([]byte, I2PString, error) {
+	key_str, more, err := ReadI2PString(remainder)
+	return more, key_str, err
+}
+
+// parseValueFromRemainder extracts a value string from the remainder data.
+func parseValueFromRemainder(remainder []byte) ([]byte, I2PString, error) {
+	val_str, more, err := ReadI2PString(remainder)
+	return more, val_str, err
+}
+
+// checkForDuplicateKey validates that a key hasn't been encountered before in this mapping.
+func checkForDuplicateKey(key_str I2PString, encounteredKeysMap map[string]bool) error {
+	keyBytes, _ := key_str.Data()
+	keyAsString := string(keyBytes)
+	_, ok := encounteredKeysMap[keyAsString]
+	if ok {
+		log.WithFields(logrus.Fields{
+			"at":     "(Mapping) Values",
+			"reason": "duplicate key in mapping",
+			"key":    string(key_str),
+		}).Error("mapping format violation")
+		log.Printf("DUPE: %s", key_str)
+		return oops.Errorf("mapping format violation, duplicate key in mapping")
+	}
+	return nil
+}
+
+// validateAndConsumeDelimiter checks for the expected delimiter and consumes it from remainder.
+func validateAndConsumeDelimiter(remainder []byte, delimiter byte, delimiterName string) ([]byte, error) {
+	if !beginsWith(remainder, delimiter) {
+		log.WithFields(logrus.Fields{
+			"at":     "(Mapping) Values",
+			"reason": "expected " + delimiterName,
+			"value:": string(remainder),
+		}).Warn("mapping format violation")
+		log.Printf("ERRVAL: %s", remainder)
+		return remainder, oops.Errorf("mapping format violation, expected %s", delimiterName)
+	}
+	return remainder[1:], nil
+}
+
+// storeEncounteredKey records that a key has been seen in the current mapping.
+func storeEncounteredKey(key_str I2PString, encounteredKeysMap map[string]bool) {
+	keyBytes, _ := key_str.Data()
+	keyAsString := string(keyBytes)
+	encounteredKeysMap[keyAsString] = true
 }

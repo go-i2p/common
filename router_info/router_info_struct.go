@@ -435,102 +435,28 @@ func (ri *RouterInfo) serializeWithoutSignature() []byte {
 func ReadRouterInfo(bytes []byte) (info RouterInfo, remainder []byte, err error) {
 	log.WithField("input_length", len(bytes)).Debug("Reading RouterInfo from bytes")
 
-	info.router_identity, remainder, err = ReadRouterIdentity(bytes)
+	// Parse core RouterInfo fields
+	info, remainder, err = parseRouterInfoCore(bytes)
 	if err != nil {
-		log.WithFields(logrus.Fields{
-			"at":           "(RouterInfo) ReadRouterInfo",
-			"data_len":     len(bytes),
-			"required_len": ROUTER_INFO_MIN_SIZE,
-			"reason":       "not enough data",
-		}).Error("error parsing router info")
 		return
 	}
-	info.published, remainder, err = NewDate(remainder)
+
+	// Parse router addresses
+	info.addresses, remainder, err = parseRouterAddresses(info.size, remainder)
 	if err != nil {
-		log.WithFields(logrus.Fields{
-			"at":           "(RouterInfo) ReadRouterInfo",
-			"data_len":     len(remainder),
-			"required_len": DATE_SIZE,
-			"reason":       "not enough data",
-		}).Error("error parsing router info")
-	}
-	info.size, remainder, err = NewInteger(remainder, 1)
-	if err != nil {
-		log.WithFields(logrus.Fields{
-			"at":           "(RouterInfo) ReadRouterInfo",
-			"data_len":     len(remainder),
-			"required_len": info.size.Int(),
-			"reason":       "read error",
-		}).Error("error parsing router info size")
-	}
-	for i := 0; i < info.size.Int(); i++ {
-		address, more, err := ReadRouterAddress(remainder)
-		remainder = more
-		if err != nil {
-			log.WithFields(logrus.Fields{
-				"at":       "(RouterInfo) ReadRouterInfo",
-				"data_len": len(remainder),
-				//"required_len": ROUTER_ADDRESS_SIZE,
-				"reason": "not enough data",
-			}).Error("error parsing router address")
-		}
-		info.addresses = append(info.addresses, &address)
-	}
-	info.peer_size, remainder, err = NewInteger(remainder, 1)
-	if err != nil {
-		log.WithError(err).Error("Failed to read PeerSize")
 		return
 	}
-	var errs []error
-	info.options, remainder, errs = NewMapping(remainder)
-	if len(errs) != 0 {
-		log.WithFields(logrus.Fields{
-			"at":       "(RouterInfo) ReadRouterInfo",
-			"data_len": len(remainder),
-			//"required_len": MAPPING_SIZE,
-			"reason": "not enough data",
-		}).Error("error parsing router info")
-		estring := ""
-		for _, e := range errs {
-			estring += e.Error() + " "
-		}
-	}
-	// Add debug logging for certificate inspection
-	cert := info.router_identity.Certificate()
-	log.WithFields(logrus.Fields{
-		"at":            "(RouterInfo) ReadRouterInfo",
-		"cert_type":     cert.Type(),
-		"cert_length":   cert.Length(),
-		"remainder_len": len(remainder),
-	}).Debug("Processing certificate")
 
-	sigType, err := certificate.GetSignatureTypeFromCertificate(cert)
+	// Parse peer size and options
+	info.peer_size, info.options, remainder, err = parsePeerSizeAndOptions(remainder)
 	if err != nil {
-		log.WithError(err).Error("Failed to get signature type from certificate")
-		return RouterInfo{}, remainder, oops.Errorf("certificate signature type error: %v", err)
+		return
 	}
 
-	// Enhanced signature type validation
-	if sigType <= SIGNATURE_TYPE_RSA_SHA256_2048 || sigType > SIGNATURE_TYPE_REDDSA_SHA512_ED25519 {
-		log.WithFields(logrus.Fields{
-			"sigType": sigType,
-			"cert":    cert,
-		}).Error("Invalid signature type detected")
-		return RouterInfo{}, remainder, oops.Errorf("invalid signature type: %d", sigType)
-	}
-
-	log.WithFields(logrus.Fields{
-		"sigType": sigType,
-	}).Debug("Got sigType")
-	info.signature, remainder, err = NewSignature(remainder, sigType)
+	// Parse signature
+	info.signature, remainder, err = parseRouterInfoSignature(info.router_identity, remainder)
 	if err != nil {
-		log.WithFields(logrus.Fields{
-			"at":       "(RouterInfo) ReadRouterInfo",
-			"data_len": len(remainder),
-			//"required_len": MAPPING_SIZE,
-			"reason": "not enough data",
-		}).Error("error parsing router info")
-		err = oops.Errorf("error parsing router info: not enough data to read signature")
+		return
 	}
 
 	log.WithFields(logrus.Fields{
@@ -541,4 +467,132 @@ func ReadRouterInfo(bytes []byte) (info RouterInfo, remainder []byte, err error)
 	}).Debug("Successfully read RouterInfo")
 
 	return
+}
+
+// parseRouterInfoCore reads the RouterIdentity, published date, and address count from bytes.
+func parseRouterInfoCore(bytes []byte) (info RouterInfo, remainder []byte, err error) {
+	info.router_identity, remainder, err = ReadRouterIdentity(bytes)
+	if err != nil {
+		log.WithFields(logrus.Fields{
+			"at":           "(RouterInfo) parseRouterInfoCore",
+			"data_len":     len(bytes),
+			"required_len": ROUTER_INFO_MIN_SIZE,
+			"reason":       "not enough data",
+		}).Error("error parsing router info")
+		return
+	}
+
+	info.published, remainder, err = NewDate(remainder)
+	if err != nil {
+		log.WithFields(logrus.Fields{
+			"at":           "(RouterInfo) parseRouterInfoCore",
+			"data_len":     len(remainder),
+			"required_len": DATE_SIZE,
+			"reason":       "not enough data",
+		}).Error("error parsing router info")
+		return
+	}
+
+	info.size, remainder, err = NewInteger(remainder, 1)
+	if err != nil {
+		log.WithFields(logrus.Fields{
+			"at":           "(RouterInfo) parseRouterInfoCore",
+			"data_len":     len(remainder),
+			"required_len": info.size.Int(),
+			"reason":       "read error",
+		}).Error("error parsing router info size")
+		return
+	}
+
+	return
+}
+
+// parseRouterAddresses reads the specified number of RouterAddress structures from bytes.
+func parseRouterAddresses(size *Integer, remainder []byte) ([]*RouterAddress, []byte, error) {
+	var addresses []*RouterAddress
+
+	for i := 0; i < size.Int(); i++ {
+		address, more, err := ReadRouterAddress(remainder)
+		remainder = more
+		if err != nil {
+			log.WithFields(logrus.Fields{
+				"at":       "(RouterInfo) parseRouterAddresses",
+				"data_len": len(remainder),
+				"reason":   "not enough data",
+			}).Error("error parsing router address")
+			return addresses, remainder, err
+		}
+		addresses = append(addresses, &address)
+	}
+
+	return addresses, remainder, nil
+}
+
+// parsePeerSizeAndOptions reads the peer size and options mapping from bytes.
+func parsePeerSizeAndOptions(remainder []byte) (*Integer, *Mapping, []byte, error) {
+	peer_size, remainder, err := NewInteger(remainder, 1)
+	if err != nil {
+		log.WithError(err).Error("Failed to read PeerSize")
+		return nil, nil, remainder, err
+	}
+
+	var errs []error
+	options, remainder, errs := NewMapping(remainder)
+	if len(errs) != 0 {
+		log.WithFields(logrus.Fields{
+			"at":       "(RouterInfo) parsePeerSizeAndOptions",
+			"data_len": len(remainder),
+			"reason":   "not enough data",
+		}).Error("error parsing router info")
+		estring := ""
+		for _, e := range errs {
+			estring += e.Error() + " "
+		}
+		return peer_size, options, remainder, errs[0]
+	}
+
+	return peer_size, options, remainder, nil
+}
+
+// parseRouterInfoSignature extracts signature type from certificate and reads the signature.
+func parseRouterInfoSignature(router_identity *RouterIdentity, remainder []byte) (*Signature, []byte, error) {
+	// Add debug logging for certificate inspection
+	cert := router_identity.Certificate()
+	log.WithFields(logrus.Fields{
+		"at":            "(RouterInfo) parseRouterInfoSignature",
+		"cert_type":     cert.Type(),
+		"cert_length":   cert.Length(),
+		"remainder_len": len(remainder),
+	}).Debug("Processing certificate")
+
+	sigType, err := certificate.GetSignatureTypeFromCertificate(cert)
+	if err != nil {
+		log.WithError(err).Error("Failed to get signature type from certificate")
+		return nil, remainder, oops.Errorf("certificate signature type error: %v", err)
+	}
+
+	// Enhanced signature type validation
+	if sigType <= SIGNATURE_TYPE_RSA_SHA256_2048 || sigType > SIGNATURE_TYPE_REDDSA_SHA512_ED25519 {
+		log.WithFields(logrus.Fields{
+			"sigType": sigType,
+			"cert":    cert,
+		}).Error("Invalid signature type detected")
+		return nil, remainder, oops.Errorf("invalid signature type: %d", sigType)
+	}
+
+	log.WithFields(logrus.Fields{
+		"sigType": sigType,
+	}).Debug("Got sigType")
+
+	signature, remainder, err := NewSignature(remainder, sigType)
+	if err != nil {
+		log.WithFields(logrus.Fields{
+			"at":       "(RouterInfo) parseRouterInfoSignature",
+			"data_len": len(remainder),
+			"reason":   "not enough data",
+		}).Error("error parsing router info")
+		return nil, remainder, oops.Errorf("error parsing router info: not enough data to read signature")
+	}
+
+	return signature, remainder, nil
 }
