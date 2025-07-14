@@ -539,16 +539,33 @@ func parsePeerSizeAndOptions(remainder []byte) (*Integer, *Mapping, []byte, erro
 	var errs []error
 	options, remainder, errs := NewMapping(remainder)
 	if len(errs) != 0 {
-		log.WithFields(logrus.Fields{
-			"at":       "(RouterInfo) parsePeerSizeAndOptions",
-			"data_len": len(remainder),
-			"reason":   "not enough data",
-		}).Error("error parsing router info")
-		estring := ""
+		// Check if errors are just warnings about extra data beyond mapping length
+		hasNonWarningErrors := false
 		for _, e := range errs {
-			estring += e.Error() + " "
+			if !strings.Contains(e.Error(), "warning parsing mapping: data exists beyond length of mapping") {
+				hasNonWarningErrors = true
+				break
+			}
 		}
-		return peer_size, options, remainder, errs[0]
+
+		if hasNonWarningErrors {
+			log.WithFields(logrus.Fields{
+				"at":       "(RouterInfo) parsePeerSizeAndOptions",
+				"data_len": len(remainder),
+				"reason":   "not enough data",
+			}).Error("error parsing router info")
+			estring := ""
+			for _, e := range errs {
+				estring += e.Error() + " "
+			}
+			return peer_size, options, remainder, errs[0]
+		} else {
+			// Just warnings about extra data - log but continue parsing
+			log.WithFields(logrus.Fields{
+				"at":     "(RouterInfo) parsePeerSizeAndOptions",
+				"reason": "extra data beyond mapping length",
+			}).Warn("mapping format violation")
+		}
 	}
 
 	return peer_size, options, remainder, nil
