@@ -83,8 +83,8 @@ func TestCreateRouterInfo(t *testing.T) {
 	}
 
 	// Directly write the bytes of the Integer instances to the payload
-	payload.Write(*cryptoPublicKeyType)
 	payload.Write(*signingPublicKeyType)
+	payload.Write(*cryptoPublicKeyType)
 
 	// Create KeyCertificate specifying key types
 	cert, err := certificate.NewCertificateWithType(certificate.CERT_KEY, payload.Bytes())

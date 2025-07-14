@@ -113,8 +113,8 @@ func KeyCertificateFromCertificate(cert Certificate) (*KeyCertificate, error) {
 	fmt.Printf("cpkTypeBytes in KeyCertificateFromCertificate: %v\n", cpkTypeBytes)
 	fmt.Printf("spkTypeBytes in KeyCertificateFromCertificate: %v\n", spkTypeBytes)
 
-	cpkType := Integer(cpkTypeBytes)
 	spkType := Integer(spkTypeBytes)
+	cpkType := Integer(cpkTypeBytes)
 
 	fmt.Printf("cpkType (Int) in KeyCertificateFromCertificate: %d\n", cpkType.Int())
 	fmt.Printf("spkType (Int) in KeyCertificateFromCertificate: %d\n", spkType.Int())

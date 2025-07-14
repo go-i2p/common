@@ -81,8 +81,8 @@ func createValidKeyAndCert(t *testing.T) *KeysAndCert {
 	if err != nil {
 		t.Fatalf("Failed to create signing public key type integer: %v", err)
 	}
-	payload.Write(*cryptoPublicKeyType)
 	payload.Write(*signingPublicKeyType)
+	payload.Write(*cryptoPublicKeyType)
 
 	// Create certificate
 	cert, err := certificate.NewCertificateWithType(certificate.CERT_KEY, payload.Bytes())

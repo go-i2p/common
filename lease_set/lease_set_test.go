@@ -87,8 +87,8 @@ func generateTestRouterInfo(t *testing.T) (*router_info.RouterInfo, types.Reciev
 		t.Fatalf("Failed to create crypto public key type integer: %v", err)
 	}
 
-	payload.Write(*cryptoPublicKeyType)
 	payload.Write(*signingPublicKeyType)
+	payload.Write(*cryptoPublicKeyType)
 
 	cert, err := certificate.NewCertificateWithType(certificate.CERT_KEY, payload.Bytes())
 	if err != nil {
@@ -239,8 +239,8 @@ func generateTestDestination(t *testing.T) (*destination.Destination, types.Reci
 	if err != nil {
 		t.Fatalf("Failed to create signing public key type integer: %v", err)
 	}
-	payload.Write(*cryptoPublicKeyType)
 	payload.Write(*signingPublicKeyType)
+	payload.Write(*cryptoPublicKeyType)
 
 	// Create Certificate
 	cert, err := certificate.NewCertificateWithType(certificate.CERT_KEY, payload.Bytes())

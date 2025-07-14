@@ -84,8 +84,8 @@ func generateTestRouterInfo(t *testing.T, publishedTime time.Time) (*RouterInfo,
 		t.Fatalf("Failed to create crypto public key type integer: %v", err)
 	}
 
-	payload.Write(*cryptoPublicKeyType)
 	payload.Write(*signingPublicKeyType)
+	payload.Write(*cryptoPublicKeyType)
 
 	// Create KeyCertificate specifying key types
 	cert, err := certificate.NewCertificateWithType(certificate.CERT_KEY, payload.Bytes())
