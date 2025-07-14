@@ -2,6 +2,8 @@ package data
 
 import (
 	"encoding/binary"
+
+	"github.com/samber/oops"
 )
 
 /*
@@ -50,6 +52,19 @@ func NewInteger(bytes []byte, size int) (integer *Integer, remainder []byte, err
 
 // NewIntegerFromInt creates a new Integer from a Go integer of a specified []byte length.
 func NewIntegerFromInt(value int, size int) (integer *Integer, err error) {
+	// Validate that the value fits in the specified byte size
+	if value < 0 {
+		err = oops.Errorf("cannot create integer from negative value: %d", value)
+		return
+	}
+
+	// Calculate maximum value that can fit in the specified size
+	maxValue := uint64(1<<(size*8)) - 1
+	if uint64(value) > maxValue {
+		err = oops.Errorf("value %d exceeds maximum for %d bytes (max: %d)", value, size, maxValue)
+		return
+	}
+
 	bytes := make([]byte, MAX_INTEGER_SIZE)
 	binary.BigEndian.PutUint64(bytes, uint64(value))
 	integerSize := MAX_INTEGER_SIZE
