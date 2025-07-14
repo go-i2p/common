@@ -71,10 +71,18 @@ func ReadCertificate(data []byte) (certificate Certificate, remainder []byte, er
 		log.Warn("Certificate data longer than specified length")
 		err = nil
 	}
-	remainder = certificate.ExcessBytes()
+
+	// Calculate remainder as data after the complete certificate, not ExcessBytes within payload
+	certLength := certificate.length()
+	if len(data) > certLength {
+		remainder = data[certLength:]
+	}
+
 	log.WithFields(logrus.Fields{
-		"remainder_length": len(remainder),
-	}).Debug("Read certificate and extracted remainder")
+		"certificate_length": certLength,
+		"input_length":       len(data),
+		"remainder_length":   len(remainder),
+	}).Debug("Read certificate and calculated remainder")
 	return
 }
 
