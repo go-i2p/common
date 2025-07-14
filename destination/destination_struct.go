@@ -24,7 +24,7 @@ Contents
 Identical to KeysAndCert.
 */
 
-// Destination is the represenation of an I2P Destination.
+// Destination is the representation of an I2P Destination.
 //
 // https://geti2p.net/spec/common-structures#destination
 type Destination struct {

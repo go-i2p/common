@@ -18,7 +18,7 @@ and the remaining 0-255 bytes are the non-null terminated UTF-8 encoded characte
 Length limit is 255 bytes (not characters). Length may be 0.
 */
 
-// I2PString is the represenation of an I2P String.
+// I2PString is the representation of an I2P String.
 //
 // https://geti2p.net/spec/common-structures#string
 type I2PString []byte
