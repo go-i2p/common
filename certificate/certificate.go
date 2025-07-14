@@ -27,70 +27,118 @@ func readCertificate(data []byte) (certificate Certificate, err error) {
 // ReadCertificate creates a Certificate from []byte and returns any ExcessBytes at the end of the input.
 // returns err if the certificate could not be read.
 func ReadCertificate(data []byte) (certificate Certificate, remainder []byte, err error) {
-	certificate = Certificate{}
+	certificate, err = parseCertificateFromData(data)
+	if err != nil {
+		return
+	}
+
+	err = normalizeErrorConditions(err)
+	remainder = calculateRemainder(data, certificate)
+
+	logCertificateReadCompletion(certificate, data, remainder)
+	return
+}
+
+// parseCertificateFromData constructs a Certificate based on the input data length and content.
+func parseCertificateFromData(data []byte) (Certificate, error) {
+	certificate := Certificate{}
+
 	switch len(data) {
 	case 0:
-		certificate.kind = Integer([]byte{0})
-		certificate.len = Integer([]byte{0})
-		log.WithFields(logrus.Fields{
-			"at":                       "(Certificate) ReadCertificate",
-			"certificate_bytes_length": len(data),
-			"reason":                   "too short (len < CERT_MIN_SIZE)" + fmt.Sprintf("%d", certificate.kind.Int()),
-		}).Error("invalid certificate, empty")
-		err = oops.Errorf("error parsing certificate: certificate is empty")
-		return
+		return handleEmptyCertificateData(certificate)
 	case 1, 2:
-		certificate.kind = Integer(data[0 : len(data)-1])
-		certificate.len = Integer([]byte{0})
-		log.WithFields(logrus.Fields{
-			"at":                       "(Certificate) ReadCertificate",
-			"certificate_bytes_length": len(data),
-			"reason":                   "too short (len < CERT_MIN_SIZE)" + fmt.Sprintf("%d", certificate.kind.Int()),
-		}).Error("invalid certificate, too short")
-		err = oops.Errorf("error parsing certificate: certificate is too short")
-		return
+		return handleShortCertificateData(certificate, data)
 	default:
-		certificate.kind = Integer(data[0:1])
-		certificate.len = Integer(data[1:3])
-		payloadLength := len(data) - CERT_MIN_SIZE
-		certificate.payload = data[CERT_MIN_SIZE:]
-		if certificate.len.Int() > len(data)-CERT_MIN_SIZE {
-			err = oops.Errorf("certificate parsing warning: certificate data is shorter than specified by length")
-			log.WithFields(logrus.Fields{
-				"at":                         "(Certificate) ReadCertificate",
-				"certificate_bytes_length":   certificate.len.Int(),
-				"certificate_payload_length": payloadLength,
-				"data_bytes:":                string(data),
-				"kind_bytes":                 data[0:1],
-				"len_bytes":                  data[1:3],
-				"reason":                     err.Error(),
-			}).Error("invalid certificate, shorter than specified by length")
-			return
-		}
-		log.WithFields(logrus.Fields{
-			"type":   certificate.kind.Int(),
-			"length": certificate.len.Int(),
-		}).Debug("Successfully created new certificate")
+		return handleValidCertificateData(certificate, data)
 	}
+}
 
-	// Handle the case where data longer than specified by length should not be an error
-	if err != nil && err.Error() == "certificate parsing warning: certificate data is longer than specified by length" {
-		log.Warn("Certificate data longer than specified length")
-		err = nil
-	}
+// handleEmptyCertificateData processes the case where no data is provided.
+func handleEmptyCertificateData(certificate Certificate) (Certificate, error) {
+	certificate.kind = Integer([]byte{0})
+	certificate.len = Integer([]byte{0})
+	log.WithFields(logrus.Fields{
+		"at":                       "(Certificate) ReadCertificate",
+		"certificate_bytes_length": 0,
+		"reason":                   "too short (len < CERT_MIN_SIZE)" + fmt.Sprintf("%d", certificate.kind.Int()),
+	}).Error("invalid certificate, empty")
+	return certificate, oops.Errorf("error parsing certificate: certificate is empty")
+}
 
-	// Calculate remainder as data after the complete certificate, not ExcessBytes within payload
-	certLength := certificate.length()
-	if len(data) > certLength {
-		remainder = data[certLength:]
+// handleShortCertificateData processes the case where insufficient data is provided.
+func handleShortCertificateData(certificate Certificate, data []byte) (Certificate, error) {
+	certificate.kind = Integer(data[0 : len(data)-1])
+	certificate.len = Integer([]byte{0})
+	log.WithFields(logrus.Fields{
+		"at":                       "(Certificate) ReadCertificate",
+		"certificate_bytes_length": len(data),
+		"reason":                   "too short (len < CERT_MIN_SIZE)" + fmt.Sprintf("%d", certificate.kind.Int()),
+	}).Error("invalid certificate, too short")
+	return certificate, oops.Errorf("error parsing certificate: certificate is too short")
+}
+
+// handleValidCertificateData processes the case where sufficient data is available.
+func handleValidCertificateData(certificate Certificate, data []byte) (Certificate, error) {
+	certificate.kind = Integer(data[0:1])
+	certificate.len = Integer(data[1:3])
+	payloadLength := len(data) - CERT_MIN_SIZE
+	certificate.payload = data[CERT_MIN_SIZE:]
+
+	if err := validateCertificatePayloadLength(certificate, data, payloadLength); err != nil {
+		return certificate, err
 	}
 
 	log.WithFields(logrus.Fields{
-		"certificate_length": certLength,
+		"type":   certificate.kind.Int(),
+		"length": certificate.len.Int(),
+	}).Debug("Successfully created new certificate")
+
+	return certificate, nil
+}
+
+// validateCertificatePayloadLength checks if the payload length matches the declared length.
+func validateCertificatePayloadLength(certificate Certificate, data []byte, payloadLength int) error {
+	if certificate.len.Int() > len(data)-CERT_MIN_SIZE {
+		err := oops.Errorf("certificate parsing warning: certificate data is shorter than specified by length")
+		log.WithFields(logrus.Fields{
+			"at":                         "(Certificate) ReadCertificate",
+			"certificate_bytes_length":   certificate.len.Int(),
+			"certificate_payload_length": payloadLength,
+			"data_bytes:":                string(data),
+			"kind_bytes":                 data[0:1],
+			"len_bytes":                  data[1:3],
+			"reason":                     err.Error(),
+		}).Error("invalid certificate, shorter than specified by length")
+		return err
+	}
+	return nil
+}
+
+// normalizeErrorConditions handles specific error conditions that should not be treated as errors.
+func normalizeErrorConditions(err error) error {
+	if err != nil && err.Error() == "certificate parsing warning: certificate data is longer than specified by length" {
+		log.Warn("Certificate data longer than specified length")
+		return nil
+	}
+	return err
+}
+
+// calculateRemainder determines the remaining bytes after the complete certificate.
+func calculateRemainder(data []byte, certificate Certificate) []byte {
+	certLength := certificate.length()
+	if len(data) > certLength {
+		return data[certLength:]
+	}
+	return nil
+}
+
+// logCertificateReadCompletion logs detailed information about the completed certificate reading operation.
+func logCertificateReadCompletion(certificate Certificate, data []byte, remainder []byte) {
+	log.WithFields(logrus.Fields{
+		"certificate_length": certificate.length(),
 		"input_length":       len(data),
 		"remainder_length":   len(remainder),
 	}).Debug("Read certificate and calculated remainder")
-	return
 }
 
 func GetSignatureTypeFromCertificate(cert Certificate) (int, error) {
