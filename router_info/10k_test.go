@@ -119,81 +119,143 @@ func createTempNetDbDir() (string, error) {
 }
 
 func Test10K(t *testing.T) {
+	if err := checkNetDbDirectoriesExist(t); err != nil {
+		return // Test was skipped
+	}
+
+	tempDir, targetDir, err := setupTestDirectories(t)
+	if err != nil {
+		t.Fatalf("Failed to setup test directories: %v", err)
+	}
+
+	if err := processAllRouterInfoFiles(t, tempDir, targetDir); err != nil {
+		t.Fatalf("Failed to process router info files: %v", err)
+	}
+
+	cleanupTestDirectories(t, tempDir, targetDir)
+}
+
+// checkNetDbDirectoriesExist verifies that at least one netDb directory exists.
+func checkNetDbDirectoriesExist(t *testing.T) error {
 	i2pPath := filepath.Join(os.Getenv("HOME"), ".i2p/netDb")
 	i2pdPath := filepath.Join(os.Getenv("HOME"), ".i2pd/netDb")
 
-	// Skip if neither directory exists
 	if _, err := os.Stat(i2pPath); os.IsNotExist(err) {
 		if _, err := os.Stat(i2pdPath); os.IsNotExist(err) {
 			t.Skip("Neither .i2p nor .i2pd netDb directories exist, so we will skip.")
+			return fmt.Errorf("test skipped")
 		}
 	}
+	return nil
+}
 
-	tempDir, err := createTempNetDbDir()
+// setupTestDirectories creates temporary directories and consolidates netDb data.
+func setupTestDirectories(t *testing.T) (tempDir, targetDir string, err error) {
+	tempDir, err = createTempNetDbDir()
 	if err != nil {
-		t.Fatalf("Failed to create temp directory: %v", err)
+		return "", "", fmt.Errorf("failed to create temp directory: %v", err)
 	}
-	// defer cleanupTempDir(tempDir)
 
 	if err := consolidateAllNetDbs(tempDir); err != nil {
-		t.Fatalf("Failed to consolidate netDbs: %v", err)
-	}
-	time.Sleep(1 * time.Second)
-	targetDir, err := createTempNetDbDir()
-	if err != nil {
-		panic(err)
+		return "", "", fmt.Errorf("failed to consolidate netDbs: %v", err)
 	}
 
-	// Read and process all router info files
+	time.Sleep(1 * time.Second)
+
+	targetDir, err = createTempNetDbDir()
+	if err != nil {
+		return "", "", fmt.Errorf("failed to create target directory: %v", err)
+	}
+
+	return tempDir, targetDir, nil
+}
+
+// processAllRouterInfoFiles reads, parses, and writes router info files from temp to target directory.
+func processAllRouterInfoFiles(t *testing.T, tempDir, targetDir string) error {
 	files, err := os.ReadDir(tempDir)
 	if err != nil {
-		t.Fatalf("Failed to read temp directory: %v", err)
+		return fmt.Errorf("failed to read temp directory: %v", err)
 	}
 
 	for d, file := range files {
-		if !file.IsDir() && strings.HasPrefix(file.Name(), "routerInfo-") {
-			// Read the router info file
-			log.Println("RI LOAD: ", d, file.Name())
-			data, err := os.ReadFile(filepath.Join(tempDir, file.Name()))
-			if err != nil {
-				t.Logf("Failed to read file %s: %v", file.Name(), err)
-				continue
-			}
-
-			// Parse the router info
-			// fmt.Printf("data: %s\n", string(data))
-			routerInfo, _, err := ReadRouterInfo(data)
-			if err != nil {
-				t.Logf("Failed to parse router info from %s: %v", file.Name(), err)
-				continue
-			}
-
-			// Write the router info to the target directory
-			routerBytes, err := routerInfo.Bytes()
-			if err != nil {
-				t.Logf("Failed to serialize router info %s: %v", file.Name(), err)
-				continue
-			}
-
-			err = os.WriteFile(filepath.Join(targetDir, file.Name()), routerBytes, 0o644)
-			if err != nil {
-				t.Logf("Failed to write router info %s: %v", file.Name(), err)
+		if shouldProcessFile(file) {
+			if err := processRouterInfoFile(t, tempDir, targetDir, file, d); err != nil {
+				t.Logf("Failed to process file %s: %v", file.Name(), err)
 				continue
 			}
 		}
 	}
-	// Cleanup both directories
-	if err := cleanupTempDir(tempDir); err != nil {
-		log.WithError(err).Error("Failed to cleanup temp directory")
-		t.Errorf("Failed to cleanup temp directory: %v", err)
-	} else {
-		log.Debug("Successfully cleaned up temp directory")
+
+	return nil
+}
+
+// shouldProcessFile determines if a file should be processed as a router info file.
+func shouldProcessFile(file os.DirEntry) bool {
+	return !file.IsDir() && strings.HasPrefix(file.Name(), "routerInfo-")
+}
+
+// processRouterInfoFile handles the complete processing of a single router info file.
+func processRouterInfoFile(t *testing.T, tempDir, targetDir string, file os.DirEntry, fileIndex int) error {
+	log.Println("RI LOAD: ", fileIndex, file.Name())
+
+	data, err := readRouterInfoFile(tempDir, file.Name())
+	if err != nil {
+		return fmt.Errorf("failed to read file: %v", err)
 	}
 
-	if err := cleanupTempDir(targetDir); err != nil {
-		log.WithError(err).Error("Failed to cleanup target directory")
-		t.Errorf("Failed to cleanup target directory: %v", err)
+	routerInfo, err := parseRouterInfoData(data)
+	if err != nil {
+		return fmt.Errorf("failed to parse router info: %v", err)
+	}
+
+	if err := writeRouterInfoFile(targetDir, file.Name(), routerInfo); err != nil {
+		return fmt.Errorf("failed to write router info: %v", err)
+	}
+
+	return nil
+}
+
+// readRouterInfoFile reads router info data from a file in the specified directory.
+func readRouterInfoFile(directory, filename string) ([]byte, error) {
+	return os.ReadFile(filepath.Join(directory, filename))
+}
+
+// parseRouterInfoData parses router info from raw byte data.
+func parseRouterInfoData(data []byte) (RouterInfo, error) {
+	routerInfo, _, err := ReadRouterInfo(data)
+	if err != nil {
+		return RouterInfo{}, err
+	}
+	return routerInfo, nil
+}
+
+// writeRouterInfoFile serializes and writes router info to a file in the target directory.
+func writeRouterInfoFile(targetDir, filename string, routerInfo RouterInfo) error {
+	routerBytes, err := routerInfo.Bytes()
+	if err != nil {
+		return fmt.Errorf("failed to serialize router info: %v", err)
+	}
+
+	err = os.WriteFile(filepath.Join(targetDir, filename), routerBytes, 0o644)
+	if err != nil {
+		return fmt.Errorf("failed to write file: %v", err)
+	}
+
+	return nil
+}
+
+// cleanupTestDirectories removes temporary directories and logs any cleanup errors.
+func cleanupTestDirectories(t *testing.T, tempDir, targetDir string) {
+	cleanupSingleDirectory(t, tempDir, "temp")
+	cleanupSingleDirectory(t, targetDir, "target")
+}
+
+// cleanupSingleDirectory removes a single directory and logs the result.
+func cleanupSingleDirectory(t *testing.T, dir, dirType string) {
+	if err := cleanupTempDir(dir); err != nil {
+		log.WithError(err).Error("Failed to cleanup " + dirType + " directory")
+		t.Errorf("Failed to cleanup %s directory: %v", dirType, err)
 	} else {
-		log.Debug("Successfully cleaned up target directory")
+		log.Debug("Successfully cleaned up " + dirType + " directory")
 	}
 }
