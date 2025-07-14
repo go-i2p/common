@@ -42,7 +42,7 @@ func ReadInteger(bytes []byte, size int) (Integer, []byte) {
 }
 
 // NewInteger creates a new Integer from []byte using ReadInteger.
-// Limits the length of the created Integer to MAX_INTEGER_SIZE.
+// Deprecated: Use ReadInteger and take address if pointer needed. This function will be removed in v2.0.
 // Returns a pointer to Integer unlike ReadInteger.
 func NewInteger(bytes []byte, size int) (integer *Integer, remainder []byte, err error) {
 	i, remainder := ReadInteger(bytes, size)
