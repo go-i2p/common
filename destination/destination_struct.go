@@ -51,6 +51,20 @@ func ReadDestination(data []byte) (destination Destination, remainder []byte, er
 	return
 }
 
+// Bytes returns the binary representation of the Destination.
+// This serializes the destination back to []byte format for storage or transmission.
+func (destination Destination) Bytes() []byte {
+	log.Debug("Serializing Destination to bytes")
+
+	bytes := destination.KeysAndCert.Bytes()
+
+	log.WithFields(logrus.Fields{
+		"bytes_length": len(bytes),
+	}).Debug("Successfully serialized Destination to bytes")
+
+	return bytes
+}
+
 // Base32Address returns the I2P base32 address for this Destination.
 func (destination Destination) Base32Address() (str string) {
 	log.Debug("Generating Base32 address for Destination")

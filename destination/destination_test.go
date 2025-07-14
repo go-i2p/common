@@ -63,3 +63,42 @@ func TestDestinationAddressGeneration(t *testing.T) {
 	assert.Contains(expectedBase32, ".b32.i2p", "Address should be properly formatted")
 	assert.Greater(len(hash), 0, "Hash should be generated from full destination data")
 }
+
+// TestDestinationBytes verifies that the Bytes() method correctly serializes
+// a destination back to its binary representation
+func TestDestinationBytes(t *testing.T) {
+	assert := assert.New(t)
+
+	// Create test data representing a valid destination (384 bytes keys + certificate)
+	keysData := make([]byte, 384) // Minimal keys data
+	for i := range keysData {
+		keysData[i] = byte(i % 256) // Fill with test pattern
+	}
+
+	// Create a KEY certificate (type=5) with minimal payload (4 bytes: crypto_type=0, sig_type=0)
+	certData := []byte{0x05, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00}
+
+	// Combine keys and certificate data
+	originalData := append(keysData, certData...)
+
+	// Parse into Destination
+	dest, remainder, err := ReadDestination(originalData)
+	assert.Nil(err, "Should be able to parse test destination data")
+	assert.Empty(remainder, "Should consume all data")
+
+	// Serialize back to bytes
+	serializedData := dest.Bytes()
+
+	// Verify that serialized data matches original data
+	assert.Equal(originalData, serializedData, "Serialized destination should match original data")
+	assert.Equal(len(originalData), len(serializedData), "Serialized destination should have same length as original")
+
+	// Verify round-trip: parse serialized data should give same destination
+	dest2, remainder2, err2 := ReadDestination(serializedData)
+	assert.Nil(err2, "Should be able to parse serialized destination data")
+	assert.Empty(remainder2, "Should consume all serialized data")
+
+	// Verify that both destinations generate the same addresses
+	assert.Equal(dest.Base32Address(), dest2.Base32Address(), "Round-trip destinations should have same Base32 address")
+	assert.Equal(dest.Base64(), dest2.Base64(), "Round-trip destinations should have same Base64 address")
+}
