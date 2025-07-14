@@ -264,12 +264,11 @@ func (router_info *RouterInfo) RouterIdentity() *RouterIdentity {
 // IdentHash returns the identity hash (sha256 sum) for this RouterInfo.
 func (router_info *RouterInfo) IdentHash() Hash {
 	log.Debug("Calculating IdentHash for RouterInfo")
-	// data, _ := router_info.RouterIdentity().keyCertificate.Data()
-	cert := router_info.RouterIdentity().KeysAndCert.Certificate()
-	data := cert.Data()
+	// Hash the complete RouterIdentity bytes as per I2P specification
+	data := router_info.RouterIdentity().Bytes()
 	hash := HashData(data)
 	log.WithField("hash", hash).Debug("Calculated IdentHash for RouterInfo")
-	return HashData(data)
+	return hash
 }
 
 // Published returns the date this RouterInfo was published as an I2P Date.
