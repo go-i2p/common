@@ -55,8 +55,7 @@ func ReadDestination(data []byte) (destination Destination, remainder []byte, er
 func (destination Destination) Base32Address() (str string) {
 	log.Debug("Generating Base32 address for Destination")
 
-	cert := destination.KeysAndCert.Certificate()
-	dest := cert.Bytes()
+	dest := destination.KeysAndCert.Bytes()
 	hash := types.SHA256(dest)
 	str = strings.Trim(base32.EncodeToString(hash[:]), "=")
 	str = str + ".b32.i2p"
@@ -72,8 +71,7 @@ func (destination Destination) Base32Address() (str string) {
 func (destination Destination) Base64() string {
 	log.Debug("Generating Base64 address for Destination")
 
-	cert := destination.KeysAndCert.Certificate()
-	dest := cert.Bytes()
+	dest := destination.KeysAndCert.Bytes()
 	base64Address := base64.EncodeToString(dest)
 
 	log.WithFields(logrus.Fields{
