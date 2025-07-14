@@ -23,44 +23,47 @@ import (
 )
 
 func generateTestRouterInfo(t *testing.T, publishedTime time.Time) (*RouterInfo, error) {
-	// Generate signing key pair (Ed25519)
-	var ed25519_privkey ed25519.Ed25519PrivateKey
-	ed25519_signingprivkey, err := ed25519.GenerateEd25519Key() // Use direct key generation
+	ed25519_privkey, ed25519_pubkey := generateEd25519KeyPair(t)
+	elg_pubkey := generateElGamalKeyPair(t)
+	cert := createTestCertificate(t)
+	routerIdentity := createTestRouterIdentity(t, elg_pubkey, ed25519_pubkey, cert)
+	routerAddresses := createTestRouterAddresses(t)
+
+	routerInfo, err := NewRouterInfo(routerIdentity, publishedTime, routerAddresses, nil, &ed25519_privkey, signature.SIGNATURE_TYPE_EDDSA_SHA512_ED25519)
+	if err != nil {
+		t.Fatalf("Failed to create router info: %v\n", err)
+	}
+	return routerInfo, nil
+}
+
+// generateEd25519KeyPair creates and validates Ed25519 signing keys for testing.
+func generateEd25519KeyPair(t *testing.T) (ed25519.Ed25519PrivateKey, types.SigningPublicKey) {
+	ed25519_signingprivkey, err := ed25519.GenerateEd25519Key()
 	if err != nil {
 		t.Fatalf("Failed to generate Ed25519 private key: %v\n", err)
 	}
-	ed25519_privkey = ed25519_signingprivkey.(ed25519.Ed25519PrivateKey) // Store the generated key
+	ed25519_privkey := ed25519_signingprivkey.(ed25519.Ed25519PrivateKey)
 
-	// Verify key size
 	if len(ed25519_privkey) != 64 {
 		t.Fatalf("Generated Ed25519 private key has wrong size: got %d, want 64", len(ed25519_privkey))
 	}
 
-	ed25519_pubkey_raw, err := ed25519_privkey.Public()
+	ed25519_pubkey, err := ed25519_privkey.Public()
 	if err != nil {
 		t.Fatalf("Failed to derive Ed25519 public key: %v\n", err)
 	}
-	ed25519_pubkey, ok := ed25519_pubkey_raw.(types.SigningPublicKey)
-	if !ok {
-		t.Fatalf("Failed to get SigningPublicKey from Ed25519 public key")
-	}
 
-	// Generate encryption key pair (ElGamal)
+	return ed25519_privkey, ed25519_pubkey
+}
+
+// generateElGamalKeyPair creates ElGamal encryption keys and converts them to I2P format.
+func generateElGamalKeyPair(t *testing.T) elgamal.ElgPublicKey {
 	var elgamal_privkey elgamal.PrivateKey
-	err = elgamal.ElgamalGenerate(&elgamal_privkey.PrivateKey, rand.Reader)
+	err := elgamal.ElgamalGenerate(&elgamal_privkey.PrivateKey, rand.Reader)
 	if err != nil {
 		t.Fatalf("Failed to generate ElGamal private key: %v\n", err)
 	}
 
-	// Convert elgamal private key to elgamal.ElgPrivateKey
-	var elg_privkey elgamal.ElgPrivateKey
-	xBytes := elgamal_privkey.X.Bytes()
-	if len(xBytes) > 256 {
-		t.Fatalf("ElGamal private key X too large")
-	}
-	copy(elg_privkey[256-len(xBytes):], xBytes)
-
-	// Convert elgamal public key to elgamal.ElgPublicKey
 	var elg_pubkey elgamal.ElgPublicKey
 	yBytes := elgamal_privkey.PublicKey.Y.Bytes()
 	if len(yBytes) > 256 {
@@ -68,10 +71,13 @@ func generateTestRouterInfo(t *testing.T, publishedTime time.Time) (*RouterInfo,
 	}
 	copy(elg_pubkey[256-len(yBytes):], yBytes)
 
-	// Ensure that elg_pubkey implements crypto.PublicKey interface
 	var _ types.RecievingPublicKey = elg_pubkey
 
-	// Create KeyCertificate specifying key types
+	return elg_pubkey
+}
+
+// createTestCertificate builds a key certificate with the required payload for testing.
+func createTestCertificate(t *testing.T) certificate.Certificate {
 	var payload bytes.Buffer
 
 	signingPublicKeyType, err := data.NewIntegerFromInt(7, 2)
@@ -87,7 +93,6 @@ func generateTestRouterInfo(t *testing.T, publishedTime time.Time) (*RouterInfo,
 	payload.Write(*signingPublicKeyType)
 	payload.Write(*cryptoPublicKeyType)
 
-	// Create KeyCertificate specifying key types
 	cert, err := certificate.NewCertificateWithType(certificate.CERT_KEY, payload.Bytes())
 	if err != nil {
 		t.Fatalf("Failed to create new certificate: %v\n", err)
@@ -96,10 +101,16 @@ func generateTestRouterInfo(t *testing.T, publishedTime time.Time) (*RouterInfo,
 	certBytes := cert.Bytes()
 	t.Logf("Serialized Certificate Size: %d bytes", len(certBytes))
 
-	keyCert, err := key_certificate.KeyCertificateFromCertificate(*cert)
+	return *cert
+}
+
+// createTestRouterIdentity assembles a router identity from keys and certificate with proper padding.
+func createTestRouterIdentity(t *testing.T, elg_pubkey elgamal.ElgPublicKey, ed25519_pubkey types.SigningPublicKey, cert certificate.Certificate) *router_identity.RouterIdentity {
+	keyCert, err := key_certificate.KeyCertificateFromCertificate(cert)
 	if err != nil {
 		log.Fatalf("KeyCertificateFromCertificate failed: %v\n", err)
 	}
+
 	pubKeySize := keyCert.CryptoSize()
 	sigKeySize := keyCert.SignatureSize()
 	paddingSize := keys_and_cert.KEYS_AND_CERT_DATA_SIZE - pubKeySize - sigKeySize
@@ -108,24 +119,23 @@ func generateTestRouterInfo(t *testing.T, publishedTime time.Time) (*RouterInfo,
 	if err != nil {
 		t.Fatalf("Failed to generate random padding: %v\n", err)
 	}
-	// Create RouterIdentity
-	routerIdentity, err := router_identity.NewRouterIdentity(elg_pubkey, ed25519_pubkey, *cert, padding)
+
+	routerIdentity, err := router_identity.NewRouterIdentity(elg_pubkey, ed25519_pubkey, cert, padding)
 	if err != nil {
 		t.Fatalf("Failed to create router identity: %v\n", err)
 	}
-	// create some dummy addresses
+
+	return routerIdentity
+}
+
+// createTestRouterAddresses generates dummy router addresses for testing purposes.
+func createTestRouterAddresses(t *testing.T) []*router_address.RouterAddress {
 	options := map[string]string{}
 	routerAddress, err := router_address.NewRouterAddress(3, <-time.After(1*time.Second), "NTCP2", options)
 	if err != nil {
 		t.Fatalf("Failed to create router address: %v\n", err)
 	}
-	routerAddresses := []*router_address.RouterAddress{routerAddress}
-	// create router info
-	routerInfo, err := NewRouterInfo(routerIdentity, publishedTime, routerAddresses, nil, &ed25519_privkey, signature.SIGNATURE_TYPE_EDDSA_SHA512_ED25519)
-	if err != nil {
-		t.Fatalf("Failed to create router info: %v\n", err)
-	}
-	return routerInfo, nil
+	return []*router_address.RouterAddress{routerAddress}
 }
 
 // TestRouterInfoCreation verifies that a RouterInfo object can be created without errors.
