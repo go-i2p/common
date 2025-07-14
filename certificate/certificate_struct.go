@@ -63,6 +63,12 @@ func NewCertificate() *Certificate {
 // NewCertificateDeux creates a new Certificate with specified type and payload.
 // Deprecated: Use NewCertificateWithType instead. This function will be removed in v2.0.
 func NewCertificateDeux(certType int, payload []byte) (*Certificate, error) {
+	log.WithFields(logrus.Fields{
+		"at":        "NewCertificateDeux",
+		"reason":    "deprecated function called",
+		"cert_type": certType,
+	}).Debug("NewCertificateDeux is deprecated, use NewCertificateWithType instead")
+
 	if certType < 0 || certType > 255 {
 		return nil, oops.Errorf("invalid certificate type: %d", certType)
 	}
