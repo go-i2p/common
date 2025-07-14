@@ -55,8 +55,8 @@ type Certificate struct {
 func NewCertificate() *Certificate {
 	return &Certificate{
 		kind:    Integer([]byte{CERT_NULL}),
-		len:     Integer([]byte{0}),
-		payload: make([]byte, 0),
+		len:     Integer([]byte{CERT_EMPTY_PAYLOAD_SIZE}),
+		payload: make([]byte, CERT_EMPTY_PAYLOAD_SIZE),
 	}
 }
 
@@ -69,7 +69,7 @@ func NewCertificateDeux(certType int, payload []byte) (*Certificate, error) {
 		"cert_type": certType,
 	}).Debug("NewCertificateDeux is deprecated, use NewCertificateWithType instead")
 
-	if certType < 0 || certType > 255 {
+	if certType < CERT_EMPTY_PAYLOAD_SIZE || certType > CERT_MAX_TYPE_VALUE {
 		return nil, oops.Errorf("invalid certificate type: %d", certType)
 	}
 	return NewCertificateWithType(uint8(certType), payload)
@@ -86,16 +86,16 @@ func NewCertificateWithType(certType uint8, payload []byte) (*Certificate, error
 	}
 
 	// Validate payload length
-	if len(payload) > 65535 {
+	if len(payload) > CERT_MAX_PAYLOAD_SIZE {
 		return nil, oops.Errorf("payload too long: %d bytes", len(payload))
 	}
 
 	// For NULL certificates, payload should be empty
-	if certType == CERT_NULL && len(payload) > 0 {
+	if certType == CERT_NULL && len(payload) > CERT_EMPTY_PAYLOAD_SIZE {
 		return nil, oops.Errorf("NULL certificates must have empty payload")
 	}
 
-	length, err := NewIntegerFromInt(len(payload), 2)
+	length, err := NewIntegerFromInt(len(payload), CERT_LENGTH_FIELD_SIZE)
 	if err != nil {
 		return nil, oops.Errorf("failed to create length integer: %w", err)
 	}
@@ -107,7 +107,7 @@ func NewCertificateWithType(certType uint8, payload []byte) (*Certificate, error
 	}
 
 	// Copy payload if present
-	if len(payload) > 0 {
+	if len(payload) > CERT_EMPTY_PAYLOAD_SIZE {
 		copy(cert.payload, payload)
 	}
 

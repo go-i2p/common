@@ -6,6 +6,12 @@
 
 Package key_certificate implements the I2P Destination common data structure
 
+Package key_certificate implements the I2P Destination common data structure
+
+Package key_certificate implements the I2P Destination common data structure
+
+Package key_certificate implements the I2P Destination common data structure
+
 ## Usage
 
 ```go
@@ -77,18 +83,21 @@ const (
 	SIGNATURE_TYPE_ED25519_SHA512 = 7 // Ed25519
 )
 ```
+Additional crypto and signature type constants
 
 ```go
 const (
 	KEYCERT_MIN_SIZE = 7
 )
 ```
+Minimum size constants
 
 ```go
 var CryptoPublicKeySizes = map[uint16]int{
-	CRYPTO_KEY_TYPE_ELGAMAL: 256,
+	KEYCERT_CRYPTO_ELG: 256,
 }
 ```
+CryptoPublicKeySizes maps crypto key types to their sizes
 
 ```go
 var SignaturePublicKeySizes = map[uint16]int{
@@ -96,6 +105,7 @@ var SignaturePublicKeySizes = map[uint16]int{
 	SIGNATURE_TYPE_ED25519_SHA512: 32,
 }
 ```
+SignaturePublicKeySizes maps signature types to their sizes
 
 #### type KeyCertificate
 
@@ -107,13 +117,39 @@ type KeyCertificate struct {
 }
 ```
 
-type KeyCertificate []byte
+KeyCertificate represents an I2P Key Certificate structure
+https://geti2p.net/spec/common-structures#certificate Accurate for version
+0.9.24
+
++----+----+----+----+----+-// |type| length | payload
++----+----+----+----+----+-//
+
+type :: Integer
+
+    length -> 1 byte
+
+    case 0 -> NULL
+    case 1 -> HASHCASH
+    case 2 -> HIDDEN
+    case 3 -> SIGNED
+    case 4 -> MULTIPLE
+    case 5 -> KEY
+
+length :: Integer
+
+    length -> 2 bytes
+
+payload :: data
+
+    length -> $length bytes
 
 #### func  KeyCertificateFromCertificate
 
 ```go
 func KeyCertificateFromCertificate(cert Certificate) (*KeyCertificate, error)
 ```
+KeyCertificateFromCertificate creates a KeyCertificate from an existing
+Certificate
 
 #### func  NewKeyCertificate
 
@@ -147,6 +183,8 @@ encountered while parsing.
 ```go
 func (keyCertificate *KeyCertificate) CryptoPublicKeySize() (int, error)
 ```
+CryptoPublicKeySize returns the size of a public key for the certificate's
+crypto type
 
 #### func (KeyCertificate) CryptoSize
 
@@ -183,6 +221,8 @@ Certificate's signingPublicKey type.
 ```go
 func (keyCertificate *KeyCertificate) SigningPublicKeySize() int
 ```
+SigningPublicKeySize returns the size of a signing public key for the
+certificate's signing type
 
 #### func (KeyCertificate) SigningPublicKeyType
 

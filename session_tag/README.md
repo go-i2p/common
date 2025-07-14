@@ -6,15 +6,28 @@
 
 Package session_tag implements the I2P SessionTag common data structure
 
+Package session_tag implements the I2P SessionTag common data structure
+
+Package session_tag implements the I2P SessionTag common data structure
+
 ## Usage
+
+```go
+const SessionTagSize = 32
+```
+SessionTagSize is the size of an I2P SessionTag in bytes. According to the I2P
+specification, a SessionTag is always 32 bytes.
+
+https://geti2p.net/spec/common-structures#session-tag
 
 #### type SessionTag
 
 ```go
-type SessionTag [32]byte
+type SessionTag [SessionTagSize]byte
 ```
 
-SessionTag is the represenation of an I2P SessionTag.
+SessionTag is the representation of an I2P SessionTag. A SessionTag is a 32-byte
+random number used in I2P for session identification.
 
 https://geti2p.net/spec/common-structures#session-tag
 

@@ -14,28 +14,28 @@ digraph gocallvis {
     edge [minlen="2"]
 
     subgraph "cluster_focus" {
-        bgcolor="#e6ecfa";
-label="exportable";
-labelloc="t";
+        labelloc="t";
 labeljust="c";
 fontsize="18";
+bgcolor="#e6ecfa";
+label="exportable";
         
         "github.com/go-i2p/common/fuzz/certificate.Fuzz" [ fillcolor="lightblue" label="Fuzz" penwidth="1.5" tooltip="github.com/go-i2p/common/fuzz/certificate.Fuzz | defined in fuzz.go:5\nat fuzz.go:6: calling [github.com/go-i2p/common/certificate.ReadCertificate]\nat fuzz.go:7: calling [(*github.com/go-i2p/common/certificate.Certificate).Data]\nat fuzz.go:8: calling [(*github.com/go-i2p/common/certificate.Certificate).Length]\nat fuzz.go:9: calling [(*github.com/go-i2p/common/certificate.Certificate).Type]" ]
-        "github.com/go-i2p/common/certificate.ReadCertificate" [ fillcolor="moccasin" label="certificate\nReadCertificate" penwidth="1.5" tooltip="github.com/go-i2p/common/certificate.ReadCertificate | defined in certificate.go:201" ]
+        "github.com/go-i2p/common/certificate.ReadCertificate" [ fillcolor="moccasin" label="certificate\nReadCertificate" penwidth="1.5" tooltip="github.com/go-i2p/common/certificate.ReadCertificate | defined in certificate.go:28" ]
         
         subgraph "cluster_*github.com/go-i2p/common/certificate.Certificate" {
-        fontsize="15";
-fontcolor="#222222";
+        fontcolor="#222222";
 labelloc="b";
 style="rounded,filled";
 fillcolor="wheat2";
 label="(*Certificate)";
 tooltip="type: *github.com/go-i2p/common/certificate.Certificate";
 penwidth="0.5";
+fontsize="15";
         
-        "(*github.com/go-i2p/common/certificate.Certificate).Data" [ penwidth="1.5" tooltip="(*github.com/go-i2p/common/certificate.Certificate).Data | defined in certificate.go:134" fillcolor="moccasin" label="certificate\nData" ]
-        "(*github.com/go-i2p/common/certificate.Certificate).Length" [ fillcolor="moccasin" label="certificate\nLength" penwidth="1.5" tooltip="(*github.com/go-i2p/common/certificate.Certificate).Length | defined in certificate.go:125" ]
-        "(*github.com/go-i2p/common/certificate.Certificate).Type" [ penwidth="1.5" tooltip="(*github.com/go-i2p/common/certificate.Certificate).Type | defined in certificate.go:116" fillcolor="moccasin" label="certificate\nType" ]
+        "(*github.com/go-i2p/common/certificate.Certificate).Data" [ fillcolor="moccasin" label="certificate\nData" penwidth="1.5" tooltip="(*github.com/go-i2p/common/certificate.Certificate).Data | defined in certificate_struct.go:177" ]
+        "(*github.com/go-i2p/common/certificate.Certificate).Length" [ label="certificate\nLength" penwidth="1.5" tooltip="(*github.com/go-i2p/common/certificate.Certificate).Length | defined in certificate_struct.go:168" fillcolor="moccasin" ]
+        "(*github.com/go-i2p/common/certificate.Certificate).Type" [ fillcolor="moccasin" label="certificate\nType" penwidth="1.5" tooltip="(*github.com/go-i2p/common/certificate.Certificate).Type | defined in certificate_struct.go:159" ]
         
     }
 
@@ -43,6 +43,6 @@ penwidth="0.5";
 
     "github.com/go-i2p/common/fuzz/certificate.Fuzz" -> "github.com/go-i2p/common/certificate.ReadCertificate" [ color="saddlebrown" tooltip="at fuzz.go:6: calling [github.com/go-i2p/common/certificate.ReadCertificate]" ]
     "github.com/go-i2p/common/fuzz/certificate.Fuzz" -> "(*github.com/go-i2p/common/certificate.Certificate).Data" [ color="saddlebrown" tooltip="at fuzz.go:7: calling [(*github.com/go-i2p/common/certificate.Certificate).Data]" ]
-    "github.com/go-i2p/common/fuzz/certificate.Fuzz" -> "(*github.com/go-i2p/common/certificate.Certificate).Length" [ tooltip="at fuzz.go:8: calling [(*github.com/go-i2p/common/certificate.Certificate).Length]" color="saddlebrown" ]
+    "github.com/go-i2p/common/fuzz/certificate.Fuzz" -> "(*github.com/go-i2p/common/certificate.Certificate).Length" [ color="saddlebrown" tooltip="at fuzz.go:8: calling [(*github.com/go-i2p/common/certificate.Certificate).Length]" ]
     "github.com/go-i2p/common/fuzz/certificate.Fuzz" -> "(*github.com/go-i2p/common/certificate.Certificate).Type" [ color="saddlebrown" tooltip="at fuzz.go:9: calling [(*github.com/go-i2p/common/certificate.Certificate).Type]" ]
 }

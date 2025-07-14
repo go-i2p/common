@@ -240,8 +240,8 @@ func createSignerFromPrivateKey(signingPrivateKey types.SigningPrivateKey, sigTy
 		if !ok {
 			return nil, oops.Errorf("expected *Ed25519PrivateKey but got %T", signingPrivateKey)
 		}
-		if len(*ed25519Key) != 64 {
-			return nil, oops.Errorf("invalid Ed25519 private key size: got %d, want 64", len(*ed25519Key))
+		if len(*ed25519Key) != ED25519_PRIVATE_KEY_SIZE {
+			return nil, oops.Errorf("invalid Ed25519 private key size: got %d, want %d", len(*ed25519Key), ED25519_PRIVATE_KEY_SIZE)
 		}
 		signer, err = ed25519Key.NewSigner()
 	default:
@@ -360,7 +360,7 @@ func (router_info RouterInfo) Signature() (signature Signature) {
 
 // Network implements net.Addr
 func (router_info RouterInfo) Network() string {
-	return "i2p"
+	return I2P_NETWORK_NAME
 }
 
 // AddAddress adds a RouterAddress to this RouterInfo.

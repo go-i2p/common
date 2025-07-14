@@ -9,20 +9,57 @@ Package data implements common data structures used in higher level structures.
 ## Usage
 
 ```go
+const BITS_PER_BYTE = 8
+```
+BITS_PER_BYTE is the number of bits in a byte, used for bit shift calculations
+Cross-Ref: integer.go
+
+```go
 const DATE_SIZE = 8
 ```
-DATE_SIZE is the length in bytes of an I2P Date.
+DATE_SIZE is the length in bytes of an I2P Date. Cross-Ref: date.go
+
+```go
+const KEY_VAL_INTEGER_LENGTH = 1
+```
+KEY_VAL_INTEGER_LENGTH is the length in bytes for encoding key and value lengths
+in I2P mappings Cross-Ref: mapping.go
+
+```go
+const MAPPING_EQUALS_DELIMITER = 0x3d
+```
+MAPPING_EQUALS_DELIMITER is the ASCII character '=' (0x3d) used to separate keys
+from values in I2P mappings Cross-Ref: mapping.go
+
+```go
+const MAPPING_MIN_SIZE = 3
+```
+MAPPING_MIN_SIZE is the minimum size in bytes for a valid I2P mapping (2-byte
+length field + at least 1 byte data) Cross-Ref: mapping.go
+
+```go
+const MAPPING_SEMICOLON_DELIMITER = 0x3b
+```
+MAPPING_SEMICOLON_DELIMITER is the ASCII character ';' (0x3b) used to separate
+key-value pairs in I2P mappings Cross-Ref: mapping.go
+
+```go
+const MAPPING_SIZE_FIELD_LENGTH = 2
+```
+MAPPING_SIZE_FIELD_LENGTH is the length in bytes of the mapping size field in
+I2P mappings Cross-Ref: mapping.go
 
 ```go
 const MAX_INTEGER_SIZE = 8
 ```
-MAX_INTEGER_SIZE is the maximum length of an I2P integer in bytes.
+MAX_INTEGER_SIZE is the maximum length of an I2P integer in bytes. Cross-Ref:
+integer.go
 
 ```go
 const STRING_MAX_SIZE = 255
 ```
 STRING_MAX_SIZE is the maximum number of bytes that can be stored in an I2P
-string
+string Cross-Ref: string.go
 
 ```go
 var (
@@ -39,7 +76,7 @@ var (
 ```go
 func PrintErrors(errs []error)
 ```
-PrintErrors prints a formatted list of errors to the console.
+PrintErrors prints a formatted list of errors to the console. Used in: errors.go
 
 #### func  WrapErrors
 
@@ -47,7 +84,7 @@ PrintErrors prints a formatted list of errors to the console.
 func WrapErrors(errs []error) error
 ```
 WrapErrors compiles a slice of errors and returns them wrapped together as a
-single error.
+single error. Used in: errors.go
 
 #### type Date
 
@@ -135,6 +172,7 @@ error if one occurs while reading from reader
 ```go
 func (h Hash) Bytes() [32]byte
 ```
+Bytes returns the raw []byte content of a Hash.
 
 #### type I2PString
 
@@ -142,7 +180,7 @@ func (h Hash) Bytes() [32]byte
 type I2PString []byte
 ```
 
-I2PString is the represenation of an I2P String.
+I2PString is the representation of an I2P String.
 
 https://geti2p.net/spec/common-structures#string
 
@@ -194,9 +232,9 @@ https://geti2p.net/spec/common-structures#integer
 ```go
 func NewInteger(bytes []byte, size int) (integer *Integer, remainder []byte, err error)
 ```
-NewInteger creates a new Integer from []byte using ReadInteger. Limits the
-length of the created Integer to MAX_INTEGER_SIZE. Returns a pointer to Integer
-unlike ReadInteger.
+NewInteger creates a new Integer from []byte using ReadInteger. Deprecated: Use
+ReadInteger and take address if pointer needed. This function will be removed in
+v2.0. Returns a pointer to Integer unlike ReadInteger.
 
 #### func  NewIntegerFromInt
 
@@ -314,6 +352,7 @@ occurred during parsing.
 ```go
 func (m MappingValues) Get(key I2PString) I2PString
 ```
+Get retrieves the value for a given key from MappingValues.
 
 
 

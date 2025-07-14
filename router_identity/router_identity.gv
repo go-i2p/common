@@ -20,73 +20,73 @@ labelloc="t";
 labeljust="c";
 fontsize="18";
         
-        "github.com/go-i2p/common/router_identity.init" [ fillcolor="lightblue" label="init" penwidth="0.5" tooltip="github.com/go-i2p/common/router_identity.init | defined in .:0\nat router_identity.go:14: calling [github.com/go-i2p/logger.GetGoI2PLogger]" ]
-        "github.com/go-i2p/logger.GetGoI2PLogger" [ label="logger\nGetGoI2PLogger" penwidth="1.5" tooltip="github.com/go-i2p/logger.GetGoI2PLogger | defined in log.go:120" fillcolor="moccasin" ]
-        "github.com/go-i2p/common/router_identity.NewRouterIdentity" [ label="NewRouterIdentity" penwidth="1.5" tooltip="github.com/go-i2p/common/router_identity.NewRouterIdentity | defined in router_identity.go:55\nat router_identity.go:62: calling [(*github.com/go-i2p/logger.Logger).WithError]\nat router_identity.go:69: calling [(*github.com/go-i2p/logger.Logger).WithError]\nat router_identity.go:67: calling [github.com/go-i2p/common/keys_and_cert.NewKeysAndCert]\nat router_identity.go:79: calling [(github.com/go-i2p/common/key_certificate.KeyCertificate).PublicKeyType]\nat router_identity.go:80: calling [(github.com/go-i2p/common/key_certificate.KeyCertificate).SigningPublicKeyType]\nat router_identity.go:78: calling [(*github.com/go-i2p/logger.Logger).WithFields]\nat router_identity.go:62: calling [(*github.com/go-i2p/logger.Logger).Error]\nat router_identity.go:69: calling [(*github.com/go-i2p/logger.Logger).Error]\nat router_identity.go:56: calling [(*github.com/sirupsen/logrus.Logger).Debug]\nat router_identity.go:82: calling [(*github.com/sirupsen/logrus.Logger).Debug]\nat router_identity.go:60: calling [github.com/go-i2p/common/key_certificate.KeyCertificateFromCertificate]" fillcolor="lightblue" ]
-        "github.com/go-i2p/common/key_certificate.KeyCertificateFromCertificate" [ fillcolor="moccasin" label="key_certificate\nKeyCertificateFromCertificate" penwidth="1.5" tooltip="github.com/go-i2p/common/key_certificate.KeyCertificateFromCertificate | defined in key_certificate.go:399" ]
-        "github.com/go-i2p/common/keys_and_cert.NewKeysAndCert" [ fillcolor="moccasin" label="keys_and_cert\nNewKeysAndCert" penwidth="1.5" tooltip="github.com/go-i2p/common/keys_and_cert.NewKeysAndCert | defined in keys_and_cert.go:306" ]
-        "github.com/go-i2p/common/router_identity.ReadRouterIdentity" [ fillcolor="lightblue" label="ReadRouterIdentity" penwidth="1.5" tooltip="github.com/go-i2p/common/router_identity.ReadRouterIdentity | defined in router_identity.go:37\nat router_identity.go:38: calling [(*github.com/go-i2p/logger.Logger).WithFields]\nat router_identity.go:49: calling [(*github.com/go-i2p/logger.Logger).WithFields]\nat router_identity.go:40: calling [(*github.com/sirupsen/logrus.Logger).Debug]\nat router_identity.go:51: calling [(*github.com/sirupsen/logrus.Logger).Debug]\nat router_identity.go:41: calling [github.com/go-i2p/common/keys_and_cert.ReadKeysAndCert]\nat router_identity.go:43: calling [(*github.com/go-i2p/logger.Logger).WithError]\nat router_identity.go:43: calling [(*github.com/go-i2p/logger.Logger).Error]" ]
-        "github.com/go-i2p/common/keys_and_cert.ReadKeysAndCert" [ label="keys_and_cert\nReadKeysAndCert" penwidth="1.5" tooltip="github.com/go-i2p/common/keys_and_cert.ReadKeysAndCert | defined in keys_and_cert.go:145" fillcolor="moccasin" ]
+        "github.com/go-i2p/common/router_identity.init" [ label="init" penwidth="0.5" tooltip="github.com/go-i2p/common/router_identity.init | defined in .:0\nat router_identity_struct.go:14: calling [github.com/go-i2p/logger.GetGoI2PLogger]" fillcolor="lightblue" ]
+        "github.com/go-i2p/logger.GetGoI2PLogger" [ penwidth="1.5" tooltip="github.com/go-i2p/logger.GetGoI2PLogger | defined in log.go:120" fillcolor="moccasin" label="logger\nGetGoI2PLogger" ]
+        "github.com/go-i2p/common/router_identity.ReadRouterIdentity" [ fillcolor="lightblue" label="ReadRouterIdentity" penwidth="1.5" tooltip="github.com/go-i2p/common/router_identity.ReadRouterIdentity | defined in router_identity_struct.go:73\nat router_identity_struct.go:79: calling [(*github.com/go-i2p/logger.Logger).WithError]\nat router_identity_struct.go:79: calling [(*github.com/go-i2p/logger.Logger).Error]\nat router_identity_struct.go:74: calling [(*github.com/go-i2p/logger.Logger).WithFields]\nat router_identity_struct.go:85: calling [(*github.com/go-i2p/logger.Logger).WithFields]\nat router_identity_struct.go:76: calling [(*github.com/sirupsen/logrus.Logger).Debug]\nat router_identity_struct.go:87: calling [(*github.com/sirupsen/logrus.Logger).Debug]\nat router_identity_struct.go:77: calling [github.com/go-i2p/common/keys_and_cert.ReadKeysAndCert]" ]
+        "github.com/go-i2p/common/keys_and_cert.ReadKeysAndCert" [ fillcolor="moccasin" label="keys_and_cert\nReadKeysAndCert" penwidth="1.5" tooltip="github.com/go-i2p/common/keys_and_cert.ReadKeysAndCert | defined in keys_and_cert_struct.go:201" ]
+        "github.com/go-i2p/common/router_identity.NewRouterIdentity" [ fillcolor="lightblue" label="NewRouterIdentity" penwidth="1.5" tooltip="github.com/go-i2p/common/router_identity.NewRouterIdentity | defined in router_identity_struct.go:37\nat router_identity_struct.go:38: calling [(*github.com/sirupsen/logrus.Logger).Debug]\nat router_identity_struct.go:64: calling [(*github.com/sirupsen/logrus.Logger).Debug]\nat router_identity_struct.go:42: calling [github.com/go-i2p/common/key_certificate.KeyCertificateFromCertificate]\nat router_identity_struct.go:44: calling [(*github.com/go-i2p/logger.Logger).WithError]\nat router_identity_struct.go:51: calling [(*github.com/go-i2p/logger.Logger).WithError]\nat router_identity_struct.go:44: calling [(*github.com/go-i2p/logger.Logger).Error]\nat router_identity_struct.go:51: calling [(*github.com/go-i2p/logger.Logger).Error]\nat router_identity_struct.go:49: calling [github.com/go-i2p/common/keys_and_cert.NewKeysAndCert]\nat router_identity_struct.go:61: calling [(github.com/go-i2p/common/key_certificate.KeyCertificate).PublicKeyType]\nat router_identity_struct.go:62: calling [(github.com/go-i2p/common/key_certificate.KeyCertificate).SigningPublicKeyType]\nat router_identity_struct.go:60: calling [(*github.com/go-i2p/logger.Logger).WithFields]" ]
+        "github.com/go-i2p/common/key_certificate.KeyCertificateFromCertificate" [ tooltip="github.com/go-i2p/common/key_certificate.KeyCertificateFromCertificate | defined in key_certificate_struct.go:97" fillcolor="moccasin" label="key_certificate\nKeyCertificateFromCertificate" penwidth="1.5" ]
+        "github.com/go-i2p/common/keys_and_cert.NewKeysAndCert" [ fillcolor="moccasin" label="keys_and_cert\nNewKeysAndCert" penwidth="1.5" tooltip="github.com/go-i2p/common/keys_and_cert.NewKeysAndCert | defined in keys_and_cert_struct.go:80" ]
         
         subgraph "cluster_*github.com/go-i2p/logger.Logger" {
-        fontsize="15";
+        penwidth="0.5";
+fontsize="15";
 fontcolor="#222222";
 labelloc="b";
 style="rounded,filled";
 fillcolor="wheat2";
 label="(*Logger)";
 tooltip="type: *github.com/go-i2p/logger.Logger";
-penwidth="0.5";
         
-        "(*github.com/go-i2p/logger.Logger).WithError" [ fillcolor="moccasin" label="logger\nWithError" penwidth="1.5" tooltip="(*github.com/go-i2p/logger.Logger).WithError | defined in log.go:66" ]
-        "(*github.com/go-i2p/logger.Logger).Error" [ fillcolor="moccasin" label="logger\nError" penwidth="1.5" tooltip="(*github.com/go-i2p/logger.Logger).Error | defined in log.go:42" ]
         "(*github.com/go-i2p/logger.Logger).WithFields" [ fillcolor="moccasin" label="logger\nWithFields" penwidth="1.5" tooltip="(*github.com/go-i2p/logger.Logger).WithFields | defined in log.go:60" ]
+        "(*github.com/go-i2p/logger.Logger).WithError" [ tooltip="(*github.com/go-i2p/logger.Logger).WithError | defined in log.go:66" fillcolor="moccasin" label="logger\nWithError" penwidth="1.5" ]
+        "(*github.com/go-i2p/logger.Logger).Error" [ fillcolor="moccasin" label="logger\nError" penwidth="1.5" tooltip="(*github.com/go-i2p/logger.Logger).Error | defined in log.go:42" ]
         
     }
 
         subgraph "cluster_*github.com/sirupsen/logrus.Logger" {
-        tooltip="type: *github.com/sirupsen/logrus.Logger";
-penwidth="0.5";
-fontsize="15";
+        fontsize="15";
 fontcolor="#222222";
 labelloc="b";
 style="rounded,filled";
 fillcolor="wheat2";
 label="(*Logger)";
+tooltip="type: *github.com/sirupsen/logrus.Logger";
+penwidth="0.5";
         
-        "(*github.com/sirupsen/logrus.Logger).Debug" [ fillcolor="moccasin" label="logrus\nDebug" penwidth="1.5" tooltip="(*github.com/sirupsen/logrus.Logger).Debug | defined in logger.go:221" ]
+        "(*github.com/sirupsen/logrus.Logger).Debug" [ penwidth="1.5" tooltip="(*github.com/sirupsen/logrus.Logger).Debug | defined in logger.go:221" fillcolor="moccasin" label="logrus\nDebug" ]
         
     }
 
         subgraph "cluster_github.com/go-i2p/common/key_certificate.KeyCertificate" {
-        labelloc="b";
+        fontcolor="#222222";
+labelloc="b";
 style="rounded,filled";
 fillcolor="wheat2";
 label="(KeyCertificate)";
 tooltip="type: github.com/go-i2p/common/key_certificate.KeyCertificate";
 penwidth="0.5";
 fontsize="15";
-fontcolor="#222222";
         
-        "(github.com/go-i2p/common/key_certificate.KeyCertificate).PublicKeyType" [ fillcolor="moccasin" label="key_certificate\nPublicKeyType" penwidth="1.5" tooltip="(github.com/go-i2p/common/key_certificate.KeyCertificate).PublicKeyType | defined in key_certificate.go:130" ]
-        "(github.com/go-i2p/common/key_certificate.KeyCertificate).SigningPublicKeyType" [ label="key_certificate\nSigningPublicKeyType" penwidth="1.5" tooltip="(github.com/go-i2p/common/key_certificate.KeyCertificate).SigningPublicKeyType | defined in key_certificate.go:121" fillcolor="moccasin" ]
+        "(github.com/go-i2p/common/key_certificate.KeyCertificate).PublicKeyType" [ fillcolor="moccasin" label="key_certificate\nPublicKeyType" penwidth="1.5" tooltip="(github.com/go-i2p/common/key_certificate.KeyCertificate).PublicKeyType | defined in key_certificate_struct.go:150" ]
+        "(github.com/go-i2p/common/key_certificate.KeyCertificate).SigningPublicKeyType" [ fillcolor="moccasin" label="key_certificate\nSigningPublicKeyType" penwidth="1.5" tooltip="(github.com/go-i2p/common/key_certificate.KeyCertificate).SigningPublicKeyType | defined in key_certificate_struct.go:141" ]
         
     }
 
     }
 
-    "github.com/go-i2p/common/router_identity.NewRouterIdentity" -> "(*github.com/go-i2p/logger.Logger).WithError" [ color="saddlebrown" tooltip="at router_identity.go:62: calling [(*github.com/go-i2p/logger.Logger).WithError]\nat router_identity.go:69: calling [(*github.com/go-i2p/logger.Logger).WithError]" ]
-    "github.com/go-i2p/common/router_identity.NewRouterIdentity" -> "github.com/go-i2p/common/keys_and_cert.NewKeysAndCert" [ color="saddlebrown" tooltip="at router_identity.go:67: calling [github.com/go-i2p/common/keys_and_cert.NewKeysAndCert]" ]
-    "github.com/go-i2p/common/router_identity.NewRouterIdentity" -> "(github.com/go-i2p/common/key_certificate.KeyCertificate).PublicKeyType" [ color="saddlebrown" tooltip="at router_identity.go:79: calling [(github.com/go-i2p/common/key_certificate.KeyCertificate).PublicKeyType]" ]
-    "github.com/go-i2p/common/router_identity.NewRouterIdentity" -> "(github.com/go-i2p/common/key_certificate.KeyCertificate).SigningPublicKeyType" [ color="saddlebrown" tooltip="at router_identity.go:80: calling [(github.com/go-i2p/common/key_certificate.KeyCertificate).SigningPublicKeyType]" ]
-    "github.com/go-i2p/common/router_identity.NewRouterIdentity" -> "(*github.com/go-i2p/logger.Logger).WithFields" [ color="saddlebrown" tooltip="at router_identity.go:78: calling [(*github.com/go-i2p/logger.Logger).WithFields]" ]
-    "github.com/go-i2p/common/router_identity.ReadRouterIdentity" -> "(*github.com/go-i2p/logger.Logger).WithFields" [ color="saddlebrown" tooltip="at router_identity.go:38: calling [(*github.com/go-i2p/logger.Logger).WithFields]\nat router_identity.go:49: calling [(*github.com/go-i2p/logger.Logger).WithFields]" ]
-    "github.com/go-i2p/common/router_identity.init" -> "github.com/go-i2p/logger.GetGoI2PLogger" [ color="saddlebrown" tooltip="at router_identity.go:14: calling [github.com/go-i2p/logger.GetGoI2PLogger]" ]
-    "github.com/go-i2p/common/router_identity.NewRouterIdentity" -> "(*github.com/go-i2p/logger.Logger).Error" [ color="saddlebrown" tooltip="at router_identity.go:62: calling [(*github.com/go-i2p/logger.Logger).Error]\nat router_identity.go:69: calling [(*github.com/go-i2p/logger.Logger).Error]" ]
-    "github.com/go-i2p/common/router_identity.ReadRouterIdentity" -> "(*github.com/sirupsen/logrus.Logger).Debug" [ color="saddlebrown" tooltip="at router_identity.go:40: calling [(*github.com/sirupsen/logrus.Logger).Debug]\nat router_identity.go:51: calling [(*github.com/sirupsen/logrus.Logger).Debug]" ]
-    "github.com/go-i2p/common/router_identity.ReadRouterIdentity" -> "github.com/go-i2p/common/keys_and_cert.ReadKeysAndCert" [ color="saddlebrown" tooltip="at router_identity.go:41: calling [github.com/go-i2p/common/keys_and_cert.ReadKeysAndCert]" ]
-    "github.com/go-i2p/common/router_identity.ReadRouterIdentity" -> "(*github.com/go-i2p/logger.Logger).WithError" [ color="saddlebrown" tooltip="at router_identity.go:43: calling [(*github.com/go-i2p/logger.Logger).WithError]" ]
-    "github.com/go-i2p/common/router_identity.ReadRouterIdentity" -> "(*github.com/go-i2p/logger.Logger).Error" [ color="saddlebrown" tooltip="at router_identity.go:43: calling [(*github.com/go-i2p/logger.Logger).Error]" ]
-    "github.com/go-i2p/common/router_identity.NewRouterIdentity" -> "(*github.com/sirupsen/logrus.Logger).Debug" [ color="saddlebrown" tooltip="at router_identity.go:56: calling [(*github.com/sirupsen/logrus.Logger).Debug]\nat router_identity.go:82: calling [(*github.com/sirupsen/logrus.Logger).Debug]" ]
-    "github.com/go-i2p/common/router_identity.NewRouterIdentity" -> "github.com/go-i2p/common/key_certificate.KeyCertificateFromCertificate" [ color="saddlebrown" tooltip="at router_identity.go:60: calling [github.com/go-i2p/common/key_certificate.KeyCertificateFromCertificate]" ]
+    "github.com/go-i2p/common/router_identity.ReadRouterIdentity" -> "(*github.com/go-i2p/logger.Logger).WithError" [ color="saddlebrown" tooltip="at router_identity_struct.go:79: calling [(*github.com/go-i2p/logger.Logger).WithError]" ]
+    "github.com/go-i2p/common/router_identity.ReadRouterIdentity" -> "(*github.com/go-i2p/logger.Logger).Error" [ color="saddlebrown" tooltip="at router_identity_struct.go:79: calling [(*github.com/go-i2p/logger.Logger).Error]" ]
+    "github.com/go-i2p/common/router_identity.NewRouterIdentity" -> "(*github.com/sirupsen/logrus.Logger).Debug" [ color="saddlebrown" tooltip="at router_identity_struct.go:38: calling [(*github.com/sirupsen/logrus.Logger).Debug]\nat router_identity_struct.go:64: calling [(*github.com/sirupsen/logrus.Logger).Debug]" ]
+    "github.com/go-i2p/common/router_identity.NewRouterIdentity" -> "github.com/go-i2p/common/key_certificate.KeyCertificateFromCertificate" [ color="saddlebrown" tooltip="at router_identity_struct.go:42: calling [github.com/go-i2p/common/key_certificate.KeyCertificateFromCertificate]" ]
+    "github.com/go-i2p/common/router_identity.NewRouterIdentity" -> "(*github.com/go-i2p/logger.Logger).WithError" [ color="saddlebrown" tooltip="at router_identity_struct.go:44: calling [(*github.com/go-i2p/logger.Logger).WithError]\nat router_identity_struct.go:51: calling [(*github.com/go-i2p/logger.Logger).WithError]" ]
+    "github.com/go-i2p/common/router_identity.init" -> "github.com/go-i2p/logger.GetGoI2PLogger" [ color="saddlebrown" tooltip="at router_identity_struct.go:14: calling [github.com/go-i2p/logger.GetGoI2PLogger]" ]
+    "github.com/go-i2p/common/router_identity.NewRouterIdentity" -> "(*github.com/go-i2p/logger.Logger).Error" [ color="saddlebrown" tooltip="at router_identity_struct.go:44: calling [(*github.com/go-i2p/logger.Logger).Error]\nat router_identity_struct.go:51: calling [(*github.com/go-i2p/logger.Logger).Error]" ]
+    "github.com/go-i2p/common/router_identity.NewRouterIdentity" -> "github.com/go-i2p/common/keys_and_cert.NewKeysAndCert" [ color="saddlebrown" tooltip="at router_identity_struct.go:49: calling [github.com/go-i2p/common/keys_and_cert.NewKeysAndCert]" ]
+    "github.com/go-i2p/common/router_identity.NewRouterIdentity" -> "(github.com/go-i2p/common/key_certificate.KeyCertificate).PublicKeyType" [ color="saddlebrown" tooltip="at router_identity_struct.go:61: calling [(github.com/go-i2p/common/key_certificate.KeyCertificate).PublicKeyType]" ]
+    "github.com/go-i2p/common/router_identity.NewRouterIdentity" -> "(github.com/go-i2p/common/key_certificate.KeyCertificate).SigningPublicKeyType" [ color="saddlebrown" tooltip="at router_identity_struct.go:62: calling [(github.com/go-i2p/common/key_certificate.KeyCertificate).SigningPublicKeyType]" ]
+    "github.com/go-i2p/common/router_identity.NewRouterIdentity" -> "(*github.com/go-i2p/logger.Logger).WithFields" [ color="saddlebrown" tooltip="at router_identity_struct.go:60: calling [(*github.com/go-i2p/logger.Logger).WithFields]" ]
+    "github.com/go-i2p/common/router_identity.ReadRouterIdentity" -> "(*github.com/go-i2p/logger.Logger).WithFields" [ tooltip="at router_identity_struct.go:74: calling [(*github.com/go-i2p/logger.Logger).WithFields]\nat router_identity_struct.go:85: calling [(*github.com/go-i2p/logger.Logger).WithFields]" color="saddlebrown" ]
+    "github.com/go-i2p/common/router_identity.ReadRouterIdentity" -> "(*github.com/sirupsen/logrus.Logger).Debug" [ color="saddlebrown" tooltip="at router_identity_struct.go:76: calling [(*github.com/sirupsen/logrus.Logger).Debug]\nat router_identity_struct.go:87: calling [(*github.com/sirupsen/logrus.Logger).Debug]" ]
+    "github.com/go-i2p/common/router_identity.ReadRouterIdentity" -> "github.com/go-i2p/common/keys_and_cert.ReadKeysAndCert" [ tooltip="at router_identity_struct.go:77: calling [github.com/go-i2p/common/keys_and_cert.ReadKeysAndCert]" color="saddlebrown" ]
 }

@@ -9,15 +9,32 @@ Package router_info implements the I2P RouterInfo common data structure
 ## Usage
 
 ```go
-const (
-	MIN_GOOD_VERSION = 58
-	MAX_GOOD_VERSION = 99
-)
+const ED25519_PRIVATE_KEY_SIZE = 64
 ```
+ED25519_PRIVATE_KEY_SIZE is the size in bytes of an Ed25519 private key Used for
+validation when creating Ed25519 signers in router info operations
+
+```go
+const I2P_NETWORK_NAME = "i2p"
+```
+I2P_NETWORK_NAME is the network identifier returned by the Network() method
+implementing net.Addr interface for I2P router addresses
+
+```go
+const MAX_GOOD_VERSION = 99
+```
+MAX_GOOD_VERSION defines the maximum acceptable router version.
+
+```go
+const MIN_GOOD_VERSION = 58
+```
+MIN_GOOD_VERSION defines the minimum acceptable router version.
 
 ```go
 const ROUTER_INFO_MIN_SIZE = 439
 ```
+ROUTER_INFO_MIN_SIZE defines the minimum size of a RouterInfo structure in
+bytes.
 
 #### type RouterInfo
 
@@ -42,12 +59,15 @@ func NewRouterInfo(
 	sigType int,
 ) (*RouterInfo, error)
 ```
+NewRouterInfo creates a new RouterInfo with the specified parameters.
 
 #### func  OwnedRouterInfo
 
 ```go
 func OwnedRouterInfo(keyCertificate key_certificate.KeyCertificate) *RouterInfo
 ```
+OwnedRouterInfo creates a RouterInfo instance using the specified key
+certificate.
 
 #### func  ReadRouterInfo
 
@@ -63,6 +83,7 @@ during parsing.
 ```go
 func (router_info *RouterInfo) AddAddress(address *RouterAddress)
 ```
+AddAddress adds a RouterAddress to this RouterInfo.
 
 #### func (RouterInfo) Bytes
 
@@ -76,13 +97,14 @@ Bytes returns the RouterInfo as a []byte suitable for writing to a stream.
 ```go
 func (router_info *RouterInfo) GoodVersion() bool
 ```
+GoodVersion checks if the RouterInfo version is acceptable.
 
 #### func (*RouterInfo) IdentHash
 
 ```go
 func (router_info *RouterInfo) IdentHash() Hash
 ```
-IndentHash returns the identity hash (sha256 sum) for this RouterInfo.
+IdentHash returns the identity hash (sha256 sum) for this RouterInfo.
 
 #### func (RouterInfo) Network
 
@@ -117,6 +139,7 @@ Published returns the date this RouterInfo was published as an I2P Date.
 ```go
 func (router_info *RouterInfo) Reachable() bool
 ```
+Reachable checks if the RouterInfo indicates the router is reachable.
 
 #### func (*RouterInfo) RouterAddressCount
 
@@ -139,6 +162,7 @@ RouterAddresses returns all RouterAddresses for this RouterInfo as
 ```go
 func (router_info *RouterInfo) RouterCapabilities() string
 ```
+RouterCapabilities returns the capabilities string for this RouterInfo.
 
 #### func (*RouterInfo) RouterIdentity
 
@@ -152,6 +176,7 @@ RouterIdentity returns the router identity as *RouterIdentity.
 ```go
 func (router_info *RouterInfo) RouterVersion() string
 ```
+RouterVersion returns the version string for this RouterInfo.
 
 #### func (RouterInfo) Signature
 
@@ -165,12 +190,14 @@ Signature returns the signature for this RouterInfo as an I2P Signature.
 ```go
 func (router_info RouterInfo) String() string
 ```
+String returns a string representation of the RouterInfo.
 
 #### func (*RouterInfo) UnCongested
 
 ```go
 func (router_info *RouterInfo) UnCongested() bool
 ```
+UnCongested checks if the RouterInfo indicates the router is not congested.
 
 
 

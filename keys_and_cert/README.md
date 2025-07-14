@@ -6,6 +6,12 @@
 
 Package keys_and_cert implements the I2P KeysAndCert common data structure
 
+Package keys_and_cert implements the I2P KeysAndCert common data structure
+
+Package keys_and_cert implements the I2P KeysAndCert common data structure
+
+Package keys_and_cert implements the I2P KeysAndCert common data structure
+
 ## Usage
 
 ```go
@@ -60,6 +66,8 @@ Returns a pointer to KeysAndCert unlike ReadKeysAndCert.
 ```go
 func ReadKeysAndCertElgAndEd25519(data []byte) (keysAndCert *KeysAndCert, remainder []byte, err error)
 ```
+ReadKeysAndCertElgAndEd25519 reads KeysAndCert with fixed ElGamal and Ed25519
+key sizes.
 
 #### func (KeysAndCert) Bytes
 
@@ -74,21 +82,21 @@ specified length.
 ```go
 func (keys_and_cert *KeysAndCert) Certificate() (cert Certificate)
 ```
-Certfificate returns the certificate.
+Certificate returns the certificate.
 
 #### func (*KeysAndCert) PublicKey
 
 ```go
 func (keys_and_cert *KeysAndCert) PublicKey() (key types.RecievingPublicKey)
 ```
-publicKey returns the public key as a types.publicKey.
+PublicKey returns the public key as a types.publicKey.
 
 #### func (*KeysAndCert) SigningPublicKey
 
 ```go
 func (keys_and_cert *KeysAndCert) SigningPublicKey() (signing_public_key types.SigningPublicKey)
 ```
-signingPublicKey returns the signing public key.
+SigningPublicKey returns the signing public key.
 
 #### type PrivateKeysAndCert
 
@@ -101,13 +109,14 @@ type PrivateKeysAndCert struct {
 ```
 
 PrivateKeysAndCert contains a KeysAndCert along with the corresponding private
-keys for the Public Key and the Signing Public Key
+keys for the Public Key and the Signing Public Key.
 
 #### func  NewPrivateKeysAndCert
 
 ```go
 func NewPrivateKeysAndCert() (*PrivateKeysAndCert, error)
 ```
+NewPrivateKeysAndCert creates a new PrivateKeysAndCert instance.
 
 
 

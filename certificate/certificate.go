@@ -54,11 +54,11 @@ func parseCertificateFromData(data []byte) (Certificate, error) {
 
 // handleEmptyCertificateData processes the case where no data is provided.
 func handleEmptyCertificateData(certificate Certificate) (Certificate, error) {
-	certificate.kind = Integer([]byte{0})
-	certificate.len = Integer([]byte{0})
+	certificate.kind = Integer([]byte{CERT_EMPTY_PAYLOAD_SIZE})
+	certificate.len = Integer([]byte{CERT_EMPTY_PAYLOAD_SIZE})
 	log.WithFields(logrus.Fields{
 		"at":                       "(Certificate) ReadCertificate",
-		"certificate_bytes_length": 0,
+		"certificate_bytes_length": CERT_EMPTY_PAYLOAD_SIZE,
 		"reason":                   "too short (len < CERT_MIN_SIZE)" + fmt.Sprintf("%d", certificate.kind.Int()),
 	}).Error("invalid certificate, empty")
 	return certificate, oops.Errorf("error parsing certificate: certificate is empty")
@@ -66,8 +66,8 @@ func handleEmptyCertificateData(certificate Certificate) (Certificate, error) {
 
 // handleShortCertificateData processes the case where insufficient data is provided.
 func handleShortCertificateData(certificate Certificate, data []byte) (Certificate, error) {
-	certificate.kind = Integer(data[0 : len(data)-1])
-	certificate.len = Integer([]byte{0})
+	certificate.kind = Integer(data[CERT_EMPTY_PAYLOAD_SIZE : len(data)-CERT_DEFAULT_TYPE_SIZE])
+	certificate.len = Integer([]byte{CERT_EMPTY_PAYLOAD_SIZE})
 	log.WithFields(logrus.Fields{
 		"at":                       "(Certificate) ReadCertificate",
 		"certificate_bytes_length": len(data),
@@ -144,11 +144,11 @@ func logCertificateReadCompletion(certificate Certificate, data []byte, remainde
 // Returns an error if the certificate is not a KEY type or if the payload is too short.
 func GetSignatureTypeFromCertificate(cert Certificate) (int, error) {
 	if cert.Type() != CERT_KEY {
-		return 0, oops.Errorf("unexpected certificate type: %d", cert.Type())
+		return CERT_EMPTY_PAYLOAD_SIZE, oops.Errorf("unexpected certificate type: %d", cert.Type())
 	}
-	if len(cert.payload) < 4 {
-		return 0, oops.Errorf("certificate payload too short to contain signature type")
+	if len(cert.payload) < CERT_MIN_KEY_PAYLOAD_SIZE {
+		return CERT_EMPTY_PAYLOAD_SIZE, oops.Errorf("certificate payload too short to contain signature type")
 	}
-	sigType := int(binary.BigEndian.Uint16(cert.payload[0:CERT_SIGNING_KEY_TYPE_SIZE])) // Read signing public key type from correct offset
+	sigType := int(binary.BigEndian.Uint16(cert.payload[CERT_KEY_SIG_TYPE_OFFSET:CERT_SIGNING_KEY_TYPE_SIZE])) // Read signing public key type from correct offset
 	return sigType, nil
 }

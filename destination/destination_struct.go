@@ -72,7 +72,7 @@ func (destination Destination) Base32Address() (str string) {
 	dest := destination.KeysAndCert.Bytes()
 	hash := types.SHA256(dest)
 	str = strings.Trim(base32.EncodeToString(hash[:]), "=")
-	str = str + ".b32.i2p"
+	str = str + I2P_BASE32_SUFFIX
 
 	log.WithFields(logrus.Fields{
 		"base32_address": str,

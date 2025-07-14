@@ -14,11 +14,11 @@ digraph gocallvis {
     edge [minlen="2"]
 
     subgraph "cluster_focus" {
-        fontsize="18";
-bgcolor="#e6ecfa";
-label="base32";
+        label="base32";
 labelloc="t";
 labeljust="c";
+fontsize="18";
+bgcolor="#e6ecfa";
         
         
     }

@@ -6,12 +6,22 @@
 
 Package session_key implements the I2P SessionKey common data structure
 
+Package session_key implements the I2P SessionKey common data structure
+
 ## Usage
+
+```go
+const SESSION_KEY_SIZE = 32
+```
+SESSION_KEY_SIZE defines the size of an I2P SessionKey in bytes. As specified in
+the I2P common structures specification.
+
+https://geti2p.net/spec/common-structures#sessionkey
 
 #### type SessionKey
 
 ```go
-type SessionKey [32]byte
+type SessionKey [SESSION_KEY_SIZE]byte
 ```
 
 SessionKey is the represenation of an I2P SessionKey.

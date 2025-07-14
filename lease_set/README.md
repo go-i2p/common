@@ -4,7 +4,13 @@
 
 ![lease_set.svg](lease_set.svg)
 
-Package lease_set implements the I2P LeastSet common data structure
+Package lease_set constants
+
+Package lease_set implements the I2P LeaseSet methods and constructor
+
+Package lease_set implements the I2P LeaseSet struct definition
+
+Package lease_set utility functions
 
 ## Usage
 
@@ -22,6 +28,7 @@ Sizes of various structures in an I2P LeaseSet
 ```go
 func ReadDestinationFromLeaseSet(data []byte) (dest destination.Destination, remainder []byte, err error)
 ```
+ReadDestinationFromLeaseSet reads the destination from lease set data.
 
 #### type LeaseSet
 
@@ -44,18 +51,21 @@ func NewLeaseSet(
 	signingPrivateKey types.SigningPrivateKey,
 ) (LeaseSet, error)
 ```
+NewLeaseSet creates a new LeaseSet from the provided components.
 
 #### func  ReadLeaseSet
 
 ```go
 func ReadLeaseSet(data []byte) (LeaseSet, error)
 ```
+ReadLeaseSet reads a lease set from byte data.
 
 #### func (LeaseSet) Bytes
 
 ```go
 func (lease_set LeaseSet) Bytes() ([]byte, error)
 ```
+Bytes returns the LeaseSet as a byte array.
 
 #### func (LeaseSet) Destination
 
@@ -69,6 +79,8 @@ Destination returns the Destination as []byte.
 ```go
 func (lease_set LeaseSet) DestinationDeux() (dest destination.Destination, err error)
 ```
+DestinationDeux returns the destination from the lease set using alternative
+method.
 
 #### func (LeaseSet) LeaseCount
 

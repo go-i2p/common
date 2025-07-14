@@ -6,6 +6,13 @@
 
 Package signature implements the I2P Signature common data structure
 
+
+Package signature implements the I2P Signature common data structure
+
+Package signature implements the I2P Signature common data structure
+
+Package signature implements the I2P Signature common data structure
+
 ## Usage
 
 ```go
@@ -38,6 +45,7 @@ const (
 	SIGNATURE_TYPE_REDDSA_SHA512_ED25519  = 11
 )
 ```
+Signature type constants for I2P signature algorithms
 
 #### type Signature
 

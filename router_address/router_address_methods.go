@@ -36,18 +36,18 @@ func (router_address *RouterAddress) IPVersion() string {
 		log.WithError(err).Error("Failed to get CapsString data")
 		return ""
 	}
-	if strings.HasSuffix(str, "6") {
+	if strings.HasSuffix(str, IPV6_SUFFIX) {
 		log.Debug("IP version is IPv6")
-		return "6"
+		return IPV6_VERSION_STRING
 	}
 	log.Debug("IP version is IPv4")
-	return "4"
+	return IPV4_VERSION_STRING
 }
 
 // UDP checks if the RouterAddress is UDP-based
 func (router_address *RouterAddress) UDP() bool {
 	log.Debug("Checking if RouterAddress is UDP")
-	isUDP := strings.HasPrefix(strings.ToLower(router_address.Network()), "ssu")
+	isUDP := strings.HasPrefix(strings.ToLower(router_address.Network()), SSU_TRANSPORT_PREFIX)
 	log.WithField("is_udp", isUDP).Debug("Checked if RouterAddress is UDP")
 	return isUDP
 }
@@ -124,70 +124,70 @@ func (router_address RouterAddress) CheckOption(key string) bool {
 
 // HostString returns the host option as an I2PString
 func (router_address RouterAddress) HostString() I2PString {
-	host, _ := ToI2PString("host")
+	host, _ := ToI2PString(HOST_OPTION_KEY)
 	return router_address.GetOption(host)
 }
 
 // PortString returns the port option as an I2PString
 func (router_address RouterAddress) PortString() I2PString {
-	port, _ := ToI2PString("port")
+	port, _ := ToI2PString(PORT_OPTION_KEY)
 	return router_address.GetOption(port)
 }
 
 // CapsString returns the caps option as an I2PString
 func (router_address RouterAddress) CapsString() I2PString {
-	caps, _ := ToI2PString("caps")
+	caps, _ := ToI2PString(CAPS_OPTION_KEY)
 	return router_address.GetOption(caps)
 }
 
 // StaticKeyString returns the static key option as an I2PString
 func (router_address RouterAddress) StaticKeyString() I2PString {
-	sk, _ := ToI2PString("s")
+	sk, _ := ToI2PString(STATIC_KEY_OPTION_KEY)
 	return router_address.GetOption(sk)
 }
 
 // InitializationVectorString returns the initialization vector option as an I2PString
 func (router_address RouterAddress) InitializationVectorString() I2PString {
-	iv, _ := ToI2PString("i")
+	iv, _ := ToI2PString(INITIALIZATION_VECTOR_OPTION_KEY)
 	return router_address.GetOption(iv)
 }
 
 // ProtocolVersionString returns the protocol version option as an I2PString
 func (router_address RouterAddress) ProtocolVersionString() I2PString {
-	v, _ := ToI2PString("v")
+	v, _ := ToI2PString(PROTOCOL_VERSION_OPTION_KEY)
 	return router_address.GetOption(v)
 }
 
 // IntroducerHashString returns the introducer hash option for the specified number
 func (router_address RouterAddress) IntroducerHashString(num int) I2PString {
-	if num >= 0 && num <= 2 {
+	if num >= MIN_INTRODUCER_NUMBER && num <= MAX_INTRODUCER_NUMBER {
 		val := strconv.Itoa(num)
-		v, _ := ToI2PString("ih" + val)
+		v, _ := ToI2PString(INTRODUCER_HASH_PREFIX + val)
 		return router_address.GetOption(v)
 	}
-	v, _ := ToI2PString("ih0")
+	v, _ := ToI2PString(INTRODUCER_HASH_PREFIX + strconv.Itoa(DEFAULT_INTRODUCER_NUMBER))
 	return router_address.GetOption(v)
 }
 
 // IntroducerExpirationString returns the introducer expiration option for the specified number
 func (router_address RouterAddress) IntroducerExpirationString(num int) I2PString {
-	if num >= 0 && num <= 2 {
+	if num >= MIN_INTRODUCER_NUMBER && num <= MAX_INTRODUCER_NUMBER {
 		val := strconv.Itoa(num)
-		v, _ := ToI2PString("iexp" + val)
+		v, _ := ToI2PString(INTRODUCER_EXPIRATION_PREFIX + val)
 		return router_address.GetOption(v)
 	}
-	v, _ := ToI2PString("iexp0")
+	v, _ := ToI2PString(INTRODUCER_EXPIRATION_PREFIX + strconv.Itoa(DEFAULT_INTRODUCER_NUMBER))
 	return router_address.GetOption(v)
 }
 
 // IntroducerTagString returns the introducer tag option for the specified number
 func (router_address RouterAddress) IntroducerTagString(num int) I2PString {
-	if num >= 0 && num <= 2 {
+	if num >= MIN_INTRODUCER_NUMBER && num <= MAX_INTRODUCER_NUMBER {
 		val := strconv.Itoa(num)
-		v, _ := ToI2PString("itag" + val)
+		v, _ := ToI2PString(INTRODUCER_TAG_PREFIX + val)
 		return router_address.GetOption(v)
 	}
-	v, _ := ToI2PString("itag0")
+	v, _ := ToI2PString(INTRODUCER_TAG_PREFIX + strconv.Itoa(DEFAULT_INTRODUCER_NUMBER))
 	return router_address.GetOption(v)
 }
 
@@ -241,8 +241,8 @@ func (routerAddress RouterAddress) StaticKey() ([32]byte, error) {
 	}
 
 	skBytes := []byte(sk)
-	if len(skBytes) != 32 {
-		return [32]byte{}, oops.Errorf("error: invalid static key length: %d, expected 32", len(skBytes))
+	if len(skBytes) != STATIC_KEY_SIZE {
+		return [32]byte{}, oops.Errorf("error: invalid static key length: %d, expected %d", len(skBytes), STATIC_KEY_SIZE)
 	}
 
 	var result [32]byte
@@ -253,7 +253,7 @@ func (routerAddress RouterAddress) StaticKey() ([32]byte, error) {
 // InitializationVector returns the initialization vector as a 16-byte array
 func (router_address RouterAddress) InitializationVector() ([16]byte, error) {
 	iv := router_address.InitializationVectorString()
-	if len([]byte(iv)) != 16 {
+	if len([]byte(iv)) != INITIALIZATION_VECTOR_SIZE {
 		return [16]byte{}, oops.Errorf("error: invalid IV")
 	}
 	return [16]byte(iv), nil

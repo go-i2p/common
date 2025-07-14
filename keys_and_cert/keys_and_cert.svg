@@ -17,8 +17,8 @@
 <g id="clust6" class="cluster">
 <title>cluster_github.com/go&#45;i2p/common/keys_and_cert.KeysAndCert</title>
 <g id="a_clust6"><a xlink:title="type: github.com/go&#45;i2p/common/keys_and_cert.KeysAndCert">
-<path fill="#b0c4de" stroke="#000000" stroke-width=".5" d="M82.9783,-832C82.9783,-832 172.8647,-832 172.8647,-832 178.8647,-832 184.8647,-838 184.8647,-844 184.8647,-844 184.8647,-898 184.8647,-898 184.8647,-904 178.8647,-910 172.8647,-910 172.8647,-910 82.9783,-910 82.9783,-910 76.9783,-910 70.9783,-904 70.9783,-898 70.9783,-898 70.9783,-844 70.9783,-844 70.9783,-838 76.9783,-832 82.9783,-832"/>
-<text text-anchor="middle" x="127.9215" y="-840.5" font-family="Arial" font-size="15.00" fill="#222222">(KeysAndCert)</text>
+<path fill="#b0c4de" stroke="#000000" stroke-width=".5" d="M82.9783,-822C82.9783,-822 172.8647,-822 172.8647,-822 178.8647,-822 184.8647,-828 184.8647,-834 184.8647,-834 184.8647,-888 184.8647,-888 184.8647,-894 178.8647,-900 172.8647,-900 172.8647,-900 82.9783,-900 82.9783,-900 76.9783,-900 70.9783,-894 70.9783,-888 70.9783,-888 70.9783,-834 70.9783,-834 70.9783,-828 76.9783,-822 82.9783,-822"/>
+<text text-anchor="middle" x="127.9215" y="-830.5" font-family="Arial" font-size="15.00" fill="#222222">(KeysAndCert)</text>
 </a>
 </g>
 </g>
@@ -54,12 +54,12 @@
 </a>
 </g>
 </g>
-<!-- github.com/go&#45;i2p/common/keys_and_cert.constructSigningPublicKey -->
+<!-- github.com/go&#45;i2p/common/keys_and_cert.NewKeysAndCert -->
 <g id="node1" class="node">
-<title>github.com/go&#45;i2p/common/keys_and_cert.constructSigningPublicKey</title>
-<g id="a_node1"><a xlink:title="github.com/go&#45;i2p/common/keys_and_cert.constructSigningPublicKey | defined in keys_and_cert.go:291&#10;at keys_and_cert.go:300: calling [github.com/samber/oops.Errorf]&#10;at keys_and_cert.go:295: calling [github.com/samber/oops.Errorf]">
-<path fill="#add8e6" stroke="#000000" stroke-width=".5" d="M204.9005,-174C204.9005,-174 50.9425,-174 50.9425,-174 44.9425,-174 38.9425,-168 38.9425,-162 38.9425,-162 38.9425,-150 38.9425,-150 38.9425,-144 44.9425,-138 50.9425,-138 50.9425,-138 204.9005,-138 204.9005,-138 210.9005,-138 216.9005,-144 216.9005,-150 216.9005,-150 216.9005,-162 216.9005,-162 216.9005,-168 210.9005,-174 204.9005,-174"/>
-<text text-anchor="middle" x="127.9215" y="-151.8" font-family="Verdana" font-size="14.00" fill="#000000">constructSigningPublicKey</text>
+<title>github.com/go&#45;i2p/common/keys_and_cert.NewKeysAndCert</title>
+<g id="a_node1"><a xlink:title="github.com/go&#45;i2p/common/keys_and_cert.NewKeysAndCert | defined in keys_and_cert_struct.go:80&#10;at keys_and_cert_struct.go:89: calling [(*github.com/go&#45;i2p/logger.Logger).Error]&#10;at keys_and_cert_struct.go:103: calling [(*github.com/go&#45;i2p/logger.Logger).Error]&#10;at keys_and_cert_struct.go:114: calling [(*github.com/go&#45;i2p/logger.Logger).Error]&#10;at keys_and_cert_struct.go:125: calling [(*github.com/go&#45;i2p/logger.Logger).Error]&#10;at keys_and_cert_struct.go:95: calling [(github.com/go&#45;i2p/common/key_certificate.KeyCertificate).SignatureSize]&#10;at keys_and_cert_struct.go:100: calling [(*github.com/go&#45;i2p/logger.Logger).WithFields]&#10;at keys_and_cert_struct.go:111: calling [(*github.com/go&#45;i2p/logger.Logger).WithFields]&#10;at keys_and_cert_struct.go:122: calling [(*github.com/go&#45;i2p/logger.Logger).WithFields]&#10;at keys_and_cert_struct.go:86: calling [(*github.com/sirupsen/logrus.Logger).Debug]&#10;at keys_and_cert_struct.go:90: calling [github.com/samber/oops.Errorf]&#10;at keys_and_cert_struct.go:104: calling [github.com/samber/oops.Errorf]&#10;at keys_and_cert_struct.go:115: calling [github.com/samber/oops.Errorf]&#10;at keys_and_cert_struct.go:126: calling [github.com/samber/oops.Errorf]&#10;at keys_and_cert_struct.go:94: calling [(github.com/go&#45;i2p/common/key_certificate.KeyCertificate).CryptoSize]">
+<path fill="#add8e6" stroke="#000000" stroke-width="1.5" d="M179.8247,-554C179.8247,-554 76.0183,-554 76.0183,-554 70.0183,-554 64.0183,-548 64.0183,-542 64.0183,-542 64.0183,-530 64.0183,-530 64.0183,-524 70.0183,-518 76.0183,-518 76.0183,-518 179.8247,-518 179.8247,-518 185.8247,-518 191.8247,-524 191.8247,-530 191.8247,-530 191.8247,-542 191.8247,-542 191.8247,-548 185.8247,-554 179.8247,-554"/>
+<text text-anchor="middle" x="127.9215" y="-531.8" font-family="Verdana" font-size="14.00" fill="#000000">NewKeysAndCert</text>
 </a>
 </g>
 </g>
@@ -73,106 +73,50 @@
 </a>
 </g>
 </g>
-<!-- github.com/go&#45;i2p/common/keys_and_cert.constructSigningPublicKey&#45;&gt;github.com/samber/oops.Errorf -->
-<g id="edge7" class="edge">
-<title>github.com/go&#45;i2p/common/keys_and_cert.constructSigningPublicKey&#45;&gt;github.com/samber/oops.Errorf</title>
-<g id="a_edge7"><a xlink:title="at keys_and_cert.go:300: calling [github.com/samber/oops.Errorf]&#10;at keys_and_cert.go:295: calling [github.com/samber/oops.Errorf]">
-<path fill="none" stroke="#8b4513" d="M209.4541,-137.9456C260.5358,-126.6341 324.0662,-112.5661 364.188,-103.6816"/>
-<polygon fill="#8b4513" stroke="#8b4513" points="365.1031,-107.0638 374.1099,-101.4845 363.5897,-100.2294 365.1031,-107.0638"/>
+<!-- github.com/go&#45;i2p/common/keys_and_cert.NewKeysAndCert&#45;&gt;github.com/samber/oops.Errorf -->
+<g id="edge27" class="edge">
+<title>github.com/go&#45;i2p/common/keys_and_cert.NewKeysAndCert&#45;&gt;github.com/samber/oops.Errorf</title>
+<g id="a_edge27"><a xlink:title="at keys_and_cert_struct.go:90: calling [github.com/samber/oops.Errorf]&#10;at keys_and_cert_struct.go:104: calling [github.com/samber/oops.Errorf]&#10;at keys_and_cert_struct.go:115: calling [github.com/samber/oops.Errorf]&#10;at keys_and_cert_struct.go:126: calling [github.com/samber/oops.Errorf]">
+<path fill="none" stroke="#8b4513" d="M144.1746,-517.965C168.5234,-490.0052 214.3279,-433.6054 239.843,-378 264.7707,-323.6746 262.0648,-158.7452 304.843,-117 320.3351,-101.882 343.8096,-96.2296 363.9621,-94.4288"/>
+<polygon fill="#8b4513" stroke="#8b4513" points="364.3694,-97.9106 374.1379,-93.8085 363.9434,-90.9236 364.3694,-97.9106"/>
 </a>
 </g>
 </g>
-<!-- github.com/go&#45;i2p/common/keys_and_cert.ReadKeysAndCert -->
-<g id="node3" class="node">
-<title>github.com/go&#45;i2p/common/keys_and_cert.ReadKeysAndCert</title>
-<g id="a_node3"><a xlink:title="github.com/go&#45;i2p/common/keys_and_cert.ReadKeysAndCert | defined in keys_and_cert.go:145&#10;at keys_and_cert.go:199: calling [(github.com/go&#45;i2p/common/key_certificate.KeyCertificate).PublicKeyType]&#10;at keys_and_cert.go:146: calling [(*github.com/go&#45;i2p/logger.Logger).WithFields]&#10;at keys_and_cert.go:155: calling [(*github.com/go&#45;i2p/logger.Logger).WithFields]&#10;at keys_and_cert.go:198: calling [(*github.com/go&#45;i2p/logger.Logger).WithFields]&#10;at keys_and_cert.go:161: calling [github.com/samber/oops.Errorf]&#10;at keys_and_cert.go:167: calling [(*github.com/go&#45;i2p/logger.Logger).WithError]&#10;at keys_and_cert.go:178: calling [(*github.com/go&#45;i2p/logger.Logger).WithError]&#10;at keys_and_cert.go:194: calling [(*github.com/go&#45;i2p/logger.Logger).WithError]&#10;at keys_and_cert.go:173: calling [(github.com/go&#45;i2p/common/key_certificate.KeyCertificate).SignatureSize]&#10;at keys_and_cert.go:200: calling [(github.com/go&#45;i2p/common/key_certificate.KeyCertificate).SigningPublicKeyType]&#10;at keys_and_cert.go:172: calling [(github.com/go&#45;i2p/common/key_certificate.KeyCertificate).CryptoSize]&#10;at keys_and_cert.go:190: calling [(github.com/go&#45;i2p/common/key_certificate.KeyCertificate).ConstructSigningPublicKey]&#10;at keys_and_cert.go:165: calling [github.com/go&#45;i2p/common/key_certificate.NewKeyCertificate]&#10;at keys_and_cert.go:148: calling [(*github.com/sirupsen/logrus.Logger).Debug]&#10;at keys_and_cert.go:203: calling [(*github.com/sirupsen/logrus.Logger).Debug]&#10;at keys_and_cert.go:160: calling [(*github.com/go&#45;i2p/logger.Logger).Error]&#10;at keys_and_cert.go:167: calling [(*github.com/go&#45;i2p/logger.Logger).Error]&#10;at keys_and_cert.go:178: calling [(*github.com/go&#45;i2p/logger.Logger).Error]&#10;at keys_and_cert.go:194: calling [(*github.com/go&#45;i2p/logger.Logger).Error]&#10;at keys_and_cert.go:176: calling [(github.com/go&#45;i2p/common/key_certificate.KeyCertificate).ConstructPublicKey]">
-<path fill="#add8e6" stroke="#000000" stroke-width="1.5" d="M180.6624,-399C180.6624,-399 75.1806,-399 75.1806,-399 69.1806,-399 63.1806,-393 63.1806,-387 63.1806,-387 63.1806,-375 63.1806,-375 63.1806,-369 69.1806,-363 75.1806,-363 75.1806,-363 180.6624,-363 180.6624,-363 186.6624,-363 192.6624,-369 192.6624,-375 192.6624,-375 192.6624,-387 192.6624,-387 192.6624,-393 186.6624,-399 180.6624,-399"/>
-<text text-anchor="middle" x="127.9215" y="-376.8" font-family="Verdana" font-size="14.00" fill="#000000">ReadKeysAndCert</text>
+<!-- (*github.com/go&#45;i2p/logger.Logger).Error -->
+<g id="node11" class="node">
+<title>(*github.com/go&#45;i2p/logger.Logger).Error</title>
+<g id="a_node11"><a xlink:title="(*github.com/go&#45;i2p/logger.Logger).Error | defined in log.go:42">
+<path fill="#ffe4b5" stroke="#000000" stroke-width="1.5" d="M421.1598,-635C421.1598,-635 385.6272,-635 385.6272,-635 379.6272,-635 373.6272,-629 373.6272,-623 373.6272,-623 373.6272,-611 373.6272,-611 373.6272,-605 379.6272,-599 385.6272,-599 385.6272,-599 421.1598,-599 421.1598,-599 427.1598,-599 433.1598,-605 433.1598,-611 433.1598,-611 433.1598,-623 433.1598,-623 433.1598,-629 427.1598,-635 421.1598,-635"/>
+<text text-anchor="middle" x="403.3935" y="-621.2" font-family="Verdana" font-size="14.00" fill="#000000">logger</text>
+<text text-anchor="middle" x="403.3935" y="-604.4" font-family="Verdana" font-size="14.00" fill="#000000">Error</text>
 </a>
 </g>
 </g>
-<!-- github.com/go&#45;i2p/common/keys_and_cert.ReadKeysAndCert&#45;&gt;github.com/samber/oops.Errorf -->
-<g id="edge9" class="edge">
-<title>github.com/go&#45;i2p/common/keys_and_cert.ReadKeysAndCert&#45;&gt;github.com/samber/oops.Errorf</title>
-<g id="a_edge9"><a xlink:title="at keys_and_cert.go:161: calling [github.com/samber/oops.Errorf]">
-<path fill="none" stroke="#8b4513" d="M137.7355,-362.8285C167.3421,-308.6494 256.6881,-149.9451 304.843,-117 322.1357,-105.1692 344.7626,-99.59 363.9735,-97.0038"/>
-<polygon fill="#8b4513" stroke="#8b4513" points="364.4041,-100.4775 373.9496,-95.8805 363.6208,-93.5215 364.4041,-100.4775"/>
-</a>
-</g>
-</g>
-<!-- github.com/go&#45;i2p/common/key_certificate.NewKeyCertificate -->
-<g id="node4" class="node">
-<title>github.com/go&#45;i2p/common/key_certificate.NewKeyCertificate</title>
-<g id="a_node4"><a xlink:title="github.com/go&#45;i2p/common/key_certificate.NewKeyCertificate | defined in key_certificate.go:360">
-<path fill="#ffe4b5" stroke="#000000" stroke-width="1.5" d="M457.7212,-557C457.7212,-557 349.0658,-557 349.0658,-557 343.0658,-557 337.0658,-551 337.0658,-545 337.0658,-545 337.0658,-533 337.0658,-533 337.0658,-527 343.0658,-521 349.0658,-521 349.0658,-521 457.7212,-521 457.7212,-521 463.7212,-521 469.7212,-527 469.7212,-533 469.7212,-533 469.7212,-545 469.7212,-545 469.7212,-551 463.7212,-557 457.7212,-557"/>
-<text text-anchor="middle" x="403.3935" y="-543.2" font-family="Verdana" font-size="14.00" fill="#000000">key_certificate</text>
-<text text-anchor="middle" x="403.3935" y="-526.4" font-family="Verdana" font-size="14.00" fill="#000000">NewKeyCertificate</text>
-</a>
-</g>
-</g>
-<!-- github.com/go&#45;i2p/common/keys_and_cert.ReadKeysAndCert&#45;&gt;github.com/go&#45;i2p/common/key_certificate.NewKeyCertificate -->
-<g id="edge21" class="edge">
-<title>github.com/go&#45;i2p/common/keys_and_cert.ReadKeysAndCert&#45;&gt;github.com/go&#45;i2p/common/key_certificate.NewKeyCertificate</title>
-<g id="a_edge21"><a xlink:title="at keys_and_cert.go:165: calling [github.com/go&#45;i2p/common/key_certificate.NewKeyCertificate]">
-<path fill="none" stroke="#8b4513" d="M147.9119,-399.2079C179.2004,-426.8232 242.6215,-479.3195 304.843,-510 312.0074,-513.5327 319.6816,-516.7169 327.4678,-519.5665"/>
-<polygon fill="#8b4513" stroke="#8b4513" points="326.3992,-522.9004 336.994,-522.8773 328.6973,-516.2884 326.3992,-522.9004"/>
+<!-- github.com/go&#45;i2p/common/keys_and_cert.NewKeysAndCert&#45;&gt;(*github.com/go&#45;i2p/logger.Logger).Error -->
+<g id="edge11" class="edge">
+<title>github.com/go&#45;i2p/common/keys_and_cert.NewKeysAndCert&#45;&gt;(*github.com/go&#45;i2p/logger.Logger).Error</title>
+<g id="a_edge11"><a xlink:title="at keys_and_cert_struct.go:89: calling [(*github.com/go&#45;i2p/logger.Logger).Error]&#10;at keys_and_cert_struct.go:103: calling [(*github.com/go&#45;i2p/logger.Logger).Error]&#10;at keys_and_cert_struct.go:114: calling [(*github.com/go&#45;i2p/logger.Logger).Error]&#10;at keys_and_cert_struct.go:125: calling [(*github.com/go&#45;i2p/logger.Logger).Error]">
+<path fill="none" stroke="#8b4513" d="M177.4529,-554.0295C212.6958,-566.4852 261.3206,-582.9192 304.843,-595 323.9949,-600.3161 345.5131,-605.2386 363.5449,-609.0734"/>
+<polygon fill="#8b4513" stroke="#8b4513" points="362.935,-612.5215 373.4399,-611.1438 364.3687,-605.6699 362.935,-612.5215"/>
 </a>
 </g>
 </g>
 <!-- (*github.com/go&#45;i2p/logger.Logger).WithFields -->
-<g id="node11" class="node">
+<g id="node12" class="node">
 <title>(*github.com/go&#45;i2p/logger.Logger).WithFields</title>
-<g id="a_node11"><a xlink:title="(*github.com/go&#45;i2p/logger.Logger).WithFields | defined in log.go:60">
+<g id="a_node12"><a xlink:title="(*github.com/go&#45;i2p/logger.Logger).WithFields | defined in log.go:60">
 <path fill="#ffe4b5" stroke="#000000" stroke-width="1.5" d="M434.6126,-757C434.6126,-757 372.1744,-757 372.1744,-757 366.1744,-757 360.1744,-751 360.1744,-745 360.1744,-745 360.1744,-733 360.1744,-733 360.1744,-727 366.1744,-721 372.1744,-721 372.1744,-721 434.6126,-721 434.6126,-721 440.6126,-721 446.6126,-727 446.6126,-733 446.6126,-733 446.6126,-745 446.6126,-745 446.6126,-751 440.6126,-757 434.6126,-757"/>
 <text text-anchor="middle" x="403.3935" y="-743.2" font-family="Verdana" font-size="14.00" fill="#000000">logger</text>
 <text text-anchor="middle" x="403.3935" y="-726.4" font-family="Verdana" font-size="14.00" fill="#000000">WithFields</text>
 </a>
 </g>
 </g>
-<!-- github.com/go&#45;i2p/common/keys_and_cert.ReadKeysAndCert&#45;&gt;(*github.com/go&#45;i2p/logger.Logger).WithFields -->
-<g id="edge8" class="edge">
-<title>github.com/go&#45;i2p/common/keys_and_cert.ReadKeysAndCert&#45;&gt;(*github.com/go&#45;i2p/logger.Logger).WithFields</title>
-<g id="a_edge8"><a xlink:title="at keys_and_cert.go:146: calling [(*github.com/go&#45;i2p/logger.Logger).WithFields]&#10;at keys_and_cert.go:155: calling [(*github.com/go&#45;i2p/logger.Logger).WithFields]&#10;at keys_and_cert.go:198: calling [(*github.com/go&#45;i2p/logger.Logger).WithFields]">
-<path fill="none" stroke="#8b4513" d="M149.4933,-399.1213C174.5474,-421.245 215.5384,-460.9415 239.843,-503 287.8784,-586.124 236.6136,-641.4594 304.843,-709 316.9476,-720.9824 333.6847,-728.2014 349.9324,-732.5428"/>
-<polygon fill="#8b4513" stroke="#8b4513" points="349.4047,-736.014 359.9398,-734.891 351.0038,-729.1991 349.4047,-736.014"/>
-</a>
-</g>
-</g>
-<!-- (*github.com/go&#45;i2p/logger.Logger).Error -->
-<g id="node12" class="node">
-<title>(*github.com/go&#45;i2p/logger.Logger).Error</title>
-<g id="a_node12"><a xlink:title="(*github.com/go&#45;i2p/logger.Logger).Error | defined in log.go:42">
-<path fill="#ffe4b5" stroke="#000000" stroke-width="1.5" d="M421.1598,-696C421.1598,-696 385.6272,-696 385.6272,-696 379.6272,-696 373.6272,-690 373.6272,-684 373.6272,-684 373.6272,-672 373.6272,-672 373.6272,-666 379.6272,-660 385.6272,-660 385.6272,-660 421.1598,-660 421.1598,-660 427.1598,-660 433.1598,-666 433.1598,-672 433.1598,-672 433.1598,-684 433.1598,-684 433.1598,-690 427.1598,-696 421.1598,-696"/>
-<text text-anchor="middle" x="403.3935" y="-682.2" font-family="Verdana" font-size="14.00" fill="#000000">logger</text>
-<text text-anchor="middle" x="403.3935" y="-665.4" font-family="Verdana" font-size="14.00" fill="#000000">Error</text>
-</a>
-</g>
-</g>
-<!-- github.com/go&#45;i2p/common/keys_and_cert.ReadKeysAndCert&#45;&gt;(*github.com/go&#45;i2p/logger.Logger).Error -->
-<g id="edge25" class="edge">
-<title>github.com/go&#45;i2p/common/keys_and_cert.ReadKeysAndCert&#45;&gt;(*github.com/go&#45;i2p/logger.Logger).Error</title>
-<g id="a_edge25"><a xlink:title="at keys_and_cert.go:160: calling [(*github.com/go&#45;i2p/logger.Logger).Error]&#10;at keys_and_cert.go:167: calling [(*github.com/go&#45;i2p/logger.Logger).Error]&#10;at keys_and_cert.go:178: calling [(*github.com/go&#45;i2p/logger.Logger).Error]&#10;at keys_and_cert.go:194: calling [(*github.com/go&#45;i2p/logger.Logger).Error]">
-<path fill="none" stroke="#8b4513" d="M148.2354,-399.2333C172.4447,-421.7732 212.9879,-462.1779 239.843,-503 278.6572,-562.0009 251.8617,-601.3027 304.843,-648 321.0671,-662.2998 343.9524,-669.784 363.5862,-673.7008"/>
-<polygon fill="#8b4513" stroke="#8b4513" points="363.0501,-677.1601 373.5045,-675.4411 364.2599,-670.2654 363.0501,-677.1601"/>
-</a>
-</g>
-</g>
-<!-- (*github.com/go&#45;i2p/logger.Logger).WithError -->
-<g id="node13" class="node">
-<title>(*github.com/go&#45;i2p/logger.Logger).WithError</title>
-<g id="a_node13"><a xlink:title="(*github.com/go&#45;i2p/logger.Logger).WithError | defined in log.go:66">
-<path fill="#ffe4b5" stroke="#000000" stroke-width="1.5" d="M431.925,-635C431.925,-635 374.862,-635 374.862,-635 368.862,-635 362.862,-629 362.862,-623 362.862,-623 362.862,-611 362.862,-611 362.862,-605 368.862,-599 374.862,-599 374.862,-599 431.925,-599 431.925,-599 437.925,-599 443.925,-605 443.925,-611 443.925,-611 443.925,-623 443.925,-623 443.925,-629 437.925,-635 431.925,-635"/>
-<text text-anchor="middle" x="403.3935" y="-621.2" font-family="Verdana" font-size="14.00" fill="#000000">logger</text>
-<text text-anchor="middle" x="403.3935" y="-604.4" font-family="Verdana" font-size="14.00" fill="#000000">WithError</text>
-</a>
-</g>
-</g>
-<!-- github.com/go&#45;i2p/common/keys_and_cert.ReadKeysAndCert&#45;&gt;(*github.com/go&#45;i2p/logger.Logger).WithError -->
-<g id="edge14" class="edge">
-<title>github.com/go&#45;i2p/common/keys_and_cert.ReadKeysAndCert&#45;&gt;(*github.com/go&#45;i2p/logger.Logger).WithError</title>
-<g id="a_edge14"><a xlink:title="at keys_and_cert.go:167: calling [(*github.com/go&#45;i2p/logger.Logger).WithError]&#10;at keys_and_cert.go:178: calling [(*github.com/go&#45;i2p/logger.Logger).WithError]&#10;at keys_and_cert.go:194: calling [(*github.com/go&#45;i2p/logger.Logger).WithError]">
-<path fill="none" stroke="#8b4513" d="M146.1391,-399.3562C168.9518,-422.6735 208.806,-464.5182 239.843,-503 271.2732,-541.9693 263.1775,-567.243 304.843,-595 318.8581,-604.3367 336.2317,-609.7641 352.47,-612.9014"/>
-<polygon fill="#8b4513" stroke="#8b4513" points="351.9511,-616.3632 362.3936,-614.5733 353.1141,-609.4605 351.9511,-616.3632"/>
+<!-- github.com/go&#45;i2p/common/keys_and_cert.NewKeysAndCert&#45;&gt;(*github.com/go&#45;i2p/logger.Logger).WithFields -->
+<g id="edge15" class="edge">
+<title>github.com/go&#45;i2p/common/keys_and_cert.NewKeysAndCert&#45;&gt;(*github.com/go&#45;i2p/logger.Logger).WithFields</title>
+<g id="a_edge15"><a xlink:title="at keys_and_cert_struct.go:100: calling [(*github.com/go&#45;i2p/logger.Logger).WithFields]&#10;at keys_and_cert_struct.go:111: calling [(*github.com/go&#45;i2p/logger.Logger).WithFields]&#10;at keys_and_cert_struct.go:122: calling [(*github.com/go&#45;i2p/logger.Logger).WithFields]">
+<path fill="none" stroke="#8b4513" d="M141.4097,-554.0518C168.5095,-589.0734 233.1402,-666.52 304.843,-709 318.6011,-717.1509 334.771,-723.2678 349.9894,-727.7772"/>
+<polygon fill="#8b4513" stroke="#8b4513" points="349.2454,-731.2031 359.8178,-730.5136 351.123,-724.4596 349.2454,-731.2031"/>
 </a>
 </g>
 </g>
@@ -186,151 +130,297 @@
 </a>
 </g>
 </g>
-<!-- github.com/go&#45;i2p/common/keys_and_cert.ReadKeysAndCert&#45;&gt;(*github.com/sirupsen/logrus.Logger).Debug -->
-<g id="edge24" class="edge">
-<title>github.com/go&#45;i2p/common/keys_and_cert.ReadKeysAndCert&#45;&gt;(*github.com/sirupsen/logrus.Logger).Debug</title>
-<g id="a_edge24"><a xlink:title="at keys_and_cert.go:148: calling [(*github.com/sirupsen/logrus.Logger).Debug]&#10;at keys_and_cert.go:203: calling [(*github.com/sirupsen/logrus.Logger).Debug]">
-<path fill="none" stroke="#8b4513" d="M150.6949,-399.1044C176.4964,-420.917 217.8124,-460.0298 239.843,-503 295.7603,-612.0655 227.4987,-675.9217 304.843,-771 319.9352,-789.5527 343.1711,-802.7195 363.2907,-811.4045"/>
-<polygon fill="#8b4513" stroke="#8b4513" points="361.9898,-814.6537 372.5707,-815.1971 364.6381,-808.174 361.9898,-814.6537"/>
+<!-- github.com/go&#45;i2p/common/keys_and_cert.NewKeysAndCert&#45;&gt;(*github.com/sirupsen/logrus.Logger).Debug -->
+<g id="edge20" class="edge">
+<title>github.com/go&#45;i2p/common/keys_and_cert.NewKeysAndCert&#45;&gt;(*github.com/sirupsen/logrus.Logger).Debug</title>
+<g id="a_edge20"><a xlink:title="at keys_and_cert_struct.go:86: calling [(*github.com/sirupsen/logrus.Logger).Debug]">
+<path fill="none" stroke="#8b4513" d="M144.7138,-554.1256C167.3884,-578.9647 208.5563,-625.3686 239.843,-668 271.8699,-711.64 265.4043,-733.9222 304.843,-771 321.7002,-786.8481 344.0886,-799.6015 363.2658,-808.7264"/>
+<polygon fill="#8b4513" stroke="#8b4513" points="361.8354,-811.9209 372.3838,-812.912 364.7558,-805.5591 361.8354,-811.9209"/>
 </a>
 </g>
 </g>
 <!-- (github.com/go&#45;i2p/common/key_certificate.KeyCertificate).CryptoSize -->
 <g id="node15" class="node">
 <title>(github.com/go&#45;i2p/common/key_certificate.KeyCertificate).CryptoSize</title>
-<g id="a_node15"><a xlink:title="(github.com/go&#45;i2p/common/key_certificate.KeyCertificate).CryptoSize | defined in key_certificate.go:340">
-<path fill="#ffe4b5" stroke="#000000" stroke-width="1.5" d="M445.0648,-496C445.0648,-496 361.7222,-496 361.7222,-496 355.7222,-496 349.7222,-490 349.7222,-484 349.7222,-484 349.7222,-472 349.7222,-472 349.7222,-466 355.7222,-460 361.7222,-460 361.7222,-460 445.0648,-460 445.0648,-460 451.0648,-460 457.0648,-466 457.0648,-472 457.0648,-472 457.0648,-484 457.0648,-484 457.0648,-490 451.0648,-496 445.0648,-496"/>
-<text text-anchor="middle" x="403.3935" y="-482.2" font-family="Verdana" font-size="14.00" fill="#000000">key_certificate</text>
-<text text-anchor="middle" x="403.3935" y="-465.4" font-family="Verdana" font-size="14.00" fill="#000000">CryptoSize</text>
+<g id="a_node15"><a xlink:title="(github.com/go&#45;i2p/common/key_certificate.KeyCertificate).CryptoSize | defined in key_certificate_struct.go:350">
+<path fill="#ffe4b5" stroke="#000000" stroke-width="1.5" d="M445.0648,-435C445.0648,-435 361.7222,-435 361.7222,-435 355.7222,-435 349.7222,-429 349.7222,-423 349.7222,-423 349.7222,-411 349.7222,-411 349.7222,-405 355.7222,-399 361.7222,-399 361.7222,-399 445.0648,-399 445.0648,-399 451.0648,-399 457.0648,-405 457.0648,-411 457.0648,-411 457.0648,-423 457.0648,-423 457.0648,-429 451.0648,-435 445.0648,-435"/>
+<text text-anchor="middle" x="403.3935" y="-421.2" font-family="Verdana" font-size="14.00" fill="#000000">key_certificate</text>
+<text text-anchor="middle" x="403.3935" y="-404.4" font-family="Verdana" font-size="14.00" fill="#000000">CryptoSize</text>
 </a>
 </g>
 </g>
-<!-- github.com/go&#45;i2p/common/keys_and_cert.ReadKeysAndCert&#45;&gt;(github.com/go&#45;i2p/common/key_certificate.KeyCertificate).CryptoSize -->
-<g id="edge19" class="edge">
-<title>github.com/go&#45;i2p/common/keys_and_cert.ReadKeysAndCert&#45;&gt;(github.com/go&#45;i2p/common/key_certificate.KeyCertificate).CryptoSize</title>
-<g id="a_edge19"><a xlink:title="at keys_and_cert.go:172: calling [(github.com/go&#45;i2p/common/key_certificate.KeyCertificate).CryptoSize]">
-<path fill="none" stroke="#8b4513" d="M173.0735,-399.0487C208.6462,-413.0371 259.6139,-432.5708 304.843,-448 316.1496,-451.8571 328.2654,-455.7438 339.9982,-459.3821"/>
-<polygon fill="#8b4513" stroke="#8b4513" points="339.1507,-462.7831 349.7376,-462.3737 341.2062,-456.0916 339.1507,-462.7831"/>
+<!-- github.com/go&#45;i2p/common/keys_and_cert.NewKeysAndCert&#45;&gt;(github.com/go&#45;i2p/common/key_certificate.KeyCertificate).CryptoSize -->
+<g id="edge30" class="edge">
+<title>github.com/go&#45;i2p/common/keys_and_cert.NewKeysAndCert&#45;&gt;(github.com/go&#45;i2p/common/key_certificate.KeyCertificate).CryptoSize</title>
+<g id="a_edge30"><a xlink:title="at keys_and_cert_struct.go:94: calling [(github.com/go&#45;i2p/common/key_certificate.KeyCertificate).CryptoSize]">
+<path fill="none" stroke="#8b4513" d="M188.2598,-517.9225C216.4807,-507.9449 249.7554,-493.91 276.843,-476 291.5234,-466.2935 289.7942,-457.1249 304.843,-448 315.6135,-441.4692 327.891,-436.1887 340.0383,-431.964"/>
+<polygon fill="#8b4513" stroke="#8b4513" points="341.3036,-435.2327 349.7209,-428.7984 339.1283,-428.5792 341.3036,-435.2327"/>
 </a>
 </g>
 </g>
 <!-- (github.com/go&#45;i2p/common/key_certificate.KeyCertificate).SignatureSize -->
 <g id="node16" class="node">
 <title>(github.com/go&#45;i2p/common/key_certificate.KeyCertificate).SignatureSize</title>
-<g id="a_node16"><a xlink:title="(github.com/go&#45;i2p/common/key_certificate.KeyCertificate).SignatureSize | defined in key_certificate.go:312">
-<path fill="#ffe4b5" stroke="#000000" stroke-width="1.5" d="M445.0648,-435C445.0648,-435 361.7222,-435 361.7222,-435 355.7222,-435 349.7222,-429 349.7222,-423 349.7222,-423 349.7222,-411 349.7222,-411 349.7222,-405 355.7222,-399 361.7222,-399 361.7222,-399 445.0648,-399 445.0648,-399 451.0648,-399 457.0648,-405 457.0648,-411 457.0648,-411 457.0648,-423 457.0648,-423 457.0648,-429 451.0648,-435 445.0648,-435"/>
-<text text-anchor="middle" x="403.3935" y="-421.2" font-family="Verdana" font-size="14.00" fill="#000000">key_certificate</text>
-<text text-anchor="middle" x="403.3935" y="-404.4" font-family="Verdana" font-size="14.00" fill="#000000">SignatureSize</text>
+<g id="a_node16"><a xlink:title="(github.com/go&#45;i2p/common/key_certificate.KeyCertificate).SignatureSize | defined in key_certificate_struct.go:322">
+<path fill="#ffe4b5" stroke="#000000" stroke-width="1.5" d="M445.0648,-496C445.0648,-496 361.7222,-496 361.7222,-496 355.7222,-496 349.7222,-490 349.7222,-484 349.7222,-484 349.7222,-472 349.7222,-472 349.7222,-466 355.7222,-460 361.7222,-460 361.7222,-460 445.0648,-460 445.0648,-460 451.0648,-460 457.0648,-466 457.0648,-472 457.0648,-472 457.0648,-484 457.0648,-484 457.0648,-490 451.0648,-496 445.0648,-496"/>
+<text text-anchor="middle" x="403.3935" y="-482.2" font-family="Verdana" font-size="14.00" fill="#000000">key_certificate</text>
+<text text-anchor="middle" x="403.3935" y="-465.4" font-family="Verdana" font-size="14.00" fill="#000000">SignatureSize</text>
+</a>
+</g>
+</g>
+<!-- github.com/go&#45;i2p/common/keys_and_cert.NewKeysAndCert&#45;&gt;(github.com/go&#45;i2p/common/key_certificate.KeyCertificate).SignatureSize -->
+<g id="edge12" class="edge">
+<title>github.com/go&#45;i2p/common/keys_and_cert.NewKeysAndCert&#45;&gt;(github.com/go&#45;i2p/common/key_certificate.KeyCertificate).SignatureSize</title>
+<g id="a_edge12"><a xlink:title="at keys_and_cert_struct.go:95: calling [(github.com/go&#45;i2p/common/key_certificate.KeyCertificate).SignatureSize]">
+<path fill="none" stroke="#8b4513" d="M191.8127,-522.5479C236.2898,-513.1833 295.3524,-500.7478 339.7707,-491.3956"/>
+<polygon fill="#8b4513" stroke="#8b4513" points="340.5205,-494.8146 349.5848,-489.3293 339.0782,-487.9648 340.5205,-494.8146"/>
+</a>
+</g>
+</g>
+<!-- github.com/go&#45;i2p/common/keys_and_cert.ReadKeysAndCertElgAndEd25519 -->
+<g id="node3" class="node">
+<title>github.com/go&#45;i2p/common/keys_and_cert.ReadKeysAndCertElgAndEd25519</title>
+<g id="a_node3"><a xlink:title="github.com/go&#45;i2p/common/keys_and_cert.ReadKeysAndCertElgAndEd25519 | defined in keys_and_cert_struct.go:265&#10;at keys_and_cert_struct.go:268: calling [(*github.com/sirupsen/logrus.Logger).Debug]&#10;at keys_and_cert_struct.go:328: calling [(*github.com/sirupsen/logrus.Logger).Debug]&#10;at keys_and_cert_struct.go:317: calling [github.com/go&#45;i2p/common/key_certificate.NewKeyCertificate]&#10;at keys_and_cert_struct.go:281: calling [github.com/samber/oops.Errorf]&#10;at keys_and_cert_struct.go:292: calling [github.com/samber/oops.Errorf]&#10;at keys_and_cert_struct.go:308: calling [github.com/samber/oops.Errorf]&#10;at keys_and_cert_struct.go:282: calling [(*github.com/go&#45;i2p/logger.Logger).WithError]&#10;at keys_and_cert_struct.go:293: calling [(*github.com/go&#45;i2p/logger.Logger).WithError]&#10;at keys_and_cert_struct.go:309: calling [(*github.com/go&#45;i2p/logger.Logger).WithError]&#10;at keys_and_cert_struct.go:319: calling [(*github.com/go&#45;i2p/logger.Logger).WithError]&#10;at keys_and_cert_struct.go:266: calling [(*github.com/go&#45;i2p/logger.Logger).WithFields]&#10;at keys_and_cert_struct.go:323: calling [(*github.com/go&#45;i2p/logger.Logger).WithFields]&#10;at keys_and_cert_struct.go:282: calling [(*github.com/go&#45;i2p/logger.Logger).Error]&#10;at keys_and_cert_struct.go:293: calling [(*github.com/go&#45;i2p/logger.Logger).Error]&#10;at keys_and_cert_struct.go:309: calling [(*github.com/go&#45;i2p/logger.Logger).Error]&#10;at keys_and_cert_struct.go:319: calling [(*github.com/go&#45;i2p/logger.Logger).Error]">
+<path fill="#add8e6" stroke="#000000" stroke-width="1.5" d="M227.7646,-716C227.7646,-716 28.0784,-716 28.0784,-716 22.0784,-716 16.0784,-710 16.0784,-704 16.0784,-704 16.0784,-692 16.0784,-692 16.0784,-686 22.0784,-680 28.0784,-680 28.0784,-680 227.7646,-680 227.7646,-680 233.7646,-680 239.7646,-686 239.7646,-692 239.7646,-692 239.7646,-704 239.7646,-704 239.7646,-710 233.7646,-716 227.7646,-716"/>
+<text text-anchor="middle" x="127.9215" y="-693.8" font-family="Verdana" font-size="14.00" fill="#000000">ReadKeysAndCertElgAndEd25519</text>
+</a>
+</g>
+</g>
+<!-- github.com/go&#45;i2p/common/keys_and_cert.ReadKeysAndCertElgAndEd25519&#45;&gt;github.com/samber/oops.Errorf -->
+<g id="edge9" class="edge">
+<title>github.com/go&#45;i2p/common/keys_and_cert.ReadKeysAndCertElgAndEd25519&#45;&gt;github.com/samber/oops.Errorf</title>
+<g id="a_edge9"><a xlink:title="at keys_and_cert_struct.go:281: calling [github.com/samber/oops.Errorf]&#10;at keys_and_cert_struct.go:292: calling [github.com/samber/oops.Errorf]&#10;at keys_and_cert_struct.go:308: calling [github.com/samber/oops.Errorf]">
+<path fill="none" stroke="#8b4513" d="M149.7649,-679.6752C175.8926,-656.3926 218.7411,-613.5962 239.843,-567 260.6839,-520.9802 270.507,-154.0567 304.843,-117 319.7246,-100.9392 343.5433,-95.3134 364.0363,-93.7633"/>
+<polygon fill="#8b4513" stroke="#8b4513" points="364.2527,-97.2571 374.0792,-93.296 363.9273,-90.2647 364.2527,-97.2571"/>
+</a>
+</g>
+</g>
+<!-- github.com/go&#45;i2p/common/key_certificate.NewKeyCertificate -->
+<g id="node4" class="node">
+<title>github.com/go&#45;i2p/common/key_certificate.NewKeyCertificate</title>
+<g id="a_node4"><a xlink:title="github.com/go&#45;i2p/common/key_certificate.NewKeyCertificate | defined in key_certificate_struct.go:57">
+<path fill="#ffe4b5" stroke="#000000" stroke-width="1.5" d="M457.7212,-557C457.7212,-557 349.0658,-557 349.0658,-557 343.0658,-557 337.0658,-551 337.0658,-545 337.0658,-545 337.0658,-533 337.0658,-533 337.0658,-527 343.0658,-521 349.0658,-521 349.0658,-521 457.7212,-521 457.7212,-521 463.7212,-521 469.7212,-527 469.7212,-533 469.7212,-533 469.7212,-545 469.7212,-545 469.7212,-551 463.7212,-557 457.7212,-557"/>
+<text text-anchor="middle" x="403.3935" y="-543.2" font-family="Verdana" font-size="14.00" fill="#000000">key_certificate</text>
+<text text-anchor="middle" x="403.3935" y="-526.4" font-family="Verdana" font-size="14.00" fill="#000000">NewKeyCertificate</text>
+</a>
+</g>
+</g>
+<!-- github.com/go&#45;i2p/common/keys_and_cert.ReadKeysAndCertElgAndEd25519&#45;&gt;github.com/go&#45;i2p/common/key_certificate.NewKeyCertificate -->
+<g id="edge6" class="edge">
+<title>github.com/go&#45;i2p/common/keys_and_cert.ReadKeysAndCertElgAndEd25519&#45;&gt;github.com/go&#45;i2p/common/key_certificate.NewKeyCertificate</title>
+<g id="a_edge6"><a xlink:title="at keys_and_cert_struct.go:317: calling [github.com/go&#45;i2p/common/key_certificate.NewKeyCertificate]">
+<path fill="none" stroke="#8b4513" d="M206.7741,-679.9551C231.8559,-670.9032 257.9576,-657.5432 276.843,-638 302.1476,-611.8141 277.4862,-585.034 304.843,-561 311.4455,-555.1995 319.2414,-550.8271 327.5102,-547.5459"/>
+<polygon fill="#8b4513" stroke="#8b4513" points="328.6855,-550.8431 337.0084,-544.2872 326.4138,-544.2219 328.6855,-550.8431"/>
+</a>
+</g>
+</g>
+<!-- github.com/go&#45;i2p/common/keys_and_cert.ReadKeysAndCertElgAndEd25519&#45;&gt;(*github.com/go&#45;i2p/logger.Logger).Error -->
+<g id="edge22" class="edge">
+<title>github.com/go&#45;i2p/common/keys_and_cert.ReadKeysAndCertElgAndEd25519&#45;&gt;(*github.com/go&#45;i2p/logger.Logger).Error</title>
+<g id="a_edge22"><a xlink:title="at keys_and_cert_struct.go:282: calling [(*github.com/go&#45;i2p/logger.Logger).Error]&#10;at keys_and_cert_struct.go:293: calling [(*github.com/go&#45;i2p/logger.Logger).Error]&#10;at keys_and_cert_struct.go:309: calling [(*github.com/go&#45;i2p/logger.Logger).Error]&#10;at keys_and_cert_struct.go:319: calling [(*github.com/go&#45;i2p/logger.Logger).Error]">
+<path fill="none" stroke="#8b4513" d="M230.6042,-679.8977C246.3518,-675.7966 262.2214,-670.8717 276.843,-665 290.3529,-659.5748 291.5809,-654.0055 304.843,-648 323.5918,-639.5099 345.3335,-632.4025 363.6179,-627.1441"/>
+<polygon fill="#8b4513" stroke="#8b4513" points="364.6905,-630.4785 373.3793,-624.4159 362.8062,-623.7369 364.6905,-630.4785"/>
+</a>
+</g>
+</g>
+<!-- github.com/go&#45;i2p/common/keys_and_cert.ReadKeysAndCertElgAndEd25519&#45;&gt;(*github.com/go&#45;i2p/logger.Logger).WithFields -->
+<g id="edge21" class="edge">
+<title>github.com/go&#45;i2p/common/keys_and_cert.ReadKeysAndCertElgAndEd25519&#45;&gt;(*github.com/go&#45;i2p/logger.Logger).WithFields</title>
+<g id="a_edge21"><a xlink:title="at keys_and_cert_struct.go:266: calling [(*github.com/go&#45;i2p/logger.Logger).WithFields]&#10;at keys_and_cert_struct.go:323: calling [(*github.com/go&#45;i2p/logger.Logger).WithFields]">
+<path fill="none" stroke="#8b4513" d="M171.3713,-716.0937C200.3849,-727.1714 239.7086,-740.284 275.843,-746 299.9677,-749.8162 326.942,-749.0534 349.849,-746.9451"/>
+<polygon fill="#8b4513" stroke="#8b4513" points="350.474,-750.3993 360.0628,-745.8933 349.7569,-743.4361 350.474,-750.3993"/>
+</a>
+</g>
+</g>
+<!-- (*github.com/go&#45;i2p/logger.Logger).WithError -->
+<g id="node13" class="node">
+<title>(*github.com/go&#45;i2p/logger.Logger).WithError</title>
+<g id="a_node13"><a xlink:title="(*github.com/go&#45;i2p/logger.Logger).WithError | defined in log.go:66">
+<path fill="#ffe4b5" stroke="#000000" stroke-width="1.5" d="M431.925,-696C431.925,-696 374.862,-696 374.862,-696 368.862,-696 362.862,-690 362.862,-684 362.862,-684 362.862,-672 362.862,-672 362.862,-666 368.862,-660 374.862,-660 374.862,-660 431.925,-660 431.925,-660 437.925,-660 443.925,-666 443.925,-672 443.925,-672 443.925,-684 443.925,-684 443.925,-690 437.925,-696 431.925,-696"/>
+<text text-anchor="middle" x="403.3935" y="-682.2" font-family="Verdana" font-size="14.00" fill="#000000">logger</text>
+<text text-anchor="middle" x="403.3935" y="-665.4" font-family="Verdana" font-size="14.00" fill="#000000">WithError</text>
+</a>
+</g>
+</g>
+<!-- github.com/go&#45;i2p/common/keys_and_cert.ReadKeysAndCertElgAndEd25519&#45;&gt;(*github.com/go&#45;i2p/logger.Logger).WithError -->
+<g id="edge16" class="edge">
+<title>github.com/go&#45;i2p/common/keys_and_cert.ReadKeysAndCertElgAndEd25519&#45;&gt;(*github.com/go&#45;i2p/logger.Logger).WithError</title>
+<g id="a_edge16"><a xlink:title="at keys_and_cert_struct.go:282: calling [(*github.com/go&#45;i2p/logger.Logger).WithError]&#10;at keys_and_cert_struct.go:293: calling [(*github.com/go&#45;i2p/logger.Logger).WithError]&#10;at keys_and_cert_struct.go:309: calling [(*github.com/go&#45;i2p/logger.Logger).WithError]&#10;at keys_and_cert_struct.go:319: calling [(*github.com/go&#45;i2p/logger.Logger).WithError]">
+<path fill="none" stroke="#8b4513" d="M239.782,-694.3387C252.2922,-693.678 264.845,-692.9042 276.843,-692 301.9,-690.1116 329.6573,-687.1397 352.776,-684.419"/>
+<polygon fill="#8b4513" stroke="#8b4513" points="353.1969,-687.8937 362.711,-683.2319 352.3664,-680.9431 353.1969,-687.8937"/>
+</a>
+</g>
+</g>
+<!-- github.com/go&#45;i2p/common/keys_and_cert.ReadKeysAndCertElgAndEd25519&#45;&gt;(*github.com/sirupsen/logrus.Logger).Debug -->
+<g id="edge5" class="edge">
+<title>github.com/go&#45;i2p/common/keys_and_cert.ReadKeysAndCertElgAndEd25519&#45;&gt;(*github.com/sirupsen/logrus.Logger).Debug</title>
+<g id="a_edge5"><a xlink:title="at keys_and_cert_struct.go:268: calling [(*github.com/sirupsen/logrus.Logger).Debug]&#10;at keys_and_cert_struct.go:328: calling [(*github.com/sirupsen/logrus.Logger).Debug]">
+<path fill="none" stroke="#8b4513" d="M167.0974,-716.0611C219.1168,-740.0435 310.5242,-782.1847 363.1005,-806.4239"/>
+<polygon fill="#8b4513" stroke="#8b4513" points="361.9008,-809.7248 372.4476,-810.7331 364.8316,-803.3678 361.9008,-809.7248"/>
+</a>
+</g>
+</g>
+<!-- github.com/go&#45;i2p/common/keys_and_cert.ReadKeysAndCert -->
+<g id="node5" class="node">
+<title>github.com/go&#45;i2p/common/keys_and_cert.ReadKeysAndCert</title>
+<g id="a_node5"><a xlink:title="github.com/go&#45;i2p/common/keys_and_cert.ReadKeysAndCert | defined in keys_and_cert_struct.go:201&#10;at keys_and_cert_struct.go:221: calling [github.com/go&#45;i2p/common/key_certificate.NewKeyCertificate]&#10;at keys_and_cert_struct.go:216: calling [(*github.com/go&#45;i2p/logger.Logger).Error]&#10;at keys_and_cert_struct.go:223: calling [(*github.com/go&#45;i2p/logger.Logger).Error]&#10;at keys_and_cert_struct.go:234: calling [(*github.com/go&#45;i2p/logger.Logger).Error]&#10;at keys_and_cert_struct.go:250: calling [(*github.com/go&#45;i2p/logger.Logger).Error]&#10;at keys_and_cert_struct.go:217: calling [github.com/samber/oops.Errorf]&#10;at keys_and_cert_struct.go:246: calling [(github.com/go&#45;i2p/common/key_certificate.KeyCertificate).ConstructSigningPublicKey]&#10;at keys_and_cert_struct.go:255: calling [(github.com/go&#45;i2p/common/key_certificate.KeyCertificate).PublicKeyType]&#10;at keys_and_cert_struct.go:256: calling [(github.com/go&#45;i2p/common/key_certificate.KeyCertificate).SigningPublicKeyType]&#10;at keys_and_cert_struct.go:223: calling [(*github.com/go&#45;i2p/logger.Logger).WithError]&#10;at keys_and_cert_struct.go:234: calling [(*github.com/go&#45;i2p/logger.Logger).WithError]&#10;at keys_and_cert_struct.go:250: calling [(*github.com/go&#45;i2p/logger.Logger).WithError]&#10;at keys_and_cert_struct.go:229: calling [(github.com/go&#45;i2p/common/key_certificate.KeyCertificate).SignatureSize]&#10;at keys_and_cert_struct.go:228: calling [(github.com/go&#45;i2p/common/key_certificate.KeyCertificate).CryptoSize]&#10;at keys_and_cert_struct.go:232: calling [(github.com/go&#45;i2p/common/key_certificate.KeyCertificate).ConstructPublicKey]&#10;at keys_and_cert_struct.go:202: calling [(*github.com/go&#45;i2p/logger.Logger).WithFields]&#10;at keys_and_cert_struct.go:211: calling [(*github.com/go&#45;i2p/logger.Logger).WithFields]&#10;at keys_and_cert_struct.go:254: calling [(*github.com/go&#45;i2p/logger.Logger).WithFields]&#10;at keys_and_cert_struct.go:204: calling [(*github.com/sirupsen/logrus.Logger).Debug]&#10;at keys_and_cert_struct.go:259: calling [(*github.com/sirupsen/logrus.Logger).Debug]">
+<path fill="#add8e6" stroke="#000000" stroke-width="1.5" d="M180.6624,-365C180.6624,-365 75.1806,-365 75.1806,-365 69.1806,-365 63.1806,-359 63.1806,-353 63.1806,-353 63.1806,-341 63.1806,-341 63.1806,-335 69.1806,-329 75.1806,-329 75.1806,-329 180.6624,-329 180.6624,-329 186.6624,-329 192.6624,-335 192.6624,-341 192.6624,-341 192.6624,-353 192.6624,-353 192.6624,-359 186.6624,-365 180.6624,-365"/>
+<text text-anchor="middle" x="127.9215" y="-342.8" font-family="Verdana" font-size="14.00" fill="#000000">ReadKeysAndCert</text>
+</a>
+</g>
+</g>
+<!-- github.com/go&#45;i2p/common/keys_and_cert.ReadKeysAndCert&#45;&gt;github.com/samber/oops.Errorf -->
+<g id="edge3" class="edge">
+<title>github.com/go&#45;i2p/common/keys_and_cert.ReadKeysAndCert&#45;&gt;github.com/samber/oops.Errorf</title>
+<g id="a_edge3"><a xlink:title="at keys_and_cert_struct.go:217: calling [github.com/samber/oops.Errorf]">
+<path fill="none" stroke="#8b4513" d="M140.8453,-328.7671C177.7747,-276.8779 282.5388,-131.2137 304.843,-117 322.4312,-105.7917 344.9557,-100.2496 364.0301,-97.5279"/>
+<polygon fill="#8b4513" stroke="#8b4513" points="364.7149,-100.9705 374.2188,-96.288 363.8692,-94.0218 364.7149,-100.9705"/>
+</a>
+</g>
+</g>
+<!-- github.com/go&#45;i2p/common/keys_and_cert.ReadKeysAndCert&#45;&gt;github.com/go&#45;i2p/common/key_certificate.NewKeyCertificate -->
+<g id="edge1" class="edge">
+<title>github.com/go&#45;i2p/common/keys_and_cert.ReadKeysAndCert&#45;&gt;github.com/go&#45;i2p/common/key_certificate.NewKeyCertificate</title>
+<g id="a_edge1"><a xlink:title="at keys_and_cert_struct.go:221: calling [github.com/go&#45;i2p/common/key_certificate.NewKeyCertificate]">
+<path fill="none" stroke="#8b4513" d="M192.7854,-359.7811C222.1973,-368.6874 255.1665,-383.5317 276.843,-408 308.0162,-443.1881 271.9068,-476.4563 304.843,-510 311.3123,-516.5886 319.1957,-521.6984 327.6566,-525.658"/>
+<polygon fill="#8b4513" stroke="#8b4513" points="326.4455,-528.9444 337.0247,-529.5188 329.1127,-522.4725 326.4455,-528.9444"/>
+</a>
+</g>
+</g>
+<!-- github.com/go&#45;i2p/common/keys_and_cert.ReadKeysAndCert&#45;&gt;(*github.com/go&#45;i2p/logger.Logger).Error -->
+<g id="edge2" class="edge">
+<title>github.com/go&#45;i2p/common/keys_and_cert.ReadKeysAndCert&#45;&gt;(*github.com/go&#45;i2p/logger.Logger).Error</title>
+<g id="a_edge2"><a xlink:title="at keys_and_cert_struct.go:216: calling [(*github.com/go&#45;i2p/logger.Logger).Error]&#10;at keys_and_cert_struct.go:223: calling [(*github.com/go&#45;i2p/logger.Logger).Error]&#10;at keys_and_cert_struct.go:234: calling [(*github.com/go&#45;i2p/logger.Logger).Error]&#10;at keys_and_cert_struct.go:250: calling [(*github.com/go&#45;i2p/logger.Logger).Error]">
+<path fill="none" stroke="#8b4513" d="M180.8224,-365.048C213.6264,-379.0094 253.7788,-401.658 276.843,-435 317.9127,-494.3711 254.9933,-542.7825 304.843,-595 319.687,-610.549 342.9222,-616.2498 363.1039,-617.9693"/>
+<polygon fill="#8b4513" stroke="#8b4513" points="363.14,-621.4766 373.3187,-618.5367 363.5282,-614.4874 363.14,-621.4766"/>
+</a>
+</g>
+</g>
+<!-- github.com/go&#45;i2p/common/keys_and_cert.ReadKeysAndCert&#45;&gt;(*github.com/go&#45;i2p/logger.Logger).WithFields -->
+<g id="edge28" class="edge">
+<title>github.com/go&#45;i2p/common/keys_and_cert.ReadKeysAndCert&#45;&gt;(*github.com/go&#45;i2p/logger.Logger).WithFields</title>
+<g id="a_edge28"><a xlink:title="at keys_and_cert_struct.go:202: calling [(*github.com/go&#45;i2p/logger.Logger).WithFields]&#10;at keys_and_cert_struct.go:211: calling [(*github.com/go&#45;i2p/logger.Logger).WithFields]&#10;at keys_and_cert_struct.go:254: calling [(*github.com/go&#45;i2p/logger.Logger).WithFields]">
+<path fill="none" stroke="#8b4513" d="M142.812,-365.1867C165.7675,-393.8282 210.2391,-451.7797 239.843,-506 260.7654,-544.32 263.2925,-555.4963 276.843,-597 292.7678,-645.7759 269.4895,-671.8137 304.843,-709 316.6807,-721.4514 333.511,-728.7824 349.9203,-733.0825"/>
+<polygon fill="#8b4513" stroke="#8b4513" points="349.5069,-736.578 360.0345,-735.387 351.062,-729.7529 349.5069,-736.578"/>
+</a>
+</g>
+</g>
+<!-- github.com/go&#45;i2p/common/keys_and_cert.ReadKeysAndCert&#45;&gt;(*github.com/go&#45;i2p/logger.Logger).WithError -->
+<g id="edge17" class="edge">
+<title>github.com/go&#45;i2p/common/keys_and_cert.ReadKeysAndCert&#45;&gt;(*github.com/go&#45;i2p/logger.Logger).WithError</title>
+<g id="a_edge17"><a xlink:title="at keys_and_cert_struct.go:223: calling [(*github.com/go&#45;i2p/logger.Logger).WithError]&#10;at keys_and_cert_struct.go:234: calling [(*github.com/go&#45;i2p/logger.Logger).WithError]&#10;at keys_and_cert_struct.go:250: calling [(*github.com/go&#45;i2p/logger.Logger).WithError]">
+<path fill="none" stroke="#8b4513" d="M142.9777,-365.2049C172.5684,-401.8098 238.7331,-487.8619 276.843,-570 292.3451,-603.4115 278.1663,-622.6032 304.843,-648 317.8367,-660.3703 335.7792,-667.6524 352.7969,-671.9345"/>
+<polygon fill="#8b4513" stroke="#8b4513" points="352.1446,-675.3749 362.6654,-674.1249 353.6614,-668.5412 352.1446,-675.3749"/>
+</a>
+</g>
+</g>
+<!-- github.com/go&#45;i2p/common/keys_and_cert.ReadKeysAndCert&#45;&gt;(*github.com/sirupsen/logrus.Logger).Debug -->
+<g id="edge29" class="edge">
+<title>github.com/go&#45;i2p/common/keys_and_cert.ReadKeysAndCert&#45;&gt;(*github.com/sirupsen/logrus.Logger).Debug</title>
+<g id="a_edge29"><a xlink:title="at keys_and_cert_struct.go:204: calling [(*github.com/sirupsen/logrus.Logger).Debug]&#10;at keys_and_cert_struct.go:259: calling [(*github.com/sirupsen/logrus.Logger).Debug]">
+<path fill="none" stroke="#8b4513" d="M144.1932,-365.1577C168.5664,-393.3057 214.4023,-450.0768 239.843,-506 290.0589,-616.3836 230.9676,-674.8304 304.843,-771 319.5149,-790.0996 342.9534,-803.3358 363.2918,-811.9221"/>
+<polygon fill="#8b4513" stroke="#8b4513" points="362.089,-815.2104 372.6745,-815.6565 364.6777,-808.7066 362.089,-815.2104"/>
+</a>
+</g>
+</g>
+<!-- github.com/go&#45;i2p/common/keys_and_cert.ReadKeysAndCert&#45;&gt;(github.com/go&#45;i2p/common/key_certificate.KeyCertificate).CryptoSize -->
+<g id="edge23" class="edge">
+<title>github.com/go&#45;i2p/common/keys_and_cert.ReadKeysAndCert&#45;&gt;(github.com/go&#45;i2p/common/key_certificate.KeyCertificate).CryptoSize</title>
+<g id="a_edge23"><a xlink:title="at keys_and_cert_struct.go:228: calling [(github.com/go&#45;i2p/common/key_certificate.KeyCertificate).CryptoSize]">
+<path fill="none" stroke="#8b4513" d="M192.6858,-338.9811C219.9233,-338.3479 251.1783,-341.3778 276.843,-354 294.1032,-362.4888 288.768,-376.4373 304.843,-387 315.4575,-393.9746 327.7667,-399.3883 340.0137,-403.5703"/>
+<polygon fill="#8b4513" stroke="#8b4513" points="339.1985,-406.9834 349.7886,-406.6664 341.3122,-400.3101 339.1985,-406.9834"/>
 </a>
 </g>
 </g>
 <!-- github.com/go&#45;i2p/common/keys_and_cert.ReadKeysAndCert&#45;&gt;(github.com/go&#45;i2p/common/key_certificate.KeyCertificate).SignatureSize -->
-<g id="edge15" class="edge">
+<g id="edge18" class="edge">
 <title>github.com/go&#45;i2p/common/keys_and_cert.ReadKeysAndCert&#45;&gt;(github.com/go&#45;i2p/common/key_certificate.KeyCertificate).SignatureSize</title>
-<g id="a_edge15"><a xlink:title="at keys_and_cert.go:173: calling [(github.com/go&#45;i2p/common/key_certificate.KeyCertificate).SignatureSize]">
-<path fill="none" stroke="#8b4513" d="M192.9879,-383.4522C219.1295,-384.9362 249.4965,-387.2901 276.843,-391 297.4727,-393.7987 319.779,-397.9859 339.8342,-402.1867"/>
-<polygon fill="#8b4513" stroke="#8b4513" points="339.2772,-405.6466 349.7875,-404.3105 340.738,-398.8007 339.2772,-405.6466"/>
+<g id="a_edge18"><a xlink:title="at keys_and_cert_struct.go:229: calling [(github.com/go&#45;i2p/common/key_certificate.KeyCertificate).SignatureSize]">
+<path fill="none" stroke="#8b4513" d="M192.8269,-348.7566C221.3714,-352.5812 253.6127,-361.4452 276.843,-381 301.5333,-401.7839 280.9063,-426.3525 304.843,-448 314.7262,-456.9381 327.2045,-463.2146 339.9301,-467.6217"/>
+<polygon fill="#8b4513" stroke="#8b4513" points="339.0828,-471.0233 349.6708,-470.6406 341.1551,-464.3371 339.0828,-471.0233"/>
 </a>
 </g>
 </g>
 <!-- (github.com/go&#45;i2p/common/key_certificate.KeyCertificate).ConstructPublicKey -->
 <g id="node17" class="node">
 <title>(github.com/go&#45;i2p/common/key_certificate.KeyCertificate).ConstructPublicKey</title>
-<g id="a_node17"><a xlink:title="(github.com/go&#45;i2p/common/key_certificate.KeyCertificate).ConstructPublicKey | defined in key_certificate.go:140">
-<path fill="#ffe4b5" stroke="#000000" stroke-width="1.5" d="M459.9315,-191C459.9315,-191 346.8555,-191 346.8555,-191 340.8555,-191 334.8555,-185 334.8555,-179 334.8555,-179 334.8555,-167 334.8555,-167 334.8555,-161 340.8555,-155 346.8555,-155 346.8555,-155 459.9315,-155 459.9315,-155 465.9315,-155 471.9315,-161 471.9315,-167 471.9315,-167 471.9315,-179 471.9315,-179 471.9315,-185 465.9315,-191 459.9315,-191"/>
-<text text-anchor="middle" x="403.3935" y="-177.2" font-family="Verdana" font-size="14.00" fill="#000000">key_certificate</text>
-<text text-anchor="middle" x="403.3935" y="-160.4" font-family="Verdana" font-size="14.00" fill="#000000">ConstructPublicKey</text>
+<g id="a_node17"><a xlink:title="(github.com/go&#45;i2p/common/key_certificate.KeyCertificate).ConstructPublicKey | defined in key_certificate_struct.go:160">
+<path fill="#ffe4b5" stroke="#000000" stroke-width="1.5" d="M459.9315,-313C459.9315,-313 346.8555,-313 346.8555,-313 340.8555,-313 334.8555,-307 334.8555,-301 334.8555,-301 334.8555,-289 334.8555,-289 334.8555,-283 340.8555,-277 346.8555,-277 346.8555,-277 459.9315,-277 459.9315,-277 465.9315,-277 471.9315,-283 471.9315,-289 471.9315,-289 471.9315,-301 471.9315,-301 471.9315,-307 465.9315,-313 459.9315,-313"/>
+<text text-anchor="middle" x="403.3935" y="-299.2" font-family="Verdana" font-size="14.00" fill="#000000">key_certificate</text>
+<text text-anchor="middle" x="403.3935" y="-282.4" font-family="Verdana" font-size="14.00" fill="#000000">ConstructPublicKey</text>
 </a>
 </g>
 </g>
 <!-- github.com/go&#45;i2p/common/keys_and_cert.ReadKeysAndCert&#45;&gt;(github.com/go&#45;i2p/common/key_certificate.KeyCertificate).ConstructPublicKey -->
-<g id="edge26" class="edge">
+<g id="edge24" class="edge">
 <title>github.com/go&#45;i2p/common/keys_and_cert.ReadKeysAndCert&#45;&gt;(github.com/go&#45;i2p/common/key_certificate.KeyCertificate).ConstructPublicKey</title>
-<g id="a_edge26"><a xlink:title="at keys_and_cert.go:176: calling [(github.com/go&#45;i2p/common/key_certificate.KeyCertificate).ConstructPublicKey]">
-<path fill="none" stroke="#8b4513" d="M140.8718,-362.962C167.5025,-327.1642 232.0554,-246.8261 304.843,-203 311.1632,-199.1946 318.0054,-195.8366 325.0372,-192.8806"/>
-<polygon fill="#8b4513" stroke="#8b4513" points="326.6753,-195.9981 334.7123,-189.0947 324.1245,-189.4794 326.6753,-195.9981"/>
+<g id="a_edge24"><a xlink:title="at keys_and_cert_struct.go:232: calling [(github.com/go&#45;i2p/common/key_certificate.KeyCertificate).ConstructPublicKey]">
+<path fill="none" stroke="#8b4513" d="M192.8557,-334.7426C232.3213,-327.2928 282.9776,-317.7305 324.7111,-309.8526"/>
+<polygon fill="#8b4513" stroke="#8b4513" points="325.3887,-313.2866 334.5659,-307.9924 324.0902,-306.4081 325.3887,-313.2866"/>
 </a>
 </g>
 </g>
 <!-- (github.com/go&#45;i2p/common/key_certificate.KeyCertificate).ConstructSigningPublicKey -->
 <g id="node18" class="node">
 <title>(github.com/go&#45;i2p/common/key_certificate.KeyCertificate).ConstructSigningPublicKey</title>
-<g id="a_node18"><a xlink:title="(github.com/go&#45;i2p/common/key_certificate.KeyCertificate).ConstructSigningPublicKey | defined in key_certificate.go:232">
-<path fill="#ffe4b5" stroke="#000000" stroke-width="1.5" d="M481.9945,-252C481.9945,-252 324.7925,-252 324.7925,-252 318.7925,-252 312.7925,-246 312.7925,-240 312.7925,-240 312.7925,-228 312.7925,-228 312.7925,-222 318.7925,-216 324.7925,-216 324.7925,-216 481.9945,-216 481.9945,-216 487.9945,-216 493.9945,-222 493.9945,-228 493.9945,-228 493.9945,-240 493.9945,-240 493.9945,-246 487.9945,-252 481.9945,-252"/>
-<text text-anchor="middle" x="403.3935" y="-238.2" font-family="Verdana" font-size="14.00" fill="#000000">key_certificate</text>
-<text text-anchor="middle" x="403.3935" y="-221.4" font-family="Verdana" font-size="14.00" fill="#000000">ConstructSigningPublicKey</text>
+<g id="a_node18"><a xlink:title="(github.com/go&#45;i2p/common/key_certificate.KeyCertificate).ConstructSigningPublicKey | defined in key_certificate_struct.go:237">
+<path fill="#ffe4b5" stroke="#000000" stroke-width="1.5" d="M481.9945,-374C481.9945,-374 324.7925,-374 324.7925,-374 318.7925,-374 312.7925,-368 312.7925,-362 312.7925,-362 312.7925,-350 312.7925,-350 312.7925,-344 318.7925,-338 324.7925,-338 324.7925,-338 481.9945,-338 481.9945,-338 487.9945,-338 493.9945,-344 493.9945,-350 493.9945,-350 493.9945,-362 493.9945,-362 493.9945,-368 487.9945,-374 481.9945,-374"/>
+<text text-anchor="middle" x="403.3935" y="-360.2" font-family="Verdana" font-size="14.00" fill="#000000">key_certificate</text>
+<text text-anchor="middle" x="403.3935" y="-343.4" font-family="Verdana" font-size="14.00" fill="#000000">ConstructSigningPublicKey</text>
 </a>
 </g>
 </g>
 <!-- github.com/go&#45;i2p/common/keys_and_cert.ReadKeysAndCert&#45;&gt;(github.com/go&#45;i2p/common/key_certificate.KeyCertificate).ConstructSigningPublicKey -->
-<g id="edge20" class="edge">
+<g id="edge4" class="edge">
 <title>github.com/go&#45;i2p/common/keys_and_cert.ReadKeysAndCert&#45;&gt;(github.com/go&#45;i2p/common/key_certificate.KeyCertificate).ConstructSigningPublicKey</title>
-<g id="a_edge20"><a xlink:title="at keys_and_cert.go:190: calling [(github.com/go&#45;i2p/common/key_certificate.KeyCertificate).ConstructSigningPublicKey]">
-<path fill="none" stroke="#8b4513" d="M150.6688,-362.8078C183.1683,-337.5742 245.5357,-291.9129 304.843,-264 311.3512,-260.9369 318.2469,-258.0958 325.2476,-255.4826"/>
-<polygon fill="#8b4513" stroke="#8b4513" points="326.5916,-258.7192 334.8327,-252.0609 324.2381,-252.1267 326.5916,-258.7192"/>
+<g id="a_edge4"><a xlink:title="at keys_and_cert_struct.go:246: calling [(github.com/go&#45;i2p/common/key_certificate.KeyCertificate).ConstructSigningPublicKey]">
+<path fill="none" stroke="#8b4513" d="M192.7222,-331.3094C218.8262,-326.8143 249.2369,-323.8774 276.843,-327 293.3505,-328.8672 310.8424,-332.063 327.3836,-335.6676"/>
+<polygon fill="#8b4513" stroke="#8b4513" points="327.0179,-339.1729 337.5427,-337.9566 328.5566,-332.3441 327.0179,-339.1729"/>
 </a>
 </g>
 </g>
 <!-- (github.com/go&#45;i2p/common/key_certificate.KeyCertificate).PublicKeyType -->
 <g id="node19" class="node">
 <title>(github.com/go&#45;i2p/common/key_certificate.KeyCertificate).PublicKeyType</title>
-<g id="a_node19"><a xlink:title="(github.com/go&#45;i2p/common/key_certificate.KeyCertificate).PublicKeyType | defined in key_certificate.go:130">
-<path fill="#ffe4b5" stroke="#000000" stroke-width="1.5" d="M447.2604,-313C447.2604,-313 359.5266,-313 359.5266,-313 353.5266,-313 347.5266,-307 347.5266,-301 347.5266,-301 347.5266,-289 347.5266,-289 347.5266,-283 353.5266,-277 359.5266,-277 359.5266,-277 447.2604,-277 447.2604,-277 453.2604,-277 459.2604,-283 459.2604,-289 459.2604,-289 459.2604,-301 459.2604,-301 459.2604,-307 453.2604,-313 447.2604,-313"/>
-<text text-anchor="middle" x="403.3935" y="-299.2" font-family="Verdana" font-size="14.00" fill="#000000">key_certificate</text>
-<text text-anchor="middle" x="403.3935" y="-282.4" font-family="Verdana" font-size="14.00" fill="#000000">PublicKeyType</text>
+<g id="a_node19"><a xlink:title="(github.com/go&#45;i2p/common/key_certificate.KeyCertificate).PublicKeyType | defined in key_certificate_struct.go:150">
+<path fill="#ffe4b5" stroke="#000000" stroke-width="1.5" d="M447.2604,-191C447.2604,-191 359.5266,-191 359.5266,-191 353.5266,-191 347.5266,-185 347.5266,-179 347.5266,-179 347.5266,-167 347.5266,-167 347.5266,-161 353.5266,-155 359.5266,-155 359.5266,-155 447.2604,-155 447.2604,-155 453.2604,-155 459.2604,-161 459.2604,-167 459.2604,-167 459.2604,-179 459.2604,-179 459.2604,-185 453.2604,-191 447.2604,-191"/>
+<text text-anchor="middle" x="403.3935" y="-177.2" font-family="Verdana" font-size="14.00" fill="#000000">key_certificate</text>
+<text text-anchor="middle" x="403.3935" y="-160.4" font-family="Verdana" font-size="14.00" fill="#000000">PublicKeyType</text>
 </a>
 </g>
 </g>
 <!-- github.com/go&#45;i2p/common/keys_and_cert.ReadKeysAndCert&#45;&gt;(github.com/go&#45;i2p/common/key_certificate.KeyCertificate).PublicKeyType -->
-<g id="edge2" class="edge">
+<g id="edge7" class="edge">
 <title>github.com/go&#45;i2p/common/keys_and_cert.ReadKeysAndCert&#45;&gt;(github.com/go&#45;i2p/common/key_certificate.KeyCertificate).PublicKeyType</title>
-<g id="a_edge2"><a xlink:title="at keys_and_cert.go:199: calling [(github.com/go&#45;i2p/common/key_certificate.KeyCertificate).PublicKeyType]">
-<path fill="none" stroke="#8b4513" d="M185.6695,-362.9716C230.0041,-349.1307 291.2592,-330.0074 337.5058,-315.5696"/>
-<polygon fill="#8b4513" stroke="#8b4513" points="338.6324,-318.8845 347.135,-312.5634 336.5463,-312.2026 338.6324,-318.8845"/>
+<g id="a_edge7"><a xlink:title="at keys_and_cert_struct.go:255: calling [(github.com/go&#45;i2p/common/key_certificate.KeyCertificate).PublicKeyType]">
+<path fill="none" stroke="#8b4513" d="M145.8508,-328.5591C176.0442,-298.4753 240.1058,-238.7183 304.843,-204 315.0511,-198.5255 326.3806,-193.8402 337.6162,-189.8943"/>
+<polygon fill="#8b4513" stroke="#8b4513" points="339.0583,-193.1028 347.4351,-186.6159 336.8414,-186.4632 339.0583,-193.1028"/>
 </a>
 </g>
 </g>
 <!-- (github.com/go&#45;i2p/common/key_certificate.KeyCertificate).SigningPublicKeyType -->
 <g id="node20" class="node">
 <title>(github.com/go&#45;i2p/common/key_certificate.KeyCertificate).SigningPublicKeyType</title>
-<g id="a_node20"><a xlink:title="(github.com/go&#45;i2p/common/key_certificate.KeyCertificate).SigningPublicKeyType | defined in key_certificate.go:121">
-<path fill="#ffe4b5" stroke="#000000" stroke-width="1.5" d="M469.3247,-374C469.3247,-374 337.4623,-374 337.4623,-374 331.4623,-374 325.4623,-368 325.4623,-362 325.4623,-362 325.4623,-350 325.4623,-350 325.4623,-344 331.4623,-338 337.4623,-338 337.4623,-338 469.3247,-338 469.3247,-338 475.3247,-338 481.3247,-344 481.3247,-350 481.3247,-350 481.3247,-362 481.3247,-362 481.3247,-368 475.3247,-374 469.3247,-374"/>
-<text text-anchor="middle" x="403.3935" y="-360.2" font-family="Verdana" font-size="14.00" fill="#000000">key_certificate</text>
-<text text-anchor="middle" x="403.3935" y="-343.4" font-family="Verdana" font-size="14.00" fill="#000000">SigningPublicKeyType</text>
+<g id="a_node20"><a xlink:title="(github.com/go&#45;i2p/common/key_certificate.KeyCertificate).SigningPublicKeyType | defined in key_certificate_struct.go:141">
+<path fill="#ffe4b5" stroke="#000000" stroke-width="1.5" d="M469.3247,-252C469.3247,-252 337.4623,-252 337.4623,-252 331.4623,-252 325.4623,-246 325.4623,-240 325.4623,-240 325.4623,-228 325.4623,-228 325.4623,-222 331.4623,-216 337.4623,-216 337.4623,-216 469.3247,-216 469.3247,-216 475.3247,-216 481.3247,-222 481.3247,-228 481.3247,-228 481.3247,-240 481.3247,-240 481.3247,-246 475.3247,-252 469.3247,-252"/>
+<text text-anchor="middle" x="403.3935" y="-238.2" font-family="Verdana" font-size="14.00" fill="#000000">key_certificate</text>
+<text text-anchor="middle" x="403.3935" y="-221.4" font-family="Verdana" font-size="14.00" fill="#000000">SigningPublicKeyType</text>
 </a>
 </g>
 </g>
 <!-- github.com/go&#45;i2p/common/keys_and_cert.ReadKeysAndCert&#45;&gt;(github.com/go&#45;i2p/common/key_certificate.KeyCertificate).SigningPublicKeyType -->
-<g id="edge16" class="edge">
+<g id="edge13" class="edge">
 <title>github.com/go&#45;i2p/common/keys_and_cert.ReadKeysAndCert&#45;&gt;(github.com/go&#45;i2p/common/key_certificate.KeyCertificate).SigningPublicKeyType</title>
-<g id="a_edge16"><a xlink:title="at keys_and_cert.go:200: calling [(github.com/go&#45;i2p/common/key_certificate.KeyCertificate).SigningPublicKeyType]">
-<path fill="none" stroke="#8b4513" d="M193.0171,-372.7819C218.781,-369.7223 248.6782,-366.4112 275.843,-364 288.6114,-362.8666 302.1129,-361.8374 315.3663,-360.923"/>
-<polygon fill="#8b4513" stroke="#8b4513" points="315.6939,-364.4089 325.4367,-360.2463 315.2245,-357.4247 315.6939,-364.4089"/>
-</a>
-</g>
-</g>
-<!-- github.com/go&#45;i2p/common/keys_and_cert.constructPublicKey -->
-<g id="node5" class="node">
-<title>github.com/go&#45;i2p/common/keys_and_cert.constructPublicKey</title>
-<g id="a_node5"><a xlink:title="github.com/go&#45;i2p/common/keys_and_cert.constructPublicKey | defined in keys_and_cert.go:276&#10;at keys_and_cert.go:287: calling [github.com/samber/oops.Errorf]&#10;at keys_and_cert.go:280: calling [github.com/samber/oops.Errorf]">
-<path fill="#add8e6" stroke="#000000" stroke-width=".5" d="M183.3373,-113C183.3373,-113 72.5057,-113 72.5057,-113 66.5057,-113 60.5057,-107 60.5057,-101 60.5057,-101 60.5057,-89 60.5057,-89 60.5057,-83 66.5057,-77 72.5057,-77 72.5057,-77 183.3373,-77 183.3373,-77 189.3373,-77 195.3373,-83 195.3373,-89 195.3373,-89 195.3373,-101 195.3373,-101 195.3373,-107 189.3373,-113 183.3373,-113"/>
-<text text-anchor="middle" x="127.9215" y="-90.8" font-family="Verdana" font-size="14.00" fill="#000000">constructPublicKey</text>
-</a>
-</g>
-</g>
-<!-- github.com/go&#45;i2p/common/keys_and_cert.constructPublicKey&#45;&gt;github.com/samber/oops.Errorf -->
-<g id="edge28" class="edge">
-<title>github.com/go&#45;i2p/common/keys_and_cert.constructPublicKey&#45;&gt;github.com/samber/oops.Errorf</title>
-<g id="a_edge28"><a xlink:title="at keys_and_cert.go:287: calling [github.com/samber/oops.Errorf]&#10;at keys_and_cert.go:280: calling [github.com/samber/oops.Errorf]">
-<path fill="none" stroke="#8b4513" d="M195.3095,-95C248.2482,-95 320.1393,-95 364.0707,-95"/>
-<polygon fill="#8b4513" stroke="#8b4513" points="364.0733,-98.5001 374.0732,-95 364.0732,-91.5001 364.0733,-98.5001"/>
+<g id="a_edge13"><a xlink:title="at keys_and_cert_struct.go:256: calling [(github.com/go&#45;i2p/common/key_certificate.KeyCertificate).SigningPublicKeyType]">
+<path fill="none" stroke="#8b4513" d="M163.2539,-328.9738C198.5539,-311.3596 254.6455,-284.4342 304.843,-265 313.5948,-261.6117 322.8861,-258.3134 332.1307,-255.2099"/>
+<polygon fill="#8b4513" stroke="#8b4513" points="333.3198,-258.5033 341.723,-252.0506 331.13,-251.8546 333.3198,-258.5033"/>
 </a>
 </g>
 </g>
 <!-- github.com/go&#45;i2p/common/keys_and_cert.init -->
 <g id="node6" class="node">
 <title>github.com/go&#45;i2p/common/keys_and_cert.init</title>
-<g id="a_node6"><a xlink:title="github.com/go&#45;i2p/common/keys_and_cert.init | defined in .:0&#10;at keys_and_cert.go:17: calling [github.com/go&#45;i2p/logger.GetGoI2PLogger]">
+<g id="a_node6"><a xlink:title="github.com/go&#45;i2p/common/keys_and_cert.init | defined in .:0&#10;at keys_and_cert_struct.go:16: calling [github.com/go&#45;i2p/logger.GetGoI2PLogger]">
 <path fill="#add8e6" stroke="#000000" stroke-width=".5" d="M142.9215,-52C142.9215,-52 112.9215,-52 112.9215,-52 106.9215,-52 100.9215,-46 100.9215,-40 100.9215,-40 100.9215,-28 100.9215,-28 100.9215,-22 106.9215,-16 112.9215,-16 112.9215,-16 142.9215,-16 142.9215,-16 148.9215,-16 154.9215,-22 154.9215,-28 154.9215,-28 154.9215,-40 154.9215,-40 154.9215,-46 148.9215,-52 142.9215,-52"/>
 <text text-anchor="middle" x="127.9215" y="-29.8" font-family="Verdana" font-size="14.00" fill="#000000">init</text>
 </a>
@@ -347,144 +437,54 @@
 </g>
 </g>
 <!-- github.com/go&#45;i2p/common/keys_and_cert.init&#45;&gt;github.com/go&#45;i2p/logger.GetGoI2PLogger -->
-<g id="edge29" class="edge">
+<g id="edge19" class="edge">
 <title>github.com/go&#45;i2p/common/keys_and_cert.init&#45;&gt;github.com/go&#45;i2p/logger.GetGoI2PLogger</title>
-<g id="a_edge29"><a xlink:title="at keys_and_cert.go:17: calling [github.com/go&#45;i2p/logger.GetGoI2PLogger]">
+<g id="a_edge19"><a xlink:title="at keys_and_cert_struct.go:16: calling [github.com/go&#45;i2p/logger.GetGoI2PLogger]">
 <path fill="none" stroke="#8b4513" d="M155.0887,-34C195.9363,-34 274.546,-34 332.4167,-34"/>
 <polygon fill="#8b4513" stroke="#8b4513" points="332.6037,-37.5001 342.6036,-34 332.6036,-30.5001 332.6037,-37.5001"/>
 </a>
 </g>
 </g>
-<!-- github.com/go&#45;i2p/common/keys_and_cert.ReadKeysAndCertElgAndEd25519 -->
+<!-- github.com/go&#45;i2p/common/keys_and_cert.constructSigningPublicKey -->
 <g id="node8" class="node">
-<title>github.com/go&#45;i2p/common/keys_and_cert.ReadKeysAndCertElgAndEd25519</title>
-<g id="a_node8"><a xlink:title="github.com/go&#45;i2p/common/keys_and_cert.ReadKeysAndCertElgAndEd25519 | defined in keys_and_cert.go:208&#10;at keys_and_cert.go:209: calling [(*github.com/go&#45;i2p/logger.Logger).WithFields]&#10;at keys_and_cert.go:266: calling [(*github.com/go&#45;i2p/logger.Logger).WithFields]&#10;at keys_and_cert.go:224: calling [github.com/samber/oops.Errorf]&#10;at keys_and_cert.go:235: calling [github.com/samber/oops.Errorf]&#10;at keys_and_cert.go:251: calling [github.com/samber/oops.Errorf]&#10;at keys_and_cert.go:225: calling [(*github.com/go&#45;i2p/logger.Logger).WithError]&#10;at keys_and_cert.go:236: calling [(*github.com/go&#45;i2p/logger.Logger).WithError]&#10;at keys_and_cert.go:252: calling [(*github.com/go&#45;i2p/logger.Logger).WithError]&#10;at keys_and_cert.go:262: calling [(*github.com/go&#45;i2p/logger.Logger).WithError]&#10;at keys_and_cert.go:211: calling [(*github.com/sirupsen/logrus.Logger).Debug]&#10;at keys_and_cert.go:271: calling [(*github.com/sirupsen/logrus.Logger).Debug]&#10;at keys_and_cert.go:225: calling [(*github.com/go&#45;i2p/logger.Logger).Error]&#10;at keys_and_cert.go:236: calling [(*github.com/go&#45;i2p/logger.Logger).Error]&#10;at keys_and_cert.go:252: calling [(*github.com/go&#45;i2p/logger.Logger).Error]&#10;at keys_and_cert.go:262: calling [(*github.com/go&#45;i2p/logger.Logger).Error]&#10;at keys_and_cert.go:260: calling [github.com/go&#45;i2p/common/key_certificate.NewKeyCertificate]">
-<path fill="#add8e6" stroke="#000000" stroke-width="1.5" d="M227.7646,-699C227.7646,-699 28.0784,-699 28.0784,-699 22.0784,-699 16.0784,-693 16.0784,-687 16.0784,-687 16.0784,-675 16.0784,-675 16.0784,-669 22.0784,-663 28.0784,-663 28.0784,-663 227.7646,-663 227.7646,-663 233.7646,-663 239.7646,-669 239.7646,-675 239.7646,-675 239.7646,-687 239.7646,-687 239.7646,-693 233.7646,-699 227.7646,-699"/>
-<text text-anchor="middle" x="127.9215" y="-676.8" font-family="Verdana" font-size="14.00" fill="#000000">ReadKeysAndCertElgAndEd25519</text>
+<title>github.com/go&#45;i2p/common/keys_and_cert.constructSigningPublicKey</title>
+<g id="a_node8"><a xlink:title="github.com/go&#45;i2p/common/keys_and_cert.constructSigningPublicKey | defined in utils.go:30&#10;at utils.go:39: calling [github.com/samber/oops.Errorf]&#10;at utils.go:34: calling [github.com/samber/oops.Errorf]">
+<path fill="#add8e6" stroke="#000000" stroke-width=".5" d="M204.9005,-174C204.9005,-174 50.9425,-174 50.9425,-174 44.9425,-174 38.9425,-168 38.9425,-162 38.9425,-162 38.9425,-150 38.9425,-150 38.9425,-144 44.9425,-138 50.9425,-138 50.9425,-138 204.9005,-138 204.9005,-138 210.9005,-138 216.9005,-144 216.9005,-150 216.9005,-150 216.9005,-162 216.9005,-162 216.9005,-168 210.9005,-174 204.9005,-174"/>
+<text text-anchor="middle" x="127.9215" y="-151.8" font-family="Verdana" font-size="14.00" fill="#000000">constructSigningPublicKey</text>
 </a>
 </g>
 </g>
-<!-- github.com/go&#45;i2p/common/keys_and_cert.ReadKeysAndCertElgAndEd25519&#45;&gt;github.com/samber/oops.Errorf -->
-<g id="edge4" class="edge">
-<title>github.com/go&#45;i2p/common/keys_and_cert.ReadKeysAndCertElgAndEd25519&#45;&gt;github.com/samber/oops.Errorf</title>
-<g id="a_edge4"><a xlink:title="at keys_and_cert.go:224: calling [github.com/samber/oops.Errorf]&#10;at keys_and_cert.go:235: calling [github.com/samber/oops.Errorf]&#10;at keys_and_cert.go:251: calling [github.com/samber/oops.Errorf]">
-<path fill="none" stroke="#8b4513" d="M152.5861,-662.961C178.893,-642.2407 219.5099,-605.6865 239.843,-564 283.848,-473.7819 236.5845,-190.5971 304.843,-117 319.7322,-100.9463 343.5511,-95.3206 364.0423,-93.7689"/>
-<polygon fill="#8b4513" stroke="#8b4513" points="364.258,-97.2627 374.0841,-93.3006 363.9319,-90.2703 364.258,-97.2627"/>
+<!-- github.com/go&#45;i2p/common/keys_and_cert.constructSigningPublicKey&#45;&gt;github.com/samber/oops.Errorf -->
+<g id="edge14" class="edge">
+<title>github.com/go&#45;i2p/common/keys_and_cert.constructSigningPublicKey&#45;&gt;github.com/samber/oops.Errorf</title>
+<g id="a_edge14"><a xlink:title="at utils.go:39: calling [github.com/samber/oops.Errorf]&#10;at utils.go:34: calling [github.com/samber/oops.Errorf]">
+<path fill="none" stroke="#8b4513" d="M209.4541,-137.9456C260.5358,-126.6341 324.0662,-112.5661 364.188,-103.6816"/>
+<polygon fill="#8b4513" stroke="#8b4513" points="365.1031,-107.0638 374.1099,-101.4845 363.5897,-100.2294 365.1031,-107.0638"/>
 </a>
 </g>
 </g>
-<!-- github.com/go&#45;i2p/common/keys_and_cert.ReadKeysAndCertElgAndEd25519&#45;&gt;github.com/go&#45;i2p/common/key_certificate.NewKeyCertificate -->
-<g id="edge18" class="edge">
-<title>github.com/go&#45;i2p/common/keys_and_cert.ReadKeysAndCertElgAndEd25519&#45;&gt;github.com/go&#45;i2p/common/key_certificate.NewKeyCertificate</title>
-<g id="a_edge18"><a xlink:title="at keys_and_cert.go:260: calling [github.com/go&#45;i2p/common/key_certificate.NewKeyCertificate]">
-<path fill="none" stroke="#8b4513" d="M148.7008,-662.9962C180.2677,-636.598 243.1752,-587.6425 304.843,-561 311.9151,-557.9446 319.4632,-555.2899 327.1155,-552.9884"/>
-<polygon fill="#8b4513" stroke="#8b4513" points="328.1551,-556.332 336.8362,-550.2585 326.2624,-549.5927 328.1551,-556.332"/>
-</a>
-</g>
-</g>
-<!-- github.com/go&#45;i2p/common/keys_and_cert.ReadKeysAndCertElgAndEd25519&#45;&gt;(*github.com/go&#45;i2p/logger.Logger).WithFields -->
-<g id="edge3" class="edge">
-<title>github.com/go&#45;i2p/common/keys_and_cert.ReadKeysAndCertElgAndEd25519&#45;&gt;(*github.com/go&#45;i2p/logger.Logger).WithFields</title>
-<g id="a_edge3"><a xlink:title="at keys_and_cert.go:209: calling [(*github.com/go&#45;i2p/logger.Logger).WithFields]&#10;at keys_and_cert.go:266: calling [(*github.com/go&#45;i2p/logger.Logger).WithFields]">
-<path fill="none" stroke="#8b4513" d="M213.5725,-699.0336C258.2277,-708.4357 311.4487,-719.6412 350.1579,-727.7914"/>
-<polygon fill="#8b4513" stroke="#8b4513" points="349.6646,-731.2642 360.1712,-729.8996 351.1068,-724.4143 349.6646,-731.2642"/>
-</a>
-</g>
-</g>
-<!-- github.com/go&#45;i2p/common/keys_and_cert.ReadKeysAndCertElgAndEd25519&#45;&gt;(*github.com/go&#45;i2p/logger.Logger).Error -->
-<g id="edge17" class="edge">
-<title>github.com/go&#45;i2p/common/keys_and_cert.ReadKeysAndCertElgAndEd25519&#45;&gt;(*github.com/go&#45;i2p/logger.Logger).Error</title>
-<g id="a_edge17"><a xlink:title="at keys_and_cert.go:225: calling [(*github.com/go&#45;i2p/logger.Logger).Error]&#10;at keys_and_cert.go:236: calling [(*github.com/go&#45;i2p/logger.Logger).Error]&#10;at keys_and_cert.go:252: calling [(*github.com/go&#45;i2p/logger.Logger).Error]&#10;at keys_and_cert.go:262: calling [(*github.com/go&#45;i2p/logger.Logger).Error]">
-<path fill="none" stroke="#8b4513" d="M239.9665,-679.7798C283.5946,-679.3047 330.788,-678.7907 363.1907,-678.4378"/>
-<polygon fill="#8b4513" stroke="#8b4513" points="363.6246,-681.9334 373.5859,-678.3246 363.5483,-674.9338 363.6246,-681.9334"/>
-</a>
-</g>
-</g>
-<!-- github.com/go&#45;i2p/common/keys_and_cert.ReadKeysAndCertElgAndEd25519&#45;&gt;(*github.com/go&#45;i2p/logger.Logger).WithError -->
-<g id="edge5" class="edge">
-<title>github.com/go&#45;i2p/common/keys_and_cert.ReadKeysAndCertElgAndEd25519&#45;&gt;(*github.com/go&#45;i2p/logger.Logger).WithError</title>
-<g id="a_edge5"><a xlink:title="at keys_and_cert.go:225: calling [(*github.com/go&#45;i2p/logger.Logger).WithError]&#10;at keys_and_cert.go:236: calling [(*github.com/go&#45;i2p/logger.Logger).WithError]&#10;at keys_and_cert.go:252: calling [(*github.com/go&#45;i2p/logger.Logger).WithError]&#10;at keys_and_cert.go:262: calling [(*github.com/go&#45;i2p/logger.Logger).WithError]">
-<path fill="none" stroke="#8b4513" d="M205.7561,-662.9168C252.9376,-651.9552 311.7656,-638.2878 352.9209,-628.7262"/>
-<polygon fill="#8b4513" stroke="#8b4513" points="353.7756,-632.121 362.7241,-626.4487 352.1914,-625.3026 353.7756,-632.121"/>
-</a>
-</g>
-</g>
-<!-- github.com/go&#45;i2p/common/keys_and_cert.ReadKeysAndCertElgAndEd25519&#45;&gt;(*github.com/sirupsen/logrus.Logger).Debug -->
-<g id="edge10" class="edge">
-<title>github.com/go&#45;i2p/common/keys_and_cert.ReadKeysAndCertElgAndEd25519&#45;&gt;(*github.com/sirupsen/logrus.Logger).Debug</title>
-<g id="a_edge10"><a xlink:title="at keys_and_cert.go:211: calling [(*github.com/sirupsen/logrus.Logger).Debug]&#10;at keys_and_cert.go:271: calling [(*github.com/sirupsen/logrus.Logger).Debug]">
-<path fill="none" stroke="#8b4513" d="M142.4451,-699.3707C166.6253,-728.4662 218.2099,-784.4615 275.843,-810 303.0762,-822.0676 336.6216,-825.6252 362.4749,-826.2683"/>
-<polygon fill="#8b4513" stroke="#8b4513" points="362.6475,-829.7703 372.6862,-826.3827 362.7261,-822.7708 362.6475,-829.7703"/>
-</a>
-</g>
-</g>
-<!-- github.com/go&#45;i2p/common/keys_and_cert.NewKeysAndCert -->
+<!-- github.com/go&#45;i2p/common/keys_and_cert.constructPublicKey -->
 <g id="node9" class="node">
-<title>github.com/go&#45;i2p/common/keys_and_cert.NewKeysAndCert</title>
-<g id="a_node9"><a xlink:title="github.com/go&#45;i2p/common/keys_and_cert.NewKeysAndCert | defined in keys_and_cert.go:306&#10;at keys_and_cert.go:312: calling [(*github.com/sirupsen/logrus.Logger).Debug]&#10;at keys_and_cert.go:315: calling [(*github.com/go&#45;i2p/logger.Logger).Error]&#10;at keys_and_cert.go:329: calling [(*github.com/go&#45;i2p/logger.Logger).Error]&#10;at keys_and_cert.go:340: calling [(*github.com/go&#45;i2p/logger.Logger).Error]&#10;at keys_and_cert.go:351: calling [(*github.com/go&#45;i2p/logger.Logger).Error]&#10;at keys_and_cert.go:316: calling [github.com/samber/oops.Errorf]&#10;at keys_and_cert.go:330: calling [github.com/samber/oops.Errorf]&#10;at keys_and_cert.go:341: calling [github.com/samber/oops.Errorf]&#10;at keys_and_cert.go:352: calling [github.com/samber/oops.Errorf]&#10;at keys_and_cert.go:321: calling [(github.com/go&#45;i2p/common/key_certificate.KeyCertificate).SignatureSize]&#10;at keys_and_cert.go:326: calling [(*github.com/go&#45;i2p/logger.Logger).WithFields]&#10;at keys_and_cert.go:337: calling [(*github.com/go&#45;i2p/logger.Logger).WithFields]&#10;at keys_and_cert.go:348: calling [(*github.com/go&#45;i2p/logger.Logger).WithFields]&#10;at keys_and_cert.go:320: calling [(github.com/go&#45;i2p/common/key_certificate.KeyCertificate).CryptoSize]">
-<path fill="#add8e6" stroke="#000000" stroke-width="1.5" d="M179.8247,-551C179.8247,-551 76.0183,-551 76.0183,-551 70.0183,-551 64.0183,-545 64.0183,-539 64.0183,-539 64.0183,-527 64.0183,-527 64.0183,-521 70.0183,-515 76.0183,-515 76.0183,-515 179.8247,-515 179.8247,-515 185.8247,-515 191.8247,-521 191.8247,-527 191.8247,-527 191.8247,-539 191.8247,-539 191.8247,-545 185.8247,-551 179.8247,-551"/>
-<text text-anchor="middle" x="127.9215" y="-528.8" font-family="Verdana" font-size="14.00" fill="#000000">NewKeysAndCert</text>
+<title>github.com/go&#45;i2p/common/keys_and_cert.constructPublicKey</title>
+<g id="a_node9"><a xlink:title="github.com/go&#45;i2p/common/keys_and_cert.constructPublicKey | defined in utils.go:14&#10;at utils.go:25: calling [github.com/samber/oops.Errorf]&#10;at utils.go:18: calling [github.com/samber/oops.Errorf]">
+<path fill="#add8e6" stroke="#000000" stroke-width=".5" d="M183.3373,-113C183.3373,-113 72.5057,-113 72.5057,-113 66.5057,-113 60.5057,-107 60.5057,-101 60.5057,-101 60.5057,-89 60.5057,-89 60.5057,-83 66.5057,-77 72.5057,-77 72.5057,-77 183.3373,-77 183.3373,-77 189.3373,-77 195.3373,-83 195.3373,-89 195.3373,-89 195.3373,-101 195.3373,-101 195.3373,-107 189.3373,-113 183.3373,-113"/>
+<text text-anchor="middle" x="127.9215" y="-90.8" font-family="Verdana" font-size="14.00" fill="#000000">constructPublicKey</text>
 </a>
 </g>
 </g>
-<!-- github.com/go&#45;i2p/common/keys_and_cert.NewKeysAndCert&#45;&gt;github.com/samber/oops.Errorf -->
-<g id="edge11" class="edge">
-<title>github.com/go&#45;i2p/common/keys_and_cert.NewKeysAndCert&#45;&gt;github.com/samber/oops.Errorf</title>
-<g id="a_edge11"><a xlink:title="at keys_and_cert.go:316: calling [github.com/samber/oops.Errorf]&#10;at keys_and_cert.go:330: calling [github.com/samber/oops.Errorf]&#10;at keys_and_cert.go:341: calling [github.com/samber/oops.Errorf]&#10;at keys_and_cert.go:352: calling [github.com/samber/oops.Errorf]">
-<path fill="none" stroke="#8b4513" d="M151.0709,-514.651C176.8219,-492.939 217.7053,-454.351 239.843,-412 302.0369,-293.0185 210.0408,-212.0643 304.843,-117 320.128,-101.6727 343.5952,-96.0129 363.7956,-94.2606"/>
-<polygon fill="#8b4513" stroke="#8b4513" points="364.2197,-97.742 374.0007,-93.6699 363.8151,-90.7537 364.2197,-97.742"/>
-</a>
-</g>
-</g>
-<!-- github.com/go&#45;i2p/common/keys_and_cert.NewKeysAndCert&#45;&gt;(*github.com/go&#45;i2p/logger.Logger).WithFields -->
-<g id="edge13" class="edge">
-<title>github.com/go&#45;i2p/common/keys_and_cert.NewKeysAndCert&#45;&gt;(*github.com/go&#45;i2p/logger.Logger).WithFields</title>
-<g id="a_edge13"><a xlink:title="at keys_and_cert.go:326: calling [(*github.com/go&#45;i2p/logger.Logger).WithFields]&#10;at keys_and_cert.go:337: calling [(*github.com/go&#45;i2p/logger.Logger).WithFields]&#10;at keys_and_cert.go:348: calling [(*github.com/go&#45;i2p/logger.Logger).WithFields]">
-<path fill="none" stroke="#8b4513" d="M145.1049,-551.056C185.7821,-593.6572 285.9744,-697.7115 304.843,-709 318.6919,-717.2853 335.0219,-723.4571 350.3634,-727.9759"/>
-<polygon fill="#8b4513" stroke="#8b4513" points="349.6951,-731.4223 360.2661,-730.7123 351.5596,-724.6752 349.6951,-731.4223"/>
-</a>
-</g>
-</g>
-<!-- github.com/go&#45;i2p/common/keys_and_cert.NewKeysAndCert&#45;&gt;(*github.com/go&#45;i2p/logger.Logger).Error -->
-<g id="edge6" class="edge">
-<title>github.com/go&#45;i2p/common/keys_and_cert.NewKeysAndCert&#45;&gt;(*github.com/go&#45;i2p/logger.Logger).Error</title>
-<g id="a_edge6"><a xlink:title="at keys_and_cert.go:315: calling [(*github.com/go&#45;i2p/logger.Logger).Error]&#10;at keys_and_cert.go:329: calling [(*github.com/go&#45;i2p/logger.Logger).Error]&#10;at keys_and_cert.go:340: calling [(*github.com/go&#45;i2p/logger.Logger).Error]&#10;at keys_and_cert.go:351: calling [(*github.com/go&#45;i2p/logger.Logger).Error]">
-<path fill="none" stroke="#8b4513" d="M150.9989,-551.0628C183.6393,-575.8747 245.8991,-620.5422 304.843,-648 323.4462,-656.6659 345.1728,-663.5906 363.4849,-668.5939"/>
-<polygon fill="#8b4513" stroke="#8b4513" points="362.7035,-672.0074 373.2656,-671.1747 364.4895,-665.2391 362.7035,-672.0074"/>
-</a>
-</g>
-</g>
-<!-- github.com/go&#45;i2p/common/keys_and_cert.NewKeysAndCert&#45;&gt;(*github.com/sirupsen/logrus.Logger).Debug -->
-<g id="edge1" class="edge">
-<title>github.com/go&#45;i2p/common/keys_and_cert.NewKeysAndCert&#45;&gt;(*github.com/sirupsen/logrus.Logger).Debug</title>
-<g id="a_edge1"><a xlink:title="at keys_and_cert.go:312: calling [(*github.com/sirupsen/logrus.Logger).Debug]">
-<path fill="none" stroke="#8b4513" d="M151.1707,-551.3531C176.6199,-572.6643 216.8551,-610.1537 239.843,-651 269.6671,-703.9934 233.9733,-738.9012 275.843,-783 298.3604,-806.7162 334.4973,-817.0523 362.5675,-821.5508"/>
-<polygon fill="#8b4513" stroke="#8b4513" points="362.1121,-825.0211 372.5041,-822.9579 363.0937,-818.0903 362.1121,-825.0211"/>
-</a>
-</g>
-</g>
-<!-- github.com/go&#45;i2p/common/keys_and_cert.NewKeysAndCert&#45;&gt;(github.com/go&#45;i2p/common/key_certificate.KeyCertificate).CryptoSize -->
-<g id="edge23" class="edge">
-<title>github.com/go&#45;i2p/common/keys_and_cert.NewKeysAndCert&#45;&gt;(github.com/go&#45;i2p/common/key_certificate.KeyCertificate).CryptoSize</title>
-<g id="a_edge23"><a xlink:title="at keys_and_cert.go:320: calling [(github.com/go&#45;i2p/common/key_certificate.KeyCertificate).CryptoSize]">
-<path fill="none" stroke="#8b4513" d="M191.8127,-520.2437C236.2898,-511.3635 295.3524,-499.5712 339.7707,-490.7028"/>
-<polygon fill="#8b4513" stroke="#8b4513" points="340.4637,-494.1336 349.5848,-488.7433 339.0931,-487.269 340.4637,-494.1336"/>
-</a>
-</g>
-</g>
-<!-- github.com/go&#45;i2p/common/keys_and_cert.NewKeysAndCert&#45;&gt;(github.com/go&#45;i2p/common/key_certificate.KeyCertificate).SignatureSize -->
-<g id="edge12" class="edge">
-<title>github.com/go&#45;i2p/common/keys_and_cert.NewKeysAndCert&#45;&gt;(github.com/go&#45;i2p/common/key_certificate.KeyCertificate).SignatureSize</title>
-<g id="a_edge12"><a xlink:title="at keys_and_cert.go:321: calling [(github.com/go&#45;i2p/common/key_certificate.KeyCertificate).SignatureSize]">
-<path fill="none" stroke="#8b4513" d="M161.8511,-514.901C196.997,-496.5836 253.8189,-468.1622 304.843,-448 316.0505,-443.5714 328.1633,-439.332 339.9344,-435.4877"/>
-<polygon fill="#8b4513" stroke="#8b4513" points="341.2581,-438.7389 349.7143,-432.3559 339.1232,-432.0724 341.2581,-438.7389"/>
+<!-- github.com/go&#45;i2p/common/keys_and_cert.constructPublicKey&#45;&gt;github.com/samber/oops.Errorf -->
+<g id="edge10" class="edge">
+<title>github.com/go&#45;i2p/common/keys_and_cert.constructPublicKey&#45;&gt;github.com/samber/oops.Errorf</title>
+<g id="a_edge10"><a xlink:title="at utils.go:25: calling [github.com/samber/oops.Errorf]&#10;at utils.go:18: calling [github.com/samber/oops.Errorf]">
+<path fill="none" stroke="#8b4513" d="M195.3095,-95C248.2482,-95 320.1393,-95 364.0707,-95"/>
+<polygon fill="#8b4513" stroke="#8b4513" points="364.0733,-98.5001 374.0732,-95 364.0732,-91.5001 364.0733,-98.5001"/>
 </a>
 </g>
 </g>
 <!-- (*github.com/go&#45;i2p/common/certificate.Certificate).Bytes -->
 <g id="node10" class="node">
 <title>(*github.com/go&#45;i2p/common/certificate.Certificate).Bytes</title>
-<g id="a_node10"><a xlink:title="(*github.com/go&#45;i2p/common/certificate.Certificate).Bytes | defined in certificate.go:100">
+<g id="a_node10"><a xlink:title="(*github.com/go&#45;i2p/common/certificate.Certificate).Bytes | defined in certificate_struct.go:142">
 <path fill="#ffe4b5" stroke="#000000" stroke-width="1.5" d="M431.3501,-929C431.3501,-929 375.4369,-929 375.4369,-929 369.4369,-929 363.4369,-923 363.4369,-917 363.4369,-917 363.4369,-905 363.4369,-905 363.4369,-899 369.4369,-893 375.4369,-893 375.4369,-893 431.3501,-893 431.3501,-893 437.3501,-893 443.3501,-899 443.3501,-905 443.3501,-905 443.3501,-917 443.3501,-917 443.3501,-923 437.3501,-929 431.3501,-929"/>
 <text text-anchor="middle" x="403.3935" y="-915.2" font-family="Verdana" font-size="14.00" fill="#000000">certificate</text>
 <text text-anchor="middle" x="403.3935" y="-898.4" font-family="Verdana" font-size="14.00" fill="#000000">Bytes</text>
@@ -494,36 +494,36 @@
 <!-- (github.com/go&#45;i2p/common/keys_and_cert.KeysAndCert).Bytes -->
 <g id="node21" class="node">
 <title>(github.com/go&#45;i2p/common/keys_and_cert.KeysAndCert).Bytes</title>
-<g id="a_node21"><a xlink:title="(github.com/go&#45;i2p/common/keys_and_cert.KeysAndCert).Bytes | defined in keys_and_cert.go:90&#10;at keys_and_cert.go:124: calling [(*github.com/sirupsen/logrus.Logger).Debug]&#10;at keys_and_cert.go:116: calling [(*github.com/go&#45;i2p/logger.Logger).WithFields]&#10;at keys_and_cert.go:112: calling [(*github.com/go&#45;i2p/common/certificate.Certificate).Bytes]&#10;at keys_and_cert.go:113: calling [(*github.com/go&#45;i2p/common/certificate.Certificate).Bytes]">
-<path fill="#add8e6" stroke="#000000" stroke-width="1.5" d="M143.808,-902C143.808,-902 112.035,-902 112.035,-902 106.035,-902 100.035,-896 100.035,-890 100.035,-890 100.035,-878 100.035,-878 100.035,-872 106.035,-866 112.035,-866 112.035,-866 143.808,-866 143.808,-866 149.808,-866 155.808,-872 155.808,-878 155.808,-878 155.808,-890 155.808,-890 155.808,-896 149.808,-902 143.808,-902"/>
-<text text-anchor="middle" x="127.9215" y="-879.8" font-family="Verdana" font-size="14.00" fill="#000000">Bytes</text>
+<g id="a_node21"><a xlink:title="(github.com/go&#45;i2p/common/keys_and_cert.KeysAndCert).Bytes | defined in keys_and_cert_struct.go:146&#10;at keys_and_cert_struct.go:180: calling [(*github.com/sirupsen/logrus.Logger).Debug]&#10;at keys_and_cert_struct.go:168: calling [(*github.com/go&#45;i2p/common/certificate.Certificate).Bytes]&#10;at keys_and_cert_struct.go:169: calling [(*github.com/go&#45;i2p/common/certificate.Certificate).Bytes]&#10;at keys_and_cert_struct.go:172: calling [(*github.com/go&#45;i2p/logger.Logger).WithFields]">
+<path fill="#add8e6" stroke="#000000" stroke-width="1.5" d="M143.808,-892C143.808,-892 112.035,-892 112.035,-892 106.035,-892 100.035,-886 100.035,-880 100.035,-880 100.035,-868 100.035,-868 100.035,-862 106.035,-856 112.035,-856 112.035,-856 143.808,-856 143.808,-856 149.808,-856 155.808,-862 155.808,-868 155.808,-868 155.808,-880 155.808,-880 155.808,-886 149.808,-892 143.808,-892"/>
+<text text-anchor="middle" x="127.9215" y="-869.8" font-family="Verdana" font-size="14.00" fill="#000000">Bytes</text>
 </a>
 </g>
 </g>
 <!-- (github.com/go&#45;i2p/common/keys_and_cert.KeysAndCert).Bytes&#45;&gt;(*github.com/go&#45;i2p/common/certificate.Certificate).Bytes -->
-<g id="edge30" class="edge">
+<g id="edge25" class="edge">
 <title>(github.com/go&#45;i2p/common/keys_and_cert.KeysAndCert).Bytes&#45;&gt;(*github.com/go&#45;i2p/common/certificate.Certificate).Bytes</title>
-<g id="a_edge30"><a xlink:title="at keys_and_cert.go:112: calling [(*github.com/go&#45;i2p/common/certificate.Certificate).Bytes]&#10;at keys_and_cert.go:113: calling [(*github.com/go&#45;i2p/common/certificate.Certificate).Bytes]">
-<path fill="none" stroke="#8b4513" d="M155.8512,-886.7375C202.046,-891.2652 295.0028,-900.3762 352.9328,-906.0542"/>
-<polygon fill="#8b4513" stroke="#8b4513" points="352.6772,-909.5458 362.9709,-907.038 353.3601,-902.5792 352.6772,-909.5458"/>
+<g id="a_edge25"><a xlink:title="at keys_and_cert_struct.go:168: calling [(*github.com/go&#45;i2p/common/certificate.Certificate).Bytes]&#10;at keys_and_cert_struct.go:169: calling [(*github.com/go&#45;i2p/common/certificate.Certificate).Bytes]">
+<path fill="none" stroke="#8b4513" d="M155.8512,-877.7514C202.046,-883.956 295.0028,-896.4415 352.9328,-904.2224"/>
+<polygon fill="#8b4513" stroke="#8b4513" points="352.594,-907.7082 362.9709,-905.5706 353.5259,-900.7705 352.594,-907.7082"/>
 </a>
 </g>
 </g>
 <!-- (github.com/go&#45;i2p/common/keys_and_cert.KeysAndCert).Bytes&#45;&gt;(*github.com/go&#45;i2p/logger.Logger).WithFields -->
-<g id="edge27" class="edge">
+<g id="edge26" class="edge">
 <title>(github.com/go&#45;i2p/common/keys_and_cert.KeysAndCert).Bytes&#45;&gt;(*github.com/go&#45;i2p/logger.Logger).WithFields</title>
-<g id="a_edge27"><a xlink:title="at keys_and_cert.go:116: calling [(*github.com/go&#45;i2p/logger.Logger).WithFields]">
-<path fill="none" stroke="#8b4513" d="M155.9985,-886.0589C189.2424,-886.8821 244.2039,-882.9146 276.843,-852 305.7204,-824.6482 276.142,-794.5369 304.843,-767 317.066,-755.2728 333.8333,-748.3959 350.0724,-744.3835"/>
-<polygon fill="#8b4513" stroke="#8b4513" points="351.0271,-747.7584 360.0699,-742.2377 349.5581,-740.9143 351.0271,-747.7584"/>
+<g id="a_edge26"><a xlink:title="at keys_and_cert_struct.go:172: calling [(*github.com/go&#45;i2p/logger.Logger).WithFields]">
+<path fill="none" stroke="#8b4513" d="M156.0952,-869.0256C178.7978,-864.8818 211.4932,-858.6088 239.843,-852 256.4326,-848.1327 264.249,-853.4701 276.843,-842 303.1487,-818.042 278.6919,-791.1267 304.843,-767 317.1846,-755.6138 333.826,-748.8176 349.9175,-744.7746"/>
+<polygon fill="#8b4513" stroke="#8b4513" points="350.8073,-748.1626 359.8223,-742.5966 349.3039,-741.3259 350.8073,-748.1626"/>
 </a>
 </g>
 </g>
 <!-- (github.com/go&#45;i2p/common/keys_and_cert.KeysAndCert).Bytes&#45;&gt;(*github.com/sirupsen/logrus.Logger).Debug -->
-<g id="edge22" class="edge">
+<g id="edge8" class="edge">
 <title>(github.com/go&#45;i2p/common/keys_and_cert.KeysAndCert).Bytes&#45;&gt;(*github.com/sirupsen/logrus.Logger).Debug</title>
-<g id="a_edge22"><a xlink:title="at keys_and_cert.go:124: calling [(*github.com/sirupsen/logrus.Logger).Debug]">
-<path fill="none" stroke="#8b4513" d="M156.0298,-882.2499C186.2636,-879.9005 235.5591,-874.7139 276.843,-864 289.7846,-860.6414 292.1751,-857.2766 304.843,-853 323.6668,-846.6452 344.826,-840.5053 362.699,-835.6026"/>
-<polygon fill="#8b4513" stroke="#8b4513" points="363.7898,-838.9333 372.5265,-832.9398 361.9591,-832.1769 363.7898,-838.9333"/>
+<g id="a_edge8"><a xlink:title="at keys_and_cert_struct.go:180: calling [(*github.com/sirupsen/logrus.Logger).Debug]">
+<path fill="none" stroke="#8b4513" d="M156.0381,-871.0031C186.0701,-867.6205 235.0042,-861.5868 276.843,-854 305.7897,-848.751 338.1147,-841.3162 362.8492,-835.2889"/>
+<polygon fill="#8b4513" stroke="#8b4513" points="363.7375,-838.6748 372.6118,-832.8871 362.0652,-831.8774 363.7375,-838.6748"/>
 </a>
 </g>
 </g>

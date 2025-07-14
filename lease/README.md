@@ -6,6 +6,13 @@
 
 Package lease implements the I2P lease common data structure
 
+
+Package lease implements the I2P lease common data structure
+
+Package lease implements the I2P lease common data structure
+
+Package lease implements the I2P lease common data structure
+
 ## Usage
 
 ```go
@@ -23,6 +30,9 @@ Sizes in bytes of various components of a Lease
 type Lease [LEASE_SIZE]byte
 ```
 
+Lease is the represenation of an I2P Lease.
+
+https://geti2p.net/spec/common-structures#lease
 
 #### func  NewLease
 
