@@ -60,33 +60,13 @@ func NewCertificate() *Certificate {
 	}
 }
 
-// NewCertificateDeux creates a new Certificate with specified type and payload
+// NewCertificateDeux creates a new Certificate with specified type and payload.
+// Deprecated: Use NewCertificateWithType instead. This function will be removed in v2.0.
 func NewCertificateDeux(certType int, payload []byte) (*Certificate, error) {
 	if certType < 0 || certType > 255 {
 		return nil, oops.Errorf("invalid certificate type: %d", certType)
 	}
-	certTypeByte := byte(certType)
-
-	if len(payload) > 65535 {
-		return nil, oops.Errorf("payload too long: %d bytes", len(payload))
-	}
-
-	_len, err := NewIntegerFromInt(len(payload), 2)
-	if err != nil {
-		panic(err)
-	}
-	cert := &Certificate{
-		kind:    Integer([]byte{certTypeByte}),
-		len:     *_len,
-		payload: payload,
-	}
-
-	log.WithFields(logrus.Fields{
-		"type":   certType,
-		"length": len(payload),
-	}).Debug("Successfully created new certificate")
-
-	return cert, nil
+	return NewCertificateWithType(uint8(certType), payload)
 }
 
 // NewCertificateWithType creates a new Certificate with specified type and payload
@@ -99,11 +79,20 @@ func NewCertificateWithType(certType uint8, payload []byte) (*Certificate, error
 		return nil, oops.Errorf("invalid certificate type: %d", certType)
 	}
 
+	// Validate payload length
+	if len(payload) > 65535 {
+		return nil, oops.Errorf("payload too long: %d bytes", len(payload))
+	}
+
 	// For NULL certificates, payload should be empty
 	if certType == CERT_NULL && len(payload) > 0 {
 		return nil, oops.Errorf("NULL certificates must have empty payload")
 	}
-	length, _ := NewIntegerFromInt(len(payload), 2)
+
+	length, err := NewIntegerFromInt(len(payload), 2)
+	if err != nil {
+		return nil, oops.Errorf("failed to create length integer: %w", err)
+	}
 
 	cert := &Certificate{
 		kind:    Integer([]byte{certType}),
