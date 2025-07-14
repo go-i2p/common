@@ -154,6 +154,9 @@ func ReadI2PString(data []byte) (str I2PString, remainder []byte, err error) {
 		log.Errorf("I2PString length %d exceeds available data %d", data_len-1, len(data)-1)
 		err = ErrDataTooShort
 		log.WithError(err).Error("Failed to read I2PString")
+		// Return partial data consistently with other parsing functions like ReadInteger
+		str = data
+		remainder = nil
 		return
 	}
 	str = data[:data_len]
