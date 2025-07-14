@@ -291,9 +291,10 @@ func (router_info *RouterInfo) RouterAddresses() []*RouterAddress {
 
 // PeerSize returns the peer size as a Go integer.
 func (router_info *RouterInfo) PeerSize() int {
-	// Peer size is unused:
+	// Peer size is unused according to I2P spec (always 0):
 	// https://geti2p.net/spec/common-structures#routeraddress
-	return 0
+	// But we return the actual field value to maintain API contract
+	return router_info.peer_size.Int()
 }
 
 // Options returns the options for this RouterInfo as an I2P Mapping.
