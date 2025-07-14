@@ -1,5 +1,4 @@
 // Package certificate implements the certificate common-structure of I2P.
-
 package certificate
 
 import (
@@ -141,6 +140,8 @@ func logCertificateReadCompletion(certificate Certificate, data []byte, remainde
 	}).Debug("Read certificate and calculated remainder")
 }
 
+// GetSignatureTypeFromCertificate extracts the signature type from a KEY certificate.
+// Returns an error if the certificate is not a KEY type or if the payload is too short.
 func GetSignatureTypeFromCertificate(cert Certificate) (int, error) {
 	if cert.Type() != CERT_KEY {
 		return 0, oops.Errorf("unexpected certificate type: %d", cert.Type())

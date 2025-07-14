@@ -150,16 +150,16 @@ func (c *Certificate) Bytes() []byte {
 }
 
 // length returns the total certificate length in bytes.
-func (c *Certificate) length() (cert_len int) {
-	cert_len = len(c.Bytes())
+func (c *Certificate) length() (certLen int) {
+	certLen = len(c.Bytes())
 	return
 }
 
 // Type returns the Certificate type specified in the first byte of the Certificate,
-func (c *Certificate) Type() (cert_type int) {
-	cert_type = c.kind.Int()
+func (c *Certificate) Type() (certType int) {
+	certType = c.kind.Int()
 	log.WithFields(logrus.Fields{
-		"cert_type": cert_type,
+		"cert_type": certType,
 	}).Debug("Retrieved certificate type")
 	return
 }
