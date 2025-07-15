@@ -579,45 +579,71 @@ func parseRouterAddresses(size *data.Integer, remainder []byte) ([]*router_addre
 
 // parsePeerSizeAndOptions reads the peer size and options mapping from bytes.
 func parsePeerSizeAndOptions(remainder []byte) (*data.Integer, *data.Mapping, []byte, error) {
-	peer_size, remainder, err := data.NewInteger(remainder, 1)
+	peer_size, remainder, err := parsePeerSizeFromBytes(remainder)
 	if err != nil {
-		log.WithError(err).Error("Failed to read PeerSize")
 		return nil, nil, remainder, err
 	}
 
-	var errs []error
-	options, remainder, errs := data.NewMapping(remainder)
-	if len(errs) != 0 {
-		// Check if errors are just warnings about extra data beyond mapping length
-		hasNonWarningErrors := false
-		for _, e := range errs {
-			if !strings.Contains(e.Error(), "warning parsing mapping: data exists beyond length of mapping") {
-				hasNonWarningErrors = true
-				break
-			}
-		}
-
-		if hasNonWarningErrors {
-			log.WithFields(logrus.Fields{
-				"at":       "(RouterInfo) parsePeerSizeAndOptions",
-				"data_len": len(remainder),
-				"reason":   "not enough data",
-			}).Error("error parsing router info")
-			estring := ""
-			for _, e := range errs {
-				estring += e.Error() + " "
-			}
-			return peer_size, options, remainder, errs[0]
-		} else {
-			// Just warnings about extra data - log but continue parsing
-			log.WithFields(logrus.Fields{
-				"at":     "(RouterInfo) parsePeerSizeAndOptions",
-				"reason": "extra data beyond mapping length",
-			}).Warn("mapping format violation")
-		}
+	options, remainder, err := parseOptionsMapping(remainder)
+	if err != nil {
+		return peer_size, options, remainder, err
 	}
 
 	return peer_size, options, remainder, nil
+}
+
+// parsePeerSizeFromBytes extracts the peer size integer from the byte data.
+func parsePeerSizeFromBytes(remainder []byte) (*data.Integer, []byte, error) {
+	peer_size, remainder, err := data.NewInteger(remainder, 1)
+	if err != nil {
+		log.WithError(err).Error("Failed to read PeerSize")
+		return nil, remainder, err
+	}
+	return peer_size, remainder, nil
+}
+
+// parseOptionsMapping extracts the options mapping and handles error categorization.
+func parseOptionsMapping(remainder []byte) (*data.Mapping, []byte, error) {
+	var errs []error
+	options, remainder, errs := data.NewMapping(remainder)
+	if len(errs) == 0 {
+		return options, remainder, nil
+	}
+
+	if hasCriticalMappingErrors(errs) {
+		logCriticalMappingErrors(remainder, errs)
+		return options, remainder, errs[0]
+	}
+
+	logMappingWarnings()
+	return options, remainder, nil
+}
+
+// hasCriticalMappingErrors checks if any errors are critical (not just warnings).
+func hasCriticalMappingErrors(errs []error) bool {
+	for _, e := range errs {
+		if !strings.Contains(e.Error(), "warning parsing mapping: data exists beyond length of mapping") {
+			return true
+		}
+	}
+	return false
+}
+
+// logCriticalMappingErrors logs critical mapping parsing errors.
+func logCriticalMappingErrors(remainder []byte, errs []error) {
+	log.WithFields(logrus.Fields{
+		"at":       "(RouterInfo) parsePeerSizeAndOptions",
+		"data_len": len(remainder),
+		"reason":   "not enough data",
+	}).Error("error parsing router info")
+}
+
+// logMappingWarnings logs warnings about extra data beyond mapping length.
+func logMappingWarnings() {
+	log.WithFields(logrus.Fields{
+		"at":     "(RouterInfo) parsePeerSizeAndOptions",
+		"reason": "extra data beyond mapping length",
+	}).Warn("mapping format violation")
 }
 
 // parseRouterInfoSignature extracts signature type from certificate and reads the signature.
