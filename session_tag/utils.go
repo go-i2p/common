@@ -23,7 +23,7 @@ func ReadSessionTag(bytes []byte) (info SessionTag, remainder []byte, err error)
 		return
 	}
 
-	copy(info[:], bytes[:SessionTagSize])
+	copy(info.value[:], bytes[:SessionTagSize])
 	remainder = bytes[SessionTagSize:]
 
 	log.WithFields(logrus.Fields{

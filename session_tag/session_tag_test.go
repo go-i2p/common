@@ -48,12 +48,12 @@ func TestReadSessionTag(t *testing.T) {
 				assert.Error(t, err)
 			} else {
 				assert.NoError(t, err)
-				assert.Equal(t, 32, len(sessionTag))
+				assert.Equal(t, 32, len(sessionTag.Bytes()))
 				assert.Equal(t, tt.expectedRem, remainder)
 
 				// Verify that the session tag contains the first 32 bytes of input
 				if len(tt.input) >= 32 {
-					assert.True(t, bytes.Equal(sessionTag[:], tt.input[:32]))
+					assert.True(t, bytes.Equal(sessionTag.Bytes(), tt.input[:32]))
 				}
 			}
 		})
@@ -69,7 +69,7 @@ func TestNewSessionTag(t *testing.T) {
 	sessionTag, remainder, err := NewSessionTag(validData)
 	assert.NoError(t, err)
 	assert.NotNil(t, sessionTag)
-	assert.Equal(t, 32, len(*sessionTag))
+	assert.Equal(t, 32, len(sessionTag.Bytes()))
 	assert.Equal(t, 8, len(remainder))
 
 	// Test error case
