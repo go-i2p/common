@@ -51,7 +51,7 @@ end_date :: Date
 // https://geti2p.net/spec/common-structures#lease
 type Lease [LEASE_SIZE]byte
 
-// ADDED: NewLease creates a new Lease with the provided tunnel gateway, tunnel ID, and expiration time.
+// NewLease creates a new Lease with the provided tunnel gateway, tunnel ID, and expiration time.
 // It constructs a properly formatted I2P Lease structure according to the specification, encoding
 // the tunnel gateway hash, tunnel ID as big-endian uint32, and expiration time as milliseconds since epoch.
 // Returns a pointer to the created Lease and any error encountered during construction.
@@ -61,17 +61,17 @@ func NewLease(tunnelGateway data.Hash, tunnelID uint32, expirationTime time.Time
 
 	var lease Lease
 
-	// ADDED: Copy the 32-byte tunnel gateway hash to the beginning of the lease structure
+	// Copy the 32-byte tunnel gateway hash to the beginning of the lease structure
 	// This hash identifies the router that will serve as the gateway for this tunnel
 	copy(lease[:LEASE_TUNNEL_GW_SIZE], tunnelGateway[:])
 
-	// ADDED: Convert tunnel ID to big-endian format for network byte order consistency
+	// Convert tunnel ID to big-endian format for network byte order consistency
 	// The tunnel ID must be stored as 4 bytes in network byte order for I2P compatibility
 	tunnelIDBytes := make([]byte, LEASE_TUNNEL_ID_SIZE)
 	binary.BigEndian.PutUint32(tunnelIDBytes, tunnelID)
 	copy(lease[LEASE_TUNNEL_GW_SIZE:LEASE_TUNNEL_GW_SIZE+LEASE_TUNNEL_ID_SIZE], tunnelIDBytes)
 
-	// ADDED: Convert expiration time to I2P Date format (milliseconds since Unix epoch)
+	// Convert expiration time to I2P Date format (milliseconds since Unix epoch)
 	// The date must be stored as 8 bytes in big-endian format for proper network serialization
 	millis := expirationTime.UnixNano() / int64(time.Millisecond)
 	dateBytes := make([]byte, data.DATE_SIZE)
@@ -86,7 +86,10 @@ func NewLease(tunnelGateway data.Hash, tunnelID uint32, expirationTime time.Time
 	return &lease, nil
 }
 
-// TunnelGateway returns the tunnel gateway as a Hash.
+// TunnelGateway returns the tunnel gateway hash from the lease structure.
+// Extracts the first 32 bytes of the lease which contain the SHA256 hash of the RouterIdentity
+// of the gateway router responsible for handling messages sent through this tunnel.
+// The returned hash can be used to identify and route messages to the appropriate tunnel gateway.
 func (lease Lease) TunnelGateway() (hash data.Hash) {
 	copy(hash[:], lease[:LEASE_TUNNEL_GW_SIZE])
 	return
