@@ -27,8 +27,13 @@ func TestIsZeroWithNoData(t *testing.T) {
 	assert := assert.New(t)
 
 	integer := Integer([]byte{})
+	value, err := intFromBytes(integer.Bytes())
+	assert.Equal(0, value, "intFromBytes should return 0 for empty slice")
+	assert.NotNil(err, "intFromBytes should return error for empty slice")
+	assert.Contains(err.Error(), "empty input slice", "Error should mention empty input slice")
 
-	assert.Equal(integer.Int(), 0, "Integer() did not correctly parse zero length byte slice")
+	// Int() method should also return 0 for empty slice
+	assert.Equal(0, integer.Int(), "Integer.Int() should return 0 for empty slice")
 }
 
 func TestNewIntegerFromIntValidValues(t *testing.T) {

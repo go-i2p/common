@@ -28,9 +28,15 @@ func (i Integer) Bytes() []byte {
 	return i[:]
 }
 
-// Int returns the Integer as a Go integer
+// Int returns the Integer as a Go integer. Returns 0 if conversion fails.
 func (i Integer) Int() int {
-	return intFromBytes(i.Bytes())
+	value, err := intFromBytes(i.Bytes())
+	if err != nil {
+		// Log error context for debugging
+		// (logging already handled in intFromBytes)
+		return 0
+	}
+	return value
 }
 
 // ReadInteger returns an Integer from a []byte of specified length.

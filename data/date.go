@@ -32,7 +32,13 @@ func (i Date) Bytes() []byte {
 
 // Int returns the Date as a Go integer.
 func (i Date) Int() int {
-	return intFromBytes(i.Bytes())
+	value, err := intFromBytes(i.Bytes())
+	if err != nil {
+		// Log error context for debugging
+		// (logging already handled in intFromBytes)
+		return 0
+	}
+	return value
 }
 
 // Time takes the value stored in date as an 8 byte big-endian integer representing the
