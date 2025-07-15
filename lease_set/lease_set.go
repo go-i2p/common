@@ -29,19 +29,50 @@ func NewLeaseSet(
 	signingPrivateKey types.SigningPrivateKey,
 ) (LeaseSet, error) {
 	log.Debug("Creating new LeaseSet")
+
+	if err := validateLeaseSetInputs(dest, encryptionKey, signingKey, leases); err != nil {
+		return LeaseSet{}, err
+	}
+
+	dbytes, err := serializeLeaseSetData(dest, encryptionKey, signingKey, leases)
+	if err != nil {
+		return LeaseSet{}, err
+	}
+
+	signature, err := createLeaseSetSignature(signingPrivateKey, dbytes)
+	if err != nil {
+		return LeaseSet{}, err
+	}
+
+	leaseSet := assembleLeaseSet(dest, encryptionKey, signingKey, leases, signature)
+
+	logLeaseSetCreationSuccess(leaseSet)
+	return leaseSet, nil
+}
+
+// validateLeaseSetInputs validates all input parameters for LeaseSet creation.
+func validateLeaseSetInputs(dest destination.Destination, encryptionKey types.RecievingPublicKey, signingKey types.SigningPublicKey, leases []lease.Lease) error {
 	// Validate destination size
 	if len(dest.KeysAndCert.Bytes()) < 387 {
-		return LeaseSet{}, oops.Errorf("invalid destination: minimum size is 387 bytes")
+		return oops.Errorf("invalid destination: minimum size is 387 bytes")
 	}
+
 	// Validate encryption key size
 	if len(encryptionKey.Bytes()) != LEASE_SET_PUBKEY_SIZE {
-		return LeaseSet{}, oops.Errorf("invalid encryption key size")
+		return oops.Errorf("invalid encryption key size")
 	}
-	// Validate inputs
+
+	// Validate lease count
 	if len(leases) > 16 {
-		return LeaseSet{}, oops.Errorf("invalid lease set: more than 16 leases")
+		return oops.Errorf("invalid lease set: more than 16 leases")
 	}
+
 	// Validate signing key size matches certificate
+	return validateSigningKeySize(dest, signingKey)
+}
+
+// validateSigningKeySize ensures the signing key size matches the certificate requirements.
+func validateSigningKeySize(dest destination.Destination, signingKey types.SigningPublicKey) error {
 	cert := dest.Certificate()
 	if cert.Type() == certificate.CERT_KEY {
 		// Get expected size from key certificate
@@ -51,16 +82,20 @@ func NewLeaseSet(
 		}
 		expectedSize := keyCert.SignatureSize()
 		if len(signingKey.Bytes()) != expectedSize {
-			return LeaseSet{}, oops.Errorf("invalid signing key size: got %d, expected %d",
+			return oops.Errorf("invalid signing key size: got %d, expected %d",
 				len(signingKey.Bytes()), expectedSize)
 		}
 	} else {
 		// Default DSA size
 		if len(signingKey.Bytes()) != LEASE_SET_SPK_SIZE {
-			return LeaseSet{}, oops.Errorf("invalid signing key size")
+			return oops.Errorf("invalid signing key size")
 		}
 	}
-	// Build LeaseSet dbytes
+	return nil
+}
+
+// serializeLeaseSetData builds the byte array containing all LeaseSet data for signing.
+func serializeLeaseSetData(dest destination.Destination, encryptionKey types.RecievingPublicKey, signingKey types.SigningPublicKey, leases []lease.Lease) ([]byte, error) {
 	dbytes := make([]byte, 0)
 
 	// Add Destination
@@ -76,7 +111,7 @@ func NewLeaseSet(
 	leaseCount, err := data.NewIntegerFromInt(len(leases), 1)
 	if err != nil {
 		log.WithError(err).Error("Failed to create lease count")
-		return LeaseSet{}, err
+		return nil, err
 	}
 	dbytes = append(dbytes, leaseCount.Bytes()...)
 
@@ -85,21 +120,30 @@ func NewLeaseSet(
 		dbytes = append(dbytes, lease[:]...)
 	}
 
-	// Create signature for all data up to this point
+	return dbytes, nil
+}
+
+// createLeaseSetSignature generates a signature for the provided data using the private key.
+func createLeaseSetSignature(signingPrivateKey types.SigningPrivateKey, dbytes []byte) ([]byte, error) {
 	signer, err := signingPrivateKey.NewSigner()
 	if err != nil {
 		log.WithError(err).Error("Failed to create signer")
-		return LeaseSet{}, err
+		return nil, err
 	}
 
 	signature, err := signer.Sign(dbytes)
 	if err != nil {
 		log.WithError(err).Error("Failed to sign LeaseSet")
-		return LeaseSet{}, err
+		return nil, err
 	}
 
-	// Create the struct-based LeaseSet
-	leaseSet := LeaseSet{
+	return signature, nil
+}
+
+// assembleLeaseSet creates the final LeaseSet structure from all components.
+func assembleLeaseSet(dest destination.Destination, encryptionKey types.RecievingPublicKey, signingKey types.SigningPublicKey, leases []lease.Lease, signature []byte) LeaseSet {
+	cert := dest.Certificate()
+	return LeaseSet{
 		dest:          dest,
 		encryptionKey: encryptionKey,
 		signingKey:    signingKey,
@@ -107,15 +151,16 @@ func NewLeaseSet(
 		leases:        leases,
 		signature:     sig.NewSignatureFromBytes(signature, getSignatureType(cert)),
 	}
+}
 
+// logLeaseSetCreationSuccess logs detailed information about the successfully created LeaseSet.
+func logLeaseSetCreationSuccess(leaseSet LeaseSet) {
 	log.WithFields(logrus.Fields{
-		"destination_length":    len(dest.KeysAndCert.Bytes()),
-		"encryption_key_length": len(encryptionKey.Bytes()),
-		"signing_key_length":    len(signingKey.Bytes()),
-		"lease_count":           len(leases),
+		"destination_length":    len(leaseSet.dest.KeysAndCert.Bytes()),
+		"encryption_key_length": len(leaseSet.encryptionKey.Bytes()),
+		"signing_key_length":    len(leaseSet.signingKey.Bytes()),
+		"lease_count":           leaseSet.leaseCount,
 	}).Debug("Successfully created new LeaseSet")
-
-	return leaseSet, nil
 }
 
 // getSignatureType determines the signature type from a certificate
