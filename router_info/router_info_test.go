@@ -23,13 +23,43 @@ import (
 )
 
 func generateTestRouterInfo(t *testing.T, publishedTime time.Time) (*RouterInfo, error) {
-	ed25519_privkey, ed25519_pubkey := generateEd25519KeyPair(t)
-	elg_pubkey := generateElGamalKeyPair(t)
-	cert := createTestCertificate(t)
-	routerIdentity := createTestRouterIdentity(t, elg_pubkey, ed25519_pubkey, cert)
+	keyPair := generateTestKeyPair(t)
+	routerIdentity := assembleTestRouterIdentity(t, keyPair)
 	routerAddresses := createTestRouterAddresses(t)
 
-	routerInfo, err := NewRouterInfo(routerIdentity, publishedTime, routerAddresses, nil, &ed25519_privkey, signature.SIGNATURE_TYPE_EDDSA_SHA512_ED25519)
+	return createRouterInfoFromComponents(t, routerIdentity, publishedTime, routerAddresses, keyPair.ed25519PrivKey)
+}
+
+// testKeyPair holds the cryptographic key pair components for testing.
+type testKeyPair struct {
+	ed25519PrivKey ed25519.Ed25519PrivateKey
+	ed25519PubKey  types.SigningPublicKey
+	elgPubKey      elgamal.ElgPublicKey
+	certificate    certificate.Certificate
+}
+
+// generateTestKeyPair creates all necessary cryptographic components for testing.
+func generateTestKeyPair(t *testing.T) testKeyPair {
+	ed25519PrivKey, ed25519PubKey := generateEd25519KeyPair(t)
+	elgPubKey := generateElGamalKeyPair(t)
+	cert := createTestCertificate(t)
+
+	return testKeyPair{
+		ed25519PrivKey: ed25519PrivKey,
+		ed25519PubKey:  ed25519PubKey,
+		elgPubKey:      elgPubKey,
+		certificate:    cert,
+	}
+}
+
+// assembleTestRouterIdentity creates a router identity from the generated key components.
+func assembleTestRouterIdentity(t *testing.T, keyPair testKeyPair) *router_identity.RouterIdentity {
+	return createTestRouterIdentity(t, keyPair.elgPubKey, keyPair.ed25519PubKey, keyPair.certificate)
+}
+
+// createRouterInfoFromComponents assembles the final RouterInfo from all prepared components.
+func createRouterInfoFromComponents(t *testing.T, routerIdentity *router_identity.RouterIdentity, publishedTime time.Time, routerAddresses []*router_address.RouterAddress, privKey ed25519.Ed25519PrivateKey) (*RouterInfo, error) {
+	routerInfo, err := NewRouterInfo(routerIdentity, publishedTime, routerAddresses, nil, &privKey, signature.SIGNATURE_TYPE_EDDSA_SHA512_ED25519)
 	if err != nil {
 		t.Fatalf("Failed to create router info: %v\n", err)
 	}
