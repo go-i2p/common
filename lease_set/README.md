@@ -33,7 +33,8 @@ ReadDestinationFromLeaseSet reads the destination from lease set data.
 #### type LeaseSet
 
 ```go
-type LeaseSet []byte
+type LeaseSet struct {
+}
 ```
 
 LeaseSet is the represenation of an I2P LeaseSet.
@@ -124,7 +125,7 @@ encountered during parsing.
 #### func (LeaseSet) Signature
 
 ```go
-func (lease_set LeaseSet) Signature() (signature signature.Signature, err error)
+func (lease_set LeaseSet) Signature() (signature sig.Signature, err error)
 ```
 Signature returns the signature as Signature. returns errors encountered during
 parsing.

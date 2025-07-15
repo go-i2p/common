@@ -119,10 +119,10 @@ STATIC_KEY_SIZE is the size in bytes of a static key used in router addresses
 
 ```go
 type RouterAddress struct {
-	TransportCost    *Integer
-	ExpirationDate   *Date
-	TransportType    I2PString
-	TransportOptions *Mapping
+	TransportCost    *data.Integer
+	ExpirationDate   *data.Date
+	TransportType    data.I2PString
+	TransportOptions *data.Mapping
 }
 ```
 
@@ -141,7 +141,7 @@ Returns a pointer to RouterAddress.
 #### func  ReadRouterAddress
 
 ```go
-func ReadRouterAddress(data []byte) (router_address RouterAddress, remainder []byte, err error)
+func ReadRouterAddress(routerAddressData []byte) (router_address RouterAddress, remainder []byte, err error)
 ```
 ReadRouterAddress returns RouterAddress from a []byte. The remaining bytes after
 the specified length are also returned. Returns a list of errors that occurred
@@ -157,7 +157,7 @@ Bytes returns the router address as a []byte.
 #### func (RouterAddress) CapsString
 
 ```go
-func (router_address RouterAddress) CapsString() I2PString
+func (router_address RouterAddress) CapsString() data.I2PString
 ```
 CapsString returns the caps option as an I2PString
 
@@ -178,21 +178,21 @@ Cost returns the cost for this RouterAddress as a Go integer.
 #### func (RouterAddress) Expiration
 
 ```go
-func (router_address RouterAddress) Expiration() Date
+func (router_address RouterAddress) Expiration() data.Date
 ```
 Expiration returns the expiration for this RouterAddress as an I2P Date.
 
 #### func (RouterAddress) GetOption
 
 ```go
-func (router_address RouterAddress) GetOption(key I2PString) I2PString
+func (router_address RouterAddress) GetOption(key data.I2PString) data.I2PString
 ```
 GetOption returns the value of the option specified by the key
 
 #### func (RouterAddress) HasOption
 
 ```go
-func (router_address RouterAddress) HasOption(key I2PString) bool
+func (router_address RouterAddress) HasOption(key data.I2PString) bool
 ```
 HasOption checks if a given option key exists
 
@@ -206,7 +206,7 @@ Host returns the host address as a net.Addr
 #### func (RouterAddress) HostString
 
 ```go
-func (router_address RouterAddress) HostString() I2PString
+func (router_address RouterAddress) HostString() data.I2PString
 ```
 HostString returns the host option as an I2PString
 
@@ -227,7 +227,7 @@ InitializationVector returns the initialization vector as a 16-byte array
 #### func (RouterAddress) InitializationVectorString
 
 ```go
-func (router_address RouterAddress) InitializationVectorString() I2PString
+func (router_address RouterAddress) InitializationVectorString() data.I2PString
 ```
 InitializationVectorString returns the initialization vector option as an
 I2PString
@@ -235,7 +235,7 @@ I2PString
 #### func (RouterAddress) IntroducerExpirationString
 
 ```go
-func (router_address RouterAddress) IntroducerExpirationString(num int) I2PString
+func (router_address RouterAddress) IntroducerExpirationString(num int) data.I2PString
 ```
 IntroducerExpirationString returns the introducer expiration option for the
 specified number
@@ -243,14 +243,14 @@ specified number
 #### func (RouterAddress) IntroducerHashString
 
 ```go
-func (router_address RouterAddress) IntroducerHashString(num int) I2PString
+func (router_address RouterAddress) IntroducerHashString(num int) data.I2PString
 ```
 IntroducerHashString returns the introducer hash option for the specified number
 
 #### func (RouterAddress) IntroducerTagString
 
 ```go
-func (router_address RouterAddress) IntroducerTagString(num int) I2PString
+func (router_address RouterAddress) IntroducerTagString(num int) data.I2PString
 ```
 IntroducerTagString returns the introducer tag option for the specified number
 
@@ -264,7 +264,7 @@ Network implements net.Addr. It returns the transport type plus 4 or 6
 #### func (RouterAddress) Options
 
 ```go
-func (routerAddress RouterAddress) Options() Mapping
+func (routerAddress RouterAddress) Options() data.Mapping
 ```
 Options returns the options for this RouterAddress as an I2P Mapping.
 
@@ -278,7 +278,7 @@ Port returns the port number as a string
 #### func (RouterAddress) PortString
 
 ```go
-func (router_address RouterAddress) PortString() I2PString
+func (router_address RouterAddress) PortString() data.I2PString
 ```
 PortString returns the port option as an I2PString
 
@@ -292,7 +292,7 @@ ProtocolVersion returns the protocol version as a string
 #### func (RouterAddress) ProtocolVersionString
 
 ```go
-func (router_address RouterAddress) ProtocolVersionString() I2PString
+func (router_address RouterAddress) ProtocolVersionString() data.I2PString
 ```
 ProtocolVersionString returns the protocol version option as an I2PString
 
@@ -306,7 +306,7 @@ StaticKey returns the static key as a 32-byte array
 #### func (RouterAddress) StaticKeyString
 
 ```go
-func (router_address RouterAddress) StaticKeyString() I2PString
+func (router_address RouterAddress) StaticKeyString() data.I2PString
 ```
 StaticKeyString returns the static key option as an I2PString
 
@@ -320,7 +320,7 @@ String implements net.Addr. It returns the IP address, followed by the options
 #### func (RouterAddress) TransportStyle
 
 ```go
-func (router_address RouterAddress) TransportStyle() I2PString
+func (router_address RouterAddress) TransportStyle() data.I2PString
 ```
 TransportStyle returns the transport style for this RouterAddress as an
 I2PString.

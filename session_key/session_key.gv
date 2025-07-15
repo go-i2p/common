@@ -14,45 +14,45 @@ digraph gocallvis {
     edge [minlen="2"]
 
     subgraph "cluster_focus" {
-        fontsize="18";
-bgcolor="#e6ecfa";
+        bgcolor="#e6ecfa";
 label="session_key";
 labelloc="t";
 labeljust="c";
+fontsize="18";
         
-        "github.com/go-i2p/common/session_key.NewSessionKey" [ fillcolor="lightblue" label="NewSessionKey" penwidth="1.5" tooltip="github.com/go-i2p/common/session_key.NewSessionKey | defined in session_key_struct.go:29\nat session_key_struct.go:30: calling [github.com/sirupsen/logrus.WithField]\nat session_key_struct.go:31: calling [github.com/go-i2p/common/session_key.ReadSessionKey]\nat session_key_struct.go:33: calling [github.com/sirupsen/logrus.WithError]\nat session_key_struct.go:30: calling [(*github.com/sirupsen/logrus.Entry).Debug]\nat session_key_struct.go:33: calling [(*github.com/sirupsen/logrus.Entry).Error]\nat session_key_struct.go:37: calling [github.com/sirupsen/logrus.Debug]" ]
-        "github.com/sirupsen/logrus.WithField" [ penwidth="1.5" tooltip="github.com/sirupsen/logrus.WithField | defined in exported.go:69" fillcolor="moccasin" label="logrus\nWithField" ]
-        "github.com/go-i2p/common/session_key.ReadSessionKey" [ fillcolor="lightblue" label="ReadSessionKey" penwidth="1.5" tooltip="github.com/go-i2p/common/session_key.ReadSessionKey | defined in session_key_struct.go:44\nat session_key_struct.go:46: calling [github.com/sirupsen/logrus.WithFields]\nat session_key_struct.go:58: calling [github.com/sirupsen/logrus.WithFields]\nat session_key_struct.go:50: calling [(*github.com/sirupsen/logrus.Entry).Error]\nat session_key_struct.go:51: calling [github.com/samber/oops.Errorf]\nat session_key_struct.go:60: calling [(*github.com/sirupsen/logrus.Entry).Debug]" ]
-        "github.com/sirupsen/logrus.WithFields" [ tooltip="github.com/sirupsen/logrus.WithFields | defined in exported.go:79" fillcolor="moccasin" label="logrus\nWithFields" penwidth="1.5" ]
-        "github.com/samber/oops.Errorf" [ label="oops\nErrorf" penwidth="1.5" tooltip="github.com/samber/oops.Errorf | defined in oops.go:34" fillcolor="moccasin" ]
+        "github.com/go-i2p/common/session_key.ReadSessionKey" [ fillcolor="lightblue" label="ReadSessionKey" penwidth="1.5" tooltip="github.com/go-i2p/common/session_key.ReadSessionKey | defined in session_key_struct.go:44\nat session_key_struct.go:46: calling [github.com/sirupsen/logrus.WithFields]\nat session_key_struct.go:58: calling [github.com/sirupsen/logrus.WithFields]\nat session_key_struct.go:50: calling [(*github.com/sirupsen/logrus.Entry).Error]\nat session_key_struct.go:60: calling [(*github.com/sirupsen/logrus.Entry).Debug]\nat session_key_struct.go:51: calling [github.com/samber/oops.Errorf]" ]
+        "github.com/sirupsen/logrus.WithFields" [ fillcolor="moccasin" label="logrus\nWithFields" penwidth="1.5" tooltip="github.com/sirupsen/logrus.WithFields | defined in exported.go:79" ]
+        "github.com/samber/oops.Errorf" [ tooltip="github.com/samber/oops.Errorf | defined in oops.go:34" fillcolor="moccasin" label="oops\nErrorf" penwidth="1.5" ]
+        "github.com/go-i2p/common/session_key.NewSessionKey" [ label="NewSessionKey" penwidth="1.5" tooltip="github.com/go-i2p/common/session_key.NewSessionKey | defined in session_key_struct.go:29\nat session_key_struct.go:31: calling [github.com/go-i2p/common/session_key.ReadSessionKey]\nat session_key_struct.go:33: calling [github.com/sirupsen/logrus.WithError]\nat session_key_struct.go:33: calling [(*github.com/sirupsen/logrus.Entry).Error]\nat session_key_struct.go:30: calling [github.com/sirupsen/logrus.WithField]\nat session_key_struct.go:30: calling [(*github.com/sirupsen/logrus.Entry).Debug]\nat session_key_struct.go:37: calling [github.com/sirupsen/logrus.Debug]" fillcolor="lightblue" ]
+        "github.com/sirupsen/logrus.WithField" [ tooltip="github.com/sirupsen/logrus.WithField | defined in exported.go:69" fillcolor="moccasin" label="logrus\nWithField" penwidth="1.5" ]
         "github.com/sirupsen/logrus.WithError" [ fillcolor="moccasin" label="logrus\nWithError" penwidth="1.5" tooltip="github.com/sirupsen/logrus.WithError | defined in exported.go:55" ]
-        "github.com/sirupsen/logrus.Debug" [ fillcolor="moccasin" label="logrus\nDebug" penwidth="1.5" tooltip="github.com/sirupsen/logrus.Debug | defined in exported.go:98" ]
+        "github.com/sirupsen/logrus.Debug" [ penwidth="1.5" tooltip="github.com/sirupsen/logrus.Debug | defined in exported.go:98" fillcolor="moccasin" label="logrus\nDebug" ]
         
         subgraph "cluster_*github.com/sirupsen/logrus.Entry" {
-        tooltip="type: *github.com/sirupsen/logrus.Entry";
+        style="rounded,filled";
+fillcolor="wheat2";
+label="(*Entry)";
+tooltip="type: *github.com/sirupsen/logrus.Entry";
 penwidth="0.5";
 fontsize="15";
 fontcolor="#222222";
 labelloc="b";
-style="rounded,filled";
-fillcolor="wheat2";
-label="(*Entry)";
         
-        "(*github.com/sirupsen/logrus.Entry).Debug" [ fillcolor="moccasin" label="logrus\nDebug" penwidth="1.5" tooltip="(*github.com/sirupsen/logrus.Entry).Debug | defined in entry.go:312" ]
-        "(*github.com/sirupsen/logrus.Entry).Error" [ fillcolor="moccasin" label="logrus\nError" penwidth="1.5" tooltip="(*github.com/sirupsen/logrus.Entry).Error | defined in entry.go:332" ]
+        "(*github.com/sirupsen/logrus.Entry).Error" [ penwidth="1.5" tooltip="(*github.com/sirupsen/logrus.Entry).Error | defined in entry.go:332" fillcolor="moccasin" label="logrus\nError" ]
+        "(*github.com/sirupsen/logrus.Entry).Debug" [ label="logrus\nDebug" penwidth="1.5" tooltip="(*github.com/sirupsen/logrus.Entry).Debug | defined in entry.go:312" fillcolor="moccasin" ]
         
     }
 
     }
 
-    "github.com/go-i2p/common/session_key.NewSessionKey" -> "github.com/sirupsen/logrus.WithField" [ color="saddlebrown" tooltip="at session_key_struct.go:30: calling [github.com/sirupsen/logrus.WithField]" ]
     "github.com/go-i2p/common/session_key.ReadSessionKey" -> "github.com/sirupsen/logrus.WithFields" [ color="saddlebrown" tooltip="at session_key_struct.go:46: calling [github.com/sirupsen/logrus.WithFields]\nat session_key_struct.go:58: calling [github.com/sirupsen/logrus.WithFields]" ]
-    "github.com/go-i2p/common/session_key.ReadSessionKey" -> "(*github.com/sirupsen/logrus.Entry).Error" [ tooltip="at session_key_struct.go:50: calling [(*github.com/sirupsen/logrus.Entry).Error]" color="saddlebrown" ]
+    "github.com/go-i2p/common/session_key.ReadSessionKey" -> "(*github.com/sirupsen/logrus.Entry).Error" [ color="saddlebrown" tooltip="at session_key_struct.go:50: calling [(*github.com/sirupsen/logrus.Entry).Error]" ]
+    "github.com/go-i2p/common/session_key.ReadSessionKey" -> "(*github.com/sirupsen/logrus.Entry).Debug" [ color="saddlebrown" tooltip="at session_key_struct.go:60: calling [(*github.com/sirupsen/logrus.Entry).Debug]" ]
     "github.com/go-i2p/common/session_key.NewSessionKey" -> "github.com/go-i2p/common/session_key.ReadSessionKey" [ tooltip="at session_key_struct.go:31: calling [github.com/go-i2p/common/session_key.ReadSessionKey]" ]
     "github.com/go-i2p/common/session_key.NewSessionKey" -> "github.com/sirupsen/logrus.WithError" [ color="saddlebrown" tooltip="at session_key_struct.go:33: calling [github.com/sirupsen/logrus.WithError]" ]
-    "github.com/go-i2p/common/session_key.NewSessionKey" -> "(*github.com/sirupsen/logrus.Entry).Debug" [ color="saddlebrown" tooltip="at session_key_struct.go:30: calling [(*github.com/sirupsen/logrus.Entry).Debug]" ]
-    "github.com/go-i2p/common/session_key.ReadSessionKey" -> "github.com/samber/oops.Errorf" [ color="saddlebrown" tooltip="at session_key_struct.go:51: calling [github.com/samber/oops.Errorf]" ]
-    "github.com/go-i2p/common/session_key.ReadSessionKey" -> "(*github.com/sirupsen/logrus.Entry).Debug" [ tooltip="at session_key_struct.go:60: calling [(*github.com/sirupsen/logrus.Entry).Debug]" color="saddlebrown" ]
     "github.com/go-i2p/common/session_key.NewSessionKey" -> "(*github.com/sirupsen/logrus.Entry).Error" [ color="saddlebrown" tooltip="at session_key_struct.go:33: calling [(*github.com/sirupsen/logrus.Entry).Error]" ]
+    "github.com/go-i2p/common/session_key.ReadSessionKey" -> "github.com/samber/oops.Errorf" [ color="saddlebrown" tooltip="at session_key_struct.go:51: calling [github.com/samber/oops.Errorf]" ]
+    "github.com/go-i2p/common/session_key.NewSessionKey" -> "github.com/sirupsen/logrus.WithField" [ color="saddlebrown" tooltip="at session_key_struct.go:30: calling [github.com/sirupsen/logrus.WithField]" ]
+    "github.com/go-i2p/common/session_key.NewSessionKey" -> "(*github.com/sirupsen/logrus.Entry).Debug" [ color="saddlebrown" tooltip="at session_key_struct.go:30: calling [(*github.com/sirupsen/logrus.Entry).Debug]" ]
     "github.com/go-i2p/common/session_key.NewSessionKey" -> "github.com/sirupsen/logrus.Debug" [ color="saddlebrown" tooltip="at session_key_struct.go:37: calling [github.com/sirupsen/logrus.Debug]" ]
 }

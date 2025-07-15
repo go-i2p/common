@@ -51,9 +51,9 @@ https://geti2p.net/spec/common-structures#routerinfo
 
 ```go
 func NewRouterInfo(
-	routerIdentity *RouterIdentity,
+	routerIdentity *router_identity.RouterIdentity,
 	publishedTime time.Time,
-	addresses []*RouterAddress,
+	addresses []*router_address.RouterAddress,
 	options map[string]string,
 	signingPrivateKey types.SigningPrivateKey,
 	sigType int,
@@ -81,7 +81,7 @@ during parsing.
 #### func (*RouterInfo) AddAddress
 
 ```go
-func (router_info *RouterInfo) AddAddress(address *RouterAddress)
+func (router_info *RouterInfo) AddAddress(address *router_address.RouterAddress)
 ```
 AddAddress adds a RouterAddress to this RouterInfo.
 
@@ -102,7 +102,7 @@ GoodVersion checks if the RouterInfo version is acceptable.
 #### func (*RouterInfo) IdentHash
 
 ```go
-func (router_info *RouterInfo) IdentHash() Hash
+func (router_info *RouterInfo) IdentHash() data.Hash
 ```
 IdentHash returns the identity hash (sha256 sum) for this RouterInfo.
 
@@ -116,9 +116,9 @@ Network implements net.Addr
 #### func (RouterInfo) Options
 
 ```go
-func (router_info RouterInfo) Options() (mapping Mapping)
+func (router_info RouterInfo) Options() (mapping data.Mapping)
 ```
-Options returns the options for this RouterInfo as an I2P Mapping.
+Options returns the options for this RouterInfo as an I2P data.Mapping.
 
 #### func (*RouterInfo) PeerSize
 
@@ -130,7 +130,7 @@ PeerSize returns the peer size as a Go integer.
 #### func (*RouterInfo) Published
 
 ```go
-func (router_info *RouterInfo) Published() *Date
+func (router_info *RouterInfo) Published() *data.Date
 ```
 Published returns the date this RouterInfo was published as an I2P Date.
 
@@ -152,10 +152,10 @@ integer.
 #### func (*RouterInfo) RouterAddresses
 
 ```go
-func (router_info *RouterInfo) RouterAddresses() []*RouterAddress
+func (router_info *RouterInfo) RouterAddresses() []*router_address.RouterAddress
 ```
 RouterAddresses returns all RouterAddresses for this RouterInfo as
-[]*RouterAddress.
+[]*router_address.RouterAddress.
 
 #### func (*RouterInfo) RouterCapabilities
 
@@ -167,7 +167,7 @@ RouterCapabilities returns the capabilities string for this RouterInfo.
 #### func (*RouterInfo) RouterIdentity
 
 ```go
-func (router_info *RouterInfo) RouterIdentity() *RouterIdentity
+func (router_info *RouterInfo) RouterIdentity() *router_identity.RouterIdentity
 ```
 RouterIdentity returns the router identity as *RouterIdentity.
 
@@ -181,7 +181,7 @@ RouterVersion returns the version string for this RouterInfo.
 #### func (RouterInfo) Signature
 
 ```go
-func (router_info RouterInfo) Signature() (signature Signature)
+func (router_info RouterInfo) Signature() (signature signature.Signature)
 ```
 Signature returns the signature for this RouterInfo as an I2P Signature.
 

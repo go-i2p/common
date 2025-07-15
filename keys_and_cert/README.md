@@ -28,7 +28,7 @@ Sizes of various KeysAndCert structures and requirements
 
 ```go
 type KeysAndCert struct {
-	KeyCertificate  *KeyCertificate
+	KeyCertificate  *key_certificate.KeyCertificate
 	ReceivingPublic types.RecievingPublicKey
 	Padding         []byte
 	SigningPublic   types.SigningPublicKey
@@ -43,7 +43,7 @@ https://geti2p.net/spec/common-structures#keysandcert
 
 ```go
 func NewKeysAndCert(
-	keyCertificate *KeyCertificate,
+	keyCertificate *key_certificate.KeyCertificate,
 	publicKey types.RecievingPublicKey,
 	padding []byte,
 	signingPublicKey types.SigningPublicKey,
@@ -80,7 +80,7 @@ specified length.
 #### func (*KeysAndCert) Certificate
 
 ```go
-func (keys_and_cert *KeysAndCert) Certificate() (cert Certificate)
+func (keys_and_cert *KeysAndCert) Certificate() (cert certificate.Certificate)
 ```
 Certificate returns the certificate.
 

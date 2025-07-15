@@ -16,7 +16,7 @@ Package router_identity implements the I2P RouterIdentity common data structure
 
 ```go
 type RouterIdentity struct {
-	*KeysAndCert
+	*keys_and_cert.KeysAndCert
 }
 ```
 

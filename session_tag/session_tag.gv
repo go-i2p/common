@@ -14,60 +14,77 @@ digraph gocallvis {
     edge [minlen="2"]
 
     subgraph "cluster_focus" {
-        labeljust="c";
-fontsize="18";
-bgcolor="#e6ecfa";
+        bgcolor="#e6ecfa";
 label="session_tag";
 labelloc="t";
+labeljust="c";
+fontsize="18";
         
-        "github.com/go-i2p/common/session_tag.NewSessionTag" [ fillcolor="lightblue" label="NewSessionTag" penwidth="1.5" tooltip="github.com/go-i2p/common/session_tag.NewSessionTag | defined in utils.go:38\nat utils.go:39: calling [(*github.com/go-i2p/logger.Logger).WithField]\nat utils.go:39: calling [(*github.com/sirupsen/logrus.Logger).Debug]\nat utils.go:48: calling [(*github.com/sirupsen/logrus.Logger).Debug]\nat utils.go:42: calling [(*github.com/go-i2p/logger.Logger).WithError]\nat utils.go:42: calling [(*github.com/go-i2p/logger.Logger).Error]\nat utils.go:46: calling [(*github.com/go-i2p/logger.Logger).WithFields]\nat utils.go:40: calling [github.com/go-i2p/common/session_tag.ReadSessionTag]" ]
-        "github.com/go-i2p/common/session_tag.ReadSessionTag" [ fillcolor="lightblue" label="ReadSessionTag" penwidth="1.5" tooltip="github.com/go-i2p/common/session_tag.ReadSessionTag | defined in utils.go:15\nat utils.go:31: calling [(*github.com/sirupsen/logrus.Logger).Debug]\nat utils.go:17: calling [(*github.com/go-i2p/logger.Logger).WithFields]\nat utils.go:29: calling [(*github.com/go-i2p/logger.Logger).WithFields]\nat utils.go:21: calling [(*github.com/go-i2p/logger.Logger).Error]\nat utils.go:22: calling [github.com/samber/oops.Errorf]" ]
         "github.com/samber/oops.Errorf" [ fillcolor="moccasin" label="oops\nErrorf" penwidth="1.5" tooltip="github.com/samber/oops.Errorf | defined in oops.go:34" ]
+        "github.com/go-i2p/common/session_tag.ReadSessionTag" [ fillcolor="lightblue" label="ReadSessionTag" penwidth="1.5" tooltip="github.com/go-i2p/common/session_tag.ReadSessionTag | defined in utils.go:15\nat utils.go:31: calling [(*github.com/sirupsen/logrus.Logger).Debug]\nat utils.go:22: calling [github.com/samber/oops.Errorf]\nat utils.go:17: calling [(*github.com/go-i2p/logger.Logger).WithFields]\nat utils.go:29: calling [(*github.com/go-i2p/logger.Logger).WithFields]\nat utils.go:21: calling [(*github.com/go-i2p/logger.Logger).Error]" ]
+        "github.com/go-i2p/common/session_tag.NewSessionTag" [ label="NewSessionTag" penwidth="1.5" tooltip="github.com/go-i2p/common/session_tag.NewSessionTag | defined in utils.go:38\nat utils.go:39: calling [(*github.com/go-i2p/logger.Logger).WithField]\nat utils.go:40: calling [github.com/go-i2p/common/session_tag.ReadSessionTag]\nat utils.go:42: calling [(*github.com/go-i2p/logger.Logger).WithError]\nat utils.go:39: calling [(*github.com/sirupsen/logrus.Logger).Debug]\nat utils.go:48: calling [(*github.com/sirupsen/logrus.Logger).Debug]\nat utils.go:42: calling [(*github.com/go-i2p/logger.Logger).Error]\nat utils.go:46: calling [(*github.com/go-i2p/logger.Logger).WithFields]" fillcolor="lightblue" ]
+        "github.com/go-i2p/common/session_tag.NewSessionTagFromBytes" [ fillcolor="lightblue" label="NewSessionTagFromBytes" penwidth="1.5" tooltip="github.com/go-i2p/common/session_tag.NewSessionTagFromBytes | defined in session_tag_struct.go:65\nat session_tag_struct.go:67: calling [(*github.com/go-i2p/common/session_tag.SessionTag).SetBytes]" ]
         "github.com/go-i2p/common/session_tag.init" [ fillcolor="lightblue" label="init" penwidth="0.5" tooltip="github.com/go-i2p/common/session_tag.init | defined in .:0\nat utils.go:10: calling [github.com/go-i2p/logger.GetGoI2PLogger]" ]
-        "github.com/go-i2p/logger.GetGoI2PLogger" [ tooltip="github.com/go-i2p/logger.GetGoI2PLogger | defined in log.go:120" fillcolor="moccasin" label="logger\nGetGoI2PLogger" penwidth="1.5" ]
+        "github.com/go-i2p/logger.GetGoI2PLogger" [ fillcolor="moccasin" label="logger\nGetGoI2PLogger" penwidth="1.5" tooltip="github.com/go-i2p/logger.GetGoI2PLogger | defined in log.go:120" ]
         
-        subgraph "cluster_*github.com/go-i2p/logger.Logger" {
-        style="rounded,filled";
-fillcolor="wheat2";
-label="(*Logger)";
-tooltip="type: *github.com/go-i2p/logger.Logger";
-penwidth="0.5";
-fontsize="15";
+        subgraph "cluster_*github.com/go-i2p/common/session_tag.SessionTag" {
+        fontsize="15";
 fontcolor="#222222";
 labelloc="b";
+style="rounded,filled";
+label="(*SessionTag)";
+tooltip="type: *github.com/go-i2p/common/session_tag.SessionTag";
+penwidth="0.5";
+fillcolor="lightsteelblue";
         
-        "(*github.com/go-i2p/logger.Logger).WithField" [ fillcolor="moccasin" label="logger\nWithField" penwidth="1.5" tooltip="(*github.com/go-i2p/logger.Logger).WithField | defined in log.go:54" ]
-        "(*github.com/go-i2p/logger.Logger).WithFields" [ fillcolor="moccasin" label="logger\nWithFields" penwidth="1.5" tooltip="(*github.com/go-i2p/logger.Logger).WithFields | defined in log.go:60" ]
-        "(*github.com/go-i2p/logger.Logger).Error" [ fillcolor="moccasin" label="logger\nError" penwidth="1.5" tooltip="(*github.com/go-i2p/logger.Logger).Error | defined in log.go:42" ]
-        "(*github.com/go-i2p/logger.Logger).WithError" [ fillcolor="moccasin" label="logger\nWithError" penwidth="1.5" tooltip="(*github.com/go-i2p/logger.Logger).WithError | defined in log.go:66" ]
+        "(*github.com/go-i2p/common/session_tag.SessionTag).SetBytes" [ fillcolor="lightblue" label="SetBytes" penwidth="1.5" tooltip="(*github.com/go-i2p/common/session_tag.SessionTag).SetBytes | defined in session_tag_struct.go:45\nat session_tag_struct.go:47: calling [github.com/samber/oops.Errorf]" ]
         
     }
 
-        subgraph "cluster_*github.com/sirupsen/logrus.Logger" {
+        subgraph "cluster_*github.com/go-i2p/logger.Logger" {
         fontcolor="#222222";
 labelloc="b";
 style="rounded,filled";
 fillcolor="wheat2";
 label="(*Logger)";
-tooltip="type: *github.com/sirupsen/logrus.Logger";
+tooltip="type: *github.com/go-i2p/logger.Logger";
 penwidth="0.5";
 fontsize="15";
         
-        "(*github.com/sirupsen/logrus.Logger).Debug" [ tooltip="(*github.com/sirupsen/logrus.Logger).Debug | defined in logger.go:221" fillcolor="moccasin" label="logrus\nDebug" penwidth="1.5" ]
+        "(*github.com/go-i2p/logger.Logger).WithFields" [ label="logger\nWithFields" penwidth="1.5" tooltip="(*github.com/go-i2p/logger.Logger).WithFields | defined in log.go:60" fillcolor="moccasin" ]
+        "(*github.com/go-i2p/logger.Logger).Error" [ fillcolor="moccasin" label="logger\nError" penwidth="1.5" tooltip="(*github.com/go-i2p/logger.Logger).Error | defined in log.go:42" ]
+        "(*github.com/go-i2p/logger.Logger).WithField" [ fillcolor="moccasin" label="logger\nWithField" penwidth="1.5" tooltip="(*github.com/go-i2p/logger.Logger).WithField | defined in log.go:54" ]
+        "(*github.com/go-i2p/logger.Logger).WithError" [ label="logger\nWithError" penwidth="1.5" tooltip="(*github.com/go-i2p/logger.Logger).WithError | defined in log.go:66" fillcolor="moccasin" ]
+        
+    }
+
+        subgraph "cluster_*github.com/sirupsen/logrus.Logger" {
+        label="(*Logger)";
+tooltip="type: *github.com/sirupsen/logrus.Logger";
+penwidth="0.5";
+fontsize="15";
+fontcolor="#222222";
+labelloc="b";
+style="rounded,filled";
+fillcolor="wheat2";
+        
+        "(*github.com/sirupsen/logrus.Logger).Debug" [ fillcolor="moccasin" label="logrus\nDebug" penwidth="1.5" tooltip="(*github.com/sirupsen/logrus.Logger).Debug | defined in logger.go:221" ]
         
     }
 
     }
 
-    "github.com/go-i2p/common/session_tag.NewSessionTag" -> "(*github.com/go-i2p/logger.Logger).WithField" [ color="saddlebrown" tooltip="at utils.go:39: calling [(*github.com/go-i2p/logger.Logger).WithField]" ]
-    "github.com/go-i2p/common/session_tag.NewSessionTag" -> "(*github.com/sirupsen/logrus.Logger).Debug" [ color="saddlebrown" tooltip="at utils.go:39: calling [(*github.com/sirupsen/logrus.Logger).Debug]\nat utils.go:48: calling [(*github.com/sirupsen/logrus.Logger).Debug]" ]
     "github.com/go-i2p/common/session_tag.ReadSessionTag" -> "(*github.com/sirupsen/logrus.Logger).Debug" [ color="saddlebrown" tooltip="at utils.go:31: calling [(*github.com/sirupsen/logrus.Logger).Debug]" ]
+    "github.com/go-i2p/common/session_tag.NewSessionTag" -> "(*github.com/go-i2p/logger.Logger).WithField" [ color="saddlebrown" tooltip="at utils.go:39: calling [(*github.com/go-i2p/logger.Logger).WithField]" ]
+    "github.com/go-i2p/common/session_tag.NewSessionTag" -> "github.com/go-i2p/common/session_tag.ReadSessionTag" [ tooltip="at utils.go:40: calling [github.com/go-i2p/common/session_tag.ReadSessionTag]" ]
     "github.com/go-i2p/common/session_tag.NewSessionTag" -> "(*github.com/go-i2p/logger.Logger).WithError" [ color="saddlebrown" tooltip="at utils.go:42: calling [(*github.com/go-i2p/logger.Logger).WithError]" ]
+    "(*github.com/go-i2p/common/session_tag.SessionTag).SetBytes" -> "github.com/samber/oops.Errorf" [ color="saddlebrown" tooltip="at session_tag_struct.go:47: calling [github.com/samber/oops.Errorf]" ]
+    "github.com/go-i2p/common/session_tag.ReadSessionTag" -> "github.com/samber/oops.Errorf" [ color="saddlebrown" tooltip="at utils.go:22: calling [github.com/samber/oops.Errorf]" ]
+    "github.com/go-i2p/common/session_tag.NewSessionTag" -> "(*github.com/sirupsen/logrus.Logger).Debug" [ color="saddlebrown" tooltip="at utils.go:39: calling [(*github.com/sirupsen/logrus.Logger).Debug]\nat utils.go:48: calling [(*github.com/sirupsen/logrus.Logger).Debug]" ]
     "github.com/go-i2p/common/session_tag.NewSessionTag" -> "(*github.com/go-i2p/logger.Logger).Error" [ color="saddlebrown" tooltip="at utils.go:42: calling [(*github.com/go-i2p/logger.Logger).Error]" ]
     "github.com/go-i2p/common/session_tag.NewSessionTag" -> "(*github.com/go-i2p/logger.Logger).WithFields" [ color="saddlebrown" tooltip="at utils.go:46: calling [(*github.com/go-i2p/logger.Logger).WithFields]" ]
+    "github.com/go-i2p/common/session_tag.NewSessionTagFromBytes" -> "(*github.com/go-i2p/common/session_tag.SessionTag).SetBytes" [ tooltip="at session_tag_struct.go:67: calling [(*github.com/go-i2p/common/session_tag.SessionTag).SetBytes]" ]
     "github.com/go-i2p/common/session_tag.init" -> "github.com/go-i2p/logger.GetGoI2PLogger" [ color="saddlebrown" tooltip="at utils.go:10: calling [github.com/go-i2p/logger.GetGoI2PLogger]" ]
     "github.com/go-i2p/common/session_tag.ReadSessionTag" -> "(*github.com/go-i2p/logger.Logger).WithFields" [ color="saddlebrown" tooltip="at utils.go:17: calling [(*github.com/go-i2p/logger.Logger).WithFields]\nat utils.go:29: calling [(*github.com/go-i2p/logger.Logger).WithFields]" ]
     "github.com/go-i2p/common/session_tag.ReadSessionTag" -> "(*github.com/go-i2p/logger.Logger).Error" [ color="saddlebrown" tooltip="at utils.go:21: calling [(*github.com/go-i2p/logger.Logger).Error]" ]
-    "github.com/go-i2p/common/session_tag.ReadSessionTag" -> "github.com/samber/oops.Errorf" [ color="saddlebrown" tooltip="at utils.go:22: calling [github.com/samber/oops.Errorf]" ]
-    "github.com/go-i2p/common/session_tag.NewSessionTag" -> "github.com/go-i2p/common/session_tag.ReadSessionTag" [ tooltip="at utils.go:40: calling [github.com/go-i2p/common/session_tag.ReadSessionTag]" ]
 }

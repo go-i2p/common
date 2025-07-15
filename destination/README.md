@@ -25,7 +25,7 @@ destination address generation to create valid I2P hostnames
 
 ```go
 type Destination struct {
-	*KeysAndCert
+	*keys_and_cert.KeysAndCert
 }
 ```
 

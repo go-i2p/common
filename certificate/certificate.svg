@@ -41,63 +41,82 @@
 <g id="clust2" class="cluster">
 <title>cluster_*github.com/go&#45;i2p/common/certificate.Certificate</title>
 <g id="a_clust2"><a xlink:title="type: *github.com/go&#45;i2p/common/certificate.Certificate">
-<path fill="#b0c4de" stroke="#000000" stroke-width=".5" d="M683.4028,-255C683.4028,-255 1474.3667,-255 1474.3667,-255 1480.3667,-255 1486.3667,-261 1486.3667,-267 1486.3667,-267 1486.3667,-504 1486.3667,-504 1486.3667,-510 1480.3667,-516 1474.3667,-516 1474.3667,-516 683.4028,-516 683.4028,-516 677.4028,-516 671.4028,-510 671.4028,-504 671.4028,-504 671.4028,-267 671.4028,-267 671.4028,-261 677.4028,-255 683.4028,-255"/>
-<text text-anchor="middle" x="1078.8848" y="-263.5" font-family="Arial" font-size="15.00" fill="#222222">(*Certificate)</text>
+<path fill="#b0c4de" stroke="#000000" stroke-width=".5" d="M683.4028,-246C683.4028,-246 1474.3667,-246 1474.3667,-246 1480.3667,-246 1486.3667,-252 1486.3667,-258 1486.3667,-258 1486.3667,-495 1486.3667,-495 1486.3667,-501 1480.3667,-507 1474.3667,-507 1474.3667,-507 683.4028,-507 683.4028,-507 677.4028,-507 671.4028,-501 671.4028,-495 671.4028,-495 671.4028,-258 671.4028,-258 671.4028,-252 677.4028,-246 683.4028,-246"/>
+<text text-anchor="middle" x="1078.8848" y="-254.5" font-family="Arial" font-size="15.00" fill="#222222">(*Certificate)</text>
 </a>
 </g>
 </g>
-<!-- github.com/go&#45;i2p/common/certificate.init -->
+<!-- github.com/go&#45;i2p/common/certificate.NewCertificateWithType -->
 <g id="node1" class="node">
-<title>github.com/go&#45;i2p/common/certificate.init</title>
-<g id="a_node1"><a xlink:title="github.com/go&#45;i2p/common/certificate.init | defined in .:0&#10;at certificate_struct.go:12: calling [github.com/go&#45;i2p/logger.GetGoI2PLogger]">
-<path fill="#add8e6" stroke="#000000" stroke-width=".5" d="M84.5842,-1047C84.5842,-1047 54.5842,-1047 54.5842,-1047 48.5842,-1047 42.5842,-1041 42.5842,-1035 42.5842,-1035 42.5842,-1023 42.5842,-1023 42.5842,-1017 48.5842,-1011 54.5842,-1011 54.5842,-1011 84.5842,-1011 84.5842,-1011 90.5842,-1011 96.5842,-1017 96.5842,-1023 96.5842,-1023 96.5842,-1035 96.5842,-1035 96.5842,-1041 90.5842,-1047 84.5842,-1047"/>
-<text text-anchor="middle" x="69.5842" y="-1024.8" font-family="Verdana" font-size="14.00" fill="#000000">init</text>
+<title>github.com/go&#45;i2p/common/certificate.NewCertificateWithType</title>
+<g id="a_node1"><a xlink:title="github.com/go&#45;i2p/common/certificate.NewCertificateWithType | defined in certificate_struct.go:79&#10;at certificate_struct.go:98: calling [github.com/go&#45;i2p/common/data.NewIntegerFromInt]&#10;at certificate_struct.go:85: calling [github.com/samber/oops.Errorf]&#10;at certificate_struct.go:90: calling [github.com/samber/oops.Errorf]&#10;at certificate_struct.go:95: calling [github.com/samber/oops.Errorf]&#10;at certificate_struct.go:100: calling [github.com/samber/oops.Errorf]">
+<path fill="#add8e6" stroke="#000000" stroke-width="1.5" d="M1517.8074,-1125C1517.8074,-1125 1375.2682,-1125 1375.2682,-1125 1369.2682,-1125 1363.2682,-1119 1363.2682,-1113 1363.2682,-1113 1363.2682,-1101 1363.2682,-1101 1363.2682,-1095 1369.2682,-1089 1375.2682,-1089 1375.2682,-1089 1517.8074,-1089 1517.8074,-1089 1523.8074,-1089 1529.8074,-1095 1529.8074,-1101 1529.8074,-1101 1529.8074,-1113 1529.8074,-1113 1529.8074,-1119 1523.8074,-1125 1517.8074,-1125"/>
+<text text-anchor="middle" x="1446.5378" y="-1102.8" font-family="Verdana" font-size="14.00" fill="#000000">NewCertificateWithType</text>
 </a>
 </g>
 </g>
-<!-- github.com/go&#45;i2p/logger.GetGoI2PLogger -->
+<!-- github.com/samber/oops.Errorf -->
 <g id="node2" class="node">
-<title>github.com/go&#45;i2p/logger.GetGoI2PLogger</title>
-<g id="a_node2"><a xlink:title="github.com/go&#45;i2p/logger.GetGoI2PLogger | defined in log.go:120">
-<path fill="#ffe4b5" stroke="#000000" stroke-width="1.5" d="M305.4526,-1047C305.4526,-1047 208.0736,-1047 208.0736,-1047 202.0736,-1047 196.0736,-1041 196.0736,-1035 196.0736,-1035 196.0736,-1023 196.0736,-1023 196.0736,-1017 202.0736,-1011 208.0736,-1011 208.0736,-1011 305.4526,-1011 305.4526,-1011 311.4526,-1011 317.4526,-1017 317.4526,-1023 317.4526,-1023 317.4526,-1035 317.4526,-1035 317.4526,-1041 311.4526,-1047 305.4526,-1047"/>
-<text text-anchor="middle" x="256.7631" y="-1033.2" font-family="Verdana" font-size="14.00" fill="#000000">logger</text>
-<text text-anchor="middle" x="256.7631" y="-1016.4" font-family="Verdana" font-size="14.00" fill="#000000">GetGoI2PLogger</text>
+<title>github.com/samber/oops.Errorf</title>
+<g id="a_node2"><a xlink:title="github.com/samber/oops.Errorf | defined in oops.go:34">
+<path fill="#ffe4b5" stroke="#000000" stroke-width="1.5" d="M1710.7872,-1101C1710.7872,-1101 1676.3966,-1101 1676.3966,-1101 1670.3966,-1101 1664.3966,-1095 1664.3966,-1089 1664.3966,-1089 1664.3966,-1077 1664.3966,-1077 1664.3966,-1071 1670.3966,-1065 1676.3966,-1065 1676.3966,-1065 1710.7872,-1065 1710.7872,-1065 1716.7872,-1065 1722.7872,-1071 1722.7872,-1077 1722.7872,-1077 1722.7872,-1089 1722.7872,-1089 1722.7872,-1095 1716.7872,-1101 1710.7872,-1101"/>
+<text text-anchor="middle" x="1693.5919" y="-1087.2" font-family="Verdana" font-size="14.00" fill="#000000">oops</text>
+<text text-anchor="middle" x="1693.5919" y="-1070.4" font-family="Verdana" font-size="14.00" fill="#000000">Errorf</text>
 </a>
 </g>
 </g>
-<!-- github.com/go&#45;i2p/common/certificate.init&#45;&gt;github.com/go&#45;i2p/logger.GetGoI2PLogger -->
-<g id="edge31" class="edge">
-<title>github.com/go&#45;i2p/common/certificate.init&#45;&gt;github.com/go&#45;i2p/logger.GetGoI2PLogger</title>
-<g id="a_edge31"><a xlink:title="at certificate_struct.go:12: calling [github.com/go&#45;i2p/logger.GetGoI2PLogger]">
-<path fill="none" stroke="#8b4513" d="M96.8016,-1029C120.0311,-1029 154.5,-1029 185.4987,-1029"/>
-<polygon fill="#8b4513" stroke="#8b4513" points="185.8571,-1032.5001 195.8571,-1029 185.857,-1025.5001 185.8571,-1032.5001"/>
+<!-- github.com/go&#45;i2p/common/certificate.NewCertificateWithType&#45;&gt;github.com/samber/oops.Errorf -->
+<g id="edge44" class="edge">
+<title>github.com/go&#45;i2p/common/certificate.NewCertificateWithType&#45;&gt;github.com/samber/oops.Errorf</title>
+<g id="a_edge44"><a xlink:title="at certificate_struct.go:85: calling [github.com/samber/oops.Errorf]&#10;at certificate_struct.go:90: calling [github.com/samber/oops.Errorf]&#10;at certificate_struct.go:95: calling [github.com/samber/oops.Errorf]&#10;at certificate_struct.go:100: calling [github.com/samber/oops.Errorf]">
+<path fill="none" stroke="#8b4513" d="M1529.9245,-1107.7549C1549.5464,-1107.2403 1570.3531,-1106.1299 1589.615,-1104 1611.1821,-1101.6153 1634.9222,-1096.9772 1654.2664,-1092.6652"/>
+<polygon fill="#8b4513" stroke="#8b4513" points="1655.2637,-1096.0276 1664.2321,-1090.3869 1653.7036,-1089.2037 1655.2637,-1096.0276"/>
+</a>
+</g>
+</g>
+<!-- github.com/go&#45;i2p/common/data.NewIntegerFromInt -->
+<g id="node3" class="node">
+<title>github.com/go&#45;i2p/common/data.NewIntegerFromInt</title>
+<g id="a_node3"><a xlink:title="github.com/go&#45;i2p/common/data.NewIntegerFromInt | defined in integer.go:54">
+<path fill="#ffe4b5" stroke="#000000" stroke-width="1.5" d="M1749.5457,-1179C1749.5457,-1179 1637.6381,-1179 1637.6381,-1179 1631.6381,-1179 1625.6381,-1173 1625.6381,-1167 1625.6381,-1167 1625.6381,-1155 1625.6381,-1155 1625.6381,-1149 1631.6381,-1143 1637.6381,-1143 1637.6381,-1143 1749.5457,-1143 1749.5457,-1143 1755.5457,-1143 1761.5457,-1149 1761.5457,-1155 1761.5457,-1155 1761.5457,-1167 1761.5457,-1167 1761.5457,-1173 1755.5457,-1179 1749.5457,-1179"/>
+<text text-anchor="middle" x="1693.5919" y="-1165.2" font-family="Verdana" font-size="14.00" fill="#000000">data</text>
+<text text-anchor="middle" x="1693.5919" y="-1148.4" font-family="Verdana" font-size="14.00" fill="#000000">NewIntegerFromInt</text>
+</a>
+</g>
+</g>
+<!-- github.com/go&#45;i2p/common/certificate.NewCertificateWithType&#45;&gt;github.com/go&#45;i2p/common/data.NewIntegerFromInt -->
+<g id="edge3" class="edge">
+<title>github.com/go&#45;i2p/common/certificate.NewCertificateWithType&#45;&gt;github.com/go&#45;i2p/common/data.NewIntegerFromInt</title>
+<g id="a_edge3"><a xlink:title="at certificate_struct.go:98: calling [github.com/go&#45;i2p/common/data.NewIntegerFromInt]">
+<path fill="none" stroke="#8b4513" d="M1529.1467,-1125.0563C1557.0065,-1131.1458 1587.9968,-1137.9195 1615.4967,-1143.9303"/>
+<polygon fill="#8b4513" stroke="#8b4513" points="1614.9413,-1147.3915 1625.4581,-1146.1076 1616.4361,-1140.5529 1614.9413,-1147.3915"/>
 </a>
 </g>
 </g>
 <!-- github.com/go&#45;i2p/common/certificate.readCertificate -->
-<g id="node3" class="node">
+<g id="node4" class="node">
 <title>github.com/go&#45;i2p/common/certificate.readCertificate</title>
-<g id="a_node3"><a xlink:title="github.com/go&#45;i2p/common/certificate.readCertificate | defined in certificate.go:16&#10;at certificate.go:22: calling [github.com/go&#45;i2p/common/certificate.ReadCertificate]&#10;at certificate.go:20: calling [(*github.com/sirupsen/logrus.Logger).Debug]&#10;at certificate.go:17: calling [(*github.com/go&#45;i2p/logger.Logger).WithFields]">
-<path fill="#add8e6" stroke="#000000" stroke-width=".5" d="M111.2527,-546C111.2527,-546 27.9157,-546 27.9157,-546 21.9157,-546 15.9157,-540 15.9157,-534 15.9157,-534 15.9157,-522 15.9157,-522 15.9157,-516 21.9157,-510 27.9157,-510 27.9157,-510 111.2527,-510 111.2527,-510 117.2527,-510 123.2527,-516 123.2527,-522 123.2527,-522 123.2527,-534 123.2527,-534 123.2527,-540 117.2527,-546 111.2527,-546"/>
-<text text-anchor="middle" x="69.5842" y="-523.8" font-family="Verdana" font-size="14.00" fill="#000000">readCertificate</text>
+<g id="a_node4"><a xlink:title="github.com/go&#45;i2p/common/certificate.readCertificate | defined in certificate.go:16&#10;at certificate.go:17: calling [(*github.com/go&#45;i2p/logger.Logger).WithFields]&#10;at certificate.go:20: calling [(*github.com/sirupsen/logrus.Logger).Debug]&#10;at certificate.go:22: calling [github.com/go&#45;i2p/common/certificate.ReadCertificate]">
+<path fill="#add8e6" stroke="#000000" stroke-width=".5" d="M111.2527,-488C111.2527,-488 27.9157,-488 27.9157,-488 21.9157,-488 15.9157,-482 15.9157,-476 15.9157,-476 15.9157,-464 15.9157,-464 15.9157,-458 21.9157,-452 27.9157,-452 27.9157,-452 111.2527,-452 111.2527,-452 117.2527,-452 123.2527,-458 123.2527,-464 123.2527,-464 123.2527,-476 123.2527,-476 123.2527,-482 117.2527,-488 111.2527,-488"/>
+<text text-anchor="middle" x="69.5842" y="-465.8" font-family="Verdana" font-size="14.00" fill="#000000">readCertificate</text>
 </a>
 </g>
 </g>
 <!-- github.com/go&#45;i2p/common/certificate.ReadCertificate -->
 <g id="node10" class="node">
 <title>github.com/go&#45;i2p/common/certificate.ReadCertificate</title>
-<g id="a_node10"><a xlink:title="github.com/go&#45;i2p/common/certificate.ReadCertificate | defined in certificate.go:28&#10;at certificate.go:34: calling [github.com/go&#45;i2p/common/certificate.normalizeErrorConditions]&#10;at certificate.go:37: calling [github.com/go&#45;i2p/common/certificate.logCertificateReadCompletion]&#10;at certificate.go:35: calling [github.com/go&#45;i2p/common/certificate.calculateRemainder]&#10;at certificate.go:29: calling [github.com/go&#45;i2p/common/certificate.parseCertificateFromData]">
-<path fill="#add8e6" stroke="#000000" stroke-width="1.5" d="M300.6076,-546C300.6076,-546 212.9186,-546 212.9186,-546 206.9186,-546 200.9186,-540 200.9186,-534 200.9186,-534 200.9186,-522 200.9186,-522 200.9186,-516 206.9186,-510 212.9186,-510 212.9186,-510 300.6076,-510 300.6076,-510 306.6076,-510 312.6076,-516 312.6076,-522 312.6076,-522 312.6076,-534 312.6076,-534 312.6076,-540 306.6076,-546 300.6076,-546"/>
-<text text-anchor="middle" x="256.7631" y="-523.8" font-family="Verdana" font-size="14.00" fill="#000000">ReadCertificate</text>
+<g id="a_node10"><a xlink:title="github.com/go&#45;i2p/common/certificate.ReadCertificate | defined in certificate.go:28&#10;at certificate.go:35: calling [github.com/go&#45;i2p/common/certificate.calculateRemainder]&#10;at certificate.go:34: calling [github.com/go&#45;i2p/common/certificate.normalizeErrorConditions]&#10;at certificate.go:37: calling [github.com/go&#45;i2p/common/certificate.logCertificateReadCompletion]&#10;at certificate.go:29: calling [github.com/go&#45;i2p/common/certificate.parseCertificateFromData]">
+<path fill="#add8e6" stroke="#000000" stroke-width="1.5" d="M300.6076,-488C300.6076,-488 212.9186,-488 212.9186,-488 206.9186,-488 200.9186,-482 200.9186,-476 200.9186,-476 200.9186,-464 200.9186,-464 200.9186,-458 206.9186,-452 212.9186,-452 212.9186,-452 300.6076,-452 300.6076,-452 306.6076,-452 312.6076,-458 312.6076,-464 312.6076,-464 312.6076,-476 312.6076,-476 312.6076,-482 306.6076,-488 300.6076,-488"/>
+<text text-anchor="middle" x="256.7631" y="-465.8" font-family="Verdana" font-size="14.00" fill="#000000">ReadCertificate</text>
 </a>
 </g>
 </g>
 <!-- github.com/go&#45;i2p/common/certificate.readCertificate&#45;&gt;github.com/go&#45;i2p/common/certificate.ReadCertificate -->
-<g id="edge11" class="edge">
+<g id="edge40" class="edge">
 <title>github.com/go&#45;i2p/common/certificate.readCertificate&#45;&gt;github.com/go&#45;i2p/common/certificate.ReadCertificate</title>
-<g id="a_edge11"><a xlink:title="at certificate.go:22: calling [github.com/go&#45;i2p/common/certificate.ReadCertificate]">
-<path fill="none" stroke="#000000" d="M123.2222,-528C144.2056,-528 168.4876,-528 190.5454,-528"/>
-<polygon fill="#000000" stroke="#000000" points="190.836,-531.5001 200.836,-528 190.836,-524.5001 190.836,-531.5001"/>
+<g id="a_edge40"><a xlink:title="at certificate.go:22: calling [github.com/go&#45;i2p/common/certificate.ReadCertificate]">
+<path fill="none" stroke="#000000" d="M123.2222,-470C144.2056,-470 168.4876,-470 190.5454,-470"/>
+<polygon fill="#000000" stroke="#000000" points="190.836,-473.5001 200.836,-470 190.836,-466.5001 190.836,-473.5001"/>
 </a>
 </g>
 </g>
@@ -112,10 +131,10 @@
 </g>
 </g>
 <!-- github.com/go&#45;i2p/common/certificate.readCertificate&#45;&gt;(*github.com/go&#45;i2p/logger.Logger).WithFields -->
-<g id="edge50" class="edge">
+<g id="edge25" class="edge">
 <title>github.com/go&#45;i2p/common/certificate.readCertificate&#45;&gt;(*github.com/go&#45;i2p/logger.Logger).WithFields</title>
-<g id="a_edge50"><a xlink:title="at certificate.go:17: calling [(*github.com/go&#45;i2p/logger.Logger).WithFields]">
-<path fill="none" stroke="#8b4513" d="M71.2272,-546.4612C78.466,-615.4245 113.8372,-854 256.7631,-854 256.7631,-854 256.7631,-854 1446.5378,-854 1494.0359,-854 1511.3664,-864.5504 1552.615,-841 1598.857,-814.5986 1583.9355,-779.1387 1625.615,-746 1630.4788,-742.1328 1635.9028,-738.6275 1641.5069,-735.4839"/>
+<g id="a_edge25"><a xlink:title="at certificate.go:17: calling [(*github.com/go&#45;i2p/logger.Logger).WithFields]">
+<path fill="none" stroke="#8b4513" d="M74.1225,-488.0061C93.7731,-563.9243 174.2545,-854 256.7631,-854 256.7631,-854 256.7631,-854 1446.5378,-854 1494.0359,-854 1511.3664,-864.5504 1552.615,-841 1598.857,-814.5986 1583.9355,-779.1387 1625.615,-746 1630.4788,-742.1328 1635.9028,-738.6275 1641.5069,-735.4839"/>
 <polygon fill="#8b4513" stroke="#8b4513" points="1643.1592,-738.5696 1650.407,-730.8417 1639.9219,-732.3631 1643.1592,-738.5696"/>
 </a>
 </g>
@@ -131,46 +150,36 @@
 </g>
 </g>
 <!-- github.com/go&#45;i2p/common/certificate.readCertificate&#45;&gt;(*github.com/sirupsen/logrus.Logger).Debug -->
-<g id="edge19" class="edge">
+<g id="edge30" class="edge">
 <title>github.com/go&#45;i2p/common/certificate.readCertificate&#45;&gt;(*github.com/sirupsen/logrus.Logger).Debug</title>
-<g id="a_edge19"><a xlink:title="at certificate.go:20: calling [(*github.com/sirupsen/logrus.Logger).Debug]">
-<path fill="none" stroke="#8b4513" d="M72.1177,-509.8132C85.2946,-418.784 149.5286,-17 256.7631,-17 256.7631,-17 256.7631,-17 1446.5378,-17 1494.5139,-17 1508.5014,-18.1402 1552.615,-37 1596.2695,-55.6636 1639.6333,-89.6558 1666.5014,-113.0115"/>
+<g id="a_edge30"><a xlink:title="at certificate.go:20: calling [(*github.com/sirupsen/logrus.Logger).Debug]">
+<path fill="none" stroke="#8b4513" d="M82.036,-451.9052C121.0409,-396.5155 246.8428,-227.4378 390.3578,-135 523.5692,-49.1988 568.3292,-17 726.7815,-17 726.7815,-17 726.7815,-17 1446.5378,-17 1494.5139,-17 1508.5014,-18.1402 1552.615,-37 1596.2695,-55.6636 1639.6333,-89.6558 1666.5014,-113.0115"/>
 <polygon fill="#8b4513" stroke="#8b4513" points="1664.4792,-115.8951 1674.2922,-119.8896 1669.1121,-110.6475 1664.4792,-115.8951"/>
 </a>
 </g>
 </g>
 <!-- github.com/go&#45;i2p/common/certificate.handleEmptyCertificateData -->
-<g id="node4" class="node">
+<g id="node5" class="node">
 <title>github.com/go&#45;i2p/common/certificate.handleEmptyCertificateData</title>
-<g id="a_node4"><a xlink:title="github.com/go&#45;i2p/common/certificate.handleEmptyCertificateData | defined in certificate.go:56&#10;at certificate.go:62: calling [(github.com/go&#45;i2p/common/data.Integer).Int]&#10;at certificate.go:64: calling [github.com/samber/oops.Errorf]&#10;at certificate.go:59: calling [(*github.com/go&#45;i2p/logger.Logger).WithFields]&#10;at certificate.go:63: calling [(*github.com/go&#45;i2p/logger.Logger).Error]">
+<g id="a_node5"><a xlink:title="github.com/go&#45;i2p/common/certificate.handleEmptyCertificateData | defined in certificate.go:56&#10;at certificate.go:59: calling [(*github.com/go&#45;i2p/logger.Logger).WithFields]&#10;at certificate.go:62: calling [(github.com/go&#45;i2p/common/data.Integer).Int]&#10;at certificate.go:63: calling [(*github.com/go&#45;i2p/logger.Logger).Error]&#10;at certificate.go:64: calling [github.com/samber/oops.Errorf]">
 <path fill="#add8e6" stroke="#000000" stroke-width=".5" d="M1526.6965,-977C1526.6965,-977 1366.3791,-977 1366.3791,-977 1360.3791,-977 1354.3791,-971 1354.3791,-965 1354.3791,-965 1354.3791,-953 1354.3791,-953 1354.3791,-947 1360.3791,-941 1366.3791,-941 1366.3791,-941 1526.6965,-941 1526.6965,-941 1532.6965,-941 1538.6965,-947 1538.6965,-953 1538.6965,-953 1538.6965,-965 1538.6965,-965 1538.6965,-971 1532.6965,-977 1526.6965,-977"/>
 <text text-anchor="middle" x="1446.5378" y="-954.8" font-family="Verdana" font-size="14.00" fill="#000000">handleEmptyCertificateData</text>
 </a>
 </g>
 </g>
-<!-- github.com/samber/oops.Errorf -->
-<g id="node5" class="node">
-<title>github.com/samber/oops.Errorf</title>
-<g id="a_node5"><a xlink:title="github.com/samber/oops.Errorf | defined in oops.go:34">
-<path fill="#ffe4b5" stroke="#000000" stroke-width="1.5" d="M1710.7872,-1101C1710.7872,-1101 1676.3966,-1101 1676.3966,-1101 1670.3966,-1101 1664.3966,-1095 1664.3966,-1089 1664.3966,-1089 1664.3966,-1077 1664.3966,-1077 1664.3966,-1071 1670.3966,-1065 1676.3966,-1065 1676.3966,-1065 1710.7872,-1065 1710.7872,-1065 1716.7872,-1065 1722.7872,-1071 1722.7872,-1077 1722.7872,-1077 1722.7872,-1089 1722.7872,-1089 1722.7872,-1095 1716.7872,-1101 1710.7872,-1101"/>
-<text text-anchor="middle" x="1693.5919" y="-1087.2" font-family="Verdana" font-size="14.00" fill="#000000">oops</text>
-<text text-anchor="middle" x="1693.5919" y="-1070.4" font-family="Verdana" font-size="14.00" fill="#000000">Errorf</text>
-</a>
-</g>
-</g>
 <!-- github.com/go&#45;i2p/common/certificate.handleEmptyCertificateData&#45;&gt;github.com/samber/oops.Errorf -->
-<g id="edge14" class="edge">
+<g id="edge53" class="edge">
 <title>github.com/go&#45;i2p/common/certificate.handleEmptyCertificateData&#45;&gt;github.com/samber/oops.Errorf</title>
-<g id="a_edge14"><a xlink:title="at certificate.go:64: calling [github.com/samber/oops.Errorf]">
+<g id="a_edge53"><a xlink:title="at certificate.go:64: calling [github.com/samber/oops.Errorf]">
 <path fill="none" stroke="#8b4513" d="M1470.5372,-977.2011C1497.9011,-997.2638 1544.5624,-1029.4157 1588.615,-1050 1609.6403,-1059.8244 1634.3492,-1067.7556 1654.5116,-1073.3782"/>
 <polygon fill="#8b4513" stroke="#8b4513" points="1653.7348,-1076.7938 1664.3019,-1076.0283 1655.5638,-1070.037 1653.7348,-1076.7938"/>
 </a>
 </g>
 </g>
 <!-- github.com/go&#45;i2p/common/certificate.handleEmptyCertificateData&#45;&gt;(*github.com/go&#45;i2p/logger.Logger).WithFields -->
-<g id="edge27" class="edge">
+<g id="edge31" class="edge">
 <title>github.com/go&#45;i2p/common/certificate.handleEmptyCertificateData&#45;&gt;(*github.com/go&#45;i2p/logger.Logger).WithFields</title>
-<g id="a_edge27"><a xlink:title="at certificate.go:59: calling [(*github.com/go&#45;i2p/logger.Logger).WithFields]">
+<g id="a_edge31"><a xlink:title="at certificate.go:59: calling [(*github.com/go&#45;i2p/logger.Logger).WithFields]">
 <path fill="none" stroke="#8b4513" d="M1532.3785,-940.9949C1539.5761,-937.6545 1546.4473,-933.6945 1552.615,-929 1622.2932,-875.9652 1568.2096,-812.124 1625.615,-746 1630.0712,-740.867 1635.5517,-736.5364 1641.4503,-732.8949"/>
 <polygon fill="#8b4513" stroke="#8b4513" points="1643.2296,-735.911 1650.321,-728.0394 1639.8685,-729.7707 1643.2296,-735.911"/>
 </a>
@@ -187,9 +196,9 @@
 </g>
 </g>
 <!-- github.com/go&#45;i2p/common/certificate.handleEmptyCertificateData&#45;&gt;(*github.com/go&#45;i2p/logger.Logger).Error -->
-<g id="edge43" class="edge">
+<g id="edge46" class="edge">
 <title>github.com/go&#45;i2p/common/certificate.handleEmptyCertificateData&#45;&gt;(*github.com/go&#45;i2p/logger.Logger).Error</title>
-<g id="a_edge43"><a xlink:title="at certificate.go:63: calling [(*github.com/go&#45;i2p/logger.Logger).Error]">
+<g id="a_edge46"><a xlink:title="at certificate.go:63: calling [(*github.com/go&#45;i2p/logger.Logger).Error]">
 <path fill="none" stroke="#8b4513" d="M1492.0353,-977.0226C1522.8664,-985.9856 1562.738,-990.8079 1589.615,-969 1649.9253,-920.0646 1573.669,-855.7374 1625.615,-798 1632.9709,-789.8239 1643.3856,-784.6724 1653.8579,-781.431"/>
 <polygon fill="#8b4513" stroke="#8b4513" points="1655.0035,-784.7504 1663.8181,-778.8722 1653.2617,-777.9706 1655.0035,-784.7504"/>
 </a>
@@ -206,9 +215,9 @@
 </g>
 </g>
 <!-- github.com/go&#45;i2p/common/certificate.handleEmptyCertificateData&#45;&gt;(github.com/go&#45;i2p/common/data.Integer).Int -->
-<g id="edge1" class="edge">
+<g id="edge42" class="edge">
 <title>github.com/go&#45;i2p/common/certificate.handleEmptyCertificateData&#45;&gt;(github.com/go&#45;i2p/common/data.Integer).Int</title>
-<g id="a_edge1"><a xlink:title="at certificate.go:62: calling [(github.com/go&#45;i2p/common/data.Integer).Int]">
+<g id="a_edge42"><a xlink:title="at certificate.go:62: calling [(github.com/go&#45;i2p/common/data.Integer).Int]">
 <path fill="none" stroke="#8b4513" d="M1537.9238,-940.8326C1543.3081,-937.5081 1548.2846,-933.5974 1552.615,-929 1604.5578,-873.8538 1605.3379,-668.9932 1625.615,-596 1643.0835,-533.1171 1668.931,-461.003 1683.1933,-422.5526"/>
 <polygon fill="#8b4513" stroke="#8b4513" points="1686.5104,-423.6743 1686.7251,-413.0817 1679.9516,-421.2285 1686.5104,-423.6743"/>
 </a>
@@ -224,9 +233,9 @@
 </g>
 </g>
 <!-- github.com/go&#45;i2p/common/certificate.parseCertificateFromData&#45;&gt;github.com/go&#45;i2p/common/certificate.handleEmptyCertificateData -->
-<g id="edge32" class="edge">
+<g id="edge39" class="edge">
 <title>github.com/go&#45;i2p/common/certificate.parseCertificateFromData&#45;&gt;github.com/go&#45;i2p/common/certificate.handleEmptyCertificateData</title>
-<g id="a_edge32"><a xlink:title="at certificate.go:47: calling [github.com/go&#45;i2p/common/certificate.handleEmptyCertificateData]">
+<g id="a_edge39"><a xlink:title="at certificate.go:47: calling [github.com/go&#45;i2p/common/certificate.handleEmptyCertificateData]">
 <path fill="none" stroke="#000000" d="M976.1338,-801.1195C1007.6105,-813.8241 1050.9691,-830.9743 1089.5334,-845 1200.0567,-885.1971 1228.0837,-894.321 1340.4606,-929 1350.3002,-932.0364 1360.6894,-935.1217 1370.9627,-938.1012"/>
 <polygon fill="#000000" stroke="#000000" points="1370.1771,-941.5171 1380.7551,-940.9203 1372.1137,-934.7903 1370.1771,-941.5171"/>
 </a>
@@ -235,16 +244,16 @@
 <!-- github.com/go&#45;i2p/common/certificate.handleShortCertificateData -->
 <g id="node7" class="node">
 <title>github.com/go&#45;i2p/common/certificate.handleShortCertificateData</title>
-<g id="a_node7"><a xlink:title="github.com/go&#45;i2p/common/certificate.handleShortCertificateData | defined in certificate.go:68&#10;at certificate.go:71: calling [(*github.com/go&#45;i2p/logger.Logger).WithFields]&#10;at certificate.go:75: calling [(*github.com/go&#45;i2p/logger.Logger).Error]&#10;at certificate.go:74: calling [(github.com/go&#45;i2p/common/data.Integer).Int]&#10;at certificate.go:76: calling [github.com/samber/oops.Errorf]">
+<g id="a_node7"><a xlink:title="github.com/go&#45;i2p/common/certificate.handleShortCertificateData | defined in certificate.go:68&#10;at certificate.go:71: calling [(*github.com/go&#45;i2p/logger.Logger).WithFields]&#10;at certificate.go:74: calling [(github.com/go&#45;i2p/common/data.Integer).Int]&#10;at certificate.go:76: calling [github.com/samber/oops.Errorf]&#10;at certificate.go:75: calling [(*github.com/go&#45;i2p/logger.Logger).Error]">
 <path fill="#add8e6" stroke="#000000" stroke-width=".5" d="M1523.1965,-916C1523.1965,-916 1369.8791,-916 1369.8791,-916 1363.8791,-916 1357.8791,-910 1357.8791,-904 1357.8791,-904 1357.8791,-892 1357.8791,-892 1357.8791,-886 1363.8791,-880 1369.8791,-880 1369.8791,-880 1523.1965,-880 1523.1965,-880 1529.1965,-880 1535.1965,-886 1535.1965,-892 1535.1965,-892 1535.1965,-904 1535.1965,-904 1535.1965,-910 1529.1965,-916 1523.1965,-916"/>
 <text text-anchor="middle" x="1446.5378" y="-893.8" font-family="Verdana" font-size="14.00" fill="#000000">handleShortCertificateData</text>
 </a>
 </g>
 </g>
 <!-- github.com/go&#45;i2p/common/certificate.parseCertificateFromData&#45;&gt;github.com/go&#45;i2p/common/certificate.handleShortCertificateData -->
-<g id="edge5" class="edge">
+<g id="edge15" class="edge">
 <title>github.com/go&#45;i2p/common/certificate.parseCertificateFromData&#45;&gt;github.com/go&#45;i2p/common/certificate.handleShortCertificateData</title>
-<g id="a_edge5"><a xlink:title="at certificate.go:49: calling [github.com/go&#45;i2p/common/certificate.handleShortCertificateData]">
+<g id="a_edge15"><a xlink:title="at certificate.go:49: calling [github.com/go&#45;i2p/common/certificate.handleShortCertificateData]">
 <path fill="none" stroke="#000000" d="M1012.5502,-801.032C1105.8199,-821.8717 1258.9119,-856.0778 1356.1164,-877.7967"/>
 <polygon fill="#000000" stroke="#000000" points="1355.4064,-881.2243 1365.9289,-879.9892 1356.9328,-874.3927 1355.4064,-881.2243"/>
 </a>
@@ -253,52 +262,52 @@
 <!-- github.com/go&#45;i2p/common/certificate.handleValidCertificateData -->
 <g id="node9" class="node">
 <title>github.com/go&#45;i2p/common/certificate.handleValidCertificateData</title>
-<g id="a_node9"><a xlink:title="github.com/go&#45;i2p/common/certificate.handleValidCertificateData | defined in certificate.go:80&#10;at certificate.go:86: calling [github.com/go&#45;i2p/common/certificate.validateCertificatePayloadLength]&#10;at certificate.go:90: calling [(*github.com/go&#45;i2p/logger.Logger).WithFields]&#10;at certificate.go:91: calling [(github.com/go&#45;i2p/common/data.Integer).Int]&#10;at certificate.go:92: calling [(github.com/go&#45;i2p/common/data.Integer).Int]&#10;at certificate.go:93: calling [(*github.com/sirupsen/logrus.Logger).Debug]">
+<g id="a_node9"><a xlink:title="github.com/go&#45;i2p/common/certificate.handleValidCertificateData | defined in certificate.go:80&#10;at certificate.go:91: calling [(github.com/go&#45;i2p/common/data.Integer).Int]&#10;at certificate.go:92: calling [(github.com/go&#45;i2p/common/data.Integer).Int]&#10;at certificate.go:93: calling [(*github.com/sirupsen/logrus.Logger).Debug]&#10;at certificate.go:86: calling [github.com/go&#45;i2p/common/certificate.validateCertificatePayloadLength]&#10;at certificate.go:90: calling [(*github.com/go&#45;i2p/logger.Logger).WithFields]">
 <path fill="#add8e6" stroke="#000000" stroke-width=".5" d="M1255.4242,-784C1255.4242,-784 1101.5698,-784 1101.5698,-784 1095.5698,-784 1089.5698,-778 1089.5698,-772 1089.5698,-772 1089.5698,-760 1089.5698,-760 1089.5698,-754 1095.5698,-748 1101.5698,-748 1101.5698,-748 1255.4242,-748 1255.4242,-748 1261.4242,-748 1267.4242,-754 1267.4242,-760 1267.4242,-760 1267.4242,-772 1267.4242,-772 1267.4242,-778 1261.4242,-784 1255.4242,-784"/>
 <text text-anchor="middle" x="1178.497" y="-761.8" font-family="Verdana" font-size="14.00" fill="#000000">handleValidCertificateData</text>
 </a>
 </g>
 </g>
 <!-- github.com/go&#45;i2p/common/certificate.parseCertificateFromData&#45;&gt;github.com/go&#45;i2p/common/certificate.handleValidCertificateData -->
-<g id="edge15" class="edge">
+<g id="edge21" class="edge">
 <title>github.com/go&#45;i2p/common/certificate.parseCertificateFromData&#45;&gt;github.com/go&#45;i2p/common/certificate.handleValidCertificateData</title>
-<g id="a_edge15"><a xlink:title="at certificate.go:51: calling [github.com/go&#45;i2p/common/certificate.handleValidCertificateData]">
+<g id="a_edge21"><a xlink:title="at certificate.go:51: calling [github.com/go&#45;i2p/common/certificate.handleValidCertificateData]">
 <path fill="none" stroke="#000000" d="M1016.7298,-777.1496C1036.8484,-775.7629 1058.4836,-774.2717 1079.1804,-772.8452"/>
 <polygon fill="#000000" stroke="#000000" points="1079.5188,-776.3303 1089.2545,-772.1509 1079.0375,-769.3469 1079.5188,-776.3303"/>
 </a>
 </g>
 </g>
 <!-- github.com/go&#45;i2p/common/certificate.handleShortCertificateData&#45;&gt;github.com/samber/oops.Errorf -->
-<g id="edge55" class="edge">
+<g id="edge32" class="edge">
 <title>github.com/go&#45;i2p/common/certificate.handleShortCertificateData&#45;&gt;github.com/samber/oops.Errorf</title>
-<g id="a_edge55"><a xlink:title="at certificate.go:76: calling [github.com/samber/oops.Errorf]">
+<g id="a_edge32"><a xlink:title="at certificate.go:76: calling [github.com/samber/oops.Errorf]">
 <path fill="none" stroke="#8b4513" d="M1526.2367,-916.064C1535.4624,-919.6567 1544.4714,-923.9293 1552.615,-929 1606.2817,-962.4165 1652.2598,-1021.7825 1676.115,-1056.2278"/>
 <polygon fill="#8b4513" stroke="#8b4513" points="1673.4494,-1058.5319 1681.9699,-1064.8288 1679.2359,-1054.5928 1673.4494,-1058.5319"/>
 </a>
 </g>
 </g>
 <!-- github.com/go&#45;i2p/common/certificate.handleShortCertificateData&#45;&gt;(*github.com/go&#45;i2p/logger.Logger).WithFields -->
-<g id="edge20" class="edge">
+<g id="edge4" class="edge">
 <title>github.com/go&#45;i2p/common/certificate.handleShortCertificateData&#45;&gt;(*github.com/go&#45;i2p/logger.Logger).WithFields</title>
-<g id="a_edge20"><a xlink:title="at certificate.go:71: calling [(*github.com/go&#45;i2p/logger.Logger).WithFields]">
+<g id="a_edge4"><a xlink:title="at certificate.go:71: calling [(*github.com/go&#45;i2p/logger.Logger).WithFields]">
 <path fill="none" stroke="#8b4513" d="M1535.3393,-889.6373C1555.1905,-884.0613 1574.7407,-875.144 1589.615,-861 1628.4262,-824.0943 1590.1735,-786.1527 1625.615,-746 1630.1133,-740.9038 1635.6186,-736.5949 1641.5301,-732.9647"/>
 <polygon fill="#8b4513" stroke="#8b4513" points="1643.3097,-735.9809 1650.4117,-728.1188 1639.957,-729.836 1643.3097,-735.9809"/>
 </a>
 </g>
 </g>
 <!-- github.com/go&#45;i2p/common/certificate.handleShortCertificateData&#45;&gt;(*github.com/go&#45;i2p/logger.Logger).Error -->
-<g id="edge21" class="edge">
+<g id="edge54" class="edge">
 <title>github.com/go&#45;i2p/common/certificate.handleShortCertificateData&#45;&gt;(*github.com/go&#45;i2p/logger.Logger).Error</title>
-<g id="a_edge21"><a xlink:title="at certificate.go:75: calling [(*github.com/go&#45;i2p/logger.Logger).Error]">
+<g id="a_edge54"><a xlink:title="at certificate.go:75: calling [(*github.com/go&#45;i2p/logger.Logger).Error]">
 <path fill="none" stroke="#8b4513" d="M1535.4735,-906.7777C1554.7577,-904.7719 1574.0222,-899.3697 1589.615,-888 1624.425,-862.6177 1594.1412,-827.4177 1625.615,-798 1633.4438,-790.6826 1643.7301,-785.7985 1653.9236,-782.5388"/>
 <polygon fill="#8b4513" stroke="#8b4513" points="1654.8695,-785.9087 1663.5851,-779.8847 1653.0152,-779.1587 1654.8695,-785.9087"/>
 </a>
 </g>
 </g>
 <!-- github.com/go&#45;i2p/common/certificate.handleShortCertificateData&#45;&gt;(github.com/go&#45;i2p/common/data.Integer).Int -->
-<g id="edge39" class="edge">
+<g id="edge26" class="edge">
 <title>github.com/go&#45;i2p/common/certificate.handleShortCertificateData&#45;&gt;(github.com/go&#45;i2p/common/data.Integer).Int</title>
-<g id="a_edge39"><a xlink:title="at certificate.go:74: calling [(github.com/go&#45;i2p/common/data.Integer).Int]">
+<g id="a_edge26"><a xlink:title="at certificate.go:74: calling [(github.com/go&#45;i2p/common/data.Integer).Int]">
 <path fill="none" stroke="#8b4513" d="M1498.6988,-879.9203C1518.025,-870.9062 1538.6175,-858.1807 1552.615,-841 1570.5564,-818.9785 1617.008,-623.0695 1625.615,-596 1645.3908,-533.8042 1670.352,-461.4261 1683.8497,-422.748"/>
 <polygon fill="#8b4513" stroke="#8b4513" points="1687.1852,-423.8125 1687.1817,-413.2176 1680.5774,-421.5022 1687.1852,-423.8125"/>
 </a>
@@ -307,89 +316,89 @@
 <!-- github.com/go&#45;i2p/common/certificate.validateCertificatePayloadLength -->
 <g id="node8" class="node">
 <title>github.com/go&#45;i2p/common/certificate.validateCertificatePayloadLength</title>
-<g id="a_node8"><a xlink:title="github.com/go&#45;i2p/common/certificate.validateCertificatePayloadLength | defined in certificate.go:99&#10;at certificate.go:101: calling [github.com/samber/oops.Errorf]&#10;at certificate.go:110: calling [(*github.com/go&#45;i2p/logger.Logger).Error]&#10;at certificate.go:102: calling [(*github.com/go&#45;i2p/logger.Logger).WithFields]&#10;at certificate.go:100: calling [(github.com/go&#45;i2p/common/data.Integer).Int]&#10;at certificate.go:104: calling [(github.com/go&#45;i2p/common/data.Integer).Int]">
+<g id="a_node8"><a xlink:title="github.com/go&#45;i2p/common/certificate.validateCertificatePayloadLength | defined in certificate.go:99&#10;at certificate.go:110: calling [(*github.com/go&#45;i2p/logger.Logger).Error]&#10;at certificate.go:100: calling [(github.com/go&#45;i2p/common/data.Integer).Int]&#10;at certificate.go:104: calling [(github.com/go&#45;i2p/common/data.Integer).Int]&#10;at certificate.go:101: calling [github.com/samber/oops.Errorf]&#10;at certificate.go:102: calling [(*github.com/go&#45;i2p/logger.Logger).WithFields]">
 <path fill="#add8e6" stroke="#000000" stroke-width=".5" d="M1540.6923,-828C1540.6923,-828 1352.3833,-828 1352.3833,-828 1346.3833,-828 1340.3833,-822 1340.3833,-816 1340.3833,-816 1340.3833,-804 1340.3833,-804 1340.3833,-798 1346.3833,-792 1352.3833,-792 1352.3833,-792 1540.6923,-792 1540.6923,-792 1546.6923,-792 1552.6923,-798 1552.6923,-804 1552.6923,-804 1552.6923,-816 1552.6923,-816 1552.6923,-822 1546.6923,-828 1540.6923,-828"/>
 <text text-anchor="middle" x="1446.5378" y="-805.8" font-family="Verdana" font-size="14.00" fill="#000000">validateCertificatePayloadLength</text>
 </a>
 </g>
 </g>
 <!-- github.com/go&#45;i2p/common/certificate.validateCertificatePayloadLength&#45;&gt;github.com/samber/oops.Errorf -->
-<g id="edge33" class="edge">
+<g id="edge27" class="edge">
 <title>github.com/go&#45;i2p/common/certificate.validateCertificatePayloadLength&#45;&gt;github.com/samber/oops.Errorf</title>
-<g id="a_edge33"><a xlink:title="at certificate.go:101: calling [github.com/samber/oops.Errorf]">
+<g id="a_edge27"><a xlink:title="at certificate.go:101: calling [github.com/samber/oops.Errorf]">
 <path fill="none" stroke="#8b4513" d="M1490.6985,-828.1233C1511.0642,-837.9132 1534.6467,-851.4149 1552.615,-868 1613.2955,-924.0096 1659.8989,-1011.3538 1681.0799,-1055.4899"/>
 <polygon fill="#8b4513" stroke="#8b4513" points="1678.0088,-1057.183 1685.4445,-1064.7303 1684.3382,-1054.1933 1678.0088,-1057.183"/>
 </a>
 </g>
 </g>
 <!-- github.com/go&#45;i2p/common/certificate.validateCertificatePayloadLength&#45;&gt;(*github.com/go&#45;i2p/logger.Logger).WithFields -->
-<g id="edge45" class="edge">
+<g id="edge55" class="edge">
 <title>github.com/go&#45;i2p/common/certificate.validateCertificatePayloadLength&#45;&gt;(*github.com/go&#45;i2p/logger.Logger).WithFields</title>
-<g id="a_edge45"><a xlink:title="at certificate.go:102: calling [(*github.com/go&#45;i2p/logger.Logger).WithFields]">
+<g id="a_edge55"><a xlink:title="at certificate.go:102: calling [(*github.com/go&#45;i2p/logger.Logger).WithFields]">
 <path fill="none" stroke="#8b4513" d="M1552.7757,-794.6349C1565.5658,-790.7958 1578.1445,-785.9973 1589.615,-780 1609.118,-769.8029 1607.3566,-758.2872 1625.615,-746 1630.5096,-742.7061 1635.8108,-739.6041 1641.2195,-736.7298"/>
 <polygon fill="#8b4513" stroke="#8b4513" points="1643.0188,-739.7424 1650.371,-732.1137 1639.8662,-733.4924 1643.0188,-739.7424"/>
 </a>
 </g>
 </g>
 <!-- github.com/go&#45;i2p/common/certificate.validateCertificatePayloadLength&#45;&gt;(*github.com/go&#45;i2p/logger.Logger).Error -->
-<g id="edge34" class="edge">
+<g id="edge5" class="edge">
 <title>github.com/go&#45;i2p/common/certificate.validateCertificatePayloadLength&#45;&gt;(*github.com/go&#45;i2p/logger.Logger).Error</title>
-<g id="a_edge34"><a xlink:title="at certificate.go:110: calling [(*github.com/go&#45;i2p/logger.Logger).Error]">
+<g id="a_edge5"><a xlink:title="at certificate.go:110: calling [(*github.com/go&#45;i2p/logger.Logger).Error]">
 <path fill="none" stroke="#8b4513" d="M1552.6907,-810.9572C1565.1808,-810.1303 1577.7102,-808.8645 1589.615,-807 1602.1276,-805.0403 1630.1845,-796.5858 1654.0028,-789.0004"/>
 <polygon fill="#8b4513" stroke="#8b4513" points="1655.1032,-792.3232 1663.5546,-785.9339 1652.9634,-785.6582 1655.1032,-792.3232"/>
 </a>
 </g>
 </g>
 <!-- github.com/go&#45;i2p/common/certificate.validateCertificatePayloadLength&#45;&gt;(github.com/go&#45;i2p/common/data.Integer).Int -->
-<g id="edge59" class="edge">
+<g id="edge9" class="edge">
 <title>github.com/go&#45;i2p/common/certificate.validateCertificatePayloadLength&#45;&gt;(github.com/go&#45;i2p/common/data.Integer).Int</title>
-<g id="a_edge59"><a xlink:title="at certificate.go:100: calling [(github.com/go&#45;i2p/common/data.Integer).Int]&#10;at certificate.go:104: calling [(github.com/go&#45;i2p/common/data.Integer).Int]">
+<g id="a_edge9"><a xlink:title="at certificate.go:100: calling [(github.com/go&#45;i2p/common/data.Integer).Int]&#10;at certificate.go:104: calling [(github.com/go&#45;i2p/common/data.Integer).Int]">
 <path fill="none" stroke="#8b4513" d="M1465.8969,-791.7935C1495.6756,-762.9627 1553.0968,-703.9983 1589.615,-645 1636.0585,-569.9664 1670.2995,-470.5442 1685.2601,-422.8499"/>
 <polygon fill="#8b4513" stroke="#8b4513" points="1688.6284,-423.8044 1688.2391,-413.2168 1681.9408,-421.7363 1688.6284,-423.8044"/>
 </a>
 </g>
 </g>
 <!-- github.com/go&#45;i2p/common/certificate.handleValidCertificateData&#45;&gt;github.com/go&#45;i2p/common/certificate.validateCertificatePayloadLength -->
-<g id="edge22" class="edge">
+<g id="edge13" class="edge">
 <title>github.com/go&#45;i2p/common/certificate.handleValidCertificateData&#45;&gt;github.com/go&#45;i2p/common/certificate.validateCertificatePayloadLength</title>
-<g id="a_edge22"><a xlink:title="at certificate.go:86: calling [github.com/go&#45;i2p/common/certificate.validateCertificatePayloadLength]">
+<g id="a_edge13"><a xlink:title="at certificate.go:86: calling [github.com/go&#45;i2p/common/certificate.validateCertificatePayloadLength]">
 <path fill="none" stroke="#000000" d="M1267.7507,-780.6514C1287.7342,-783.9317 1309.2179,-787.4584 1330.1203,-790.8896"/>
 <polygon fill="#000000" stroke="#000000" points="1329.5644,-794.3451 1339.9994,-792.5113 1330.6984,-787.4376 1329.5644,-794.3451"/>
 </a>
 </g>
 </g>
 <!-- github.com/go&#45;i2p/common/certificate.handleValidCertificateData&#45;&gt;(*github.com/go&#45;i2p/logger.Logger).WithFields -->
-<g id="edge28" class="edge">
+<g id="edge50" class="edge">
 <title>github.com/go&#45;i2p/common/certificate.handleValidCertificateData&#45;&gt;(*github.com/go&#45;i2p/logger.Logger).WithFields</title>
-<g id="a_edge28"><a xlink:title="at certificate.go:90: calling [(*github.com/go&#45;i2p/logger.Logger).WithFields]">
+<g id="a_edge50"><a xlink:title="at certificate.go:90: calling [(*github.com/go&#45;i2p/logger.Logger).WithFields]">
 <path fill="none" stroke="#8b4513" d="M1267.6316,-757.1747C1375.0985,-746.5343 1552.2313,-728.9962 1640.3595,-720.2706"/>
 <polygon fill="#8b4513" stroke="#8b4513" points="1640.7926,-723.7449 1650.3991,-719.2766 1640.1028,-716.779 1640.7926,-723.7449"/>
 </a>
 </g>
 </g>
 <!-- github.com/go&#45;i2p/common/certificate.handleValidCertificateData&#45;&gt;(*github.com/sirupsen/logrus.Logger).Debug -->
-<g id="edge52" class="edge">
+<g id="edge10" class="edge">
 <title>github.com/go&#45;i2p/common/certificate.handleValidCertificateData&#45;&gt;(*github.com/sirupsen/logrus.Logger).Debug</title>
-<g id="a_edge52"><a xlink:title="at certificate.go:93: calling [(*github.com/sirupsen/logrus.Logger).Debug]">
-<path fill="none" stroke="#8b4513" d="M1194.4055,-747.7699C1221.7676,-717.2768 1280.5943,-655.4002 1340.4606,-616 1426.609,-559.3026 1488.4539,-602.7434 1552.615,-522 1605.5417,-455.3945 1560.2073,-414.1906 1588.615,-334 1611.3109,-269.9331 1652.4481,-201.2744 1675.9217,-164.649"/>
-<polygon fill="#8b4513" stroke="#8b4513" points="1678.992,-166.3467 1681.487,-156.0499 1673.1153,-162.5434 1678.992,-166.3467"/>
+<g id="a_edge10"><a xlink:title="at certificate.go:93: calling [(*github.com/sirupsen/logrus.Logger).Debug]">
+<path fill="none" stroke="#8b4513" d="M1194.5573,-747.9963C1222.1431,-717.8367 1281.2909,-656.4387 1340.4606,-616 1426.9971,-556.8578 1488.4629,-595.8908 1552.615,-513 1602.2816,-448.8259 1561.1637,-410.3643 1588.615,-334 1611.6076,-270.039 1652.6334,-201.3405 1676.0085,-164.6799"/>
+<polygon fill="#8b4513" stroke="#8b4513" points="1679.0797,-166.3751 1681.5493,-156.0721 1673.1937,-162.5863 1679.0797,-166.3751"/>
 </a>
 </g>
 </g>
 <!-- github.com/go&#45;i2p/common/certificate.handleValidCertificateData&#45;&gt;(github.com/go&#45;i2p/common/data.Integer).Int -->
-<g id="edge35" class="edge">
+<g id="edge6" class="edge">
 <title>github.com/go&#45;i2p/common/certificate.handleValidCertificateData&#45;&gt;(github.com/go&#45;i2p/common/data.Integer).Int</title>
-<g id="a_edge35"><a xlink:title="at certificate.go:91: calling [(github.com/go&#45;i2p/common/data.Integer).Int]&#10;at certificate.go:92: calling [(github.com/go&#45;i2p/common/data.Integer).Int]">
+<g id="a_edge6"><a xlink:title="at certificate.go:91: calling [(github.com/go&#45;i2p/common/data.Integer).Int]&#10;at certificate.go:92: calling [(github.com/go&#45;i2p/common/data.Integer).Int]">
 <path fill="none" stroke="#8b4513" d="M1236.6386,-747.9129C1328.704,-718.4733 1502.7275,-659.3315 1552.615,-618 1618.8268,-563.1438 1663.74,-468.8255 1682.9869,-422.4185"/>
 <polygon fill="#8b4513" stroke="#8b4513" points="1686.2873,-423.5935 1686.8074,-413.0114 1679.8017,-420.9595 1686.2873,-423.5935"/>
 </a>
 </g>
 </g>
 <!-- github.com/go&#45;i2p/common/certificate.ReadCertificate&#45;&gt;github.com/go&#45;i2p/common/certificate.parseCertificateFromData -->
-<g id="edge44" class="edge">
+<g id="edge56" class="edge">
 <title>github.com/go&#45;i2p/common/certificate.ReadCertificate&#45;&gt;github.com/go&#45;i2p/common/certificate.parseCertificateFromData</title>
-<g id="a_edge44"><a xlink:title="at certificate.go:29: calling [github.com/go&#45;i2p/common/certificate.parseCertificateFromData]">
-<path fill="none" stroke="#000000" d="M261.6643,-546.2537C280.3111,-611.171 353.2211,-827 498.3803,-827 498.3803,-827 498.3803,-827 726.7815,-827 775.0525,-827 828.3212,-815.2006 868.4668,-803.8225"/>
+<g id="a_edge56"><a xlink:title="at certificate.go:29: calling [github.com/go&#45;i2p/common/certificate.parseCertificateFromData]">
+<path fill="none" stroke="#000000" d="M259.8023,-488.1945C273.0885,-560.9441 332.9842,-827 498.3803,-827 498.3803,-827 498.3803,-827 726.7815,-827 775.0525,-827 828.3212,-815.2006 868.4668,-803.8225"/>
 <polygon fill="#000000" stroke="#000000" points="869.4897,-807.1701 878.1193,-801.0234 867.5401,-800.4471 869.4897,-807.1701"/>
 </a>
 </g>
@@ -398,17 +407,17 @@
 <g id="node11" class="node">
 <title>github.com/go&#45;i2p/common/certificate.normalizeErrorConditions</title>
 <g id="a_node11"><a xlink:title="github.com/go&#45;i2p/common/certificate.normalizeErrorConditions | defined in certificate.go:117&#10;at certificate.go:119: calling [(*github.com/go&#45;i2p/logger.Logger).Warn]">
-<path fill="#add8e6" stroke="#000000" stroke-width=".5" d="M571.8439,-582C571.8439,-582 424.9167,-582 424.9167,-582 418.9167,-582 412.9167,-576 412.9167,-570 412.9167,-570 412.9167,-558 412.9167,-558 412.9167,-552 418.9167,-546 424.9167,-546 424.9167,-546 571.8439,-546 571.8439,-546 577.8439,-546 583.8439,-552 583.8439,-558 583.8439,-558 583.8439,-570 583.8439,-570 583.8439,-576 577.8439,-582 571.8439,-582"/>
-<text text-anchor="middle" x="498.3803" y="-559.8" font-family="Verdana" font-size="14.00" fill="#000000">normalizeErrorConditions</text>
+<path fill="#add8e6" stroke="#000000" stroke-width=".5" d="M571.8439,-546C571.8439,-546 424.9167,-546 424.9167,-546 418.9167,-546 412.9167,-540 412.9167,-534 412.9167,-534 412.9167,-522 412.9167,-522 412.9167,-516 418.9167,-510 424.9167,-510 424.9167,-510 571.8439,-510 571.8439,-510 577.8439,-510 583.8439,-516 583.8439,-522 583.8439,-522 583.8439,-534 583.8439,-534 583.8439,-540 577.8439,-546 571.8439,-546"/>
+<text text-anchor="middle" x="498.3803" y="-523.8" font-family="Verdana" font-size="14.00" fill="#000000">normalizeErrorConditions</text>
 </a>
 </g>
 </g>
 <!-- github.com/go&#45;i2p/common/certificate.ReadCertificate&#45;&gt;github.com/go&#45;i2p/common/certificate.normalizeErrorConditions -->
-<g id="edge3" class="edge">
+<g id="edge16" class="edge">
 <title>github.com/go&#45;i2p/common/certificate.ReadCertificate&#45;&gt;github.com/go&#45;i2p/common/certificate.normalizeErrorConditions</title>
-<g id="a_edge3"><a xlink:title="at certificate.go:34: calling [github.com/go&#45;i2p/common/certificate.normalizeErrorConditions]">
-<path fill="none" stroke="#000000" d="M312.8022,-536.3496C339.4801,-540.3245 372.1407,-545.1908 402.5848,-549.7269"/>
-<polygon fill="#000000" stroke="#000000" points="402.4059,-553.2388 412.8126,-551.2507 403.4376,-546.3152 402.4059,-553.2388"/>
+<g id="a_edge16"><a xlink:title="at certificate.go:34: calling [github.com/go&#45;i2p/common/certificate.normalizeErrorConditions]">
+<path fill="none" stroke="#000000" d="M312.8022,-483.4521C342.6195,-490.6097 379.9103,-499.5614 413.2271,-507.5591"/>
+<polygon fill="#000000" stroke="#000000" points="412.4256,-510.966 422.9663,-509.8969 414.0595,-504.1594 412.4256,-510.966"/>
 </a>
 </g>
 </g>
@@ -416,17 +425,17 @@
 <g id="node12" class="node">
 <title>github.com/go&#45;i2p/common/certificate.calculateRemainder</title>
 <g id="a_node12"><a xlink:title="github.com/go&#45;i2p/common/certificate.calculateRemainder | defined in certificate.go:126&#10;at certificate.go:127: calling [(*github.com/go&#45;i2p/common/certificate.Certificate).length]">
-<path fill="#add8e6" stroke="#000000" stroke-width=".5" d="M554.0474,-401C554.0474,-401 442.7132,-401 442.7132,-401 436.7132,-401 430.7132,-395 430.7132,-389 430.7132,-389 430.7132,-377 430.7132,-377 430.7132,-371 436.7132,-365 442.7132,-365 442.7132,-365 554.0474,-365 554.0474,-365 560.0474,-365 566.0474,-371 566.0474,-377 566.0474,-377 566.0474,-389 566.0474,-389 566.0474,-395 560.0474,-401 554.0474,-401"/>
-<text text-anchor="middle" x="498.3803" y="-378.8" font-family="Verdana" font-size="14.00" fill="#000000">calculateRemainder</text>
+<path fill="#add8e6" stroke="#000000" stroke-width=".5" d="M554.0474,-183C554.0474,-183 442.7132,-183 442.7132,-183 436.7132,-183 430.7132,-177 430.7132,-171 430.7132,-171 430.7132,-159 430.7132,-159 430.7132,-153 436.7132,-147 442.7132,-147 442.7132,-147 554.0474,-147 554.0474,-147 560.0474,-147 566.0474,-153 566.0474,-159 566.0474,-159 566.0474,-171 566.0474,-171 566.0474,-177 560.0474,-183 554.0474,-183"/>
+<text text-anchor="middle" x="498.3803" y="-160.8" font-family="Verdana" font-size="14.00" fill="#000000">calculateRemainder</text>
 </a>
 </g>
 </g>
 <!-- github.com/go&#45;i2p/common/certificate.ReadCertificate&#45;&gt;github.com/go&#45;i2p/common/certificate.calculateRemainder -->
-<g id="edge37" class="edge">
+<g id="edge7" class="edge">
 <title>github.com/go&#45;i2p/common/certificate.ReadCertificate&#45;&gt;github.com/go&#45;i2p/common/certificate.calculateRemainder</title>
-<g id="a_edge37"><a xlink:title="at certificate.go:35: calling [github.com/go&#45;i2p/common/certificate.calculateRemainder]">
-<path fill="none" stroke="#000000" d="M286.8756,-509.9288C330.582,-483.6996 411.6114,-435.072 459.6911,-406.2183"/>
-<polygon fill="#000000" stroke="#000000" points="461.4953,-409.2174 468.2688,-401.0706 457.8933,-403.2153 461.4953,-409.2174"/>
+<g id="a_edge7"><a xlink:title="at certificate.go:35: calling [github.com/go&#45;i2p/common/certificate.calculateRemainder]">
+<path fill="none" stroke="#000000" d="M271.1538,-451.8343C312.1972,-400.024 429.9436,-251.3895 477.7925,-190.9885"/>
+<polygon fill="#000000" stroke="#000000" points="480.5989,-193.0824 484.065,-183.0706 475.112,-188.7357 480.5989,-193.0824"/>
 </a>
 </g>
 </g>
@@ -434,17 +443,17 @@
 <g id="node13" class="node">
 <title>github.com/go&#45;i2p/common/certificate.logCertificateReadCompletion</title>
 <g id="a_node13"><a xlink:title="github.com/go&#45;i2p/common/certificate.logCertificateReadCompletion | defined in certificate.go:135&#10;at certificate.go:137: calling [(*github.com/go&#45;i2p/common/certificate.Certificate).length]&#10;at certificate.go:140: calling [(*github.com/sirupsen/logrus.Logger).Debug]&#10;at certificate.go:136: calling [(*github.com/go&#45;i2p/logger.Logger).WithFields]">
-<path fill="#add8e6" stroke="#000000" stroke-width=".5" d="M584.229,-509C584.229,-509 412.5316,-509 412.5316,-509 406.5316,-509 400.5316,-503 400.5316,-497 400.5316,-497 400.5316,-485 400.5316,-485 400.5316,-479 406.5316,-473 412.5316,-473 412.5316,-473 584.229,-473 584.229,-473 590.229,-473 596.229,-479 596.229,-485 596.229,-485 596.229,-497 596.229,-497 596.229,-503 590.229,-509 584.229,-509"/>
-<text text-anchor="middle" x="498.3803" y="-486.8" font-family="Verdana" font-size="14.00" fill="#000000">logCertificateReadCompletion</text>
+<path fill="#add8e6" stroke="#000000" stroke-width=".5" d="M584.229,-429C584.229,-429 412.5316,-429 412.5316,-429 406.5316,-429 400.5316,-423 400.5316,-417 400.5316,-417 400.5316,-405 400.5316,-405 400.5316,-399 406.5316,-393 412.5316,-393 412.5316,-393 584.229,-393 584.229,-393 590.229,-393 596.229,-399 596.229,-405 596.229,-405 596.229,-417 596.229,-417 596.229,-423 590.229,-429 584.229,-429"/>
+<text text-anchor="middle" x="498.3803" y="-406.8" font-family="Verdana" font-size="14.00" fill="#000000">logCertificateReadCompletion</text>
 </a>
 </g>
 </g>
 <!-- github.com/go&#45;i2p/common/certificate.ReadCertificate&#45;&gt;github.com/go&#45;i2p/common/certificate.logCertificateReadCompletion -->
-<g id="edge10" class="edge">
+<g id="edge24" class="edge">
 <title>github.com/go&#45;i2p/common/certificate.ReadCertificate&#45;&gt;github.com/go&#45;i2p/common/certificate.logCertificateReadCompletion</title>
-<g id="a_edge10"><a xlink:title="at certificate.go:37: calling [github.com/go&#45;i2p/common/certificate.logCertificateReadCompletion]">
-<path fill="none" stroke="#000000" d="M312.8022,-519.4185C335.9181,-515.8786 363.5258,-511.6509 390.2914,-507.5522"/>
-<polygon fill="#000000" stroke="#000000" points="391.1422,-510.9628 400.4972,-505.9893 390.0826,-504.0434 391.1422,-510.9628"/>
+<g id="a_edge24"><a xlink:title="at certificate.go:37: calling [github.com/go&#45;i2p/common/certificate.logCertificateReadCompletion]">
+<path fill="none" stroke="#000000" d="M312.8022,-456.3159C343.0001,-448.942 380.8636,-439.6961 414.5011,-431.4823"/>
+<polygon fill="#000000" stroke="#000000" points="415.4432,-434.8552 424.3275,-429.0828 413.7826,-428.055 415.4432,-434.8552"/>
 </a>
 </g>
 </g>
@@ -459,55 +468,55 @@
 </g>
 </g>
 <!-- github.com/go&#45;i2p/common/certificate.normalizeErrorConditions&#45;&gt;(*github.com/go&#45;i2p/logger.Logger).Warn -->
-<g id="edge2" class="edge">
+<g id="edge47" class="edge">
 <title>github.com/go&#45;i2p/common/certificate.normalizeErrorConditions&#45;&gt;(*github.com/go&#45;i2p/logger.Logger).Warn</title>
-<g id="a_edge2"><a xlink:title="at certificate.go:119: calling [(*github.com/go&#45;i2p/logger.Logger).Warn]">
-<path fill="none" stroke="#8b4513" d="M584.04,-559.2295C819.001,-546.6089 1462.1959,-515.3464 1552.615,-546 1600.4518,-562.2175 1644.7977,-601.9085 1670.5296,-628.3874"/>
-<polygon fill="#8b4513" stroke="#8b4513" points="1668.1618,-630.9763 1677.5911,-635.8072 1673.2325,-626.1505 1668.1618,-630.9763"/>
+<g id="a_edge47"><a xlink:title="at certificate.go:119: calling [(*github.com/go&#45;i2p/logger.Logger).Warn]">
+<path fill="none" stroke="#8b4513" d="M584.0673,-526.3926C819.099,-522.415 1462.4609,-514.5756 1552.615,-546 1600.3116,-562.6253 1644.6968,-602.2021 1670.4751,-628.5459"/>
+<polygon fill="#8b4513" stroke="#8b4513" points="1668.1033,-631.1295 1677.5504,-635.9257 1673.1562,-626.285 1668.1033,-631.1295"/>
 </a>
 </g>
 </g>
 <!-- (*github.com/go&#45;i2p/common/certificate.Certificate).length -->
-<g id="node21" class="node">
+<g id="node23" class="node">
 <title>(*github.com/go&#45;i2p/common/certificate.Certificate).length</title>
-<g id="a_node21"><a xlink:title="(*github.com/go&#45;i2p/common/certificate.Certificate).length | defined in certificate_struct.go:153&#10;at certificate_struct.go:154: calling [(*github.com/go&#45;i2p/common/certificate.Certificate).Bytes]">
-<path fill="#add8e6" stroke="#000000" stroke-width=".5" d="M744.2773,-386C744.2773,-386 709.2857,-386 709.2857,-386 703.2857,-386 697.2857,-380 697.2857,-374 697.2857,-374 697.2857,-362 697.2857,-362 697.2857,-356 703.2857,-350 709.2857,-350 709.2857,-350 744.2773,-350 744.2773,-350 750.2773,-350 756.2773,-356 756.2773,-362 756.2773,-362 756.2773,-374 756.2773,-374 756.2773,-380 750.2773,-386 744.2773,-386"/>
-<text text-anchor="middle" x="726.7815" y="-363.8" font-family="Verdana" font-size="14.00" fill="#000000">length</text>
+<g id="a_node23"><a xlink:title="(*github.com/go&#45;i2p/common/certificate.Certificate).length | defined in certificate_struct.go:153&#10;at certificate_struct.go:154: calling [(*github.com/go&#45;i2p/common/certificate.Certificate).Bytes]">
+<path fill="#add8e6" stroke="#000000" stroke-width=".5" d="M744.2773,-316C744.2773,-316 709.2857,-316 709.2857,-316 703.2857,-316 697.2857,-310 697.2857,-304 697.2857,-304 697.2857,-292 697.2857,-292 697.2857,-286 703.2857,-280 709.2857,-280 709.2857,-280 744.2773,-280 744.2773,-280 750.2773,-280 756.2773,-286 756.2773,-292 756.2773,-292 756.2773,-304 756.2773,-304 756.2773,-310 750.2773,-316 744.2773,-316"/>
+<text text-anchor="middle" x="726.7815" y="-293.8" font-family="Verdana" font-size="14.00" fill="#000000">length</text>
 </a>
 </g>
 </g>
 <!-- github.com/go&#45;i2p/common/certificate.calculateRemainder&#45;&gt;(*github.com/go&#45;i2p/common/certificate.Certificate).length -->
-<g id="edge36" class="edge">
+<g id="edge18" class="edge">
 <title>github.com/go&#45;i2p/common/certificate.calculateRemainder&#45;&gt;(*github.com/go&#45;i2p/common/certificate.Certificate).length</title>
-<g id="a_edge36"><a xlink:title="at certificate.go:127: calling [(*github.com/go&#45;i2p/common/certificate.Certificate).length]">
-<path fill="none" stroke="#000000" d="M565.9811,-378.5604C605.2698,-375.9801 653.4404,-372.8166 686.7605,-370.6283"/>
-<polygon fill="#000000" stroke="#000000" points="687.2777,-374.102 697.0268,-369.9541 686.8189,-367.117 687.2777,-374.102"/>
+<g id="a_edge18"><a xlink:title="at certificate.go:127: calling [(*github.com/go&#45;i2p/common/certificate.Certificate).length]">
+<path fill="none" stroke="#000000" d="M523.26,-183.1408C556.0799,-206.5527 616.1586,-247.6401 671.4028,-276 676.5912,-278.6635 682.1801,-281.2208 687.7414,-283.5895"/>
+<polygon fill="#000000" stroke="#000000" points="686.4187,-286.8299 696.9991,-287.3832 689.0731,-280.3527 686.4187,-286.8299"/>
 </a>
 </g>
 </g>
 <!-- github.com/go&#45;i2p/common/certificate.logCertificateReadCompletion&#45;&gt;(*github.com/go&#45;i2p/common/certificate.Certificate).length -->
-<g id="edge4" class="edge">
+<g id="edge19" class="edge">
 <title>github.com/go&#45;i2p/common/certificate.logCertificateReadCompletion&#45;&gt;(*github.com/go&#45;i2p/common/certificate.Certificate).length</title>
-<g id="a_edge4"><a xlink:title="at certificate.go:137: calling [(*github.com/go&#45;i2p/common/certificate.Certificate).length]">
-<path fill="none" stroke="#000000" d="M532.0817,-472.8509C573.6714,-450.4538 644.2426,-412.4493 688.0304,-388.8685"/>
-<polygon fill="#000000" stroke="#000000" points="689.8027,-391.8894 696.9477,-384.0663 686.4837,-385.7262 689.8027,-391.8894"/>
+<g id="a_edge19"><a xlink:title="at certificate.go:137: calling [(*github.com/go&#45;i2p/common/certificate.Certificate).length]">
+<path fill="none" stroke="#000000" d="M534.8237,-392.9699C576.7125,-372.2457 645.1819,-338.3709 688.0221,-317.176"/>
+<polygon fill="#000000" stroke="#000000" points="689.6067,-320.297 697.0177,-312.7254 686.5026,-314.0228 689.6067,-320.297"/>
 </a>
 </g>
 </g>
 <!-- github.com/go&#45;i2p/common/certificate.logCertificateReadCompletion&#45;&gt;(*github.com/go&#45;i2p/logger.Logger).WithFields -->
-<g id="edge61" class="edge">
+<g id="edge29" class="edge">
 <title>github.com/go&#45;i2p/common/certificate.logCertificateReadCompletion&#45;&gt;(*github.com/go&#45;i2p/logger.Logger).WithFields</title>
-<g id="a_edge61"><a xlink:title="at certificate.go:136: calling [(*github.com/go&#45;i2p/logger.Logger).WithFields]">
-<path fill="none" stroke="#8b4513" d="M544.2054,-509.0951C629.2691,-542.6182 803.6452,-611 810.6602,-611 810.6602,-611 810.6602,-611 1178.497,-611 1350.3627,-611 1548.218,-667.3183 1640.7432,-697.0677"/>
+<g id="a_edge29"><a xlink:title="at certificate.go:136: calling [(*github.com/go&#45;i2p/logger.Logger).WithFields]">
+<path fill="none" stroke="#8b4513" d="M523.1778,-429.1014C591.061,-478.3332 777.1015,-611 810.6602,-611 810.6602,-611 810.6602,-611 1178.497,-611 1350.3627,-611 1548.218,-667.3183 1640.7432,-697.0677"/>
 <polygon fill="#8b4513" stroke="#8b4513" points="1639.8394,-700.454 1650.4314,-700.2098 1641.999,-693.7954 1639.8394,-700.454"/>
 </a>
 </g>
 </g>
 <!-- github.com/go&#45;i2p/common/certificate.logCertificateReadCompletion&#45;&gt;(*github.com/sirupsen/logrus.Logger).Debug -->
-<g id="edge46" class="edge">
+<g id="edge23" class="edge">
 <title>github.com/go&#45;i2p/common/certificate.logCertificateReadCompletion&#45;&gt;(*github.com/sirupsen/logrus.Logger).Debug</title>
-<g id="a_edge46"><a xlink:title="at certificate.go:140: calling [(*github.com/sirupsen/logrus.Logger).Debug]">
-<path fill="none" stroke="#8b4513" d="M534.862,-472.8977C558.3285,-459.554 587.8049,-439.3456 606.4028,-414 708.7064,-274.5785 553.8526,-44 726.7815,-44 726.7815,-44 726.7815,-44 1446.5378,-44 1494.5139,-44 1507.3038,-48.2331 1552.615,-64 1589.557,-76.8547 1628.7326,-98.1079 1656.3856,-114.5476"/>
+<g id="a_edge23"><a xlink:title="at certificate.go:140: calling [(*github.com/sirupsen/logrus.Logger).Debug]">
+<path fill="none" stroke="#8b4513" d="M507.9759,-392.8004C548.4724,-318.7474 713.4373,-44 931.8468,-44 931.8468,-44 931.8468,-44 1446.5378,-44 1494.5139,-44 1507.3038,-48.2331 1552.615,-64 1589.557,-76.8547 1628.7326,-98.1079 1656.3856,-114.5476"/>
 <polygon fill="#8b4513" stroke="#8b4513" points="1654.9302,-117.7568 1665.302,-119.9191 1658.5424,-111.7608 1654.9302,-117.7568"/>
 </a>
 </g>
@@ -515,162 +524,252 @@
 <!-- github.com/go&#45;i2p/common/certificate.NewCertificateDeux -->
 <g id="node14" class="node">
 <title>github.com/go&#45;i2p/common/certificate.NewCertificateDeux</title>
-<g id="a_node14"><a xlink:title="github.com/go&#45;i2p/common/certificate.NewCertificateDeux | defined in certificate_struct.go:65&#10;at certificate_struct.go:70: calling [(*github.com/sirupsen/logrus.Logger).Debug]&#10;at certificate_struct.go:73: calling [github.com/samber/oops.Errorf]&#10;at certificate_struct.go:75: calling [github.com/go&#45;i2p/common/certificate.NewCertificateWithType]&#10;at certificate_struct.go:66: calling [(*github.com/go&#45;i2p/logger.Logger).WithFields]">
+<g id="a_node14"><a xlink:title="github.com/go&#45;i2p/common/certificate.NewCertificateDeux | defined in certificate_struct.go:65&#10;at certificate_struct.go:73: calling [github.com/samber/oops.Errorf]&#10;at certificate_struct.go:66: calling [(*github.com/go&#45;i2p/logger.Logger).WithFields]&#10;at certificate_struct.go:70: calling [(*github.com/sirupsen/logrus.Logger).Debug]&#10;at certificate_struct.go:75: calling [github.com/go&#45;i2p/common/certificate.NewCertificateWithType]">
 <path fill="#add8e6" stroke="#000000" stroke-width="1.5" d="M1236.3247,-1049C1236.3247,-1049 1120.6693,-1049 1120.6693,-1049 1114.6693,-1049 1108.6693,-1043 1108.6693,-1037 1108.6693,-1037 1108.6693,-1025 1108.6693,-1025 1108.6693,-1019 1114.6693,-1013 1120.6693,-1013 1120.6693,-1013 1236.3247,-1013 1236.3247,-1013 1242.3247,-1013 1248.3247,-1019 1248.3247,-1025 1248.3247,-1025 1248.3247,-1037 1248.3247,-1037 1248.3247,-1043 1242.3247,-1049 1236.3247,-1049"/>
 <text text-anchor="middle" x="1178.497" y="-1026.8" font-family="Verdana" font-size="14.00" fill="#000000">NewCertificateDeux</text>
 </a>
 </g>
 </g>
-<!-- github.com/go&#45;i2p/common/certificate.NewCertificateDeux&#45;&gt;github.com/samber/oops.Errorf -->
-<g id="edge16" class="edge">
-<title>github.com/go&#45;i2p/common/certificate.NewCertificateDeux&#45;&gt;github.com/samber/oops.Errorf</title>
-<g id="a_edge16"><a xlink:title="at certificate_struct.go:73: calling [github.com/samber/oops.Errorf]">
-<path fill="none" stroke="#8b4513" d="M1248.5011,-1038.0671C1358.3286,-1049.1544 1567.5346,-1070.2742 1654.335,-1079.0369"/>
-<polygon fill="#8b4513" stroke="#8b4513" points="1653.9977,-1082.5206 1664.2987,-1080.0428 1654.7008,-1075.556 1653.9977,-1082.5206"/>
-</a>
-</g>
-</g>
-<!-- github.com/go&#45;i2p/common/certificate.NewCertificateWithType -->
-<g id="node15" class="node">
-<title>github.com/go&#45;i2p/common/certificate.NewCertificateWithType</title>
-<g id="a_node15"><a xlink:title="github.com/go&#45;i2p/common/certificate.NewCertificateWithType | defined in certificate_struct.go:79&#10;at certificate_struct.go:85: calling [github.com/samber/oops.Errorf]&#10;at certificate_struct.go:90: calling [github.com/samber/oops.Errorf]&#10;at certificate_struct.go:95: calling [github.com/samber/oops.Errorf]&#10;at certificate_struct.go:100: calling [github.com/samber/oops.Errorf]&#10;at certificate_struct.go:98: calling [github.com/go&#45;i2p/common/data.NewIntegerFromInt]">
-<path fill="#add8e6" stroke="#000000" stroke-width="1.5" d="M1517.8074,-1125C1517.8074,-1125 1375.2682,-1125 1375.2682,-1125 1369.2682,-1125 1363.2682,-1119 1363.2682,-1113 1363.2682,-1113 1363.2682,-1101 1363.2682,-1101 1363.2682,-1095 1369.2682,-1089 1375.2682,-1089 1375.2682,-1089 1517.8074,-1089 1517.8074,-1089 1523.8074,-1089 1529.8074,-1095 1529.8074,-1101 1529.8074,-1101 1529.8074,-1113 1529.8074,-1113 1529.8074,-1119 1523.8074,-1125 1517.8074,-1125"/>
-<text text-anchor="middle" x="1446.5378" y="-1102.8" font-family="Verdana" font-size="14.00" fill="#000000">NewCertificateWithType</text>
-</a>
-</g>
-</g>
 <!-- github.com/go&#45;i2p/common/certificate.NewCertificateDeux&#45;&gt;github.com/go&#45;i2p/common/certificate.NewCertificateWithType -->
-<g id="edge54" class="edge">
+<g id="edge61" class="edge">
 <title>github.com/go&#45;i2p/common/certificate.NewCertificateDeux&#45;&gt;github.com/go&#45;i2p/common/certificate.NewCertificateWithType</title>
-<g id="a_edge54"><a xlink:title="at certificate_struct.go:75: calling [github.com/go&#45;i2p/common/certificate.NewCertificateWithType]">
+<g id="a_edge61"><a xlink:title="at certificate_struct.go:75: calling [github.com/go&#45;i2p/common/certificate.NewCertificateWithType]">
 <path fill="none" stroke="#000000" d="M1234.3062,-1049.065C1255.8448,-1055.8665 1280.7305,-1063.5183 1303.4606,-1070 1322.9849,-1075.5675 1344.1095,-1081.2283 1363.9796,-1086.3928"/>
 <polygon fill="#000000" stroke="#000000" points="1363.3718,-1089.8507 1373.9296,-1088.9651 1365.1239,-1083.0735 1363.3718,-1089.8507"/>
 </a>
 </g>
 </g>
+<!-- github.com/go&#45;i2p/common/certificate.NewCertificateDeux&#45;&gt;github.com/samber/oops.Errorf -->
+<g id="edge8" class="edge">
+<title>github.com/go&#45;i2p/common/certificate.NewCertificateDeux&#45;&gt;github.com/samber/oops.Errorf</title>
+<g id="a_edge8"><a xlink:title="at certificate_struct.go:73: calling [github.com/samber/oops.Errorf]">
+<path fill="none" stroke="#8b4513" d="M1248.5011,-1038.0671C1358.3286,-1049.1544 1567.5346,-1070.2742 1654.335,-1079.0369"/>
+<polygon fill="#8b4513" stroke="#8b4513" points="1653.9977,-1082.5206 1664.2987,-1080.0428 1654.7008,-1075.556 1653.9977,-1082.5206"/>
+</a>
+</g>
+</g>
 <!-- github.com/go&#45;i2p/common/certificate.NewCertificateDeux&#45;&gt;(*github.com/go&#45;i2p/logger.Logger).WithFields -->
-<g id="edge57" class="edge">
+<g id="edge20" class="edge">
 <title>github.com/go&#45;i2p/common/certificate.NewCertificateDeux&#45;&gt;(*github.com/go&#45;i2p/logger.Logger).WithFields</title>
-<g id="a_edge57"><a xlink:title="at certificate_struct.go:66: calling [(*github.com/go&#45;i2p/logger.Logger).WithFields]">
+<g id="a_edge20"><a xlink:title="at certificate_struct.go:66: calling [(*github.com/go&#45;i2p/logger.Logger).WithFields]">
 <path fill="none" stroke="#8b4513" d="M1248.4806,-1032.0209C1343.6188,-1031.9804 1507.1492,-1026.3879 1552.615,-990 1572.4538,-974.1223 1625.2794,-746.3977 1625.615,-746 1629.9985,-740.8047 1635.436,-736.4374 1641.3123,-732.7767"/>
 <polygon fill="#8b4513" stroke="#8b4513" points="1643.0908,-735.793 1650.164,-727.905 1639.7156,-729.6605 1643.0908,-735.793"/>
 </a>
 </g>
 </g>
 <!-- github.com/go&#45;i2p/common/certificate.NewCertificateDeux&#45;&gt;(*github.com/sirupsen/logrus.Logger).Debug -->
-<g id="edge6" class="edge">
+<g id="edge43" class="edge">
 <title>github.com/go&#45;i2p/common/certificate.NewCertificateDeux&#45;&gt;(*github.com/sirupsen/logrus.Logger).Debug</title>
-<g id="a_edge6"><a xlink:title="at certificate_struct.go:70: calling [(*github.com/sirupsen/logrus.Logger).Debug]">
-<path fill="none" stroke="#8b4513" d="M1188.3598,-1012.6831C1211.8291,-969.8485 1274.0217,-860.6604 1340.4606,-780 1423.6268,-679.0317 1487.4092,-689.3993 1552.615,-576 1621.0181,-457.0402 1578.7937,-404.9891 1625.615,-276 1640.1247,-236.0269 1662.8823,-192.3923 1678.0146,-165.1148"/>
-<polygon fill="#8b4513" stroke="#8b4513" points="1681.1856,-166.6157 1683.0231,-156.1814 1675.0798,-163.1925 1681.1856,-166.6157"/>
-</a>
-</g>
-</g>
-<!-- github.com/go&#45;i2p/common/certificate.NewCertificateWithType&#45;&gt;github.com/samber/oops.Errorf -->
-<g id="edge42" class="edge">
-<title>github.com/go&#45;i2p/common/certificate.NewCertificateWithType&#45;&gt;github.com/samber/oops.Errorf</title>
-<g id="a_edge42"><a xlink:title="at certificate_struct.go:85: calling [github.com/samber/oops.Errorf]&#10;at certificate_struct.go:90: calling [github.com/samber/oops.Errorf]&#10;at certificate_struct.go:95: calling [github.com/samber/oops.Errorf]&#10;at certificate_struct.go:100: calling [github.com/samber/oops.Errorf]">
-<path fill="none" stroke="#8b4513" d="M1529.9245,-1107.7549C1549.5464,-1107.2403 1570.3531,-1106.1299 1589.615,-1104 1611.1821,-1101.6153 1634.9222,-1096.9772 1654.2664,-1092.6652"/>
-<polygon fill="#8b4513" stroke="#8b4513" points="1655.2637,-1096.0276 1664.2321,-1090.3869 1653.7036,-1089.2037 1655.2637,-1096.0276"/>
-</a>
-</g>
-</g>
-<!-- github.com/go&#45;i2p/common/data.NewIntegerFromInt -->
-<g id="node16" class="node">
-<title>github.com/go&#45;i2p/common/data.NewIntegerFromInt</title>
-<g id="a_node16"><a xlink:title="github.com/go&#45;i2p/common/data.NewIntegerFromInt | defined in integer.go:54">
-<path fill="#ffe4b5" stroke="#000000" stroke-width="1.5" d="M1749.5457,-1179C1749.5457,-1179 1637.6381,-1179 1637.6381,-1179 1631.6381,-1179 1625.6381,-1173 1625.6381,-1167 1625.6381,-1167 1625.6381,-1155 1625.6381,-1155 1625.6381,-1149 1631.6381,-1143 1637.6381,-1143 1637.6381,-1143 1749.5457,-1143 1749.5457,-1143 1755.5457,-1143 1761.5457,-1149 1761.5457,-1155 1761.5457,-1155 1761.5457,-1167 1761.5457,-1167 1761.5457,-1173 1755.5457,-1179 1749.5457,-1179"/>
-<text text-anchor="middle" x="1693.5919" y="-1165.2" font-family="Verdana" font-size="14.00" fill="#000000">data</text>
-<text text-anchor="middle" x="1693.5919" y="-1148.4" font-family="Verdana" font-size="14.00" fill="#000000">NewIntegerFromInt</text>
-</a>
-</g>
-</g>
-<!-- github.com/go&#45;i2p/common/certificate.NewCertificateWithType&#45;&gt;github.com/go&#45;i2p/common/data.NewIntegerFromInt -->
-<g id="edge47" class="edge">
-<title>github.com/go&#45;i2p/common/certificate.NewCertificateWithType&#45;&gt;github.com/go&#45;i2p/common/data.NewIntegerFromInt</title>
-<g id="a_edge47"><a xlink:title="at certificate_struct.go:98: calling [github.com/go&#45;i2p/common/data.NewIntegerFromInt]">
-<path fill="none" stroke="#8b4513" d="M1529.1467,-1125.0563C1557.0065,-1131.1458 1587.9968,-1137.9195 1615.4967,-1143.9303"/>
-<polygon fill="#8b4513" stroke="#8b4513" points="1614.9413,-1147.3915 1625.4581,-1146.1076 1616.4361,-1140.5529 1614.9413,-1147.3915"/>
+<g id="a_edge43"><a xlink:title="at certificate_struct.go:70: calling [(*github.com/sirupsen/logrus.Logger).Debug]">
+<path fill="none" stroke="#8b4513" d="M1188.4263,-1012.7375C1212.0374,-970.0191 1274.511,-861.061 1340.4606,-780 1423.9925,-677.328 1487.1083,-686.0129 1552.615,-571 1619.461,-453.6357 1579.2833,-402.8705 1625.615,-276 1640.2024,-236.0552 1662.9411,-192.4137 1678.0479,-165.127"/>
+<polygon fill="#8b4513" stroke="#8b4513" points="1681.2196,-166.6263 1683.0473,-156.1902 1675.1105,-163.2087 1681.2196,-166.6263"/>
 </a>
 </g>
 </g>
 <!-- github.com/go&#45;i2p/common/certificate.GetSignatureTypeFromCertificate -->
-<g id="node17" class="node">
+<g id="node15" class="node">
 <title>github.com/go&#45;i2p/common/certificate.GetSignatureTypeFromCertificate</title>
-<g id="a_node17"><a xlink:title="github.com/go&#45;i2p/common/certificate.GetSignatureTypeFromCertificate | defined in certificate.go:145&#10;at certificate.go:146: calling [(*github.com/go&#45;i2p/common/certificate.Certificate).Type]&#10;at certificate.go:147: calling [(*github.com/go&#45;i2p/common/certificate.Certificate).Type]&#10;at certificate.go:147: calling [github.com/samber/oops.Errorf]&#10;at certificate.go:150: calling [github.com/samber/oops.Errorf]">
-<path fill="#add8e6" stroke="#000000" stroke-width="1.5" d="M594.4253,-732C594.4253,-732 402.3353,-732 402.3353,-732 396.3353,-732 390.3353,-726 390.3353,-720 390.3353,-720 390.3353,-708 390.3353,-708 390.3353,-702 396.3353,-696 402.3353,-696 402.3353,-696 594.4253,-696 594.4253,-696 600.4253,-696 606.4253,-702 606.4253,-708 606.4253,-708 606.4253,-720 606.4253,-720 606.4253,-726 600.4253,-732 594.4253,-732"/>
-<text text-anchor="middle" x="498.3803" y="-709.8" font-family="Verdana" font-size="14.00" fill="#000000">GetSignatureTypeFromCertificate</text>
+<g id="a_node15"><a xlink:title="github.com/go&#45;i2p/common/certificate.GetSignatureTypeFromCertificate | defined in certificate.go:145&#10;at certificate.go:146: calling [(*github.com/go&#45;i2p/common/certificate.Certificate).Type]&#10;at certificate.go:147: calling [(*github.com/go&#45;i2p/common/certificate.Certificate).Type]&#10;at certificate.go:147: calling [github.com/samber/oops.Errorf]&#10;at certificate.go:150: calling [github.com/samber/oops.Errorf]">
+<path fill="#add8e6" stroke="#000000" stroke-width="1.5" d="M594.4253,-676C594.4253,-676 402.3353,-676 402.3353,-676 396.3353,-676 390.3353,-670 390.3353,-664 390.3353,-664 390.3353,-652 390.3353,-652 390.3353,-646 396.3353,-640 402.3353,-640 402.3353,-640 594.4253,-640 594.4253,-640 600.4253,-640 606.4253,-646 606.4253,-652 606.4253,-652 606.4253,-664 606.4253,-664 606.4253,-670 600.4253,-676 594.4253,-676"/>
+<text text-anchor="middle" x="498.3803" y="-653.8" font-family="Verdana" font-size="14.00" fill="#000000">GetSignatureTypeFromCertificate</text>
 </a>
 </g>
 </g>
 <!-- github.com/go&#45;i2p/common/certificate.GetSignatureTypeFromCertificate&#45;&gt;github.com/samber/oops.Errorf -->
-<g id="edge18" class="edge">
+<g id="edge51" class="edge">
 <title>github.com/go&#45;i2p/common/certificate.GetSignatureTypeFromCertificate&#45;&gt;github.com/samber/oops.Errorf</title>
-<g id="a_edge18"><a xlink:title="at certificate.go:147: calling [github.com/samber/oops.Errorf]&#10;at certificate.go:150: calling [github.com/samber/oops.Errorf]">
-<path fill="none" stroke="#8b4513" d="M540.963,-732.1619C596.0176,-756.1755 694.3033,-800.8667 774.1602,-847 921.0495,-931.858 936.5053,-988.7898 1089.5334,-1062 1194.6496,-1112.2886 1225.1919,-1120.9269 1340.4606,-1138 1433.7339,-1151.8153 1459.9503,-1155.4359 1552.615,-1138 1588.6443,-1131.2207 1627.2839,-1115.4896 1654.9823,-1102.5804"/>
+<g id="a_edge51"><a xlink:title="at certificate.go:147: calling [github.com/samber/oops.Errorf]&#10;at certificate.go:150: calling [github.com/samber/oops.Errorf]">
+<path fill="none" stroke="#8b4513" d="M524.7374,-676.0519C638.957,-754.2759 1085.6228,-1060.1264 1089.5334,-1062 1194.6208,-1112.3488 1225.1919,-1120.9269 1340.4606,-1138 1433.7339,-1151.8153 1459.9503,-1155.4359 1552.615,-1138 1588.6443,-1131.2207 1627.2839,-1115.4896 1654.9823,-1102.5804"/>
 <polygon fill="#8b4513" stroke="#8b4513" points="1656.7717,-1105.6052 1664.301,-1098.1513 1653.7668,-1099.2829 1656.7717,-1105.6052"/>
 </a>
 </g>
 </g>
 <!-- (*github.com/go&#45;i2p/common/certificate.Certificate).Type -->
-<g id="node23" class="node">
+<g id="node18" class="node">
 <title>(*github.com/go&#45;i2p/common/certificate.Certificate).Type</title>
-<g id="a_node23"><a xlink:title="(*github.com/go&#45;i2p/common/certificate.Certificate).Type | defined in certificate_struct.go:159&#10;at certificate_struct.go:160: calling [(github.com/go&#45;i2p/common/data.Integer).Int]&#10;at certificate_struct.go:163: calling [(*github.com/sirupsen/logrus.Logger).Debug]&#10;at certificate_struct.go:161: calling [(*github.com/go&#45;i2p/logger.Logger).WithFields]">
-<path fill="#add8e6" stroke="#000000" stroke-width="1.5" d="M741.7815,-447C741.7815,-447 711.7815,-447 711.7815,-447 705.7815,-447 699.7815,-441 699.7815,-435 699.7815,-435 699.7815,-423 699.7815,-423 699.7815,-417 705.7815,-411 711.7815,-411 711.7815,-411 741.7815,-411 741.7815,-411 747.7815,-411 753.7815,-417 753.7815,-423 753.7815,-423 753.7815,-435 753.7815,-435 753.7815,-441 747.7815,-447 741.7815,-447"/>
-<text text-anchor="middle" x="726.7815" y="-424.8" font-family="Verdana" font-size="14.00" fill="#000000">Type</text>
+<g id="a_node18"><a xlink:title="(*github.com/go&#45;i2p/common/certificate.Certificate).Type | defined in certificate_struct.go:159&#10;at certificate_struct.go:160: calling [(github.com/go&#45;i2p/common/data.Integer).Int]&#10;at certificate_struct.go:163: calling [(*github.com/sirupsen/logrus.Logger).Debug]&#10;at certificate_struct.go:161: calling [(*github.com/go&#45;i2p/logger.Logger).WithFields]">
+<path fill="#add8e6" stroke="#000000" stroke-width="1.5" d="M741.7815,-377C741.7815,-377 711.7815,-377 711.7815,-377 705.7815,-377 699.7815,-371 699.7815,-365 699.7815,-365 699.7815,-353 699.7815,-353 699.7815,-347 705.7815,-341 711.7815,-341 711.7815,-341 741.7815,-341 741.7815,-341 747.7815,-341 753.7815,-347 753.7815,-353 753.7815,-353 753.7815,-365 753.7815,-365 753.7815,-371 747.7815,-377 741.7815,-377"/>
+<text text-anchor="middle" x="726.7815" y="-354.8" font-family="Verdana" font-size="14.00" fill="#000000">Type</text>
 </a>
 </g>
 </g>
 <!-- github.com/go&#45;i2p/common/certificate.GetSignatureTypeFromCertificate&#45;&gt;(*github.com/go&#45;i2p/common/certificate.Certificate).Type -->
-<g id="edge13" class="edge">
+<g id="edge34" class="edge">
 <title>github.com/go&#45;i2p/common/certificate.GetSignatureTypeFromCertificate&#45;&gt;(*github.com/go&#45;i2p/common/certificate.Certificate).Type</title>
-<g id="a_edge13"><a xlink:title="at certificate.go:146: calling [(*github.com/go&#45;i2p/common/certificate.Certificate).Type]&#10;at certificate.go:147: calling [(*github.com/go&#45;i2p/common/certificate.Certificate).Type]">
-<path fill="none" stroke="#000000" d="M518.199,-695.6598C541.4171,-673.4411 580.0541,-634.1065 606.4028,-595 643.6127,-539.7733 625.7871,-508.5158 671.4028,-460 676.9219,-454.13 683.8065,-449.0842 690.8261,-444.8705"/>
-<polygon fill="#000000" stroke="#000000" points="692.6304,-447.8725 699.6974,-439.9789 689.2504,-441.7426 692.6304,-447.8725"/>
+<g id="a_edge34"><a xlink:title="at certificate.go:146: calling [(*github.com/go&#45;i2p/common/certificate.Certificate).Type]&#10;at certificate.go:147: calling [(*github.com/go&#45;i2p/common/certificate.Certificate).Type]">
+<path fill="none" stroke="#000000" d="M524.2613,-639.8428C548.3817,-621.7636 583.9157,-592.0063 606.4028,-559 651.7138,-492.4931 618.7134,-450.8282 671.4028,-390 676.7287,-383.8514 683.5886,-378.6709 690.6546,-374.4116"/>
+<polygon fill="#000000" stroke="#000000" points="692.5248,-377.378 699.6153,-369.5055 689.1631,-371.238 692.5248,-377.378"/>
+</a>
+</g>
+</g>
+<!-- github.com/go&#45;i2p/common/certificate.init -->
+<g id="node16" class="node">
+<title>github.com/go&#45;i2p/common/certificate.init</title>
+<g id="a_node16"><a xlink:title="github.com/go&#45;i2p/common/certificate.init | defined in .:0&#10;at certificate_struct.go:12: calling [github.com/go&#45;i2p/logger.GetGoI2PLogger]">
+<path fill="#add8e6" stroke="#000000" stroke-width=".5" d="M84.5842,-52C84.5842,-52 54.5842,-52 54.5842,-52 48.5842,-52 42.5842,-46 42.5842,-40 42.5842,-40 42.5842,-28 42.5842,-28 42.5842,-22 48.5842,-16 54.5842,-16 54.5842,-16 84.5842,-16 84.5842,-16 90.5842,-16 96.5842,-22 96.5842,-28 96.5842,-28 96.5842,-40 96.5842,-40 96.5842,-46 90.5842,-52 84.5842,-52"/>
+<text text-anchor="middle" x="69.5842" y="-29.8" font-family="Verdana" font-size="14.00" fill="#000000">init</text>
+</a>
+</g>
+</g>
+<!-- github.com/go&#45;i2p/logger.GetGoI2PLogger -->
+<g id="node17" class="node">
+<title>github.com/go&#45;i2p/logger.GetGoI2PLogger</title>
+<g id="a_node17"><a xlink:title="github.com/go&#45;i2p/logger.GetGoI2PLogger | defined in log.go:120">
+<path fill="#ffe4b5" stroke="#000000" stroke-width="1.5" d="M305.4526,-52C305.4526,-52 208.0736,-52 208.0736,-52 202.0736,-52 196.0736,-46 196.0736,-40 196.0736,-40 196.0736,-28 196.0736,-28 196.0736,-22 202.0736,-16 208.0736,-16 208.0736,-16 305.4526,-16 305.4526,-16 311.4526,-16 317.4526,-22 317.4526,-28 317.4526,-28 317.4526,-40 317.4526,-40 317.4526,-46 311.4526,-52 305.4526,-52"/>
+<text text-anchor="middle" x="256.7631" y="-38.2" font-family="Verdana" font-size="14.00" fill="#000000">logger</text>
+<text text-anchor="middle" x="256.7631" y="-21.4" font-family="Verdana" font-size="14.00" fill="#000000">GetGoI2PLogger</text>
+</a>
+</g>
+</g>
+<!-- github.com/go&#45;i2p/common/certificate.init&#45;&gt;github.com/go&#45;i2p/logger.GetGoI2PLogger -->
+<g id="edge1" class="edge">
+<title>github.com/go&#45;i2p/common/certificate.init&#45;&gt;github.com/go&#45;i2p/logger.GetGoI2PLogger</title>
+<g id="a_edge1"><a xlink:title="at certificate_struct.go:12: calling [github.com/go&#45;i2p/logger.GetGoI2PLogger]">
+<path fill="none" stroke="#8b4513" d="M96.8016,-34C120.0311,-34 154.5,-34 185.4987,-34"/>
+<polygon fill="#8b4513" stroke="#8b4513" points="185.8571,-37.5001 195.8571,-34 185.857,-30.5001 185.8571,-37.5001"/>
+</a>
+</g>
+</g>
+<!-- (*github.com/go&#45;i2p/common/certificate.Certificate).Type&#45;&gt;(*github.com/go&#45;i2p/logger.Logger).WithFields -->
+<g id="edge49" class="edge">
+<title>(*github.com/go&#45;i2p/common/certificate.Certificate).Type&#45;&gt;(*github.com/go&#45;i2p/logger.Logger).WithFields</title>
+<g id="a_edge49"><a xlink:title="at certificate_struct.go:161: calling [(*github.com/go&#45;i2p/logger.Logger).WithFields]">
+<path fill="none" stroke="#8b4513" d="M753.9461,-363.9549C888.8742,-388.7243 1483.2891,-499.7587 1552.615,-546 1576.2119,-561.7394 1575.8825,-573.1814 1589.615,-598 1609.8746,-634.615 1596.3716,-655.0678 1625.615,-685 1630.1111,-689.602 1635.4354,-693.5495 1641.0947,-696.9229"/>
+<polygon fill="#8b4513" stroke="#8b4513" points="1639.7202,-700.1561 1650.1925,-701.7629 1643.0079,-693.9762 1639.7202,-700.1561"/>
+</a>
+</g>
+</g>
+<!-- (*github.com/go&#45;i2p/common/certificate.Certificate).Type&#45;&gt;(*github.com/sirupsen/logrus.Logger).Debug -->
+<g id="edge14" class="edge">
+<title>(*github.com/go&#45;i2p/common/certificate.Certificate).Type&#45;&gt;(*github.com/sirupsen/logrus.Logger).Debug</title>
+<g id="a_edge14"><a xlink:title="at certificate_struct.go:163: calling [(*github.com/sirupsen/logrus.Logger).Debug]">
+<path fill="none" stroke="#8b4513" d="M754.1742,-347.0737C761.7691,-342.4849 769.2649,-336.5008 774.1602,-329 832.6293,-239.4104 734.998,-167.1288 810.1602,-91 848.6673,-51.9977 877.0383,-71 931.8468,-71 931.8468,-71 931.8468,-71 1446.5378,-71 1510.7459,-71 1527.9379,-73.1502 1589.615,-91 1611.4287,-97.313 1634.5552,-107.3963 1653.445,-116.6075"/>
+<polygon fill="#8b4513" stroke="#8b4513" points="1652.1177,-119.8564 1662.6297,-121.1791 1655.2369,-113.5898 1652.1177,-119.8564"/>
+</a>
+</g>
+</g>
+<!-- (*github.com/go&#45;i2p/common/certificate.Certificate).Type&#45;&gt;(github.com/go&#45;i2p/common/data.Integer).Int -->
+<g id="edge2" class="edge">
+<title>(*github.com/go&#45;i2p/common/certificate.Certificate).Type&#45;&gt;(github.com/go&#45;i2p/common/data.Integer).Int</title>
+<g id="a_edge2"><a xlink:title="at certificate_struct.go:160: calling [(github.com/go&#45;i2p/common/data.Integer).Int]">
+<path fill="none" stroke="#8b4513" d="M754.2494,-342.467C760.8817,-338.2414 767.8681,-333.5904 774.1602,-329 808.3172,-304.0811 808.8295,-285.8441 847.1602,-268 881.8135,-251.8678 893.6225,-253 931.8468,-253 931.8468,-253 931.8468,-253 1053.0334,-253 1275.8161,-253 1349.8075,-201.7976 1552.615,-294 1593.8161,-312.7313 1588.0973,-339.6857 1625.615,-365 1635.1938,-371.4631 1646.3922,-377.0764 1656.9039,-381.6432"/>
+<polygon fill="#8b4513" stroke="#8b4513" points="1655.7203,-384.9412 1666.2983,-385.5373 1658.4008,-378.4748 1655.7203,-384.9412"/>
+</a>
+</g>
+</g>
+<!-- (*github.com/go&#45;i2p/common/certificate.Certificate).Length -->
+<g id="node19" class="node">
+<title>(*github.com/go&#45;i2p/common/certificate.Certificate).Length</title>
+<g id="a_node19"><a xlink:title="(*github.com/go&#45;i2p/common/certificate.Certificate).Length | defined in certificate_struct.go:168&#10;at certificate_struct.go:169: calling [(github.com/go&#45;i2p/common/data.Integer).Int]&#10;at certificate_struct.go:170: calling [(*github.com/go&#45;i2p/logger.Logger).WithFields]&#10;at certificate_struct.go:172: calling [(*github.com/sirupsen/logrus.Logger).Debug]">
+<path fill="#add8e6" stroke="#000000" stroke-width="1.5" d="M1466.1965,-342C1466.1965,-342 1426.8791,-342 1426.8791,-342 1420.8791,-342 1414.8791,-336 1414.8791,-330 1414.8791,-330 1414.8791,-318 1414.8791,-318 1414.8791,-312 1420.8791,-306 1426.8791,-306 1426.8791,-306 1466.1965,-306 1466.1965,-306 1472.1965,-306 1478.1965,-312 1478.1965,-318 1478.1965,-318 1478.1965,-330 1478.1965,-330 1478.1965,-336 1472.1965,-342 1466.1965,-342"/>
+<text text-anchor="middle" x="1446.5378" y="-319.8" font-family="Verdana" font-size="14.00" fill="#000000">Length</text>
+</a>
+</g>
+</g>
+<!-- (*github.com/go&#45;i2p/common/certificate.Certificate).Length&#45;&gt;(*github.com/go&#45;i2p/logger.Logger).WithFields -->
+<g id="edge52" class="edge">
+<title>(*github.com/go&#45;i2p/common/certificate.Certificate).Length&#45;&gt;(*github.com/go&#45;i2p/logger.Logger).WithFields</title>
+<g id="a_edge52"><a xlink:title="at certificate_struct.go:170: calling [(*github.com/go&#45;i2p/logger.Logger).WithFields]">
+<path fill="none" stroke="#8b4513" d="M1468.4107,-342.2097C1501.2579,-371.009 1562.3721,-430.5573 1589.615,-496 1622.478,-574.9432 1572.4005,-618.0656 1625.615,-685 1629.876,-690.3595 1635.2923,-694.7863 1641.2016,-698.4366"/>
+<polygon fill="#8b4513" stroke="#8b4513" points="1639.6711,-701.5876 1650.1351,-703.2475 1642.9901,-695.4245 1639.6711,-701.5876"/>
+</a>
+</g>
+</g>
+<!-- (*github.com/go&#45;i2p/common/certificate.Certificate).Length&#45;&gt;(*github.com/sirupsen/logrus.Logger).Debug -->
+<g id="edge59" class="edge">
+<title>(*github.com/go&#45;i2p/common/certificate.Certificate).Length&#45;&gt;(*github.com/sirupsen/logrus.Logger).Debug</title>
+<g id="a_edge59"><a xlink:title="at certificate_struct.go:172: calling [(*github.com/sirupsen/logrus.Logger).Debug]">
+<path fill="none" stroke="#8b4513" d="M1470.6762,-305.8269C1515.3243,-272.2126 1610.826,-200.3121 1661.1025,-162.4603"/>
+<polygon fill="#8b4513" stroke="#8b4513" points="1663.4717,-165.0577 1669.3555,-156.2469 1659.2614,-159.4655 1663.4717,-165.0577"/>
+</a>
+</g>
+</g>
+<!-- (*github.com/go&#45;i2p/common/certificate.Certificate).Length&#45;&gt;(github.com/go&#45;i2p/common/data.Integer).Int -->
+<g id="edge36" class="edge">
+<title>(*github.com/go&#45;i2p/common/certificate.Certificate).Length&#45;&gt;(github.com/go&#45;i2p/common/data.Integer).Int</title>
+<g id="a_edge36"><a xlink:title="at certificate_struct.go:169: calling [(github.com/go&#45;i2p/common/data.Integer).Int]">
+<path fill="none" stroke="#8b4513" d="M1478.33,-333.1367C1524.0775,-346.2839 1608.2809,-370.4828 1656.7049,-384.3992"/>
+<polygon fill="#8b4513" stroke="#8b4513" points="1655.8905,-387.8067 1666.4683,-387.205 1657.824,-381.0791 1655.8905,-387.8067"/>
+</a>
+</g>
+</g>
+<!-- (*github.com/go&#45;i2p/common/certificate.Certificate).ExcessBytes -->
+<g id="node20" class="node">
+<title>(*github.com/go&#45;i2p/common/certificate.Certificate).ExcessBytes</title>
+<g id="a_node20"><a xlink:title="(*github.com/go&#45;i2p/common/certificate.Certificate).ExcessBytes | defined in certificate_struct.go:129&#10;at certificate_struct.go:130: calling [(github.com/go&#45;i2p/common/data.Integer).Int]&#10;at certificate_struct.go:131: calling [(github.com/go&#45;i2p/common/data.Integer).Int]&#10;at certificate_struct.go:132: calling [(*github.com/go&#45;i2p/logger.Logger).WithFields]&#10;at certificate_struct.go:134: calling [(*github.com/sirupsen/logrus.Logger).Debug]&#10;at certificate_struct.go:137: calling [(*github.com/sirupsen/logrus.Logger).Debug]">
+<path fill="#add8e6" stroke="#000000" stroke-width="1.5" d="M762.0392,-438C762.0392,-438 691.5238,-438 691.5238,-438 685.5238,-438 679.5238,-432 679.5238,-426 679.5238,-426 679.5238,-414 679.5238,-414 679.5238,-408 685.5238,-402 691.5238,-402 691.5238,-402 762.0392,-402 762.0392,-402 768.0392,-402 774.0392,-408 774.0392,-414 774.0392,-414 774.0392,-426 774.0392,-426 774.0392,-432 768.0392,-438 762.0392,-438"/>
+<text text-anchor="middle" x="726.7815" y="-415.8" font-family="Verdana" font-size="14.00" fill="#000000">ExcessBytes</text>
+</a>
+</g>
+</g>
+<!-- (*github.com/go&#45;i2p/common/certificate.Certificate).ExcessBytes&#45;&gt;(*github.com/go&#45;i2p/logger.Logger).WithFields -->
+<g id="edge37" class="edge">
+<title>(*github.com/go&#45;i2p/common/certificate.Certificate).ExcessBytes&#45;&gt;(*github.com/go&#45;i2p/logger.Logger).WithFields</title>
+<g id="a_edge37"><a xlink:title="at certificate_struct.go:132: calling [(*github.com/go&#45;i2p/logger.Logger).WithFields]">
+<path fill="none" stroke="#8b4513" d="M774.0907,-432.734C876.4903,-459.7288 1126.6917,-522.6306 1340.4606,-552 1387.2549,-558.429 1510.4261,-543.7601 1552.615,-565 1608.374,-593.0717 1580.8861,-641.4522 1625.615,-685 1630.2248,-689.4881 1635.6186,-693.3661 1641.3158,-696.7014"/>
+<polygon fill="#8b4513" stroke="#8b4513" points="1639.9698,-699.9479 1650.4495,-701.5055 1643.2284,-693.7526 1639.9698,-699.9479"/>
+</a>
+</g>
+</g>
+<!-- (*github.com/go&#45;i2p/common/certificate.Certificate).ExcessBytes&#45;&gt;(*github.com/sirupsen/logrus.Logger).Debug -->
+<g id="edge45" class="edge">
+<title>(*github.com/go&#45;i2p/common/certificate.Certificate).ExcessBytes&#45;&gt;(*github.com/sirupsen/logrus.Logger).Debug</title>
+<g id="a_edge45"><a xlink:title="at certificate_struct.go:134: calling [(*github.com/sirupsen/logrus.Logger).Debug]&#10;at certificate_struct.go:137: calling [(*github.com/sirupsen/logrus.Logger).Debug]">
+<path fill="none" stroke="#8b4513" d="M763.4347,-401.7143C767.5822,-398.3245 771.3278,-394.4291 774.1602,-390 839.8575,-287.2674 725.2939,-205.5662 810.1602,-118 848.3042,-78.6425 877.0383,-98 931.8468,-98 931.8468,-98 931.8468,-98 1446.5378,-98 1519.9596,-98 1604.0957,-115.4282 1652.8113,-127.2766"/>
+<polygon fill="#8b4513" stroke="#8b4513" points="1652.1044,-130.7072 1662.6524,-129.712 1653.786,-123.9122 1652.1044,-130.7072"/>
+</a>
+</g>
+</g>
+<!-- (*github.com/go&#45;i2p/common/certificate.Certificate).ExcessBytes&#45;&gt;(github.com/go&#45;i2p/common/data.Integer).Int -->
+<g id="edge12" class="edge">
+<title>(*github.com/go&#45;i2p/common/certificate.Certificate).ExcessBytes&#45;&gt;(github.com/go&#45;i2p/common/data.Integer).Int</title>
+<g id="a_edge12"><a xlink:title="at certificate_struct.go:130: calling [(github.com/go&#45;i2p/common/data.Integer).Int]&#10;at certificate_struct.go:131: calling [(github.com/go&#45;i2p/common/data.Integer).Int]">
+<path fill="none" stroke="#8b4513" d="M774.0561,-420.4714C837.5175,-421.0627 953.7683,-422 1053.0334,-422 1053.0334,-422 1053.0334,-422 1303.9606,-422 1430.851,-422 1461.9713,-407.9082 1588.615,-400 1611.1005,-398.5959 1636.3172,-397.3831 1656.3994,-396.5037"/>
+<polygon fill="#8b4513" stroke="#8b4513" points="1656.5506,-400.0005 1666.3914,-396.0749 1656.2505,-393.0069 1656.5506,-400.0005"/>
 </a>
 </g>
 </g>
 <!-- (*github.com/go&#45;i2p/common/certificate.Certificate).Bytes -->
-<g id="node18" class="node">
+<g id="node21" class="node">
 <title>(*github.com/go&#45;i2p/common/certificate.Certificate).Bytes</title>
-<g id="a_node18"><a xlink:title="(*github.com/go&#45;i2p/common/certificate.Certificate).Bytes | defined in certificate_struct.go:142&#10;at certificate_struct.go:146: calling [(*github.com/go&#45;i2p/logger.Logger).WithFields]&#10;at certificate_struct.go:143: calling [(github.com/go&#45;i2p/common/data.Integer).Bytes]&#10;at certificate_struct.go:144: calling [(github.com/go&#45;i2p/common/data.Integer).Bytes]&#10;at certificate_struct.go:145: calling [(*github.com/go&#45;i2p/common/certificate.Certificate).Data]&#10;at certificate_struct.go:148: calling [(*github.com/sirupsen/logrus.Logger).Debug]">
-<path fill="#add8e6" stroke="#000000" stroke-width="1.5" d="M947.7333,-349C947.7333,-349 915.9603,-349 915.9603,-349 909.9603,-349 903.9603,-343 903.9603,-337 903.9603,-337 903.9603,-325 903.9603,-325 903.9603,-319 909.9603,-313 915.9603,-313 915.9603,-313 947.7333,-313 947.7333,-313 953.7333,-313 959.7333,-319 959.7333,-325 959.7333,-325 959.7333,-337 959.7333,-337 959.7333,-343 953.7333,-349 947.7333,-349"/>
-<text text-anchor="middle" x="931.8468" y="-326.8" font-family="Verdana" font-size="14.00" fill="#000000">Bytes</text>
+<g id="a_node21"><a xlink:title="(*github.com/go&#45;i2p/common/certificate.Certificate).Bytes | defined in certificate_struct.go:142&#10;at certificate_struct.go:146: calling [(*github.com/go&#45;i2p/logger.Logger).WithFields]&#10;at certificate_struct.go:143: calling [(github.com/go&#45;i2p/common/data.Integer).Bytes]&#10;at certificate_struct.go:144: calling [(github.com/go&#45;i2p/common/data.Integer).Bytes]&#10;at certificate_struct.go:145: calling [(*github.com/go&#45;i2p/common/certificate.Certificate).Data]&#10;at certificate_struct.go:148: calling [(*github.com/sirupsen/logrus.Logger).Debug]">
+<path fill="#add8e6" stroke="#000000" stroke-width="1.5" d="M947.7333,-316C947.7333,-316 915.9603,-316 915.9603,-316 909.9603,-316 903.9603,-310 903.9603,-304 903.9603,-304 903.9603,-292 903.9603,-292 903.9603,-286 909.9603,-280 915.9603,-280 915.9603,-280 947.7333,-280 947.7333,-280 953.7333,-280 959.7333,-286 959.7333,-292 959.7333,-292 959.7333,-304 959.7333,-304 959.7333,-310 953.7333,-316 947.7333,-316"/>
+<text text-anchor="middle" x="931.8468" y="-293.8" font-family="Verdana" font-size="14.00" fill="#000000">Bytes</text>
 </a>
 </g>
 </g>
 <!-- (*github.com/go&#45;i2p/common/certificate.Certificate).Data -->
-<g id="node20" class="node">
+<g id="node22" class="node">
 <title>(*github.com/go&#45;i2p/common/certificate.Certificate).Data</title>
-<g id="a_node20"><a xlink:title="(*github.com/go&#45;i2p/common/certificate.Certificate).Data | defined in certificate_struct.go:177&#10;at certificate_struct.go:187: calling [(*github.com/sirupsen/logrus.Logger).Debug]&#10;at certificate_struct.go:178: calling [(*github.com/go&#45;i2p/common/certificate.Certificate).Length]&#10;at certificate_struct.go:185: calling [(*github.com/go&#45;i2p/logger.Logger).WithFields]&#10;at certificate_struct.go:181: calling [(*github.com/go&#45;i2p/logger.Logger).Warn]">
-<path fill="#add8e6" stroke="#000000" stroke-width="1.5" d="M1193.497,-349C1193.497,-349 1163.497,-349 1163.497,-349 1157.497,-349 1151.497,-343 1151.497,-337 1151.497,-337 1151.497,-325 1151.497,-325 1151.497,-319 1157.497,-313 1163.497,-313 1163.497,-313 1193.497,-313 1193.497,-313 1199.497,-313 1205.497,-319 1205.497,-325 1205.497,-325 1205.497,-337 1205.497,-337 1205.497,-343 1199.497,-349 1193.497,-349"/>
-<text text-anchor="middle" x="1178.497" y="-326.8" font-family="Verdana" font-size="14.00" fill="#000000">Data</text>
+<g id="a_node22"><a xlink:title="(*github.com/go&#45;i2p/common/certificate.Certificate).Data | defined in certificate_struct.go:177&#10;at certificate_struct.go:187: calling [(*github.com/sirupsen/logrus.Logger).Debug]&#10;at certificate_struct.go:181: calling [(*github.com/go&#45;i2p/logger.Logger).Warn]&#10;at certificate_struct.go:178: calling [(*github.com/go&#45;i2p/common/certificate.Certificate).Length]&#10;at certificate_struct.go:185: calling [(*github.com/go&#45;i2p/logger.Logger).WithFields]">
+<path fill="#add8e6" stroke="#000000" stroke-width="1.5" d="M1193.497,-342C1193.497,-342 1163.497,-342 1163.497,-342 1157.497,-342 1151.497,-336 1151.497,-330 1151.497,-330 1151.497,-318 1151.497,-318 1151.497,-312 1157.497,-306 1163.497,-306 1163.497,-306 1193.497,-306 1193.497,-306 1199.497,-306 1205.497,-312 1205.497,-318 1205.497,-318 1205.497,-330 1205.497,-330 1205.497,-336 1199.497,-342 1193.497,-342"/>
+<text text-anchor="middle" x="1178.497" y="-319.8" font-family="Verdana" font-size="14.00" fill="#000000">Data</text>
 </a>
 </g>
 </g>
 <!-- (*github.com/go&#45;i2p/common/certificate.Certificate).Bytes&#45;&gt;(*github.com/go&#45;i2p/common/certificate.Certificate).Data -->
-<g id="edge25" class="edge">
+<g id="edge48" class="edge">
 <title>(*github.com/go&#45;i2p/common/certificate.Certificate).Bytes&#45;&gt;(*github.com/go&#45;i2p/common/certificate.Certificate).Data</title>
-<g id="a_edge25"><a xlink:title="at certificate_struct.go:145: calling [(*github.com/go&#45;i2p/common/certificate.Certificate).Data]">
-<path fill="none" stroke="#000000" d="M960.1407,-331C1004.7955,-331 1091.6282,-331 1141.2819,-331"/>
-<polygon fill="#000000" stroke="#000000" points="1141.2847,-334.5001 1151.2846,-331 1141.2846,-327.5001 1141.2847,-334.5001"/>
+<g id="a_edge48"><a xlink:title="at certificate_struct.go:145: calling [(*github.com/go&#45;i2p/common/certificate.Certificate).Data]">
+<path fill="none" stroke="#000000" d="M960.1407,-300.9825C1004.7955,-305.6897 1091.6282,-314.8429 1141.2819,-320.0771"/>
+<polygon fill="#000000" stroke="#000000" points="1140.9728,-323.5638 1151.2846,-321.1315 1141.7067,-316.6024 1140.9728,-323.5638"/>
 </a>
 </g>
 </g>
 <!-- (*github.com/go&#45;i2p/common/certificate.Certificate).Bytes&#45;&gt;(*github.com/go&#45;i2p/logger.Logger).WithFields -->
-<g id="edge9" class="edge">
+<g id="edge11" class="edge">
 <title>(*github.com/go&#45;i2p/common/certificate.Certificate).Bytes&#45;&gt;(*github.com/go&#45;i2p/logger.Logger).WithFields</title>
-<g id="a_edge9"><a xlink:title="at certificate_struct.go:146: calling [(*github.com/go&#45;i2p/logger.Logger).WithFields]">
-<path fill="none" stroke="#8b4513" d="M959.8166,-338.295C1079.9369,-369.6415 1546.2674,-491.5168 1552.615,-496 1626.1671,-547.9494 1567.0629,-616.5874 1625.615,-685 1630.0107,-690.136 1635.4555,-694.4264 1641.3355,-698.0022"/>
+<g id="a_edge11"><a xlink:title="at certificate_struct.go:146: calling [(*github.com/go&#45;i2p/logger.Logger).WithFields]">
+<path fill="none" stroke="#8b4513" d="M959.9536,-308.4578C991.42,-320.0959 1043.9774,-339.3269 1089.5334,-355 1200.4781,-393.1694 1228.1524,-403.0515 1340.4606,-437 1434.1433,-465.3183 1472.9992,-439.0817 1552.615,-496 1625.8684,-548.3697 1567.0629,-616.5874 1625.615,-685 1630.0107,-690.136 1635.4555,-694.4264 1641.3355,-698.0022"/>
 <polygon fill="#8b4513" stroke="#8b4513" points="1639.7227,-701.1088 1650.1904,-702.7451 1643.0278,-694.9382 1639.7227,-701.1088"/>
 </a>
 </g>
 </g>
 <!-- (*github.com/go&#45;i2p/common/certificate.Certificate).Bytes&#45;&gt;(*github.com/sirupsen/logrus.Logger).Debug -->
-<g id="edge26" class="edge">
+<g id="edge58" class="edge">
 <title>(*github.com/go&#45;i2p/common/certificate.Certificate).Bytes&#45;&gt;(*github.com/sirupsen/logrus.Logger).Debug</title>
-<g id="a_edge26"><a xlink:title="at certificate_struct.go:148: calling [(*github.com/sirupsen/logrus.Logger).Debug]">
-<path fill="none" stroke="#8b4513" d="M944.1612,-312.8515C976.6631,-267.3445 1069.7683,-152 1178.497,-152 1178.497,-152 1178.497,-152 1446.5378,-152 1519.1803,-152 1603.6453,-145.892 1652.622,-141.7449"/>
+<g id="a_edge58"><a xlink:title="at certificate_struct.go:148: calling [(*github.com/sirupsen/logrus.Logger).Debug]">
+<path fill="none" stroke="#8b4513" d="M948.0798,-279.8042C984.8858,-240.6663 1079.2242,-152 1178.497,-152 1178.497,-152 1178.497,-152 1446.5378,-152 1519.1803,-152 1603.6453,-145.892 1652.622,-141.7449"/>
 <polygon fill="#8b4513" stroke="#8b4513" points="1653.1486,-145.2126 1662.8112,-140.8669 1652.5476,-138.2384 1653.1486,-145.2126"/>
 </a>
 </g>
@@ -686,191 +785,92 @@
 </g>
 </g>
 <!-- (*github.com/go&#45;i2p/common/certificate.Certificate).Bytes&#45;&gt;(github.com/go&#45;i2p/common/data.Integer).Bytes -->
-<g id="edge23" class="edge">
+<g id="edge28" class="edge">
 <title>(*github.com/go&#45;i2p/common/certificate.Certificate).Bytes&#45;&gt;(github.com/go&#45;i2p/common/data.Integer).Bytes</title>
-<g id="a_edge23"><a xlink:title="at certificate_struct.go:143: calling [(github.com/go&#45;i2p/common/data.Integer).Bytes]&#10;at certificate_struct.go:144: calling [(github.com/go&#45;i2p/common/data.Integer).Bytes]">
-<path fill="none" stroke="#8b4513" d="M959.916,-324.8494C991.3491,-318.1513 1043.877,-307.5245 1089.5334,-301 1310.1299,-269.4759 1366.0335,-263.6789 1588.615,-253 1625.4322,-251.2336 1657.2617,-283.3654 1675.9394,-307.6816"/>
-<polygon fill="#8b4513" stroke="#8b4513" points="1673.2355,-309.9123 1681.9841,-315.8883 1678.8716,-305.7609 1673.2355,-309.9123"/>
-</a>
-</g>
-</g>
-<!-- (*github.com/go&#45;i2p/common/certificate.Certificate).Length -->
-<g id="node19" class="node">
-<title>(*github.com/go&#45;i2p/common/certificate.Certificate).Length</title>
-<g id="a_node19"><a xlink:title="(*github.com/go&#45;i2p/common/certificate.Certificate).Length | defined in certificate_struct.go:168&#10;at certificate_struct.go:170: calling [(*github.com/go&#45;i2p/logger.Logger).WithFields]&#10;at certificate_struct.go:172: calling [(*github.com/sirupsen/logrus.Logger).Debug]&#10;at certificate_struct.go:169: calling [(github.com/go&#45;i2p/common/data.Integer).Int]">
-<path fill="#add8e6" stroke="#000000" stroke-width="1.5" d="M1466.1965,-342C1466.1965,-342 1426.8791,-342 1426.8791,-342 1420.8791,-342 1414.8791,-336 1414.8791,-330 1414.8791,-330 1414.8791,-318 1414.8791,-318 1414.8791,-312 1420.8791,-306 1426.8791,-306 1426.8791,-306 1466.1965,-306 1466.1965,-306 1472.1965,-306 1478.1965,-312 1478.1965,-318 1478.1965,-318 1478.1965,-330 1478.1965,-330 1478.1965,-336 1472.1965,-342 1466.1965,-342"/>
-<text text-anchor="middle" x="1446.5378" y="-319.8" font-family="Verdana" font-size="14.00" fill="#000000">Length</text>
-</a>
-</g>
-</g>
-<!-- (*github.com/go&#45;i2p/common/certificate.Certificate).Length&#45;&gt;(*github.com/go&#45;i2p/logger.Logger).WithFields -->
-<g id="edge24" class="edge">
-<title>(*github.com/go&#45;i2p/common/certificate.Certificate).Length&#45;&gt;(*github.com/go&#45;i2p/logger.Logger).WithFields</title>
-<g id="a_edge24"><a xlink:title="at certificate_struct.go:170: calling [(*github.com/go&#45;i2p/logger.Logger).WithFields]">
-<path fill="none" stroke="#8b4513" d="M1468.4107,-342.2097C1501.2579,-371.009 1562.3721,-430.5573 1589.615,-496 1622.478,-574.9432 1572.4005,-618.0656 1625.615,-685 1629.876,-690.3595 1635.2923,-694.7863 1641.2016,-698.4366"/>
-<polygon fill="#8b4513" stroke="#8b4513" points="1639.6711,-701.5876 1650.1351,-703.2475 1642.9901,-695.4245 1639.6711,-701.5876"/>
-</a>
-</g>
-</g>
-<!-- (*github.com/go&#45;i2p/common/certificate.Certificate).Length&#45;&gt;(*github.com/sirupsen/logrus.Logger).Debug -->
-<g id="edge40" class="edge">
-<title>(*github.com/go&#45;i2p/common/certificate.Certificate).Length&#45;&gt;(*github.com/sirupsen/logrus.Logger).Debug</title>
-<g id="a_edge40"><a xlink:title="at certificate_struct.go:172: calling [(*github.com/sirupsen/logrus.Logger).Debug]">
-<path fill="none" stroke="#8b4513" d="M1470.6762,-305.8269C1515.3243,-272.2126 1610.826,-200.3121 1661.1025,-162.4603"/>
-<polygon fill="#8b4513" stroke="#8b4513" points="1663.4717,-165.0577 1669.3555,-156.2469 1659.2614,-159.4655 1663.4717,-165.0577"/>
-</a>
-</g>
-</g>
-<!-- (*github.com/go&#45;i2p/common/certificate.Certificate).Length&#45;&gt;(github.com/go&#45;i2p/common/data.Integer).Int -->
-<g id="edge60" class="edge">
-<title>(*github.com/go&#45;i2p/common/certificate.Certificate).Length&#45;&gt;(github.com/go&#45;i2p/common/data.Integer).Int</title>
-<g id="a_edge60"><a xlink:title="at certificate_struct.go:169: calling [(github.com/go&#45;i2p/common/data.Integer).Int]">
-<path fill="none" stroke="#8b4513" d="M1478.33,-333.1367C1524.0775,-346.2839 1608.2809,-370.4828 1656.7049,-384.3992"/>
-<polygon fill="#8b4513" stroke="#8b4513" points="1655.8905,-387.8067 1666.4683,-387.205 1657.824,-381.0791 1655.8905,-387.8067"/>
+<g id="a_edge28"><a xlink:title="at certificate_struct.go:143: calling [(github.com/go&#45;i2p/common/data.Integer).Bytes]&#10;at certificate_struct.go:144: calling [(github.com/go&#45;i2p/common/data.Integer).Bytes]">
+<path fill="none" stroke="#8b4513" d="M959.9769,-295.381C1050.8421,-287.0696 1344.7495,-261.3447 1588.615,-253 1625.2472,-251.7465 1656.9216,-283.3878 1675.634,-307.489"/>
+<polygon fill="#8b4513" stroke="#8b4513" points="1672.9192,-309.7034 1681.6992,-315.6332 1678.5334,-305.5224 1672.9192,-309.7034"/>
 </a>
 </g>
 </g>
 <!-- (*github.com/go&#45;i2p/common/certificate.Certificate).Data&#45;&gt;(*github.com/go&#45;i2p/common/certificate.Certificate).Length -->
-<g id="edge41" class="edge">
+<g id="edge33" class="edge">
 <title>(*github.com/go&#45;i2p/common/certificate.Certificate).Data&#45;&gt;(*github.com/go&#45;i2p/common/certificate.Certificate).Length</title>
-<g id="a_edge41"><a xlink:title="at certificate_struct.go:178: calling [(*github.com/go&#45;i2p/common/certificate.Certificate).Length]">
-<path fill="none" stroke="#000000" d="M1205.6733,-330.2903C1252.5613,-329.0658 1348.9613,-326.5483 1404.5381,-325.0968"/>
-<polygon fill="#000000" stroke="#000000" points="1404.8457,-328.5901 1414.7509,-324.8301 1404.6629,-321.5925 1404.8457,-328.5901"/>
+<g id="a_edge33"><a xlink:title="at certificate_struct.go:178: calling [(*github.com/go&#45;i2p/common/certificate.Certificate).Length]">
+<path fill="none" stroke="#000000" d="M1205.6733,-324C1252.5613,-324 1348.9613,-324 1404.5381,-324"/>
+<polygon fill="#000000" stroke="#000000" points="1404.7509,-327.5001 1414.7509,-324 1404.7508,-320.5001 1404.7509,-327.5001"/>
 </a>
 </g>
 </g>
 <!-- (*github.com/go&#45;i2p/common/certificate.Certificate).Data&#45;&gt;(*github.com/go&#45;i2p/logger.Logger).WithFields -->
-<g id="edge51" class="edge">
+<g id="edge57" class="edge">
 <title>(*github.com/go&#45;i2p/common/certificate.Certificate).Data&#45;&gt;(*github.com/go&#45;i2p/logger.Logger).WithFields</title>
-<g id="a_edge51"><a xlink:title="at certificate_struct.go:185: calling [(*github.com/go&#45;i2p/logger.Logger).WithFields]">
-<path fill="none" stroke="#8b4513" d="M1205.6535,-341.6012C1237.7722,-354.0918 1292.8875,-375.3757 1340.4606,-393 1434.3811,-427.7944 1473.3089,-407.8261 1552.615,-469 1632.8522,-530.8921 1561.3527,-606.6483 1625.615,-685 1629.9571,-690.2941 1635.4208,-694.6825 1641.3545,-698.3132"/>
+<g id="a_edge57"><a xlink:title="at certificate_struct.go:185: calling [(*github.com/go&#45;i2p/logger.Logger).WithFields]">
+<path fill="none" stroke="#8b4513" d="M1205.5908,-335.2773C1248.1801,-352.9939 1327.3155,-385.867 1340.4606,-391 1434.0408,-427.5417 1473.325,-407.3101 1552.615,-469 1632.5937,-531.2258 1561.3527,-606.6483 1625.615,-685 1629.9571,-690.2941 1635.4208,-694.6825 1641.3545,-698.3132"/>
 <polygon fill="#8b4513" stroke="#8b4513" points="1639.8403,-701.4726 1650.3082,-703.1077 1643.1448,-695.3016 1639.8403,-701.4726"/>
 </a>
 </g>
 </g>
 <!-- (*github.com/go&#45;i2p/common/certificate.Certificate).Data&#45;&gt;(*github.com/go&#45;i2p/logger.Logger).Warn -->
-<g id="edge53" class="edge">
+<g id="edge22" class="edge">
 <title>(*github.com/go&#45;i2p/common/certificate.Certificate).Data&#45;&gt;(*github.com/go&#45;i2p/logger.Logger).Warn</title>
-<g id="a_edge53"><a xlink:title="at certificate_struct.go:181: calling [(*github.com/go&#45;i2p/logger.Logger).Warn]">
-<path fill="none" stroke="#8b4513" d="M1205.6121,-335.9C1292.3678,-351.7723 1559.2562,-402.181 1589.615,-427 1652.7952,-478.6512 1679.282,-577.0978 1688.8754,-625.5799"/>
-<polygon fill="#8b4513" stroke="#8b4513" points="1685.4864,-626.4979 1690.7707,-635.6808 1692.3664,-625.2068 1685.4864,-626.4979"/>
+<g id="a_edge22"><a xlink:title="at certificate_struct.go:181: calling [(*github.com/go&#45;i2p/logger.Logger).Warn]">
+<path fill="none" stroke="#8b4513" d="M1205.6188,-329.3758C1292.395,-346.7688 1559.3392,-401.8399 1589.615,-427 1652.3778,-479.1577 1679.0611,-577.3658 1688.7877,-625.6863"/>
+<polygon fill="#8b4513" stroke="#8b4513" points="1685.3965,-626.5872 1690.7119,-635.7522 1692.272,-625.2729 1685.3965,-626.5872"/>
 </a>
 </g>
 </g>
 <!-- (*github.com/go&#45;i2p/common/certificate.Certificate).Data&#45;&gt;(*github.com/sirupsen/logrus.Logger).Debug -->
-<g id="edge8" class="edge">
+<g id="edge17" class="edge">
 <title>(*github.com/go&#45;i2p/common/certificate.Certificate).Data&#45;&gt;(*github.com/sirupsen/logrus.Logger).Debug</title>
-<g id="a_edge8"><a xlink:title="at certificate_struct.go:187: calling [(*github.com/sirupsen/logrus.Logger).Debug]">
-<path fill="none" stroke="#8b4513" d="M1205.8271,-320.7597C1291.0708,-288.8199 1552.3944,-190.905 1653.2736,-153.1068"/>
-<polygon fill="#8b4513" stroke="#8b4513" points="1654.669,-156.3216 1662.8052,-149.5354 1652.2129,-149.7667 1654.669,-156.3216"/>
+<g id="a_edge17"><a xlink:title="at certificate_struct.go:187: calling [(*github.com/sirupsen/logrus.Logger).Debug]">
+<path fill="none" stroke="#8b4513" d="M1205.8271,-314.1312C1291.0708,-283.3498 1552.3944,-188.9862 1653.2736,-152.5589"/>
+<polygon fill="#8b4513" stroke="#8b4513" points="1654.5883,-155.8054 1662.8052,-149.117 1652.2109,-149.2215 1654.5883,-155.8054"/>
 </a>
 </g>
 </g>
 <!-- (*github.com/go&#45;i2p/common/certificate.Certificate).length&#45;&gt;(*github.com/go&#45;i2p/common/certificate.Certificate).Bytes -->
-<g id="edge56" class="edge">
+<g id="edge60" class="edge">
 <title>(*github.com/go&#45;i2p/common/certificate.Certificate).length&#45;&gt;(*github.com/go&#45;i2p/common/certificate.Certificate).Bytes</title>
-<g id="a_edge56"><a xlink:title="at certificate_struct.go:154: calling [(*github.com/go&#45;i2p/common/certificate.Certificate).Bytes]">
-<path fill="none" stroke="#000000" d="M756.5998,-362.6199C792.7993,-356.0884 853.9124,-345.0617 893.5602,-337.9081"/>
-<polygon fill="#000000" stroke="#000000" points="894.4222,-341.3091 903.6418,-336.089 893.1792,-334.4204 894.4222,-341.3091"/>
-</a>
-</g>
-</g>
-<!-- (*github.com/go&#45;i2p/common/certificate.Certificate).ExcessBytes -->
-<g id="node22" class="node">
-<title>(*github.com/go&#45;i2p/common/certificate.Certificate).ExcessBytes</title>
-<g id="a_node22"><a xlink:title="(*github.com/go&#45;i2p/common/certificate.Certificate).ExcessBytes | defined in certificate_struct.go:129&#10;at certificate_struct.go:130: calling [(github.com/go&#45;i2p/common/data.Integer).Int]&#10;at certificate_struct.go:131: calling [(github.com/go&#45;i2p/common/data.Integer).Int]&#10;at certificate_struct.go:134: calling [(*github.com/sirupsen/logrus.Logger).Debug]&#10;at certificate_struct.go:137: calling [(*github.com/sirupsen/logrus.Logger).Debug]&#10;at certificate_struct.go:132: calling [(*github.com/go&#45;i2p/logger.Logger).WithFields]">
-<path fill="#add8e6" stroke="#000000" stroke-width="1.5" d="M762.0392,-325C762.0392,-325 691.5238,-325 691.5238,-325 685.5238,-325 679.5238,-319 679.5238,-313 679.5238,-313 679.5238,-301 679.5238,-301 679.5238,-295 685.5238,-289 691.5238,-289 691.5238,-289 762.0392,-289 762.0392,-289 768.0392,-289 774.0392,-295 774.0392,-301 774.0392,-301 774.0392,-313 774.0392,-313 774.0392,-319 768.0392,-325 762.0392,-325"/>
-<text text-anchor="middle" x="726.7815" y="-302.8" font-family="Verdana" font-size="14.00" fill="#000000">ExcessBytes</text>
-</a>
-</g>
-</g>
-<!-- (*github.com/go&#45;i2p/common/certificate.Certificate).ExcessBytes&#45;&gt;(*github.com/go&#45;i2p/logger.Logger).WithFields -->
-<g id="edge48" class="edge">
-<title>(*github.com/go&#45;i2p/common/certificate.Certificate).ExcessBytes&#45;&gt;(*github.com/go&#45;i2p/logger.Logger).WithFields</title>
-<g id="a_edge48"><a xlink:title="at certificate_struct.go:132: calling [(*github.com/go&#45;i2p/logger.Logger).WithFields]">
-<path fill="none" stroke="#8b4513" d="M761.9288,-325.0198C785.5855,-336.6565 817.7196,-351.5243 847.1602,-362 923.4789,-389.1562 1485.9299,-500.0098 1552.615,-546 1575.9649,-562.1036 1575.8825,-573.1814 1589.615,-598 1609.8746,-634.615 1596.3716,-655.0678 1625.615,-685 1630.1111,-689.602 1635.4354,-693.5495 1641.0947,-696.9229"/>
-<polygon fill="#8b4513" stroke="#8b4513" points="1639.7202,-700.1561 1650.1925,-701.7629 1643.0079,-693.9762 1639.7202,-700.1561"/>
-</a>
-</g>
-</g>
-<!-- (*github.com/go&#45;i2p/common/certificate.Certificate).ExcessBytes&#45;&gt;(*github.com/sirupsen/logrus.Logger).Debug -->
-<g id="edge38" class="edge">
-<title>(*github.com/go&#45;i2p/common/certificate.Certificate).ExcessBytes&#45;&gt;(*github.com/sirupsen/logrus.Logger).Debug</title>
-<g id="a_edge38"><a xlink:title="at certificate_struct.go:134: calling [(*github.com/sirupsen/logrus.Logger).Debug]&#10;at certificate_struct.go:137: calling [(*github.com/sirupsen/logrus.Logger).Debug]">
-<path fill="none" stroke="#8b4513" d="M770.896,-288.6554C772.0655,-287.507 773.1596,-286.2898 774.1602,-285 827.9117,-215.7104 747.5163,-152.3678 810.1602,-91 849.3124,-52.6453 877.0383,-71 931.8468,-71 931.8468,-71 931.8468,-71 1446.5378,-71 1510.7459,-71 1527.9379,-73.1502 1589.615,-91 1611.4287,-97.313 1634.5552,-107.3963 1653.445,-116.6075"/>
-<polygon fill="#8b4513" stroke="#8b4513" points="1652.1177,-119.8564 1662.6297,-121.1791 1655.2369,-113.5898 1652.1177,-119.8564"/>
-</a>
-</g>
-</g>
-<!-- (*github.com/go&#45;i2p/common/certificate.Certificate).ExcessBytes&#45;&gt;(github.com/go&#45;i2p/common/data.Integer).Int -->
-<g id="edge17" class="edge">
-<title>(*github.com/go&#45;i2p/common/certificate.Certificate).ExcessBytes&#45;&gt;(github.com/go&#45;i2p/common/data.Integer).Int</title>
-<g id="a_edge17"><a xlink:title="at certificate_struct.go:130: calling [(github.com/go&#45;i2p/common/data.Integer).Int]&#10;at certificate_struct.go:131: calling [(github.com/go&#45;i2p/common/data.Integer).Int]">
-<path fill="none" stroke="#8b4513" d="M774.1413,-289.7658C815.2592,-276.352 876.6945,-260 931.8468,-260 931.8468,-260 931.8468,-260 1446.5378,-260 1496.0457,-260 1510.1731,-268.5104 1552.615,-294 1591.4146,-317.3021 1588.0973,-339.6857 1625.615,-365 1635.1938,-371.4631 1646.3922,-377.0764 1656.9039,-381.6432"/>
-<polygon fill="#8b4513" stroke="#8b4513" points="1655.7203,-384.9412 1666.2983,-385.5373 1658.4008,-378.4748 1655.7203,-384.9412"/>
-</a>
-</g>
-</g>
-<!-- (*github.com/go&#45;i2p/common/certificate.Certificate).Type&#45;&gt;(*github.com/go&#45;i2p/logger.Logger).WithFields -->
-<g id="edge58" class="edge">
-<title>(*github.com/go&#45;i2p/common/certificate.Certificate).Type&#45;&gt;(*github.com/go&#45;i2p/logger.Logger).WithFields</title>
-<g id="a_edge58"><a xlink:title="at certificate_struct.go:161: calling [(*github.com/go&#45;i2p/logger.Logger).WithFields]">
-<path fill="none" stroke="#8b4513" d="M753.7817,-435.7896C839.1642,-456.9622 1111.2213,-522.1454 1340.4606,-552 1387.2989,-558.0999 1510.4261,-543.7601 1552.615,-565 1608.374,-593.0717 1580.8861,-641.4522 1625.615,-685 1630.2248,-689.4881 1635.6186,-693.3661 1641.3158,-696.7014"/>
-<polygon fill="#8b4513" stroke="#8b4513" points="1639.9698,-699.9479 1650.4495,-701.5055 1643.2284,-693.7526 1639.9698,-699.9479"/>
-</a>
-</g>
-</g>
-<!-- (*github.com/go&#45;i2p/common/certificate.Certificate).Type&#45;&gt;(*github.com/sirupsen/logrus.Logger).Debug -->
-<g id="edge12" class="edge">
-<title>(*github.com/go&#45;i2p/common/certificate.Certificate).Type&#45;&gt;(*github.com/sirupsen/logrus.Logger).Debug</title>
-<g id="a_edge12"><a xlink:title="at certificate_struct.go:163: calling [(*github.com/sirupsen/logrus.Logger).Debug]">
-<path fill="none" stroke="#8b4513" d="M753.7837,-417.4387C761.5525,-412.8156 769.2458,-406.7202 774.1602,-399 841.7732,-292.7846 722.722,-208.5969 810.1602,-118 848.2221,-78.5631 877.0383,-98 931.8468,-98 931.8468,-98 931.8468,-98 1446.5378,-98 1519.9596,-98 1604.0957,-115.4282 1652.8113,-127.2766"/>
-<polygon fill="#8b4513" stroke="#8b4513" points="1652.1044,-130.7072 1662.6524,-129.712 1653.786,-123.9122 1652.1044,-130.7072"/>
-</a>
-</g>
-</g>
-<!-- (*github.com/go&#45;i2p/common/certificate.Certificate).Type&#45;&gt;(github.com/go&#45;i2p/common/data.Integer).Int -->
-<g id="edge7" class="edge">
-<title>(*github.com/go&#45;i2p/common/certificate.Certificate).Type&#45;&gt;(github.com/go&#45;i2p/common/data.Integer).Int</title>
-<g id="a_edge7"><a xlink:title="at certificate_struct.go:160: calling [(github.com/go&#45;i2p/common/data.Integer).Int]">
-<path fill="none" stroke="#8b4513" d="M753.9816,-429C793.2533,-429 868.1199,-429 931.8468,-429 931.8468,-429 931.8468,-429 1053.0334,-429 1291.4184,-429 1350.5381,-412.1152 1588.615,-400 1611.1152,-398.855 1636.3324,-397.6513 1656.4112,-396.712"/>
-<polygon fill="#8b4513" stroke="#8b4513" points="1656.5748,-400.2082 1666.4011,-396.2465 1656.249,-393.2158 1656.5748,-400.2082"/>
+<g id="a_edge60"><a xlink:title="at certificate_struct.go:154: calling [(*github.com/go&#45;i2p/common/certificate.Certificate).Bytes]">
+<path fill="none" stroke="#000000" d="M756.5998,-298C792.7993,-298 853.9124,-298 893.5602,-298"/>
+<polygon fill="#000000" stroke="#000000" points="893.6418,-301.5001 903.6418,-298 893.6418,-294.5001 893.6418,-301.5001"/>
 </a>
 </g>
 </g>
 <!-- (*github.com/go&#45;i2p/common/certificate.Certificate).RawBytes -->
 <g id="node24" class="node">
 <title>(*github.com/go&#45;i2p/common/certificate.Certificate).RawBytes</title>
-<g id="a_node24"><a xlink:title="(*github.com/go&#45;i2p/common/certificate.Certificate).RawBytes | defined in certificate_struct.go:118&#10;at certificate_struct.go:119: calling [(github.com/go&#45;i2p/common/data.Integer).Bytes]&#10;at certificate_struct.go:120: calling [(github.com/go&#45;i2p/common/data.Integer).Bytes]&#10;at certificate_struct.go:124: calling [(*github.com/sirupsen/logrus.Logger).Debug]&#10;at certificate_struct.go:122: calling [(*github.com/go&#45;i2p/logger.Logger).WithFields]">
-<path fill="#add8e6" stroke="#000000" stroke-width="1.5" d="M755.327,-508C755.327,-508 698.236,-508 698.236,-508 692.236,-508 686.236,-502 686.236,-496 686.236,-496 686.236,-484 686.236,-484 686.236,-478 692.236,-472 698.236,-472 698.236,-472 755.327,-472 755.327,-472 761.327,-472 767.327,-478 767.327,-484 767.327,-484 767.327,-496 767.327,-496 767.327,-502 761.327,-508 755.327,-508"/>
-<text text-anchor="middle" x="726.7815" y="-485.8" font-family="Verdana" font-size="14.00" fill="#000000">RawBytes</text>
+<g id="a_node24"><a xlink:title="(*github.com/go&#45;i2p/common/certificate.Certificate).RawBytes | defined in certificate_struct.go:118&#10;at certificate_struct.go:124: calling [(*github.com/sirupsen/logrus.Logger).Debug]&#10;at certificate_struct.go:122: calling [(*github.com/go&#45;i2p/logger.Logger).WithFields]&#10;at certificate_struct.go:119: calling [(github.com/go&#45;i2p/common/data.Integer).Bytes]&#10;at certificate_struct.go:120: calling [(github.com/go&#45;i2p/common/data.Integer).Bytes]">
+<path fill="#add8e6" stroke="#000000" stroke-width="1.5" d="M755.327,-499C755.327,-499 698.236,-499 698.236,-499 692.236,-499 686.236,-493 686.236,-487 686.236,-487 686.236,-475 686.236,-475 686.236,-469 692.236,-463 698.236,-463 698.236,-463 755.327,-463 755.327,-463 761.327,-463 767.327,-469 767.327,-475 767.327,-475 767.327,-487 767.327,-487 767.327,-493 761.327,-499 755.327,-499"/>
+<text text-anchor="middle" x="726.7815" y="-476.8" font-family="Verdana" font-size="14.00" fill="#000000">RawBytes</text>
 </a>
 </g>
 </g>
 <!-- (*github.com/go&#45;i2p/common/certificate.Certificate).RawBytes&#45;&gt;(*github.com/go&#45;i2p/logger.Logger).WithFields -->
-<g id="edge49" class="edge">
+<g id="edge38" class="edge">
 <title>(*github.com/go&#45;i2p/common/certificate.Certificate).RawBytes&#45;&gt;(*github.com/go&#45;i2p/logger.Logger).WithFields</title>
-<g id="a_edge49"><a xlink:title="at certificate_struct.go:122: calling [(*github.com/go&#45;i2p/logger.Logger).WithFields]">
-<path fill="none" stroke="#8b4513" d="M767.3425,-508.2611C769.67,-509.486 771.9576,-510.7364 774.1602,-512 791.0568,-521.6935 792.2112,-529.4309 810.1602,-537 911.4671,-579.721 943.0872,-584 1053.0334,-584 1053.0334,-584 1053.0334,-584 1303.9606,-584 1414.496,-584 1447.875,-553.6785 1552.615,-589 1571.905,-595.5052 1576.3355,-600.5703 1589.615,-616 1612.1785,-642.217 1600.3714,-661.3525 1625.615,-685 1630.2486,-689.3406 1635.6132,-693.1211 1641.2564,-696.3964"/>
+<g id="a_edge38"><a xlink:title="at certificate_struct.go:122: calling [(*github.com/go&#45;i2p/logger.Logger).WithFields]">
+<path fill="none" stroke="#8b4513" d="M767.5822,-498.8772C769.8495,-500.1986 772.0584,-501.5751 774.1602,-503 792.3764,-515.3497 790.5787,-526.9547 810.1602,-537 907.9851,-587.1843 943.0872,-584 1053.0334,-584 1053.0334,-584 1053.0334,-584 1303.9606,-584 1414.496,-584 1447.875,-553.6785 1552.615,-589 1571.905,-595.5052 1576.3355,-600.5703 1589.615,-616 1612.1785,-642.217 1600.3714,-661.3525 1625.615,-685 1630.2486,-689.3406 1635.6132,-693.1211 1641.2564,-696.3964"/>
 <polygon fill="#8b4513" stroke="#8b4513" points="1639.8073,-699.5885 1650.2886,-701.1353 1643.0596,-693.3899 1639.8073,-699.5885"/>
 </a>
 </g>
 </g>
 <!-- (*github.com/go&#45;i2p/common/certificate.Certificate).RawBytes&#45;&gt;(*github.com/sirupsen/logrus.Logger).Debug -->
-<g id="edge30" class="edge">
+<g id="edge35" class="edge">
 <title>(*github.com/go&#45;i2p/common/certificate.Certificate).RawBytes&#45;&gt;(*github.com/sirupsen/logrus.Logger).Debug</title>
-<g id="a_edge30"><a xlink:title="at certificate_struct.go:124: calling [(*github.com/sirupsen/logrus.Logger).Debug]">
-<path fill="none" stroke="#8b4513" d="M760.8115,-471.9053C765.6706,-468.3823 770.3156,-464.3979 774.1602,-460 882.4656,-336.1071 767.2882,-125 931.8468,-125 931.8468,-125 931.8468,-125 1446.5378,-125 1519.1643,-125 1603.6344,-130.6717 1652.6165,-134.5226"/>
+<g id="a_edge35"><a xlink:title="at certificate_struct.go:124: calling [(*github.com/sirupsen/logrus.Logger).Debug]">
+<path fill="none" stroke="#8b4513" d="M761.4928,-462.7186C766.1484,-459.2602 770.553,-455.3444 774.1602,-451 876.9749,-327.1713 770.8983,-125 931.8468,-125 931.8468,-125 931.8468,-125 1446.5378,-125 1519.1643,-125 1603.6344,-130.6717 1652.6165,-134.5226"/>
 <polygon fill="#8b4513" stroke="#8b4513" points="1652.5595,-138.0291 1662.8068,-135.3379 1653.1178,-131.0514 1652.5595,-138.0291"/>
 </a>
 </g>
 </g>
 <!-- (*github.com/go&#45;i2p/common/certificate.Certificate).RawBytes&#45;&gt;(github.com/go&#45;i2p/common/data.Integer).Bytes -->
-<g id="edge29" class="edge">
+<g id="edge41" class="edge">
 <title>(*github.com/go&#45;i2p/common/certificate.Certificate).RawBytes&#45;&gt;(github.com/go&#45;i2p/common/data.Integer).Bytes</title>
-<g id="a_edge29"><a xlink:title="at certificate_struct.go:119: calling [(github.com/go&#45;i2p/common/data.Integer).Bytes]&#10;at certificate_struct.go:120: calling [(github.com/go&#45;i2p/common/data.Integer).Bytes]">
-<path fill="none" stroke="#8b4513" d="M756.0358,-471.8846C762.0746,-468.0313 768.3599,-463.9361 774.1602,-460 807.3362,-437.4864 809.508,-420.7774 847.1602,-407 994.781,-352.9837 1396.3846,-372.3698 1552.615,-355 1587.661,-351.1036 1627.3725,-345.0381 1655.6965,-340.4257"/>
-<polygon fill="#8b4513" stroke="#8b4513" points="1656.2874,-343.8756 1665.5867,-338.7989 1655.1511,-336.9685 1656.2874,-343.8756"/>
+<g id="a_edge41"><a xlink:title="at certificate_struct.go:119: calling [(github.com/go&#45;i2p/common/data.Integer).Bytes]&#10;at certificate_struct.go:120: calling [(github.com/go&#45;i2p/common/data.Integer).Bytes]">
+<path fill="none" stroke="#8b4513" d="M755.7291,-462.9628C761.8484,-459.0684 768.2433,-454.9372 774.1602,-451 807.1101,-429.0745 809.8052,-413.0776 847.1602,-400 995.4233,-348.0947 1396.4068,-371.5868 1552.615,-355 1587.6798,-351.2767 1627.3891,-345.1916 1655.7075,-340.5278"/>
+<polygon fill="#8b4513" stroke="#8b4513" points="1656.3065,-343.9763 1665.5956,-338.8809 1655.1564,-337.0715 1656.3065,-343.9763"/>
 </a>
 </g>
 </g>
