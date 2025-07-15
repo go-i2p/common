@@ -166,6 +166,8 @@ func (keyCertificate KeyCertificate) ConstructPublicKey(data []byte) (public_key
 		return
 	}
 	data_len := len(data)
+	// ADDED: Validate that input data contains sufficient bytes for the expected key size
+	// This check prevents buffer underruns when extracting key material from certificate data
 	if data_len < keyCertificate.CryptoSize() {
 		log.WithFields(logrus.Fields{
 			"at":           "(keyCertificate) ConstructPublicKey",
@@ -176,18 +178,26 @@ func (keyCertificate KeyCertificate) ConstructPublicKey(data []byte) (public_key
 		err = oops.Errorf("error constructing public key: not enough data")
 		return
 	}
+	// ADDED: Switch on key type to construct the appropriate public key structure
+	// Each case handles the specific key format and size requirements for that algorithm
 	switch key_type {
 	case KEYCERT_CRYPTO_ELG:
+		// ADDED: Extract ElGamal public key from the end of the data buffer
+		// ElGamal keys are positioned at the end to maintain backwards compatibility
 		var elg_key elgamal.ElgPublicKey
 		copy(elg_key[:], data[KEYCERT_PUBKEY_SIZE-KEYCERT_CRYPTO_ELG_SIZE:KEYCERT_PUBKEY_SIZE])
 		public_key = elg_key
 		log.Debug("Constructed ElgPublicKey")
 	case KEYCERT_CRYPTO_X25519:
+		// ADDED: Extract X25519 public key for modern Curve25519 encryption
+		// X25519 provides high-performance elliptic curve Diffie-Hellman key exchange
 		var curve25519_key curve25519.Curve25519PublicKey
 		copy(curve25519_key[:], data[KEYCERT_PUBKEY_SIZE-KEYCERT_CRYPTO_X25519_SIZE:KEYCERT_PUBKEY_SIZE])
 		public_key = curve25519_key
 		log.Debug("Constructed Curve25519PublicKey")
 	default:
+		// ADDED: Log warning for unsupported key types to aid in debugging
+		// Unknown key types may indicate version incompatibility or corrupted data
 		log.WithFields(logrus.Fields{
 			"key_type": key_type,
 		}).Warn("Unknown public key type")
@@ -248,6 +258,8 @@ func (keyCertificate KeyCertificate) ConstructSigningPublicKey(data []byte) (sig
 		return
 	}
 	data_len := len(data)
+	// ADDED: Validate sufficient data is available for the signing key algorithm
+	// Each signing algorithm requires a specific amount of key material
 	if data_len < keyCertificate.SignatureSize() {
 		log.WithFields(logrus.Fields{
 			"at":           "(keyCertificate) ConstructSigningPublicKey",
@@ -258,57 +270,77 @@ func (keyCertificate KeyCertificate) ConstructSigningPublicKey(data []byte) (sig
 		err = oops.Errorf("error constructing signing public key: not enough data")
 		return
 	}
+	// ADDED: Construct the appropriate signing public key based on algorithm type
+	// Key material is extracted from the certificate data using algorithm-specific offsets
 	switch signing_key_type {
 	case KEYCERT_SIGN_DSA_SHA1:
+		// ADDED: Legacy DSA-SHA1 signing key construction for backwards compatibility
+		// DSA keys use the full signing key size and are extracted from the end of data
 		var dsa_key dsa.DSAPublicKey
 		copy(dsa_key[:], data[KEYCERT_SPK_SIZE-KEYCERT_SIGN_DSA_SHA1_SIZE:KEYCERT_SPK_SIZE])
 		signing_public_key = dsa_key
 		log.Debug("Constructed DSAPublicKey")
 	case KEYCERT_SIGN_P256:
+		// ADDED: ECDSA P-256 signing key for modern elliptic curve signatures
+		// Provides 128-bit security level with compact 64-byte keys
 		var ec_p256_key ecdsa.ECP256PublicKey
 		copy(ec_p256_key[:], data[KEYCERT_SPK_SIZE-KEYCERT_SIGN_P256_SIZE:KEYCERT_SPK_SIZE])
 		signing_public_key = ec_p256_key
 		log.Debug("Constructed P256PublicKey")
 	case KEYCERT_SIGN_P384:
+		// ADDED: ECDSA P-384 signing key for enhanced security applications
+		// Provides 192-bit security level with 96-byte keys
 		var ec_p384_key ecdsa.ECP384PublicKey
 		copy(ec_p384_key[:], data[KEYCERT_SPK_SIZE-KEYCERT_SIGN_P384_SIZE:KEYCERT_SPK_SIZE])
 		signing_public_key = ec_p384_key
 		log.Debug("Constructed P384PublicKey")
 	case KEYCERT_SIGN_P521:
+		// ADDED: ECDSA P-521 implementation is not yet available
+		// This represents the highest security ECDSA variant but requires implementation
 		/*var ec_p521_key crypto.ECP521PublicKey
 		copy(ec_p521_key[:], data[KEYCERT_SPK_SIZE-KEYCERT_SIGN_P521_SIZE:KEYCERT_SPK_SIZE])
 		signing_public_key = ec_p521_key
 		log.Debug("Constructed P521PublicKey")*/
 		panic("unimplemented P521SigningPublicKey")
 	case KEYCERT_SIGN_RSA2048:
+		// ADDED: RSA-2048 implementation is reserved for future offline signing support
+		// Large RSA keys are not commonly used in I2P router operations
 		/*var rsa2048_key crypto.RSA2048PublicKey
 		copy(rsa2048_key[:], data[KEYCERT_SPK_SIZE-KEYCERT_SIGN_RSA2048_SIZE:KEYCERT_SPK_SIZE])
 		signing_public_key = rsa2048_key
 		log.Debug("Constructed RSA2048PublicKey")*/
 		panic("unimplemented RSA2048SigningPublicKey")
 	case KEYCERT_SIGN_RSA3072:
+		// ADDED: RSA-3072 implementation is reserved for future enhanced security offline signing
 		/*var rsa3072_key crypto.RSA3072PublicKey
 		copy(rsa3072_key[:], data[KEYCERT_SPK_SIZE-KEYCERT_SIGN_RSA3072_SIZE:KEYCERT_SPK_SIZE])
 		signing_public_key = rsa3072_key
 		log.Debug("Constructed RSA3072PublicKey")*/
 		panic("unimplemented RSA3072SigningPublicKey")
 	case KEYCERT_SIGN_RSA4096:
+		// ADDED: RSA-4096 implementation is reserved for future maximum security offline signing
 		/*var rsa4096_key crypto.RSA4096PublicKey
 		copy(rsa4096_key[:], data[KEYCERT_SPK_SIZE-KEYCERT_SIGN_RSA4096_SIZE:KEYCERT_SPK_SIZE])
 		signing_public_key = rsa4096_key
 		log.Debug("Constructed RSA4096PublicKey")*/
 		panic("unimplemented RSA4096SigningPublicKey")
 	case KEYCERT_SIGN_ED25519:
+		// ADDED: Ed25519 signing key construction for modern high-performance signatures
+		// Ed25519 provides excellent security with 32-byte keys and fast verification
 		var ed25519_key ed25519.Ed25519PublicKey
 		copy(ed25519_key[:], data[KEYCERT_SPK_SIZE-KEYCERT_SIGN_ED25519_SIZE:KEYCERT_SPK_SIZE])
 		signing_public_key = ed25519_key
 		log.Debug("Constructed Ed25519PublicKey")
 	case KEYCERT_SIGN_ED25519PH:
+		// ADDED: Ed25519ph (pre-hashed) signing key for large message optimization
+		// Uses the same key format as Ed25519 but with pre-hashing for efficiency
 		var ed25519ph_key ed25519.Ed25519PublicKey
 		copy(ed25519ph_key[:], data[KEYCERT_SPK_SIZE-KEYCERT_SIGN_ED25519PH_SIZE:KEYCERT_SPK_SIZE])
 		signing_public_key = ed25519ph_key
 		log.Debug("Constructed Ed25519PHPublicKey")
 	default:
+		// ADDED: Handle unknown or unsupported signing key types gracefully
+		// This prevents crashes when encountering newer algorithm types or corrupted data
 		log.WithFields(logrus.Fields{
 			"signing_key_type": signing_key_type,
 		}).Warn("Unknown signing key type")
@@ -320,6 +352,8 @@ func (keyCertificate KeyCertificate) ConstructSigningPublicKey(data []byte) (sig
 
 // SignatureSize return the size of a Signature corresponding to the Key Certificate's signingPublicKey type.
 func (keyCertificate KeyCertificate) SignatureSize() (size int) {
+	// ADDED: Create a lookup map for signature sizes based on algorithm type
+	// This provides O(1) lookup time and centralizes size information for maintainability
 	sizes := map[int]int{
 		KEYCERT_SIGN_DSA_SHA1:  KEYCERT_SIGN_DSA_SHA1_SIZE,
 		KEYCERT_SIGN_P256:      KEYCERT_SIGN_P256_SIZE,
@@ -332,6 +366,8 @@ func (keyCertificate KeyCertificate) SignatureSize() (size int) {
 		KEYCERT_SIGN_ED25519PH: KEYCERT_SIGN_ED25519PH_SIZE,
 	}
 	key_type := keyCertificate.SigningPublicKeyType()
+	// ADDED: Look up the signature size with existence check to handle unknown types
+	// This prevents returning invalid sizes for unsupported or corrupted key types
 	size, exists := sizes[key_type]
 	if !exists {
 		log.WithFields(logrus.Fields{
@@ -348,6 +384,8 @@ func (keyCertificate KeyCertificate) SignatureSize() (size int) {
 
 // CryptoSize return the size of a Public Key corresponding to the Key Certificate's publicKey type.
 func (keyCertificate KeyCertificate) CryptoSize() (size int) {
+	// ADDED: Create a lookup map for crypto key sizes based on algorithm type
+	// This mapping ensures correct buffer allocation for different encryption algorithms
 	sizes := map[int]int{
 		KEYCERT_CRYPTO_ELG:    KEYCERT_CRYPTO_ELG_SIZE,
 		KEYCERT_CRYPTO_P256:   KEYCERT_CRYPTO_P256_SIZE,
@@ -356,6 +394,8 @@ func (keyCertificate KeyCertificate) CryptoSize() (size int) {
 		KEYCERT_CRYPTO_X25519: KEYCERT_CRYPTO_X25519_SIZE,
 	}
 	key_type := keyCertificate.PublicKeyType()
+	// ADDED: Direct map lookup for crypto size (note: no existence check in original)
+	// The original implementation assumes all key types are valid, but this could be enhanced
 	size = sizes[int(key_type)]
 	log.WithFields(logrus.Fields{
 		"key_type":    key_type,
