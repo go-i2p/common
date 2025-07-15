@@ -367,3 +367,35 @@ func TestCertificateSerializationDeserializationMaxPayload(t *testing.T) {
 	assert.Equal(originalCert.Length(), deserializedCert.Length(), "Certificate lengths should match")
 	assert.True(bytes.Equal(originalCert.Data(), deserializedCert.Data()), "Certificate payloads should match")
 }
+
+func TestCertificateHandlesOneByte(t *testing.T) {
+	assert := assert.New(t)
+
+	// Test the audit case: 1-byte input should not panic and handle edge case properly
+	bytes := []byte{0x03}
+	certificate, _, err := ReadCertificate(bytes)
+
+	// Should return error and not panic
+	assert.NotNil(err, "ReadCertificate should return error for 1-byte input")
+	assert.Equal("error parsing certificate: certificate is too short", err.Error())
+
+	// Certificate kind should be safely extracted from the available data
+	kind_int := certificate.kind.Int()
+	assert.Equal(3, kind_int, "Certificate kind should be extracted from available byte")
+
+	// Length should be zero for short certificate
+	length_int := certificate.len.Int()
+	assert.Equal(0, length_int, "Certificate length should be zero for short certificate")
+}
+
+func TestCertificateHandlesZeroBytes(t *testing.T) {
+	assert := assert.New(t)
+
+	// Test zero-byte input edge case
+	bytes := []byte{}
+	_, _, err := ReadCertificate(bytes)
+
+	// Should return error for empty input
+	assert.NotNil(err, "ReadCertificate should return error for empty input")
+	assert.Equal("error parsing certificate: certificate is empty", err.Error())
+}

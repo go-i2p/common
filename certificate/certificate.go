@@ -66,12 +66,30 @@ func handleEmptyCertificateData(certificate Certificate) (Certificate, error) {
 
 // handleShortCertificateData processes the case where insufficient data is provided.
 func handleShortCertificateData(certificate Certificate, bytes []byte) (Certificate, error) {
-	certificate.kind = data.Integer(bytes[CERT_EMPTY_PAYLOAD_SIZE : len(bytes)-CERT_DEFAULT_TYPE_SIZE])
-	certificate.len = data.Integer([]byte{CERT_EMPTY_PAYLOAD_SIZE})
+	// For insufficient data, create a certificate that reflects the available data
+	if len(bytes) >= 1 {
+		// We have at least the type byte
+		certificate.kind = data.Integer(bytes[:1])
+	} else {
+		// No data at all, use zero type
+		certificate.kind = data.Integer([]byte{0})
+	}
+
+	if len(bytes) >= 2 {
+		// We have some length data, use it (even if incomplete)
+		certificate.len = data.Integer(bytes[1:])
+	} else {
+		// Only type byte or less, set minimal length field
+		certificate.len = data.Integer([]byte{0})
+	}
+
+	// No payload for short certificates
+	certificate.payload = []byte{}
+
 	log.WithFields(logrus.Fields{
 		"at":                       "(Certificate) ReadCertificate",
 		"certificate_bytes_length": len(bytes),
-		"reason":                   "too short (len < CERT_MIN_SIZE)" + fmt.Sprintf("%d", certificate.kind.Int()),
+		"reason":                   "too short (len < CERT_MIN_SIZE), kind=" + fmt.Sprintf("%d", certificate.kind.Int()),
 	}).Error("invalid certificate, too short")
 	return certificate, oops.Errorf("error parsing certificate: certificate is too short")
 }
