@@ -25,7 +25,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func generateTestRouterInfo(t *testing.T) (*router_info.RouterInfo, types.RecievingPublicKey, types.SigningPublicKey, types.SigningPublicKey, types.SigningPublicKey, error) {
+func generateTestRouterInfo(t *testing.T) (*router_info.RouterInfo, types.ReceivingPublicKey, types.SigningPublicKey, types.SigningPublicKey, types.SigningPublicKey, error) {
 	// Generate signing key pair (Ed25519)
 	var ed25519_privkey ed25519.Ed25519PrivateKey
 	ed25519_signingprivkey, err := ed25519.GenerateEd25519Key() // Use direct key generation
@@ -72,7 +72,7 @@ func generateTestRouterInfo(t *testing.T) (*router_info.RouterInfo, types.Reciev
 	copy(elg_pubkey[256-len(yBytes):], yBytes)
 
 	// Ensure that elg_pubkey implements crypto.PublicKey interface
-	var _ types.RecievingPublicKey = elg_pubkey
+	var _ types.ReceivingPublicKey = elg_pubkey
 
 	// Create KeyCertificate specifying key types
 	var payload bytes.Buffer
@@ -190,7 +190,7 @@ func createTestLease(t *testing.T, index int, routerInfo *router_info.RouterInfo
 	return testLease, nil
 }
 
-func generateTestDestination(t *testing.T) (*destination.Destination, types.RecievingPublicKey, types.SigningPublicKey, types.SigningPrivateKey, error) {
+func generateTestDestination(t *testing.T) (*destination.Destination, types.ReceivingPublicKey, types.SigningPublicKey, types.SigningPrivateKey, error) {
 	// Generate client signing key pair (Ed25519)
 	var ed25519_privkey ed25519.Ed25519PrivateKey
 	ed25519_signingprivkey, err := ed25519.GenerateEd25519Key() // Use direct key generation

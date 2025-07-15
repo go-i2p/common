@@ -23,7 +23,7 @@ var log = logger.GetGoI2PLogger()
 // NewLeaseSet creates a new LeaseSet from the provided components.
 func NewLeaseSet(
 	dest destination.Destination,
-	encryptionKey types.RecievingPublicKey,
+	encryptionKey types.ReceivingPublicKey,
 	signingKey types.SigningPublicKey,
 	leases []lease.Lease,
 	signingPrivateKey types.SigningPrivateKey,
@@ -51,7 +51,7 @@ func NewLeaseSet(
 }
 
 // validateLeaseSetInputs validates all input parameters for LeaseSet creation.
-func validateLeaseSetInputs(dest destination.Destination, encryptionKey types.RecievingPublicKey, signingKey types.SigningPublicKey, leases []lease.Lease) error {
+func validateLeaseSetInputs(dest destination.Destination, encryptionKey types.ReceivingPublicKey, signingKey types.SigningPublicKey, leases []lease.Lease) error {
 	// Validate destination size
 	if len(dest.KeysAndCert.Bytes()) < 387 {
 		return oops.Errorf("invalid destination: minimum size is 387 bytes")
@@ -95,7 +95,7 @@ func validateSigningKeySize(dest destination.Destination, signingKey types.Signi
 }
 
 // serializeLeaseSetData builds the byte array containing all LeaseSet data for signing.
-func serializeLeaseSetData(dest destination.Destination, encryptionKey types.RecievingPublicKey, signingKey types.SigningPublicKey, leases []lease.Lease) ([]byte, error) {
+func serializeLeaseSetData(dest destination.Destination, encryptionKey types.ReceivingPublicKey, signingKey types.SigningPublicKey, leases []lease.Lease) ([]byte, error) {
 	dbytes := make([]byte, 0)
 
 	// Add Destination
@@ -141,7 +141,7 @@ func createLeaseSetSignature(signingPrivateKey types.SigningPrivateKey, dbytes [
 }
 
 // assembleLeaseSet creates the final LeaseSet structure from all components.
-func assembleLeaseSet(dest destination.Destination, encryptionKey types.RecievingPublicKey, signingKey types.SigningPublicKey, leases []lease.Lease, signature []byte) LeaseSet {
+func assembleLeaseSet(dest destination.Destination, encryptionKey types.ReceivingPublicKey, signingKey types.SigningPublicKey, leases []lease.Lease, signature []byte) LeaseSet {
 	cert := dest.Certificate()
 	return LeaseSet{
 		dest:          dest,

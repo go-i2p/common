@@ -107,7 +107,7 @@ type LeaseSet struct {
 	// dest contains the keys and certificate for this lease set
 	dest destination.Destination
 	// encryptionKey is the public key for encrypting garlic messages (256 bytes)
-	encryptionKey types.RecievingPublicKey
+	encryptionKey types.ReceivingPublicKey
 	// signingKey is the public key for verifying this lease set (128 bytes or variable based on certificate)
 	signingKey types.SigningPublicKey
 	// leaseCount specifies the number of leases (1 byte, 0-16)

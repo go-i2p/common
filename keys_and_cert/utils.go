@@ -11,7 +11,7 @@ import (
 )
 
 // constructPublicKey constructs a public key from raw data based on crypto type.
-func constructPublicKey(data []byte, cryptoType uint16) (types.RecievingPublicKey, error) {
+func constructPublicKey(data []byte, cryptoType uint16) (types.ReceivingPublicKey, error) {
 	switch cryptoType {
 	case key_certificate.CRYPTO_KEY_TYPE_ELGAMAL:
 		if len(data) != 256 {

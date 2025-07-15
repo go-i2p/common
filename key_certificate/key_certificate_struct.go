@@ -177,9 +177,9 @@ func (keyCertificate KeyCertificate) PublicKeyType() (pubkey_type int) {
 	return keyCertificate.CpkType.Int()
 }
 
-// ConstructPublicKey returns a publicKey constructed using any excess data that may be stored in the KeyCertififcate.
-// Returns enr errors encountered while parsing.
-func (keyCertificate KeyCertificate) ConstructPublicKey(data []byte) (public_key types.RecievingPublicKey, err error) {
+// ConstructPublicKey returns a publicKey constructed using any excess data that may be stored in the KeyCertificate.
+// Returns any errors encountered while parsing.
+func (keyCertificate KeyCertificate) ConstructPublicKey(data []byte) (public_key types.ReceivingPublicKey, err error) {
 	log.WithFields(logrus.Fields{
 		"input_length": len(data),
 	}).Debug("Constructing publicKey from keyCertificate")

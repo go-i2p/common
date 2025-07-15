@@ -101,7 +101,7 @@ func generateElGamalKeyPair(t *testing.T) elgamal.ElgPublicKey {
 	}
 	copy(elg_pubkey[256-len(yBytes):], yBytes)
 
-	var _ types.RecievingPublicKey = elg_pubkey
+	var _ types.ReceivingPublicKey = elg_pubkey
 
 	return elg_pubkey
 }

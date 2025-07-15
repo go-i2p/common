@@ -70,7 +70,7 @@ total length: 387+ bytes
 // https://geti2p.net/spec/common-structures#keysandcert
 type KeysAndCert struct {
 	KeyCertificate  *key_certificate.KeyCertificate
-	ReceivingPublic types.RecievingPublicKey
+	ReceivingPublic types.ReceivingPublicKey
 	Padding         []byte
 	SigningPublic   types.SigningPublicKey
 }
@@ -79,7 +79,7 @@ type KeysAndCert struct {
 // It validates the sizes of the provided keys and padding before assembling the struct.
 func NewKeysAndCert(
 	keyCertificate *key_certificate.KeyCertificate,
-	publicKey types.RecievingPublicKey,
+	publicKey types.ReceivingPublicKey,
 	padding []byte,
 	signingPublicKey types.SigningPublicKey,
 ) (*KeysAndCert, error) {
@@ -182,7 +182,7 @@ func (keys_and_cert KeysAndCert) Bytes() []byte {
 }
 
 // PublicKey returns the public key as a types.publicKey.
-func (keys_and_cert *KeysAndCert) PublicKey() (key types.RecievingPublicKey) {
+func (keys_and_cert *KeysAndCert) PublicKey() (key types.ReceivingPublicKey) {
 	return keys_and_cert.ReceivingPublic
 }
 
