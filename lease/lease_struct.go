@@ -61,15 +61,18 @@ func NewLease(tunnelGateway data.Hash, tunnelID uint32, expirationTime time.Time
 
 	var lease Lease
 
-	// Gateway hash
+	// ADDED: Copy the 32-byte tunnel gateway hash to the beginning of the lease structure
+	// This hash identifies the router that will serve as the gateway for this tunnel
 	copy(lease[:LEASE_TUNNEL_GW_SIZE], tunnelGateway[:])
 
-	// Convert and copy tunnel ID
+	// ADDED: Convert tunnel ID to big-endian format for network byte order consistency
+	// The tunnel ID must be stored as 4 bytes in network byte order for I2P compatibility
 	tunnelIDBytes := make([]byte, LEASE_TUNNEL_ID_SIZE)
 	binary.BigEndian.PutUint32(tunnelIDBytes, tunnelID)
 	copy(lease[LEASE_TUNNEL_GW_SIZE:LEASE_TUNNEL_GW_SIZE+LEASE_TUNNEL_ID_SIZE], tunnelIDBytes)
 
-	// Convert and copy expiration date
+	// ADDED: Convert expiration time to I2P Date format (milliseconds since Unix epoch)
+	// The date must be stored as 8 bytes in big-endian format for proper network serialization
 	millis := expirationTime.UnixNano() / int64(time.Millisecond)
 	dateBytes := make([]byte, data.DATE_SIZE)
 	binary.BigEndian.PutUint64(dateBytes, uint64(millis))
