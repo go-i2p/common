@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>go-i2p/common</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <nav class="nav-sidebar">
+    <div class="repo-info">
+      <h2>
+        <a href="index.html">go-i2p/common</a>
+      </h2>
+      <div class="repo-meta">
+        📝 91 commits
+         • 📜 MIT License
+      </div>
+    </div>
+    
+    <ul class="nav-links">
+      <li><a href="index.html" class="active">Repository Overview</a></li>
+      
+      
+        <div class="nav-section-title">Documentation:</div>
+        
+          <li><a href="docs/common.html">Common</a></li>
+        
+          <li><a href="docs/template.html">Template</a></li>
+        
+      
+    </ul>
+    
+    <div class="nav-footer">
+      <a href="https://github.com/go-i2p/common" target="_blank">View on GitHub</a>
+    </div>
+  </nav>
+  
+  <div class="main-content">
+    <header class="repo-header">
+      <h1>go-i2p/common</h1>
+      <div class="repo-description">A comprehensive Go library implementing I2P (Invisible Internet Project) network protocol common data structures and utilities. This library provid...</div>
+      
+      <div class="repo-stats">
+        
+        <div class="repo-stat">
+          <span>📝</span> <span>91 commits</span>
+        </div>
+        
+        
+        <div class="repo-stat">
+          <span>📅</span> <span>Last updated: July 15, 2025</span>
+        </div>
+        
+        
+        <div class="repo-stat">
+          <span>📜</span> <span>MIT License</span>
+        </div>
+        
+      </div>
+    </header>
+    
+    <main>
+      
+      <section id="readme" class="repo-section">
+        <h2>README</h2>
+        <div class="readme-content">
+          <h1 id="go-i2p-common">go-i2p/common</h1>
+
+<p>A comprehensive Go library implementing I2P (Invisible Internet Project) network protocol common data structures and utilities. This library provides type-safe implementations of the I2P specification common structures, factored out from the main I2P router to enable reusable components for parsing, encoding, and manipulating I2P network data.</p>
+
+<hr>
+
+<h2 id="installation">Installation</h2>
+
+<pre><code class="language-bash">go mod init your-project
+go get github.com/go-i2p/common
+</code></pre>
+
+<hr>
+
+<h2 id="usage">Usage</h2>
+
+<h3 id="basic-certificate-parsing">Basic Certificate Parsing</h3>
+
+<pre><code class="language-go">package main
+
+import (
+    &quot;fmt&quot;
+    &quot;github.com/go-i2p/common/certificate&quot;
+)
+
+func main() {
+    // Parse I2P certificate from binary data
+    data := []byte{0x00, 0x00, 0x02, 0xff, 0xff}
+    cert, remainder, err := certificate.ReadCertificate(data)
+    if err != nil {
+        fmt.Printf(&quot;Error: %v\n&quot;, err)
+        return
+    }
+    
+    fmt.Printf(&quot;Certificate type: %d\n&quot;, cert.Type())
+    fmt.Printf(&quot;Certificate length: %d\n&quot;, cert.Length())
+    fmt.Printf(&quot;Remaining bytes: %d\n&quot;, len(remainder))
+}
+</code></pre>
+
+<h3 id="working-with-destinations">Working with Destinations</h3>
+
+<pre><code class="language-go">package main
+
+import (
+    &quot;fmt&quot;
+    &quot;github.com/go-i2p/common/destination&quot;
+)
+
+func main() {
+    // Read destination from binary data
+    data := []byte{/* destination bytes */}
+    dest, remainder, err := destination.ReadDestination(data)
+    if err != nil {
+        fmt.Printf(&quot;Error: %v\n&quot;, err)
+        return
+    }
+    
+    // Generate I2P addresses
+    base32Address := dest.Base32Address()
+    base64Address := dest.Base64()
+    
+    fmt.Printf(&quot;Base32 address: %s\n&quot;, base32Address)
+    fmt.Printf(&quot;Base64 address: %s\n&quot;, base64Address)
+}
+</code></pre>
+
+<h3 id="parsing-router-information">Parsing Router Information</h3>
+
+<pre><code class="language-go">package main
+
+import (
+    &quot;fmt&quot;
+    &quot;github.com/go-i2p/common/router_info&quot;
+)
+
+func main() {
+    // Read router info from binary data
+    data := []byte{/* router info bytes */}
+    routerInfo, remainder, err := router_info.ReadRouterInfo(data)
+    if err != nil {
+        fmt.Printf(&quot;Error: %v\n&quot;, err)
+        return
+    }
+    
+    // Access router information
+    identity := routerInfo.RouterIdentity()
+    addresses := routerInfo.RouterAddresses()
+    capabilities := routerInfo.RouterCapabilities()
+    
+    fmt.Printf(&quot;Router identity: %v\n&quot;, identity)
+    fmt.Printf(&quot;Router addresses: %d\n&quot;, len(addresses))
+    fmt.Printf(&quot;Router capabilities: %s\n&quot;, capabilities)
+}
+</code></pre>
+
+<h3 id="working-with-i2p-strings">Working with I2P Strings</h3>
+
+<pre><code class="language-go">package main
+
+import (
+    &quot;fmt&quot;
+    &quot;github.com/go-i2p/common/data&quot;
+)
+
+func main() {
+    // Parse I2P string from binary data
+    stringData := []byte{0x05, 'h', 'e', 'l', 'l', 'o'}
+    i2pString := data.I2PString(stringData)
+    
+    length, err := i2pString.Length()
+    if err != nil {
+        fmt.Printf(&quot;Error: %v\n&quot;, err)
+        return
+    }
+    
+    content, err := i2pString.Data()
+    if err != nil {
+        fmt.Printf(&quot;Error: %v\n&quot;, err)
+        return
+    }
+    
+    fmt.Printf(&quot;String length: %d\n&quot;, length)
+    fmt.Printf(&quot;String content: %s\n&quot;, content)
+}
+</code></pre>
+
+<hr>
+
+<h2 id="requirements">Requirements</h2>
+
+<ul>
+<li><strong>Go Version</strong>: 1.24.2 or later</li>
+<li><strong>Dependencies</strong>:
+
+<ul>
+<li><code>github.com/go-i2p/go-i2p</code> - Core I2P library</li>
+<li><code>github.com/go-i2p/logger</code> - Structured logging wrapper</li>
+<li><code>github.com/samber/oops</code> - Enhanced error handling</li>
+<li><code>github.com/sirupsen/logrus</code> - Logging framework</li>
+<li><code>github.com/stretchr/testify</code> - Testing utilities</li>
+</ul></li>
+</ul>
+
+<hr>
+
+<h2 id="testing">Testing</h2>
+
+<p>Run the comprehensive test suite:</p>
+
+<pre><code class="language-bash"># Run all tests
+make test
+
+# Run specific component tests
+go test ./certificate/...
+go test ./destination/...
+go test ./router_info/...
+
+# Run fuzz tests
+go test -fuzz=FuzzCertificate ./certificate/
+</code></pre>
+
+<hr>
+
+<h2 id="license">License</h2>
+
+<p>MIT License - see <a href="LICENSE" target="_blank">LICENSE</a> file for details.</p>
+
+<p>Copyright &copy; 2025 I2P For Go</p>
+
+        </div>
+      </section>
+      
+      
+      
+      <section id="contributors" class="repo-section">
+        <h2>Top Contributors</h2>
+        <div class="contributors-list">
+          
+          <div class="contributor-item">
+            <!-- Use first letter as avatar if no image available -->
+            <div class="contributor-avatar">
+              e
+            </div>
+            <div class="contributor-info">
+              <div class="contributor-name">
+                eyedeekay
+              </div>
+              <div class="contributor-commits">
+                91 commits
+              </div>
+            </div>
+          </div>
+          
+        </div>
+        <a href="https://github.com/go-i2p/common/graphs/contributors" target="_blank">View all contributors on GitHub →</a>
+      </section>
+      
+    </main>
+    
+    <footer class="page-footer">
+      <p>Generated on 2025-07-15 22:49:02 • <a href="https://github.com/go-i2p/common" target="_blank">View on GitHub</a></p>
+    </footer>
+  </div>
+</body>
+</html>
