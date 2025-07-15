@@ -9,7 +9,7 @@ import (
 	"github.com/go-i2p/common/destination"
 	"github.com/go-i2p/common/key_certificate"
 	"github.com/go-i2p/common/lease"
-	"github.com/go-i2p/common/signature"
+	sig "github.com/go-i2p/common/signature"
 	"github.com/go-i2p/crypto/dsa"
 	elgamal "github.com/go-i2p/crypto/elg"
 	"github.com/go-i2p/crypto/types"
@@ -24,7 +24,6 @@ import (
 var log = logger.GetGoI2PLogger()
 
 // NewLeaseSet creates a new LeaseSet from the provided components.
-//
 func NewLeaseSet(
 	dest destination.Destination,
 	encryptionKey types.RecievingPublicKey,
@@ -117,13 +116,11 @@ func NewLeaseSet(
 }
 
 // Bytes returns the LeaseSet as a byte array.
-//
 func (lease_set LeaseSet) Bytes() ([]byte, error) {
 	return []byte(lease_set), nil
 }
 
 // Destination returns the Destination as []byte.
-//
 func (lease_set LeaseSet) Destination() (dest destination.Destination, err error) {
 	keys_and_cert, _, err := keys_and_cert.ReadKeysAndCertElgAndEd25519(lease_set)
 	if err != nil {
@@ -140,7 +137,6 @@ func (lease_set LeaseSet) Destination() (dest destination.Destination, err error
 }
 
 // DestinationDeux returns the destination from the lease set using alternative method.
-//
 func (lease_set LeaseSet) DestinationDeux() (dest destination.Destination, err error) {
 	data := lease_set
 
@@ -162,7 +158,6 @@ func (lease_set LeaseSet) DestinationDeux() (dest destination.Destination, err e
 
 // PublicKey returns the public key as crypto.ElgPublicKey.
 // Returns errors encountered during parsing.
-//
 func (lease_set LeaseSet) PublicKey() (public_key elgamal.ElgPublicKey, err error) {
 	_, remainder, err := keys_and_cert.ReadKeysAndCert(lease_set)
 	remainder_len := len(remainder)
@@ -178,7 +173,6 @@ func (lease_set LeaseSet) PublicKey() (public_key elgamal.ElgPublicKey, err erro
 
 // SigningKey returns the signing public key as crypto.SigningPublicKey.
 // returns errors encountered during parsing.
-//
 func (lease_set LeaseSet) SigningKey() (signing_public_key types.SigningPublicKey, err error) {
 	log.Debug("Retrieving SigningKey from LeaseSet")
 	destination, err := lease_set.Destination()
@@ -244,7 +238,6 @@ func (lease_set LeaseSet) SigningKey() (signing_public_key types.SigningPublicKe
 
 // LeaseCount returns the numbert of leases specified by the LeaseCount value as int.
 // returns errors encountered during parsing.
-//
 func (lease_set LeaseSet) LeaseCount() (count int, err error) {
 	log.Debug("Retrieving LeaseCount from LeaseSet")
 	_, remainder, err := keys_and_cert.ReadKeysAndCert(lease_set)
@@ -280,7 +273,6 @@ func (lease_set LeaseSet) LeaseCount() (count int, err error) {
 
 // Leases returns the leases as []Lease.
 // returns errors encountered during parsing.
-//
 func (lease_set LeaseSet) Leases() (leases []lease.Lease, err error) {
 	log.Debug("Retrieving Leases from LeaseSet")
 	destination, err := lease_set.Destination()
@@ -318,8 +310,7 @@ func (lease_set LeaseSet) Leases() (leases []lease.Lease, err error) {
 
 // Signature returns the signature as Signature.
 // returns errors encountered during parsing.
-//
-func (lease_set LeaseSet) Signature() (signature signature.Signature, err error) {
+func (lease_set LeaseSet) Signature() (signature sig.Signature, err error) {
 	log.Debug("Retrieving Signature from LeaseSet")
 	destination, err := lease_set.Destination()
 	if err != nil {
@@ -359,13 +350,30 @@ func (lease_set LeaseSet) Signature() (signature signature.Signature, err error)
 		err = oops.Errorf("error parsing signature: not enough data")
 		return
 	}
-	signature = []byte(lease_set[start:end])
-	log.WithField("signature_length", len(signature)).Debug("Retrieved Signature from LeaseSet")
+	// Note: In LeaseSet context, signature type must be inferred from the destination's certificate
+	signatureBytes := []byte(lease_set[start:end])
+
+	// Determine signature type from certificate
+	var sigType int = sig.SIGNATURE_TYPE_DSA_SHA1 // Default type
+	if cert_type == certificate.CERT_KEY {
+		keyCert, err := key_certificate.KeyCertificateFromCertificate(cert)
+		if err == nil {
+			// Extract the actual signature type from the key certificate
+			sigType = keyCert.SigningPublicKeyType()
+			log.WithField("signature_type", sigType).Debug("Extracted signature type from key certificate")
+		} else {
+			log.WithError(err).Warn("Failed to extract signature type from key certificate, using default")
+		}
+	} else {
+		log.Debug("Using default DSA SHA1 signature type (no key certificate)")
+	}
+
+	signature = sig.NewSignatureFromBytes(signatureBytes, sigType)
+	log.WithField("signature_length", len(signature.Bytes())).Debug("Retrieved Signature from LeaseSet")
 	return
 }
 
 // Verify returns nil
-//
 func (lease_set LeaseSet) Verify() error {
 	log.Debug("Verifying LeaseSet")
 	//data_end := len(destination) +
@@ -387,7 +395,6 @@ func (lease_set LeaseSet) Verify() error {
 
 // NewestExpiration returns the newest lease expiration as an I2P Date.
 // Returns errors encountered during parsing.
-//
 func (lease_set LeaseSet) NewestExpiration() (newest data.Date, err error) {
 	log.Debug("Finding newest expiration in LeaseSet")
 	leases, err := lease_set.Leases()
@@ -408,7 +415,6 @@ func (lease_set LeaseSet) NewestExpiration() (newest data.Date, err error) {
 
 // OldestExpiration returns the oldest lease expiration as an I2P Date.
 // Returns errors encountered during parsing.
-//
 func (lease_set LeaseSet) OldestExpiration() (earliest data.Date, err error) {
 	log.Debug("Finding oldest expiration in LeaseSet")
 	leases, err := lease_set.Leases()

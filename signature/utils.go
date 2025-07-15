@@ -48,7 +48,10 @@ func ReadSignature(data []byte, sigType int) (sig Signature, remainder []byte, e
 		log.WithError(err).Error("Failed to read Signature")
 		return
 	}
-	sig = data[:sigLength]
+	sig = Signature{
+		sigType: sigType,
+		data:    data[:sigLength],
+	}
 	remainder = data[sigLength:]
 	return
 }

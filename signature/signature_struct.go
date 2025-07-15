@@ -2,6 +2,8 @@
 package signature
 
 import (
+	"fmt"
+
 	"github.com/sirupsen/logrus"
 )
 
@@ -20,7 +22,12 @@ DSA_SHA1. As of release 0.9.12, other types may be supported, depending on conte
 // Signature is the represenation of an I2P Signature.
 //
 // https://geti2p.net/spec/common-structures#signature
-type Signature []byte
+type Signature struct {
+	// sigType holds the signature algorithm type
+	sigType int
+	// data holds the raw signature bytes
+	data []byte
+}
 
 // NewSignature creates a new *Signature from []byte using ReadSignature.
 // Returns a pointer to Signature unlike ReadSignature.
@@ -33,8 +40,37 @@ func NewSignature(data []byte, sigType int) (signature *Signature, remainder []b
 	}
 	signature = &sig
 	log.WithFields(logrus.Fields{
-		"signature_length": len(sig),
+		"signature_length": sig.Len(),
 		"remainder_length": len(remainder),
 	}).Debug("Successfully created new Signature")
 	return
+}
+
+// NewSignatureFromBytes creates a Signature struct from raw bytes without type validation.
+// This is used when the signature type is known but validation is not needed.
+func NewSignatureFromBytes(data []byte, sigType int) Signature {
+	return Signature{
+		sigType: sigType,
+		data:    data,
+	}
+}
+
+// Type returns the signature algorithm type
+func (s Signature) Type() int {
+	return s.sigType
+}
+
+// Bytes returns the raw signature data as a byte slice for compatibility
+func (s Signature) Bytes() []byte {
+	return s.data
+}
+
+// Len returns the length of the signature data
+func (s Signature) Len() int {
+	return len(s.data)
+}
+
+// String returns a string representation of the signature type and length
+func (s Signature) String() string {
+	return fmt.Sprintf("Signature{type: %d, length: %d}", s.sigType, len(s.data))
 }

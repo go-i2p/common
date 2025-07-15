@@ -46,7 +46,8 @@ func TestReadSignature(t *testing.T) {
 	for i, sigType := range sigTypes {
 		sig, rem, err := ReadSignature(data, sigType)
 		assert.Nil(err, "no errors should be returned")
-		assert.Equal(sig, Signature(data[:sigLengths[i]]), "signature should be sliced from data")
+		assert.Equal(sig.Bytes(), data[:sigLengths[i]], "signature bytes should be sliced from data")
+		assert.Equal(sig.Type(), sigType, "signature type should match input")
 		assert.Equal(rem, data[sigLengths[i]:], "remainder should be sliced from data ")
 	}
 }
@@ -73,6 +74,7 @@ func TestNewSignature(t *testing.T) {
 
 	sig, rem, err := NewSignature(data, sigType)
 	assert.Nil(err, "no errors should be returned")
-	assert.Equal(*sig, Signature(data[:sigLength]), "signature should be sliced from data")
+	assert.Equal(sig.Bytes(), data[:sigLength], "signature bytes should be sliced from data")
+	assert.Equal(sig.Type(), sigType, "signature type should match input")
 	assert.Equal(rem, data[sigLength:], "remainder should be sliced from data ")
 }
