@@ -51,7 +51,11 @@ end_date :: Date
 // https://geti2p.net/spec/common-structures#lease
 type Lease [LEASE_SIZE]byte
 
-// NewLease creates a new Lease with the provided parameters.
+// ADDED: NewLease creates a new Lease with the provided tunnel gateway, tunnel ID, and expiration time.
+// It constructs a properly formatted I2P Lease structure according to the specification, encoding
+// the tunnel gateway hash, tunnel ID as big-endian uint32, and expiration time as milliseconds since epoch.
+// Returns a pointer to the created Lease and any error encountered during construction.
+// Example: lease, err := NewLease(gatewayHash, 12345, time.Now().Add(10*time.Minute))
 func NewLease(tunnelGateway data.Hash, tunnelID uint32, expirationTime time.Time) (*Lease, error) {
 	log.Debug("Creating new Lease")
 
