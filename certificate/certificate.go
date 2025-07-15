@@ -161,8 +161,13 @@ func logCertificateReadCompletion(certificate Certificate, data []byte, remainde
 // GetSignatureTypeFromCertificate extracts the signature type from a KEY certificate.
 // Returns an error if the certificate is not a KEY type or if the payload is too short.
 func GetSignatureTypeFromCertificate(cert Certificate) (int, error) {
-	if cert.Type() != CERT_KEY {
-		return CERT_EMPTY_PAYLOAD_SIZE, oops.Errorf("unexpected certificate type: %d", cert.Type())
+	kind, err := cert.Type()
+	if err != nil {
+		log.WithFields(logrus.Fields{"at": "GetSignatureTypeFromCertificate", "reason": "invalid certificate type"}).Error(err.Error())
+		return CERT_EMPTY_PAYLOAD_SIZE, err
+	}
+	if kind != CERT_KEY {
+		return CERT_EMPTY_PAYLOAD_SIZE, oops.Errorf("unexpected certificate type: %d", kind)
 	}
 	if len(cert.payload) < CERT_MIN_KEY_PAYLOAD_SIZE {
 		return CERT_EMPTY_PAYLOAD_SIZE, oops.Errorf("certificate payload too short to contain signature type")

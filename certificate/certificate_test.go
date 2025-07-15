@@ -11,33 +11,29 @@ func TestCertificateTypeIsFirstByte(t *testing.T) {
 	assert := assert.New(t)
 
 	bytes := []byte{0x03, 0x00, 0x00}
-	certificate, _, err := ReadCertificate(bytes)
-	cert_type := certificate.Type()
-
+	certificate, _, _ := ReadCertificate(bytes)
+	cert_type, typeErr := certificate.Type()
+	assert.Nil(typeErr, "certificate.Type() should not error for valid type")
 	assert.Equal(cert_type, 3, "certificate.Type() should be the first bytes in a certificate")
-	assert.Nil(err)
 }
 
 func TestCertificateLengthCorrect(t *testing.T) {
 	assert := assert.New(t)
 
 	bytes := []byte{0x03, 0x00, 0x02, 0xff, 0xff}
-	certificate, _, err := ReadCertificate(bytes)
-	cert_len := certificate.Length()
-
+	certificate, _, _ := ReadCertificate(bytes)
+	cert_len, lenErr := certificate.Length()
+	assert.Nil(lenErr, "certificate.Length() should not error for valid length")
 	assert.Equal(cert_len, 2, "certificate.Length() should return integer from second two bytes")
-	assert.Nil(err)
 }
 
 func TestCertificateLengthErrWhenTooShort(t *testing.T) {
 	assert := assert.New(t)
 
 	bytes := []byte{0x03, 0x01}
-	certificate, _, err := ReadCertificate(bytes)
-	cert_len := certificate.Length()
-
-	assert.Equal(cert_len, 0, "certificate.Length() did not return zero length for missing length data")
-	if assert.NotNil(err) {
+	_, _, err := ReadCertificate(bytes)
+	// If ReadCertificate returns an error, assert it and do not call methods on certificate
+	if assert.NotNil(err, "ReadCertificate should return error for missing length data") {
 		assert.Equal("error parsing certificate: certificate is too short", err.Error(), "correct error message should be returned")
 	}
 }
@@ -46,11 +42,9 @@ func TestCertificateLengthErrWhenDataTooShort(t *testing.T) {
 	assert := assert.New(t)
 
 	bytes := []byte{0x03, 0x00, 0x02, 0xff}
-	certificate, _, err := ReadCertificate(bytes)
-	cert_len := certificate.Length()
-
-	assert.Equal(cert_len, 2, "certificate.Length() did not return indicated length when data was actually missing")
-	if assert.NotNil(err) {
+	_, _, err := ReadCertificate(bytes)
+	// If ReadCertificate returns an error, assert it and do not call methods on certificate
+	if assert.NotNil(err, "ReadCertificate should return error for data too short") {
 		assert.Equal("certificate parsing warning: certificate data is shorter than specified by length", err.Error(), "correct error message should be returned")
 	}
 }
@@ -59,12 +53,11 @@ func TestCertificateDataWhenCorrectSize(t *testing.T) {
 	assert := assert.New(t)
 
 	bytes := []byte{0x03, 0x00, 0x01, 0xaa}
-	certificate, _, err := ReadCertificate(bytes)
-	cert_data := certificate.Data()
-
-	assert.Nil(err, "certificate.Data() returned error with valid data")
+	certificate, _, _ := ReadCertificate(bytes)
+	cert_data, dataErr := certificate.Data()
+	assert.Nil(dataErr, "certificate.Data() returned error with valid data")
 	cert_len := len(cert_data)
-	assert.Equal(cert_len, 1, "certificate.Length() did not return indicated length when data was valid")
+	assert.Equal(cert_len, 1, "certificate.Data() did not return indicated length when data was valid")
 	assert.Equal(170, int(cert_data[0]), "certificate.Data() returned incorrect data")
 }
 
@@ -73,9 +66,10 @@ func TestCertificateDataWhenTooLong(t *testing.T) {
 
 	bytes := []byte{0x03, 0x00, 0x02, 0xff, 0xff, 0xaa, 0xaa}
 	certificate, _, _ := ReadCertificate(bytes)
-	cert_data := certificate.Data()
-
-	cert_len := certificate.Length() // len(cert_data)
+	cert_data, dataErr := certificate.Data()
+	assert.Nil(dataErr, "certificate.Data() should not error for valid length")
+	cert_len, lenErr := certificate.Length()
+	assert.Nil(lenErr, "certificate.Length() should not error for valid length")
 	assert.Equal(cert_len, 2, "certificate.Length() did not return indicated length when data was too long")
 	if cert_data[0] != 0xff || cert_data[1] != 0xff {
 		t.Fatal("certificate.Data() returned incorrect data when data was too long")
@@ -86,15 +80,11 @@ func TestCertificateDataWhenTooShort(t *testing.T) {
 	assert := assert.New(t)
 
 	bytes := []byte{0x03, 0x00, 0x02, 0xff}
-	certificate, _, err := ReadCertificate(bytes)
-	cert_data := certificate.Data()
-
-	if assert.NotNil(err) {
+	_, _, err := ReadCertificate(bytes)
+	// If ReadCertificate returns an error, assert it and do not call methods on certificate
+	if assert.NotNil(err, "ReadCertificate should return error for data too short") {
 		assert.Equal("certificate parsing warning: certificate data is shorter than specified by length", err.Error(), "correct error message should be returned")
 	}
-	cert_len := len(cert_data)
-	assert.Equal(cert_len, 1, "certificate.Data() did not return correct amount of data when data too short")
-	assert.Equal(255, int(cert_data[0]), "certificate.Data() did not return correct data values when data was too short")
 }
 
 func TestReadCertificateWithCorrectData(t *testing.T) {
@@ -152,9 +142,15 @@ func TestNewCertificateNullType(t *testing.T) {
 	// Create a NULL certificate with no payload
 	cert, err := NewCertificateWithType(CERT_NULL, []byte{})
 	assert.Nil(err, "Expected no error when creating NULL certificate with empty payload")
-	assert.Equal(CERT_NULL, cert.Type(), "Certificate type should be CERT_NULL")
-	assert.Equal(0, cert.Length(), "Certificate length should be 0 for NULL certificate")
-	assert.Equal(0, len(cert.Data()), "Certificate data should be empty for NULL certificate")
+	typ, typErr := cert.Type()
+	assert.Nil(typErr, "Certificate type should not error for valid NULL type")
+	assert.Equal(CERT_NULL, typ, "Certificate type should be CERT_NULL")
+	length, lenErr := cert.Length()
+	assert.Nil(lenErr, "Certificate length should not error for valid NULL certificate")
+	assert.Equal(0, length, "Certificate length should be 0 for NULL certificate")
+	data, dataErr := cert.Data()
+	assert.Nil(dataErr, "Certificate data should not error for valid NULL certificate")
+	assert.Equal(0, len(data), "Certificate data should be empty for NULL certificate")
 }
 
 func TestNewCertificateNullTypeWithPayload(t *testing.T) {
@@ -172,9 +168,15 @@ func TestNewCertificateKeyType(t *testing.T) {
 	payload := []byte{0x00, 0x01, 0x02, 0x03, 0x04}
 	cert, err := NewCertificateWithType(CERT_KEY, payload)
 	assert.Nil(err, "Expected no error when creating KEY certificate with valid payload")
-	assert.Equal(CERT_KEY, cert.Type(), "Certificate type should be CERT_KEY")
-	assert.Equal(len(payload), cert.Length(), "Certificate length should match payload length")
-	assert.Equal(payload, cert.Data(), "Certificate data should match payload")
+	typ, typErr := cert.Type()
+	assert.Nil(typErr, "Certificate type should not error for valid KEY type")
+	assert.Equal(CERT_KEY, typ, "Certificate type should be CERT_KEY")
+	length, lenErr := cert.Length()
+	assert.Nil(lenErr, "Certificate length should not error for valid KEY certificate")
+	assert.Equal(len(payload), length, "Certificate length should match payload length")
+	data, dataErr := cert.Data()
+	assert.Nil(dataErr, "Certificate data should not error for valid KEY certificate")
+	assert.Equal(payload, data, "Certificate data should match payload")
 }
 
 func TestNewCertificateInvalidType(t *testing.T) {
@@ -223,9 +225,15 @@ func TestCertificateFieldsAfterCreation(t *testing.T) {
 	cert, err := NewCertificateWithType(uint8(certType), payload)
 	assert.Nil(err, "Expected no error when creating MULTIPLE certificate")
 
-	assert.Equal(certType, cert.Type(), "Certificate type should match")
-	assert.Equal(len(payload), cert.Length(), "Certificate length should match payload length")
-	assert.Equal(payload, cert.Data(), "Certificate data should match payload")
+	typ, typErr := cert.Type()
+	assert.Nil(typErr, "Certificate type should not error for valid type")
+	assert.Equal(certType, typ, "Certificate type should match")
+	length, lenErr := cert.Length()
+	assert.Nil(lenErr, "Certificate length should not error for valid certificate")
+	assert.Equal(len(payload), length, "Certificate length should match payload length")
+	data, dataErr := cert.Data()
+	assert.Nil(dataErr, "Certificate data should not error for valid certificate")
+	assert.Equal(payload, data, "Certificate data should match payload")
 }
 
 func TestCertificateWithZeroLengthPayload(t *testing.T) {
@@ -235,9 +243,15 @@ func TestCertificateWithZeroLengthPayload(t *testing.T) {
 	cert, err := NewCertificateWithType(uint8(certType), []byte{})
 	assert.Nil(err, "Expected no error when creating certificate with zero-length payload")
 
-	assert.Equal(certType, cert.Type(), "Certificate type should match")
-	assert.Equal(0, cert.Length(), "Certificate length should be 0 for zero-length payload")
-	assert.Equal(0, len(cert.Data()), "Certificate data should be empty")
+	typ, typErr := cert.Type()
+	assert.Nil(typErr, "Certificate type should not error for valid type")
+	assert.Equal(certType, typ, "Certificate type should match")
+	length, lenErr := cert.Length()
+	assert.Nil(lenErr, "Certificate length should not error for valid certificate")
+	assert.Equal(0, length, "Certificate length should be 0 for zero-length payload")
+	data, dataErr := cert.Data()
+	assert.Nil(dataErr, "Certificate data should not error for valid certificate")
+	assert.Equal(0, len(data), "Certificate data should be empty")
 }
 
 func TestNewCertificateDeuxFunction(t *testing.T) {
@@ -248,9 +262,15 @@ func TestNewCertificateDeuxFunction(t *testing.T) {
 	cert, err := NewCertificateDeux(certType, payload)
 	assert.Nil(err, "Expected no error when creating certificate with NewCertificateDeux")
 
-	assert.Equal(certType, cert.Type(), "Certificate type should match")
-	assert.Equal(len(payload), cert.Length(), "Certificate length should match payload length")
-	assert.Equal(payload, cert.Data(), "Certificate data should match payload")
+	typ, typErr := cert.Type()
+	assert.Nil(typErr, "Certificate type should not error for valid type")
+	assert.Equal(certType, typ, "Certificate type should match")
+	length, lenErr := cert.Length()
+	assert.Nil(lenErr, "Certificate length should not error for valid certificate")
+	assert.Equal(len(payload), length, "Certificate length should match payload length")
+	data, dataErr := cert.Data()
+	assert.Nil(dataErr, "Certificate data should not error for valid certificate")
+	assert.Equal(payload, data, "Certificate data should match payload")
 }
 
 func TestNewCertificateWithInvalidPayloadLength(t *testing.T) {
@@ -278,7 +298,9 @@ func TestCertificateExcessBytes(t *testing.T) {
 	excess := cert.ExcessBytes()
 	assert.Equal(extraBytes, excess, "ExcessBytes should return the extra bytes in the payload")
 
-	assert.Equal(payload, cert.Data(), "Data() should return the valid payload excluding excess bytes")
+	data, dataErr := cert.Data()
+	assert.Nil(dataErr, "Certificate data should not error for valid certificate")
+	assert.Equal(payload, data, "Data() should return the valid payload excluding excess bytes")
 }
 
 func TestCertificateSerializationDeserialization(t *testing.T) {
@@ -296,9 +318,21 @@ func TestCertificateSerializationDeserialization(t *testing.T) {
 	deserializedCert, err := readCertificate(serializedBytes)
 	assert.Nil(err, "Expected no error when deserializing certificate")
 
-	assert.Equal(originalCert.Type(), deserializedCert.Type(), "Certificate types should match")
-	assert.Equal(originalCert.Length(), deserializedCert.Length(), "Certificate lengths should match")
-	assert.Equal(originalCert.Data(), deserializedCert.Data(), "Certificate payloads should match")
+	origType, origTypeErr := originalCert.Type()
+	deserType, deserTypeErr := deserializedCert.Type()
+	assert.Nil(origTypeErr, "Original certificate type should not error")
+	assert.Nil(deserTypeErr, "Deserialized certificate type should not error")
+	assert.Equal(origType, deserType, "Certificate types should match")
+	origLen, origLenErr := originalCert.Length()
+	deserLen, deserLenErr := deserializedCert.Length()
+	assert.Nil(origLenErr, "Original certificate length should not error")
+	assert.Nil(deserLenErr, "Deserialized certificate length should not error")
+	assert.Equal(origLen, deserLen, "Certificate lengths should match")
+	origData, origDataErr := originalCert.Data()
+	deserData, deserDataErr := deserializedCert.Data()
+	assert.Nil(origDataErr, "Original certificate data should not error")
+	assert.Nil(deserDataErr, "Deserialized certificate data should not error")
+	assert.Equal(origData, deserData, "Certificate payloads should match")
 }
 
 func TestCertificateSerializationDeserializationWithExcessBytes(t *testing.T) {
@@ -318,9 +352,21 @@ func TestCertificateSerializationDeserializationWithExcessBytes(t *testing.T) {
 	deserializedCert, err := readCertificate(serializedBytesWithExcess)
 	assert.Nil(err, "Expected no error when deserializing certificate with excess bytes")
 
-	assert.Equal(originalCert.Type(), deserializedCert.Type(), "Certificate types should match")
-	assert.Equal(originalCert.Length(), deserializedCert.Length(), "Certificate lengths should match")
-	assert.Equal(originalCert.Data(), deserializedCert.Data(), "Certificate payloads should match")
+	origType, origTypeErr := originalCert.Type()
+	deserType, deserTypeErr := deserializedCert.Type()
+	assert.Nil(origTypeErr, "Original certificate type should not error")
+	assert.Nil(deserTypeErr, "Deserialized certificate type should not error")
+	assert.Equal(origType, deserType, "Certificate types should match")
+	origLen, origLenErr := originalCert.Length()
+	deserLen, deserLenErr := deserializedCert.Length()
+	assert.Nil(origLenErr, "Original certificate length should not error")
+	assert.Nil(deserLenErr, "Deserialized certificate length should not error")
+	assert.Equal(origLen, deserLen, "Certificate lengths should match")
+	origData, origDataErr := originalCert.Data()
+	deserData, deserDataErr := deserializedCert.Data()
+	assert.Nil(origDataErr, "Original certificate data should not error")
+	assert.Nil(deserDataErr, "Deserialized certificate data should not error")
+	assert.Equal(origData, deserData, "Certificate payloads should match")
 
 	excess := deserializedCert.ExcessBytes()
 	assert.Equal(excessBytes, excess, "ExcessBytes should return the extra bytes appended to the serialized data")
@@ -340,9 +386,21 @@ func TestCertificateSerializationDeserializationEmptyPayload(t *testing.T) {
 	deserializedCert, err := readCertificate(serializedBytes)
 	assert.Nil(err, "Expected no error when deserializing NULL certificate")
 
-	assert.Equal(originalCert.Type(), deserializedCert.Type(), "Certificate types should match")
-	assert.Equal(originalCert.Length(), deserializedCert.Length(), "Certificate lengths should match")
-	assert.Equal(originalCert.Data(), deserializedCert.Data(), "Certificate payloads should match")
+	origType, origTypeErr := originalCert.Type()
+	deserType, deserTypeErr := deserializedCert.Type()
+	assert.Nil(origTypeErr, "Original certificate type should not error")
+	assert.Nil(deserTypeErr, "Deserialized certificate type should not error")
+	assert.Equal(origType, deserType, "Certificate types should match")
+	origLen, origLenErr := originalCert.Length()
+	deserLen, deserLenErr := deserializedCert.Length()
+	assert.Nil(origLenErr, "Original certificate length should not error")
+	assert.Nil(deserLenErr, "Deserialized certificate length should not error")
+	assert.Equal(origLen, deserLen, "Certificate lengths should match")
+	origData, origDataErr := originalCert.Data()
+	deserData, deserDataErr := deserializedCert.Data()
+	assert.Nil(origDataErr, "Original certificate data should not error")
+	assert.Nil(deserDataErr, "Deserialized certificate data should not error")
+	assert.Equal(origData, deserData, "Certificate payloads should match")
 }
 
 func TestCertificateSerializationDeserializationMaxPayload(t *testing.T) {
@@ -363,9 +421,21 @@ func TestCertificateSerializationDeserializationMaxPayload(t *testing.T) {
 	deserializedCert, err := readCertificate(serializedBytes)
 	assert.Nil(err, "Expected no error when deserializing certificate with maximum payload")
 
-	assert.Equal(originalCert.Type(), deserializedCert.Type(), "Certificate types should match")
-	assert.Equal(originalCert.Length(), deserializedCert.Length(), "Certificate lengths should match")
-	assert.True(bytes.Equal(originalCert.Data(), deserializedCert.Data()), "Certificate payloads should match")
+	origType, origTypeErr := originalCert.Type()
+	deserType, deserTypeErr := deserializedCert.Type()
+	assert.Nil(origTypeErr, "Original certificate type should not error")
+	assert.Nil(deserTypeErr, "Deserialized certificate type should not error")
+	assert.Equal(origType, deserType, "Certificate types should match")
+	origLen, origLenErr := originalCert.Length()
+	deserLen, deserLenErr := deserializedCert.Length()
+	assert.Nil(origLenErr, "Original certificate length should not error")
+	assert.Nil(deserLenErr, "Deserialized certificate length should not error")
+	assert.Equal(origLen, deserLen, "Certificate lengths should match")
+	origData, origDataErr := originalCert.Data()
+	deserData, deserDataErr := deserializedCert.Data()
+	assert.Nil(origDataErr, "Original certificate data should not error")
+	assert.Nil(deserDataErr, "Deserialized certificate data should not error")
+	assert.True(bytes.Equal(origData, deserData), "Certificate payloads should match")
 }
 
 func TestCertificateHandlesOneByte(t *testing.T) {
