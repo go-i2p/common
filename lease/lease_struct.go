@@ -95,7 +95,10 @@ func (lease Lease) TunnelGateway() (hash data.Hash) {
 	return
 }
 
-// TunnelID returns the tunnel id as a uint23.
+// ADDED: TunnelID returns the tunnel identifier as a 32-bit unsigned integer.
+// Extracts bytes 32-35 of the lease structure and converts them from big-endian format
+// to a native uint32 value. This ID uniquely identifies the specific tunnel within
+// the context of the gateway router and is used for message routing and delivery.
 func (lease Lease) TunnelID() uint32 {
 	i := data.Integer(lease[LEASE_TUNNEL_GW_SIZE : LEASE_TUNNEL_GW_SIZE+LEASE_TUNNEL_ID_SIZE])
 	return uint32(
@@ -103,7 +106,10 @@ func (lease Lease) TunnelID() uint32 {
 	)
 }
 
-// Date returns the date as an I2P Date.
+// ADDED: Date returns the expiration date of the lease as an I2P Date structure.
+// Extracts the last 8 bytes of the lease structure which contain the expiration timestamp
+// in milliseconds since Unix epoch. This date determines when the lease becomes invalid
+// and can no longer be used for tunnel message delivery within the I2P network.
 func (lease Lease) Date() (date data.Date) {
 	copy(date[:], lease[LEASE_TUNNEL_GW_SIZE+LEASE_TUNNEL_ID_SIZE:])
 	return
