@@ -295,7 +295,7 @@ func createTestLeaseSet(t *testing.T, routerInfo *router_info.RouterInfo, leaseC
 	// Generate test Destination and client keys
 	dest, encryptionKey, signingKey, signingPrivKey, err := generateTestDestination(t)
 	if err != nil {
-		return nil, oops.Errorf("failed to generate test destination: %v", err)
+		return LeaseSet{}, oops.Errorf("failed to generate test destination: %v", err)
 	}
 
 	destBytes := dest.KeysAndCert.Bytes()
@@ -311,7 +311,7 @@ func createTestLeaseSet(t *testing.T, routerInfo *router_info.RouterInfo, leaseC
 	for i := 0; i < leaseCount; i++ {
 		testLease, err := createTestLease(t, i, routerInfo)
 		if err != nil {
-			return nil, err
+			return LeaseSet{}, err
 		}
 		leases = append(leases, *testLease)
 	}

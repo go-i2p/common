@@ -6,12 +6,17 @@ import (
 
 	"github.com/go-i2p/common/certificate"
 	"github.com/go-i2p/common/destination"
+	"github.com/go-i2p/common/key_certificate"
 	"github.com/go-i2p/common/keys_and_cert"
+	"github.com/go-i2p/common/lease"
+	sig "github.com/go-i2p/common/signature"
+	"github.com/go-i2p/crypto/dsa"
+	elgamal "github.com/go-i2p/crypto/elg"
+	"github.com/go-i2p/crypto/types"
 	"github.com/samber/oops"
 )
 
 // ReadDestinationFromLeaseSet reads the destination from lease set data.
-//
 func ReadDestinationFromLeaseSet(data []byte) (dest destination.Destination, remainder []byte, err error) {
 	fmt.Printf("Reading Destination from LeaseSet, input_length=%d\n", len(data))
 
@@ -63,12 +68,113 @@ func ReadDestinationFromLeaseSet(data []byte) (dest destination.Destination, rem
 }
 
 // ReadLeaseSet reads a lease set from byte data.
-//
 func ReadLeaseSet(data []byte) (LeaseSet, error) {
 	log.Debug("Reading LeaseSet")
-	lease_set := LeaseSet(data)
-	if len(lease_set) < 387 {
-		return nil, oops.Errorf("LeaseSet data too short to contain Destination")
+
+	if len(data) < 387 {
+		return LeaseSet{}, oops.Errorf("LeaseSet data too short to contain Destination")
 	}
-	return lease_set, nil
+
+	// Parse destination
+	dest, remainder, err := ReadDestinationFromLeaseSet(data)
+	if err != nil {
+		return LeaseSet{}, oops.Errorf("failed to read destination: %w", err)
+	}
+
+	// Parse encryption key (256 bytes)
+	if len(remainder) < LEASE_SET_PUBKEY_SIZE {
+		return LeaseSet{}, oops.Errorf("LeaseSet data too short for encryption key")
+	}
+	var encKeyBytes [LEASE_SET_PUBKEY_SIZE]byte
+	copy(encKeyBytes[:], remainder[:LEASE_SET_PUBKEY_SIZE])
+	encryptionKey := elgamal.ElgPublicKey(encKeyBytes)
+	remainder = remainder[LEASE_SET_PUBKEY_SIZE:]
+
+	// Parse signing key (128 bytes or variable based on certificate)
+	sigKeySize := LEASE_SET_SPK_SIZE
+	cert := dest.Certificate()
+	if cert.Type() == certificate.CERT_KEY {
+		keyCert, err := key_certificate.KeyCertificateFromCertificate(cert)
+		if err == nil {
+			sigKeySize = keyCert.SignatureSize()
+		}
+	}
+
+	if len(remainder) < sigKeySize {
+		return LeaseSet{}, oops.Errorf("LeaseSet data too short for signing key")
+	}
+
+	var signingKey types.SigningPublicKey
+	if cert.Type() == certificate.CERT_KEY {
+		keyCert, err := key_certificate.KeyCertificateFromCertificate(cert)
+		if err == nil {
+			signingKey, err = keyCert.ConstructSigningPublicKey(remainder[:sigKeySize])
+			if err != nil {
+				return LeaseSet{}, oops.Errorf("failed to construct signing key: %w", err)
+			}
+		}
+	} else {
+		// Default DSA key
+		var dsaKey [LEASE_SET_SPK_SIZE]byte
+		copy(dsaKey[:], remainder[:LEASE_SET_SPK_SIZE])
+		signingKey = dsa.DSAPublicKey(dsaKey)
+	}
+	remainder = remainder[sigKeySize:]
+
+	// Parse lease count (1 byte)
+	if len(remainder) < 1 {
+		return LeaseSet{}, oops.Errorf("LeaseSet data too short for lease count")
+	}
+	leaseCount := int(remainder[0])
+	if leaseCount > 16 {
+		return LeaseSet{}, oops.Errorf("invalid lease count: %d (max 16)", leaseCount)
+	}
+	remainder = remainder[1:]
+
+	// Parse leases
+	if len(remainder) < leaseCount*lease.LEASE_SIZE {
+		return LeaseSet{}, oops.Errorf("LeaseSet data too short for leases")
+	}
+
+	var leases []lease.Lease
+	for i := 0; i < leaseCount; i++ {
+		var l lease.Lease
+		copy(l[:], remainder[i*lease.LEASE_SIZE:(i+1)*lease.LEASE_SIZE])
+		leases = append(leases, l)
+	}
+	remainder = remainder[leaseCount*lease.LEASE_SIZE:]
+
+	// Parse signature
+	sigSize := LEASE_SET_SIG_SIZE
+	if cert.Type() == certificate.CERT_KEY {
+		keyCert, err := key_certificate.KeyCertificateFromCertificate(cert)
+		if err == nil {
+			sigSize = keyCert.SignatureSize()
+		}
+	}
+
+	if len(remainder) < sigSize {
+		return LeaseSet{}, oops.Errorf("LeaseSet data too short for signature")
+	}
+
+	sigType := sig.SIGNATURE_TYPE_DSA_SHA1
+	if cert.Type() == certificate.CERT_KEY {
+		keyCert, err := key_certificate.KeyCertificateFromCertificate(cert)
+		if err == nil {
+			sigType = keyCert.SigningPublicKeyType()
+		}
+	}
+
+	signature := sig.NewSignatureFromBytes(remainder[:sigSize], sigType)
+
+	leaseSet := LeaseSet{
+		dest:          dest,
+		encryptionKey: encryptionKey,
+		signingKey:    signingKey,
+		leaseCount:    leaseCount,
+		leases:        leases,
+		signature:     signature,
+	}
+
+	return leaseSet, nil
 }

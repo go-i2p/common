@@ -1,6 +1,13 @@
 // Package lease_set implements the I2P LeaseSet struct definition
 package lease_set
 
+import (
+	"github.com/go-i2p/common/destination"
+	"github.com/go-i2p/common/lease"
+	sig "github.com/go-i2p/common/signature"
+	"github.com/go-i2p/crypto/types"
+)
+
 /*
 [LeaseSet]
 Accurate for version 0.9.49
@@ -96,16 +103,17 @@ signature :: Signature
 // LeaseSet is the represenation of an I2P LeaseSet.
 //
 // https://geti2p.net/spec/common-structures#leaseset
-//
-type LeaseSet []byte
-
-/*
 type LeaseSet struct {
-	Destination *Destination
-	EncryptionKey *crypto.ElgPublicKey
-	SigningKey *crypto.ElgPublicKey
-	Size *Integer
-	Leases []*Lease
-	Signature *Signature
+	// dest contains the keys and certificate for this lease set
+	dest destination.Destination
+	// encryptionKey is the public key for encrypting garlic messages (256 bytes)
+	encryptionKey types.RecievingPublicKey
+	// signingKey is the public key for verifying this lease set (128 bytes or variable based on certificate)
+	signingKey types.SigningPublicKey
+	// leaseCount specifies the number of leases (1 byte, 0-16)
+	leaseCount int
+	// leases contains the actual lease structures (44 bytes each)
+	leases []lease.Lease
+	// signature is the signature of all preceding data
+	signature sig.Signature
 }
-*/
