@@ -52,7 +52,7 @@ func ReadSignature(data []byte, sigType int) (sig Signature, remainder []byte, e
 		log.WithError(err).Error("Failed to read Signature")
 		return
 	}
-	
+
 	// Extract signature bytes and prepare remainder for further processing
 	// Creates a new Signature struct with validated data and type information
 	sig = Signature{
