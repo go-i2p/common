@@ -74,7 +74,16 @@ func validateLeaseSetInputs(dest destination.Destination, encryptionKey types.Re
 // validateSigningKeySize ensures the signing key size matches the certificate requirements.
 func validateSigningKeySize(dest destination.Destination, signingKey types.SigningPublicKey) error {
 	cert := dest.Certificate()
-	if cert.Type() == certificate.CERT_KEY {
+	kind, err := cert.Type()
+	if err != nil {
+		log.WithFields(logrus.Fields{
+			"at":     "validateSigningKeySize",
+			"reason": "invalid certificate type",
+		}).Error("error parsing certificate type")
+		return oops.Errorf("invalid certificate type: %v", err)
+	}
+
+	if kind == certificate.CERT_KEY {
 		// Get expected size from key certificate
 		keyCert, err := key_certificate.KeyCertificateFromCertificate(cert)
 		if err != nil {
@@ -165,7 +174,15 @@ func logLeaseSetCreationSuccess(leaseSet LeaseSet) {
 
 // getSignatureType determines the signature type from a certificate
 func getSignatureType(cert certificate.Certificate) int {
-	if cert.Type() == certificate.CERT_KEY {
+	kind, err := cert.Type()
+	if err != nil {
+		log.WithFields(logrus.Fields{
+			"at":     "getSignatureType",
+			"reason": "invalid certificate type",
+		}).Error("error parsing certificate type")
+		return sig.SIGNATURE_TYPE_DSA_SHA1 // Default type
+	}
+	if kind == certificate.CERT_KEY {
 		keyCert, err := key_certificate.KeyCertificateFromCertificate(cert)
 		if err == nil {
 			return keyCert.SigningPublicKeyType()

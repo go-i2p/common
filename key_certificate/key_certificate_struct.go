@@ -70,23 +70,32 @@ func NewKeyCertificate(bytes []byte) (key_certificate *KeyCertificate, remainder
 
 	// Validate that this is specifically a Key Certificate type
 	// Only CERT_KEY type certificates can be converted to KeyCertificate structures
-	if cert.Type() != certificate.CERT_KEY {
-		return nil, remainder, oops.Errorf("invalid certificate type: %d", cert.Type())
+	kind, err := cert.Type()
+	if err != nil {
+		log.WithFields(logrus.Fields{"at": "NewKeyCertificate", "reason": "invalid certificate type"}).Error(err.Error())
+		return nil, remainder, err
+	}
+	if kind != certificate.CERT_KEY {
+		return nil, remainder, oops.Errorf("invalid certificate type: %d", kind)
 	}
 
 	// Ensure the certificate payload contains sufficient data for key type fields
 	// Key certificates require at least 4 bytes: 2 for signing key type, 2 for crypto key type
-	if len(cert.Data()) < 4 {
+	certData, err := cert.Data()
+	if err != nil {
+		return nil, remainder, err
+	}
+	if len(certData) < 4 {
 		return nil, remainder, oops.Errorf("key certificate data too short")
 	}
-	log.Println("Certificate Data in NewKeyCertificate: ", cert.Data()[0:2], cert.Data()[2:4])
+	log.Println("Certificate Data in NewKeyCertificate: ", certData[0:2], certData[2:4])
 
 	// Extract the signing public key type from the first 2 bytes of certificate data
 	// This determines which signature algorithm will be used for this certificate
-	spkType, _ := data.ReadInteger(cert.Data()[0:2], 2)
+	spkType, _ := data.ReadInteger(certData[0:2], 2)
 	// Extract the crypto public key type from bytes 2-3 of certificate data
 	// This determines which encryption algorithm will be used for this certificate
-	cpkType, _ := data.ReadInteger(cert.Data()[2:4], 2)
+	cpkType, _ := data.ReadInteger(certData[2:4], 2)
 	key_certificate = &KeyCertificate{
 		Certificate: cert,
 		CpkType:     cpkType,
@@ -107,11 +116,18 @@ func NewKeyCertificate(bytes []byte) (key_certificate *KeyCertificate, remainder
 func KeyCertificateFromCertificate(cert certificate.Certificate) (*KeyCertificate, error) {
 	// Validate certificate type before proceeding with conversion
 	// Only Key Certificate types contain the required key type information
-	if cert.Type() != certificate.CERT_KEY {
-		return nil, oops.Errorf("expected Key Certificate type, got %d", cert.Type())
+	kind, err := cert.Type()
+	if err != nil {
+		log.WithFields(logrus.Fields{"at": "KeyCertificateFromCertificate", "reason": "invalid certificate type"}).Error(err.Error())
+	}
+	if kind != certificate.CERT_KEY {
+		return nil, oops.Errorf("expected Key Certificate type, got %d", kind)
 	}
 
-	certdata := cert.Data()
+	certdata, err := cert.Data()
+	if err != nil {
+		return nil, err
+	}
 	fmt.Printf("Certificate Data Length in KeyCertificateFromCertificate: %d\n", len(certdata))
 	fmt.Printf("Certificate Data Bytes in KeyCertificateFromCertificate: %v\n", certdata)
 

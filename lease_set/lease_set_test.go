@@ -95,14 +95,23 @@ func generateTestRouterInfo(t *testing.T) (*router_info.RouterInfo, types.Receiv
 		t.Fatalf("Failed to create new certificate: %v\n", err)
 	}
 
+	kind, err := cert.Type()
+	if err != nil {
+		t.Fatalf("Failed to read certificate type: %v\n", err)
+	}
+	certLength, err := cert.Length()
+	if err != nil {
+		t.Fatalf("Failed to read certificate length: %v\n", err)
+	}
+
 	t.Logf("Key Certificate Payload Length: %d bytes", len(payload.Bytes()))
-	t.Logf("Certificate Type: %d", cert.Type())
-	t.Logf("Certificate Length Field: %d", cert.Length())
+	t.Logf("Certificate Type: %d", kind)
+	t.Logf("Certificate Length Field: %d", certLength)
 	t.Logf("Certificate Bytes Length: %d", len(cert.Bytes()))
 	t.Logf("Certificate Bytes: %d", cert.Bytes())
 
-	if cert.Length() != len(cert.Bytes()) {
-		t.Logf("Certificate length (%d) does not match with bytes length (%d)", cert.Length(), cert.Bytes())
+	if certLength != len(cert.Bytes()) {
+		t.Logf("Certificate length (%d) does not match with bytes length (%d)", certLength, cert.Bytes())
 	}
 
 	certBytes := cert.Bytes()

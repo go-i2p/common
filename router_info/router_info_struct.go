@@ -650,10 +650,23 @@ func logMappingWarnings() {
 func parseRouterInfoSignature(router_identity *router_identity.RouterIdentity, remainder []byte) (*signature.Signature, []byte, error) {
 	// Add debug logging for certificate inspection
 	cert := router_identity.Certificate()
+	kind, err := cert.Type()
+	if err != nil {
+		log.WithFields(logrus.Fields{
+			"at":     "(RouterInfo) parseRouterInfoSignature",
+			"reason": "invalid certificate type",
+		}).Error("error parsing router info signature")
+		return nil, remainder, oops.Errorf("invalid certificate type: %v", err)
+	}
+	certData, err := cert.Data()
+	if err != nil {
+		log.WithError(err).Error("Failed to read Certificate Data")
+		return nil, remainder, err
+	}
 	log.WithFields(logrus.Fields{
 		"at":            "(RouterInfo) parseRouterInfoSignature",
-		"cert_type":     cert.Type(),
-		"cert_length":   cert.Length(),
+		"cert_type":     kind,
+		"cert_length":   certData,
 		"remainder_len": len(remainder),
 	}).Debug("Processing certificate")
 

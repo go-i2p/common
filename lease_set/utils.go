@@ -14,6 +14,7 @@ import (
 	elgamal "github.com/go-i2p/crypto/elg"
 	"github.com/go-i2p/crypto/types"
 	"github.com/samber/oops"
+	"github.com/sirupsen/logrus"
 )
 
 // ReadDestinationFromLeaseSet reads the destination from lease set data.
@@ -35,12 +36,23 @@ func ReadDestinationFromLeaseSet(data []byte) (dest destination.Destination, rem
 		return
 	}
 
-	certTotalLength := 3 + int(cert.Length())
+	kind, err := cert.Type()
+	if err != nil {
+		fmt.Printf("Error reading certificate type: %v\n", err)
+		return
+	}
+	certLength, err := cert.Length()
+	if err != nil {
+		fmt.Printf("Failed to read Certificate Length: %v\n", err)
+		return
+	}
+
+	certTotalLength := 3 + int(certLength)
 	destinationLength := certDataStart + certTotalLength
 
 	fmt.Printf("Certificate details:\n")
-	fmt.Printf("  certType: %d\n", cert.Type())
-	fmt.Printf("  certLength: %d\n", cert.Length())
+	fmt.Printf("  certType: %d\n", kind)
+	fmt.Printf("  certLength: %d\n", certLength)
 	fmt.Printf("  certTotalLength: %d\n", certTotalLength)
 	fmt.Printf("  destinationLength: %d\n", destinationLength)
 
@@ -93,7 +105,15 @@ func ReadLeaseSet(data []byte) (LeaseSet, error) {
 	// Parse signing key (128 bytes or variable based on certificate)
 	sigKeySize := LEASE_SET_SPK_SIZE
 	cert := dest.Certificate()
-	if cert.Type() == certificate.CERT_KEY {
+	kind, err := cert.Type()
+	if err != nil {
+		log.WithFields(logrus.Fields{
+			"at":     "ReadLeaseSet",
+			"reason": "invalid certificate type",
+		}).Error("error parsing certificate type")
+		return LeaseSet{}, oops.Errorf("invalid certificate type: %v", err)
+	}
+	if kind == certificate.CERT_KEY {
 		keyCert, err := key_certificate.KeyCertificateFromCertificate(cert)
 		if err == nil {
 			sigKeySize = keyCert.SignatureSize()
@@ -105,7 +125,7 @@ func ReadLeaseSet(data []byte) (LeaseSet, error) {
 	}
 
 	var signingKey types.SigningPublicKey
-	if cert.Type() == certificate.CERT_KEY {
+	if kind == certificate.CERT_KEY {
 		keyCert, err := key_certificate.KeyCertificateFromCertificate(cert)
 		if err == nil {
 			signingKey, err = keyCert.ConstructSigningPublicKey(remainder[:sigKeySize])
@@ -146,7 +166,7 @@ func ReadLeaseSet(data []byte) (LeaseSet, error) {
 
 	// Parse signature
 	sigSize := LEASE_SET_SIG_SIZE
-	if cert.Type() == certificate.CERT_KEY {
+	if kind == certificate.CERT_KEY {
 		keyCert, err := key_certificate.KeyCertificateFromCertificate(cert)
 		if err == nil {
 			sigSize = keyCert.SignatureSize()
@@ -158,7 +178,7 @@ func ReadLeaseSet(data []byte) (LeaseSet, error) {
 	}
 
 	sigType := sig.SIGNATURE_TYPE_DSA_SHA1
-	if cert.Type() == certificate.CERT_KEY {
+	if kind == certificate.CERT_KEY {
 		keyCert, err := key_certificate.KeyCertificateFromCertificate(cert)
 		if err == nil {
 			sigType = keyCert.SigningPublicKeyType()
