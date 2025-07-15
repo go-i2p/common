@@ -59,6 +59,8 @@ func NewKeyCertificate(bytes []byte) (key_certificate *KeyCertificate, remainder
 		"input_length": len(bytes),
 	}).Debug("Creating new keyCertificate")
 
+	// ADDED: Parse the base certificate structure first to extract type and payload
+	// This validates the certificate header and extracts the key-specific data
 	var cert certificate.Certificate
 	cert, remainder, err = certificate.ReadCertificate(bytes)
 	if err != nil {
@@ -66,16 +68,24 @@ func NewKeyCertificate(bytes []byte) (key_certificate *KeyCertificate, remainder
 		return
 	}
 
+	// ADDED: Validate that this is specifically a Key Certificate type
+	// Only CERT_KEY type certificates can be converted to KeyCertificate structures
 	if cert.Type() != certificate.CERT_KEY {
 		return nil, remainder, oops.Errorf("invalid certificate type: %d", cert.Type())
 	}
 
+	// ADDED: Ensure the certificate payload contains sufficient data for key type fields
+	// Key certificates require at least 4 bytes: 2 for signing key type, 2 for crypto key type
 	if len(cert.Data()) < 4 {
 		return nil, remainder, oops.Errorf("key certificate data too short")
 	}
 	log.Println("Certificate Data in NewKeyCertificate: ", cert.Data()[0:2], cert.Data()[2:4])
 
+	// ADDED: Extract the signing public key type from the first 2 bytes of certificate data
+	// This determines which signature algorithm will be used for this certificate
 	spkType, _ := data.ReadInteger(cert.Data()[0:2], 2)
+	// ADDED: Extract the crypto public key type from bytes 2-3 of certificate data
+	// This determines which encryption algorithm will be used for this certificate
 	cpkType, _ := data.ReadInteger(cert.Data()[2:4], 2)
 	key_certificate = &KeyCertificate{
 		Certificate: cert,
@@ -95,6 +105,8 @@ func NewKeyCertificate(bytes []byte) (key_certificate *KeyCertificate, remainder
 
 // KeyCertificateFromCertificate creates a KeyCertificate from an existing Certificate
 func KeyCertificateFromCertificate(cert certificate.Certificate) (*KeyCertificate, error) {
+	// ADDED: Validate certificate type before proceeding with conversion
+	// Only Key Certificate types contain the required key type information
 	if cert.Type() != certificate.CERT_KEY {
 		return nil, oops.Errorf("expected Key Certificate type, got %d", cert.Type())
 	}
@@ -103,22 +115,32 @@ func KeyCertificateFromCertificate(cert certificate.Certificate) (*KeyCertificat
 	fmt.Printf("Certificate Data Length in KeyCertificateFromCertificate: %d\n", len(certdata))
 	fmt.Printf("Certificate Data Bytes in KeyCertificateFromCertificate: %v\n", certdata)
 
+	// ADDED: Ensure certificate contains minimum required data for key type extraction
+	// Key certificates need at least 4 bytes for signing and crypto key type identifiers
 	if len(certdata) < 4 {
 		return nil, oops.Errorf("certificate payload too short in KeyCertificateFromCertificate")
 	}
 
+	// ADDED: Extract raw bytes for signing public key type (first 2 bytes)
+	// This identifies which signature algorithm is specified in the certificate
 	spkTypeBytes := certdata[0:2]
+	// ADDED: Extract raw bytes for crypto public key type (next 2 bytes)
+	// This identifies which encryption algorithm is specified in the certificate
 	cpkTypeBytes := certdata[2:4]
 
 	fmt.Printf("cpkTypeBytes in KeyCertificateFromCertificate: %v\n", cpkTypeBytes)
 	fmt.Printf("spkTypeBytes in KeyCertificateFromCertificate: %v\n", spkTypeBytes)
 
+	// ADDED: Convert raw bytes to I2P Integer types for algorithm identification
+	// These integers will be used to determine key sizes and construction methods
 	spkType := data.Integer(spkTypeBytes)
 	cpkType := data.Integer(cpkTypeBytes)
 
 	fmt.Printf("cpkType (Int) in KeyCertificateFromCertificate: %d\n", cpkType.Int())
 	fmt.Printf("spkType (Int) in KeyCertificateFromCertificate: %d\n", spkType.Int())
 
+	// ADDED: Construct the KeyCertificate with extracted type information
+	// This creates a specialized certificate that can construct cryptographic keys
 	keyCert := &KeyCertificate{
 		Certificate: cert,
 		CpkType:     cpkType,
@@ -162,9 +184,6 @@ func (keyCertificate KeyCertificate) ConstructPublicKey(data []byte) (public_key
 		"input_length": len(data),
 	}).Debug("Constructing publicKey from keyCertificate")
 	key_type := keyCertificate.PublicKeyType()
-	if err != nil {
-		return
-	}
 	data_len := len(data)
 	// ADDED: Validate that input data contains sufficient bytes for the expected key size
 	// This check prevents buffer underruns when extracting key material from certificate data
@@ -254,9 +273,6 @@ func (keyCertificate KeyCertificate) ConstructSigningPublicKey(data []byte) (sig
 		"data_len":         len(data),
 		"required_len":     KEYCERT_SPK_SIZE,
 	}).Error("DEBUG: About to construct signing public key")
-	if err != nil {
-		return
-	}
 	data_len := len(data)
 	// ADDED: Validate sufficient data is available for the signing key algorithm
 	// Each signing algorithm requires a specific amount of key material
