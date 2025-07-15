@@ -8,7 +8,7 @@ import (
 
 	"github.com/samber/oops"
 
-	. "github.com/go-i2p/common/data"
+	"github.com/go-i2p/common/data"
 )
 
 // Network implements net.Addr. It returns the transport type plus 4 or 6
@@ -96,98 +96,98 @@ func (router_address RouterAddress) Cost() int {
 }
 
 // Expiration returns the expiration for this RouterAddress as an I2P Date.
-func (router_address RouterAddress) Expiration() Date {
+func (router_address RouterAddress) Expiration() data.Date {
 	return *router_address.ExpirationDate
 }
 
 // TransportStyle returns the transport style for this RouterAddress as an I2PString.
-func (router_address RouterAddress) TransportStyle() I2PString {
+func (router_address RouterAddress) TransportStyle() data.I2PString {
 	return router_address.TransportType
 }
 
 // GetOption returns the value of the option specified by the key
-func (router_address RouterAddress) GetOption(key I2PString) I2PString {
+func (router_address RouterAddress) GetOption(key data.I2PString) data.I2PString {
 	return router_address.Options().Values().Get(key)
 }
 
 // HasOption checks if a given option key exists
-func (router_address RouterAddress) HasOption(key I2PString) bool {
+func (router_address RouterAddress) HasOption(key data.I2PString) bool {
 	opt := router_address.GetOption(key)
 	return opt != nil
 }
 
 // CheckOption checks if an option exists using a string key
 func (router_address RouterAddress) CheckOption(key string) bool {
-	keyv, _ := ToI2PString(key)
+	keyv, _ := data.ToI2PString(key)
 	return router_address.HasOption(keyv)
 }
 
 // HostString returns the host option as an I2PString
-func (router_address RouterAddress) HostString() I2PString {
-	host, _ := ToI2PString(HOST_OPTION_KEY)
+func (router_address RouterAddress) HostString() data.I2PString {
+	host, _ := data.ToI2PString(HOST_OPTION_KEY)
 	return router_address.GetOption(host)
 }
 
 // PortString returns the port option as an I2PString
-func (router_address RouterAddress) PortString() I2PString {
-	port, _ := ToI2PString(PORT_OPTION_KEY)
+func (router_address RouterAddress) PortString() data.I2PString {
+	port, _ := data.ToI2PString(PORT_OPTION_KEY)
 	return router_address.GetOption(port)
 }
 
 // CapsString returns the caps option as an I2PString
-func (router_address RouterAddress) CapsString() I2PString {
-	caps, _ := ToI2PString(CAPS_OPTION_KEY)
+func (router_address RouterAddress) CapsString() data.I2PString {
+	caps, _ := data.ToI2PString(CAPS_OPTION_KEY)
 	return router_address.GetOption(caps)
 }
 
 // StaticKeyString returns the static key option as an I2PString
-func (router_address RouterAddress) StaticKeyString() I2PString {
-	sk, _ := ToI2PString(STATIC_KEY_OPTION_KEY)
+func (router_address RouterAddress) StaticKeyString() data.I2PString {
+	sk, _ := data.ToI2PString(STATIC_KEY_OPTION_KEY)
 	return router_address.GetOption(sk)
 }
 
 // InitializationVectorString returns the initialization vector option as an I2PString
-func (router_address RouterAddress) InitializationVectorString() I2PString {
-	iv, _ := ToI2PString(INITIALIZATION_VECTOR_OPTION_KEY)
+func (router_address RouterAddress) InitializationVectorString() data.I2PString {
+	iv, _ := data.ToI2PString(INITIALIZATION_VECTOR_OPTION_KEY)
 	return router_address.GetOption(iv)
 }
 
 // ProtocolVersionString returns the protocol version option as an I2PString
-func (router_address RouterAddress) ProtocolVersionString() I2PString {
-	v, _ := ToI2PString(PROTOCOL_VERSION_OPTION_KEY)
+func (router_address RouterAddress) ProtocolVersionString() data.I2PString {
+	v, _ := data.ToI2PString(PROTOCOL_VERSION_OPTION_KEY)
 	return router_address.GetOption(v)
 }
 
 // IntroducerHashString returns the introducer hash option for the specified number
-func (router_address RouterAddress) IntroducerHashString(num int) I2PString {
+func (router_address RouterAddress) IntroducerHashString(num int) data.I2PString {
 	if num >= MIN_INTRODUCER_NUMBER && num <= MAX_INTRODUCER_NUMBER {
 		val := strconv.Itoa(num)
-		v, _ := ToI2PString(INTRODUCER_HASH_PREFIX + val)
+		v, _ := data.ToI2PString(INTRODUCER_HASH_PREFIX + val)
 		return router_address.GetOption(v)
 	}
-	v, _ := ToI2PString(INTRODUCER_HASH_PREFIX + strconv.Itoa(DEFAULT_INTRODUCER_NUMBER))
+	v, _ := data.ToI2PString(INTRODUCER_HASH_PREFIX + strconv.Itoa(DEFAULT_INTRODUCER_NUMBER))
 	return router_address.GetOption(v)
 }
 
 // IntroducerExpirationString returns the introducer expiration option for the specified number
-func (router_address RouterAddress) IntroducerExpirationString(num int) I2PString {
+func (router_address RouterAddress) IntroducerExpirationString(num int) data.I2PString {
 	if num >= MIN_INTRODUCER_NUMBER && num <= MAX_INTRODUCER_NUMBER {
 		val := strconv.Itoa(num)
-		v, _ := ToI2PString(INTRODUCER_EXPIRATION_PREFIX + val)
+		v, _ := data.ToI2PString(INTRODUCER_EXPIRATION_PREFIX + val)
 		return router_address.GetOption(v)
 	}
-	v, _ := ToI2PString(INTRODUCER_EXPIRATION_PREFIX + strconv.Itoa(DEFAULT_INTRODUCER_NUMBER))
+	v, _ := data.ToI2PString(INTRODUCER_EXPIRATION_PREFIX + strconv.Itoa(DEFAULT_INTRODUCER_NUMBER))
 	return router_address.GetOption(v)
 }
 
 // IntroducerTagString returns the introducer tag option for the specified number
-func (router_address RouterAddress) IntroducerTagString(num int) I2PString {
+func (router_address RouterAddress) IntroducerTagString(num int) data.I2PString {
 	if num >= MIN_INTRODUCER_NUMBER && num <= MAX_INTRODUCER_NUMBER {
 		val := strconv.Itoa(num)
-		v, _ := ToI2PString(INTRODUCER_TAG_PREFIX + val)
+		v, _ := data.ToI2PString(INTRODUCER_TAG_PREFIX + val)
 		return router_address.GetOption(v)
 	}
-	v, _ := ToI2PString(INTRODUCER_TAG_PREFIX + strconv.Itoa(DEFAULT_INTRODUCER_NUMBER))
+	v, _ := data.ToI2PString(INTRODUCER_TAG_PREFIX + strconv.Itoa(DEFAULT_INTRODUCER_NUMBER))
 	return router_address.GetOption(v)
 }
 
@@ -265,10 +265,10 @@ func (router_address RouterAddress) ProtocolVersion() (string, error) {
 }
 
 // Options returns the options for this RouterAddress as an I2P Mapping.
-func (routerAddress RouterAddress) Options() Mapping {
+func (routerAddress RouterAddress) Options() data.Mapping {
 	if routerAddress.TransportOptions == nil {
 		log.Warn("TransportOptions is nil in RouterAddress")
-		return Mapping{}
+		return data.Mapping{}
 	}
 	return *routerAddress.TransportOptions
 }

@@ -2,7 +2,7 @@
 package router_address
 
 import (
-	. "github.com/go-i2p/common/data"
+	"github.com/go-i2p/common/data"
 )
 
 /*
@@ -55,8 +55,8 @@ options :: Mapping
 //
 // https://geti2p.net/spec/common-structures#routeraddress
 type RouterAddress struct {
-	TransportCost    *Integer
-	ExpirationDate   *Date
-	TransportType    I2PString
-	TransportOptions *Mapping
+	TransportCost    *data.Integer
+	ExpirationDate   *data.Date
+	TransportType    data.I2PString
+	TransportOptions *data.Mapping
 }

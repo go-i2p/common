@@ -5,7 +5,7 @@ import (
 	"github.com/samber/oops"
 	"github.com/sirupsen/logrus"
 
-	. "github.com/go-i2p/common/data"
+	"github.com/go-i2p/common/data"
 	"github.com/go-i2p/logger"
 )
 
@@ -46,16 +46,16 @@ payload :: data
 //
 // https://geti2p.net/spec/common-structures#certificate
 type Certificate struct {
-	kind    Integer
-	len     Integer
+	kind    data.Integer
+	len     data.Integer
 	payload []byte
 }
 
 // NewCertificate creates a new Certificate with default NULL type
 func NewCertificate() *Certificate {
 	return &Certificate{
-		kind:    Integer([]byte{CERT_NULL}),
-		len:     Integer([]byte{CERT_EMPTY_PAYLOAD_SIZE}),
+		kind:    data.Integer([]byte{CERT_NULL}),
+		len:     data.Integer([]byte{CERT_EMPTY_PAYLOAD_SIZE}),
 		payload: make([]byte, CERT_EMPTY_PAYLOAD_SIZE),
 	}
 }
@@ -95,13 +95,13 @@ func NewCertificateWithType(certType uint8, payload []byte) (*Certificate, error
 		return nil, oops.Errorf("NULL certificates must have empty payload")
 	}
 
-	length, err := NewIntegerFromInt(len(payload), CERT_LENGTH_FIELD_SIZE)
+	length, err := data.NewIntegerFromInt(len(payload), CERT_LENGTH_FIELD_SIZE)
 	if err != nil {
 		return nil, oops.Errorf("failed to create length integer: %w", err)
 	}
 
 	cert := &Certificate{
-		kind:    Integer([]byte{certType}),
+		kind:    data.Integer([]byte{certType}),
 		len:     *length,
 		payload: make([]byte, len(payload)),
 	}

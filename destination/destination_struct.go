@@ -6,7 +6,7 @@ import (
 
 	"github.com/sirupsen/logrus"
 
-	. "github.com/go-i2p/common/keys_and_cert"
+	"github.com/go-i2p/common/keys_and_cert"
 	"github.com/go-i2p/crypto/types"
 
 	"github.com/go-i2p/common/base32"
@@ -28,7 +28,7 @@ Identical to KeysAndCert.
 //
 // https://geti2p.net/spec/common-structures#destination
 type Destination struct {
-	*KeysAndCert
+	*keys_and_cert.KeysAndCert
 }
 
 // ReadDestination returns Destination from a []byte.
@@ -39,9 +39,9 @@ func ReadDestination(data []byte) (destination Destination, remainder []byte, er
 		"input_length": len(data),
 	}).Debug("Reading Destination from bytes")
 
-	keys_and_cert, remainder, err := ReadKeysAndCert(data)
+	keys_and_cert_obj, remainder, err := keys_and_cert.ReadKeysAndCert(data)
 	destination = Destination{
-		keys_and_cert,
+		keys_and_cert_obj,
 	}
 
 	log.WithFields(logrus.Fields{

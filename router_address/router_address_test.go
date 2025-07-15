@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"testing"
 
-	. "github.com/go-i2p/common/data"
+	"github.com/go-i2p/common/data"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -40,7 +40,7 @@ func TestCheckRouterAddressValidNoErrWithValidData(t *testing.T) {
 	assert := assert.New(t)
 
 	router_address, _, _ := ReadRouterAddress([]byte{0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00})
-	mapping, err := GoMapToMapping(map[string]string{"host": "127.0.0.1", "port": "4567"})
+	mapping, err := data.GoMapToMapping(map[string]string{"host": "127.0.0.1", "port": "4567"})
 	assert.Nil(err, "GoMapToMapping() returned error with valid data")
 	router_address.TransportOptions = mapping
 	// router_address = append(router_address, mapping...)
@@ -76,8 +76,8 @@ func TestReadRouterAddressReturnsCorrectRemainderWithoutError(t *testing.T) {
 	assert := assert.New(t)
 
 	router_address_bytes := []byte{0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}
-	str, _ := ToI2PString("foo")
-	mapping, _ := GoMapToMapping(map[string]string{"host": "127.0.0.1", "port": "4567"})
+	str, _ := data.ToI2PString("foo")
+	mapping, _ := data.GoMapToMapping(map[string]string{"host": "127.0.0.1", "port": "4567"})
 	router_address_bytes = append(router_address_bytes, []byte(str)...)
 	router_address_bytes = append(router_address_bytes, mapping.Data()...)
 	router_address_bytes = append(router_address_bytes, []byte{0x01, 0x02, 0x03}...)

@@ -9,16 +9,14 @@ import (
 	"github.com/go-i2p/crypto/ed25519"
 
 	"github.com/go-i2p/common/certificate"
+	"github.com/go-i2p/common/data"
+	"github.com/go-i2p/common/router_address"
+	"github.com/go-i2p/common/router_identity"
 	"github.com/go-i2p/common/signature"
 	"github.com/go-i2p/crypto/types"
 	"github.com/samber/oops"
 
 	"github.com/sirupsen/logrus"
-
-	. "github.com/go-i2p/common/data"
-	. "github.com/go-i2p/common/router_address"
-	. "github.com/go-i2p/common/router_identity"
-	. "github.com/go-i2p/common/signature"
 )
 
 /*
@@ -95,7 +93,7 @@ peer_size :: Integer
              The number of peer Hashes to follow, 0-255, unused, always zero
              value -> 0
 
-options :: Mapping
+options :: data.Mapping
 
 signature :: Signature
              length -> 40 bytes
@@ -105,20 +103,20 @@ signature :: Signature
 //
 // https://geti2p.net/spec/common-structures#routerinfo
 type RouterInfo struct {
-	router_identity *RouterIdentity
-	published       *Date
-	size            *Integer
-	addresses       []*RouterAddress
-	peer_size       *Integer
-	options         *Mapping
-	signature       *Signature
+	router_identity *router_identity.RouterIdentity
+	published       *data.Date
+	size            *data.Integer
+	addresses       []*router_address.RouterAddress
+	peer_size       *data.Integer
+	options         *data.Mapping
+	signature       *signature.Signature
 }
 
 // NewRouterInfo creates a new RouterInfo with the specified parameters.
 func NewRouterInfo(
-	routerIdentity *RouterIdentity,
+	routerIdentity *router_identity.RouterIdentity,
 	publishedTime time.Time,
-	addresses []*RouterAddress,
+	addresses []*router_address.RouterAddress,
 	options map[string]string,
 	signingPrivateKey types.SigningPrivateKey,
 	sigType int,
@@ -166,11 +164,11 @@ func NewRouterInfo(
 }
 
 // createPublishedDate converts a time.Time to an I2P Date structure.
-func createPublishedDate(publishedTime time.Time) (*Date, error) {
+func createPublishedDate(publishedTime time.Time) (*data.Date, error) {
 	millis := publishedTime.UnixNano() / int64(time.Millisecond)
-	dateBytes := make([]byte, DATE_SIZE)
+	dateBytes := make([]byte, data.DATE_SIZE)
 	binary.BigEndian.PutUint64(dateBytes, uint64(millis))
-	publishedDate, _, err := ReadDate(dateBytes)
+	publishedDate, _, err := data.ReadDate(dateBytes)
 	if err != nil {
 		log.WithError(err).Error("Failed to create Published Date")
 		return nil, oops.Errorf("failed to create published date: %v", err)
@@ -179,14 +177,14 @@ func createPublishedDate(publishedTime time.Time) (*Date, error) {
 }
 
 // createSizeIntegers creates the size and peer size integer fields for RouterInfo.
-func createSizeIntegers(addresses []*RouterAddress) (*Integer, *Integer, error) {
-	sizeInt, err := NewIntegerFromInt(len(addresses), 1)
+func createSizeIntegers(addresses []*router_address.RouterAddress) (*data.Integer, *data.Integer, error) {
+	sizeInt, err := data.NewIntegerFromInt(len(addresses), 1)
 	if err != nil {
 		log.WithError(err).Error("Failed to create Size Integer")
 		return nil, nil, oops.Errorf("failed to create size integer: %v", err)
 	}
 
-	peerSizeInt, err := NewIntegerFromInt(0, 1)
+	peerSizeInt, err := data.NewIntegerFromInt(0, 1)
 	if err != nil {
 		log.WithError(err).Error("Failed to create PeerSize Integer")
 		return nil, nil, oops.Errorf("failed to create peer size integer: %v", err)
@@ -195,11 +193,11 @@ func createSizeIntegers(addresses []*RouterAddress) (*Integer, *Integer, error) 
 	return sizeInt, peerSizeInt, nil
 }
 
-// convertOptionsToMapping converts a Go map to an I2P Mapping structure.
-func convertOptionsToMapping(options map[string]string) (*Mapping, error) {
-	mapping, err := GoMapToMapping(options)
+// convertOptionsToMapping converts a Go map to an I2P data.Mapping structure.
+func convertOptionsToMapping(options map[string]string) (*data.Mapping, error) {
+	mapping, err := data.GoMapToMapping(options)
 	if err != nil {
-		log.WithError(err).Error("Failed to convert options map to Mapping")
+		log.WithError(err).Error("Failed to convert options map to data.Mapping")
 		return nil, oops.Errorf("failed to convert options to mapping: %v", err)
 	}
 	return mapping, nil
@@ -207,12 +205,12 @@ func convertOptionsToMapping(options map[string]string) (*Mapping, error) {
 
 // assembleRouterInfoWithoutSignature creates a RouterInfo structure without the signature field.
 func assembleRouterInfoWithoutSignature(
-	routerIdentity *RouterIdentity,
-	publishedDate *Date,
-	sizeInt *Integer,
-	addresses []*RouterAddress,
-	peerSizeInt *Integer,
-	mapping *Mapping,
+	routerIdentity *router_identity.RouterIdentity,
+	publishedDate *data.Date,
+	sizeInt *data.Integer,
+	addresses []*router_address.RouterAddress,
+	peerSizeInt *data.Integer,
+	mapping *data.Mapping,
 ) *RouterInfo {
 	return &RouterInfo{
 		router_identity: routerIdentity,
@@ -257,7 +255,7 @@ func createSignerFromPrivateKey(signingPrivateKey types.SigningPrivateKey, sigTy
 }
 
 // signRouterInfoData serializes RouterInfo data and creates a signature.
-func signRouterInfoData(routerInfo *RouterInfo, signer types.Signer, sigType int) (*Signature, error) {
+func signRouterInfoData(routerInfo *RouterInfo, signer types.Signer, sigType int) (*signature.Signature, error) {
 	dataBytes := routerInfo.serializeWithoutSignature()
 
 	signatureBytes, err := signer.Sign(dataBytes)
@@ -266,7 +264,7 @@ func signRouterInfoData(routerInfo *RouterInfo, signer types.Signer, sigType int
 		return nil, oops.Errorf("failed to sign data: %v", err)
 	}
 
-	sig, _, err := ReadSignature(signatureBytes, sigType)
+	sig, _, err := signature.ReadSignature(signatureBytes, sigType)
 	if err != nil {
 		log.WithError(err).Error("Failed to create Signature from signature bytes")
 		return nil, oops.Errorf("failed to create signature: %v", err)
@@ -308,22 +306,22 @@ func (router_info RouterInfo) String() string {
 }
 
 // RouterIdentity returns the router identity as *RouterIdentity.
-func (router_info *RouterInfo) RouterIdentity() *RouterIdentity {
+func (router_info *RouterInfo) RouterIdentity() *router_identity.RouterIdentity {
 	return router_info.router_identity
 }
 
 // IdentHash returns the identity hash (sha256 sum) for this RouterInfo.
-func (router_info *RouterInfo) IdentHash() Hash {
+func (router_info *RouterInfo) IdentHash() data.Hash {
 	log.Debug("Calculating IdentHash for RouterInfo")
 	// Hash the complete RouterIdentity bytes as per I2P specification
-	data := router_info.RouterIdentity().Bytes()
-	hash := HashData(data)
+	identityData := router_info.router_identity.Bytes()
+	hash := data.HashData(identityData)
 	log.WithField("hash", hash).Debug("Calculated IdentHash for RouterInfo")
 	return hash
 }
 
 // Published returns the date this RouterInfo was published as an I2P Date.
-func (router_info *RouterInfo) Published() *Date {
+func (router_info *RouterInfo) Published() *data.Date {
 	return router_info.published
 }
 
@@ -334,8 +332,8 @@ func (router_info *RouterInfo) RouterAddressCount() int {
 	return count
 }
 
-// RouterAddresses returns all RouterAddresses for this RouterInfo as []*RouterAddress.
-func (router_info *RouterInfo) RouterAddresses() []*RouterAddress {
+// RouterAddresses returns all RouterAddresses for this RouterInfo as []*router_address.RouterAddress.
+func (router_info *RouterInfo) RouterAddresses() []*router_address.RouterAddress {
 	log.WithField("address_count", len(router_info.addresses)).Debug("Retrieved RouterAddresses from RouterInfo")
 	return router_info.addresses
 }
@@ -348,13 +346,13 @@ func (router_info *RouterInfo) PeerSize() int {
 	return router_info.peer_size.Int()
 }
 
-// Options returns the options for this RouterInfo as an I2P Mapping.
-func (router_info RouterInfo) Options() (mapping Mapping) {
+// Options returns the options for this RouterInfo as an I2P data.Mapping.
+func (router_info RouterInfo) Options() (mapping data.Mapping) {
 	return *router_info.options
 }
 
 // Signature returns the signature for this RouterInfo as an I2P Signature.
-func (router_info RouterInfo) Signature() (signature Signature) {
+func (router_info RouterInfo) Signature() (signature signature.Signature) {
 	return *router_info.signature
 }
 
@@ -364,14 +362,14 @@ func (router_info RouterInfo) Network() string {
 }
 
 // AddAddress adds a RouterAddress to this RouterInfo.
-func (router_info *RouterInfo) AddAddress(address *RouterAddress) {
+func (router_info *RouterInfo) AddAddress(address *router_address.RouterAddress) {
 	router_info.addresses = append(router_info.addresses, address)
 }
 
 // RouterCapabilities returns the capabilities string for this RouterInfo.
 func (router_info *RouterInfo) RouterCapabilities() string {
 	log.Debug("Retrieving RouterCapabilities")
-	str, err := ToI2PString("caps")
+	str, err := data.ToI2PString("caps")
 	if err != nil {
 		log.WithError(err).Error("Failed to create I2PString for 'caps'")
 		return ""
@@ -385,7 +383,7 @@ func (router_info *RouterInfo) RouterCapabilities() string {
 // RouterVersion returns the version string for this RouterInfo.
 func (router_info *RouterInfo) RouterVersion() string {
 	log.Debug("Retrieving RouterVersion")
-	str, err := ToI2PString("router.version")
+	str, err := data.ToI2PString("router.version")
 	if err != nil {
 		log.WithError(err).Error("Failed to create I2PString for 'router.version'")
 		return ""
@@ -522,7 +520,7 @@ func ReadRouterInfo(bytes []byte) (info RouterInfo, remainder []byte, err error)
 
 // parseRouterInfoCore reads the RouterIdentity, published date, and address count from bytes.
 func parseRouterInfoCore(bytes []byte) (info RouterInfo, remainder []byte, err error) {
-	info.router_identity, remainder, err = ReadRouterIdentity(bytes)
+	info.router_identity, remainder, err = router_identity.ReadRouterIdentity(bytes)
 	if err != nil {
 		log.WithFields(logrus.Fields{
 			"at":           "(RouterInfo) parseRouterInfoCore",
@@ -533,18 +531,18 @@ func parseRouterInfoCore(bytes []byte) (info RouterInfo, remainder []byte, err e
 		return
 	}
 
-	info.published, remainder, err = NewDate(remainder)
+	info.published, remainder, err = data.NewDate(remainder)
 	if err != nil {
 		log.WithFields(logrus.Fields{
 			"at":           "(RouterInfo) parseRouterInfoCore",
 			"data_len":     len(remainder),
-			"required_len": DATE_SIZE,
+			"required_len": data.DATE_SIZE,
 			"reason":       "not enough data",
 		}).Error("error parsing router info")
 		return
 	}
 
-	info.size, remainder, err = NewInteger(remainder, 1)
+	info.size, remainder, err = data.NewInteger(remainder, 1)
 	if err != nil {
 		log.WithFields(logrus.Fields{
 			"at":           "(RouterInfo) parseRouterInfoCore",
@@ -559,11 +557,11 @@ func parseRouterInfoCore(bytes []byte) (info RouterInfo, remainder []byte, err e
 }
 
 // parseRouterAddresses reads the specified number of RouterAddress structures from bytes.
-func parseRouterAddresses(size *Integer, remainder []byte) ([]*RouterAddress, []byte, error) {
-	var addresses []*RouterAddress
+func parseRouterAddresses(size *data.Integer, remainder []byte) ([]*router_address.RouterAddress, []byte, error) {
+	var addresses []*router_address.RouterAddress
 
 	for i := 0; i < size.Int(); i++ {
-		address, more, err := ReadRouterAddress(remainder)
+		address, more, err := router_address.ReadRouterAddress(remainder)
 		remainder = more
 		if err != nil {
 			log.WithFields(logrus.Fields{
@@ -580,15 +578,15 @@ func parseRouterAddresses(size *Integer, remainder []byte) ([]*RouterAddress, []
 }
 
 // parsePeerSizeAndOptions reads the peer size and options mapping from bytes.
-func parsePeerSizeAndOptions(remainder []byte) (*Integer, *Mapping, []byte, error) {
-	peer_size, remainder, err := NewInteger(remainder, 1)
+func parsePeerSizeAndOptions(remainder []byte) (*data.Integer, *data.Mapping, []byte, error) {
+	peer_size, remainder, err := data.NewInteger(remainder, 1)
 	if err != nil {
 		log.WithError(err).Error("Failed to read PeerSize")
 		return nil, nil, remainder, err
 	}
 
 	var errs []error
-	options, remainder, errs := NewMapping(remainder)
+	options, remainder, errs := data.NewMapping(remainder)
 	if len(errs) != 0 {
 		// Check if errors are just warnings about extra data beyond mapping length
 		hasNonWarningErrors := false
@@ -623,7 +621,7 @@ func parsePeerSizeAndOptions(remainder []byte) (*Integer, *Mapping, []byte, erro
 }
 
 // parseRouterInfoSignature extracts signature type from certificate and reads the signature.
-func parseRouterInfoSignature(router_identity *RouterIdentity, remainder []byte) (*Signature, []byte, error) {
+func parseRouterInfoSignature(router_identity *router_identity.RouterIdentity, remainder []byte) (*signature.Signature, []byte, error) {
 	// Add debug logging for certificate inspection
 	cert := router_identity.Certificate()
 	log.WithFields(logrus.Fields{
@@ -640,7 +638,7 @@ func parseRouterInfoSignature(router_identity *RouterIdentity, remainder []byte)
 	}
 
 	// Enhanced signature type validation
-	if sigType <= SIGNATURE_TYPE_RSA_SHA256_2048 || sigType > SIGNATURE_TYPE_REDDSA_SHA512_ED25519 {
+	if sigType <= signature.SIGNATURE_TYPE_RSA_SHA256_2048 || sigType > signature.SIGNATURE_TYPE_REDDSA_SHA512_ED25519 {
 		log.WithFields(logrus.Fields{
 			"sigType": sigType,
 			"cert":    cert,
@@ -652,7 +650,7 @@ func parseRouterInfoSignature(router_identity *RouterIdentity, remainder []byte)
 		"sigType": sigType,
 	}).Debug("Got sigType")
 
-	signature, remainder, err := NewSignature(remainder, sigType)
+	signature, remainder, err := signature.NewSignature(remainder, sigType)
 	if err != nil {
 		log.WithFields(logrus.Fields{
 			"at":       "(RouterInfo) parseRouterInfoSignature",

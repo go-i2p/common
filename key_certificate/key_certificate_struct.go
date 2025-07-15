@@ -15,8 +15,8 @@ import (
 
 	"github.com/sirupsen/logrus"
 
-	. "github.com/go-i2p/common/certificate"
-	. "github.com/go-i2p/common/data"
+	"github.com/go-i2p/common/certificate"
+	"github.com/go-i2p/common/data"
 )
 
 // KeyCertificate represents an I2P Key Certificate structure
@@ -46,9 +46,9 @@ import (
 //
 //	length -> $length bytes
 type KeyCertificate struct {
-	Certificate
-	SpkType Integer
-	CpkType Integer
+	certificate.Certificate
+	SpkType data.Integer
+	CpkType data.Integer
 }
 
 // NewKeyCertificate creates a new *KeyCertificate from []byte using ReadCertificate.
@@ -59,26 +59,26 @@ func NewKeyCertificate(bytes []byte) (key_certificate *KeyCertificate, remainder
 		"input_length": len(bytes),
 	}).Debug("Creating new keyCertificate")
 
-	var certificate Certificate
-	certificate, remainder, err = ReadCertificate(bytes)
+	var cert certificate.Certificate
+	cert, remainder, err = certificate.ReadCertificate(bytes)
 	if err != nil {
 		log.WithError(err).Error("Failed to read Certificate")
 		return
 	}
 
-	if certificate.Type() != CERT_KEY {
-		return nil, remainder, oops.Errorf("invalid certificate type: %d", certificate.Type())
+	if cert.Type() != certificate.CERT_KEY {
+		return nil, remainder, oops.Errorf("invalid certificate type: %d", cert.Type())
 	}
 
-	if len(certificate.Data()) < 4 {
+	if len(cert.Data()) < 4 {
 		return nil, remainder, oops.Errorf("key certificate data too short")
 	}
-	log.Println("Certificate Data in NewKeyCertificate: ", certificate.Data()[0:2], certificate.Data()[2:4])
+	log.Println("Certificate Data in NewKeyCertificate: ", cert.Data()[0:2], cert.Data()[2:4])
 
-	spkType, _ := ReadInteger(certificate.Data()[0:2], 2)
-	cpkType, _ := ReadInteger(certificate.Data()[2:4], 2)
+	spkType, _ := data.ReadInteger(cert.Data()[0:2], 2)
+	cpkType, _ := data.ReadInteger(cert.Data()[2:4], 2)
 	key_certificate = &KeyCertificate{
-		Certificate: certificate,
+		Certificate: cert,
 		CpkType:     cpkType,
 		SpkType:     spkType,
 	}
@@ -94,27 +94,27 @@ func NewKeyCertificate(bytes []byte) (key_certificate *KeyCertificate, remainder
 }
 
 // KeyCertificateFromCertificate creates a KeyCertificate from an existing Certificate
-func KeyCertificateFromCertificate(cert Certificate) (*KeyCertificate, error) {
-	if cert.Type() != CERT_KEY {
+func KeyCertificateFromCertificate(cert certificate.Certificate) (*KeyCertificate, error) {
+	if cert.Type() != certificate.CERT_KEY {
 		return nil, oops.Errorf("expected Key Certificate type, got %d", cert.Type())
 	}
 
-	data := cert.Data()
-	fmt.Printf("Certificate Data Length in KeyCertificateFromCertificate: %d\n", len(data))
-	fmt.Printf("Certificate Data Bytes in KeyCertificateFromCertificate: %v\n", data)
+	certdata := cert.Data()
+	fmt.Printf("Certificate Data Length in KeyCertificateFromCertificate: %d\n", len(certdata))
+	fmt.Printf("Certificate Data Bytes in KeyCertificateFromCertificate: %v\n", certdata)
 
-	if len(data) < 4 {
+	if len(certdata) < 4 {
 		return nil, oops.Errorf("certificate payload too short in KeyCertificateFromCertificate")
 	}
 
-	spkTypeBytes := data[0:2]
-	cpkTypeBytes := data[2:4]
+	spkTypeBytes := certdata[0:2]
+	cpkTypeBytes := certdata[2:4]
 
 	fmt.Printf("cpkTypeBytes in KeyCertificateFromCertificate: %v\n", cpkTypeBytes)
 	fmt.Printf("spkTypeBytes in KeyCertificateFromCertificate: %v\n", spkTypeBytes)
 
-	spkType := Integer(spkTypeBytes)
-	cpkType := Integer(cpkTypeBytes)
+	spkType := data.Integer(spkTypeBytes)
+	cpkType := data.Integer(cpkTypeBytes)
 
 	fmt.Printf("cpkType (Int) in KeyCertificateFromCertificate: %d\n", cpkType.Int())
 	fmt.Printf("spkType (Int) in KeyCertificateFromCertificate: %d\n", spkType.Int())

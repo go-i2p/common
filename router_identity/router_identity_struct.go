@@ -5,7 +5,7 @@ import (
 	"github.com/go-i2p/common/certificate"
 	"github.com/go-i2p/common/destination"
 	"github.com/go-i2p/common/key_certificate"
-	. "github.com/go-i2p/common/keys_and_cert"
+	"github.com/go-i2p/common/keys_and_cert"
 	"github.com/go-i2p/crypto/types"
 	"github.com/go-i2p/logger"
 	"github.com/sirupsen/logrus"
@@ -29,7 +29,7 @@ Identical to KeysAndCert.
 //
 // https://geti2p.net/spec/common-structures#routeridentity
 type RouterIdentity struct {
-	*KeysAndCert
+	*keys_and_cert.KeysAndCert
 }
 
 // NewRouterIdentity creates a new RouterIdentity with the specified parameters.
@@ -46,7 +46,7 @@ func NewRouterIdentity(publicKey types.RecievingPublicKey, signingPublicKey type
 	}
 
 	// Step 2: Create KeysAndCert instance.
-	keysAndCert, err := NewKeysAndCert(keyCert, publicKey, padding, signingPublicKey)
+	keysAndCert, err := keys_and_cert.NewKeysAndCert(keyCert, publicKey, padding, signingPublicKey)
 	if err != nil {
 		log.WithError(err).Error("NewKeysAndCert failed.")
 		return nil, err
@@ -74,7 +74,7 @@ func ReadRouterIdentity(data []byte) (router_identity *RouterIdentity, remainder
 	log.WithFields(logrus.Fields{
 		"input_length": len(data),
 	}).Debug("Reading RouterIdentity from data")
-	keys_and_cert, remainder, err := ReadKeysAndCert(data)
+	keys_and_cert, remainder, err := keys_and_cert.ReadKeysAndCert(data)
 	if err != nil {
 		log.WithError(err).Error("Failed to read KeysAndCert for RouterIdentity")
 		return
