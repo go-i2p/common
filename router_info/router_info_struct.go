@@ -286,7 +286,7 @@ func (router_info RouterInfo) Bytes() (bytes []byte, err error) {
 	}
 	bytes = append(bytes, router_info.peer_size.Bytes()...)
 	bytes = append(bytes, router_info.options.Data()...)
-	bytes = append(bytes, []byte(*router_info.signature)...)
+	bytes = append(bytes, router_info.signature.Bytes()...)
 	log.WithField("bytes_length", len(bytes)).Debug("Converted RouterInfo to bytes")
 	return bytes, err
 }
@@ -302,7 +302,7 @@ func (router_info RouterInfo) String() string {
 	}
 	str += "Peer Size: " + bytesToString(router_info.peer_size.Bytes()) + "\n"
 	str += "Options: " + bytesToString(router_info.options.Data()) + "\n"
-	str += "Signature: " + bytesToString([]byte(*router_info.signature)) + "\n"
+	str += "Signature: " + bytesToString(router_info.signature.Bytes()) + "\n"
 	log.WithField("string_length", len(str)).Debug("Converted RouterInfo to string")
 	return str
 }
