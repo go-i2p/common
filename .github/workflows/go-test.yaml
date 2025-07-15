@@ -49,7 +49,7 @@ jobs:
             COVERAGE=$(go tool cover -func=coverage.out | grep total | awk '{print substr($3, 1, length($3)-1)}')
             echo "Total coverage: ${COVERAGE}%"
             if (( $(echo "${COVERAGE} < 50" | bc -l) )); then
-                echo "Coverage ${COVERAGE}% is below required 90%"
+                echo "Coverage ${COVERAGE}% is below required 50%"
                 exit 1
             fi
 
