@@ -6,6 +6,8 @@ github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc h1:U9qPSI2PIWSS1
 github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/go-i2p/crypto v0.0.0-20250715184623-f513693a7dcc h1:uPGQTF7XDqBzHg3auMn6x/8ByxMmPni9ANsvhpcYcQ8=
 github.com/go-i2p/crypto v0.0.0-20250715184623-f513693a7dcc/go.mod h1:1Y3NCpVg6OgE3c2VPRQ3QDmWPtDpJYLIyRBA1iJCd3E=
+github.com/go-i2p/crypto v0.0.0-20250715200104-0ce55885b9cf h1:R7SX3WbuYX2YH9wCzNup2GY6efLN0j8BRbyeskDYWn8=
+github.com/go-i2p/crypto v0.0.0-20250715200104-0ce55885b9cf/go.mod h1:1Y3NCpVg6OgE3c2VPRQ3QDmWPtDpJYLIyRBA1iJCd3E=
 github.com/go-i2p/logger v0.0.0-20241123010126-3050657e5d0c h1:VTiECn3dFEmUlZjto+wOwJ7SSJTHPLyNprQMR5HzIMI=
 github.com/go-i2p/logger v0.0.0-20241123010126-3050657e5d0c/go.mod h1:te7Zj3g3oMeIl8uBXAgO62UKmZ6m6kHRNg1Mm+X8Hzk=
 github.com/google/go-cmp v0.7.0 h1:wk8382ETsv4JYUZwIsn6YpYiWiBsYLSJiTsyBybVuN8=
