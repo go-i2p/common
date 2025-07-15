@@ -40,7 +40,6 @@ jobs:
 
         - name: Run unit tests
           env:
-            CGO_ENABLED: 0
             DEBUG_I2P: "false"
           run: go test -v -race -coverprofile=coverage.out ./...
 
