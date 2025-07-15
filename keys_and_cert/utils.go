@@ -5,7 +5,7 @@ import (
 	"github.com/go-i2p/crypto/ed25519"
 	"github.com/samber/oops"
 
-	. "github.com/go-i2p/common/key_certificate"
+	"github.com/go-i2p/common/key_certificate"
 	elgamal "github.com/go-i2p/crypto/elg"
 	"github.com/go-i2p/crypto/types"
 )
@@ -13,7 +13,7 @@ import (
 // constructPublicKey constructs a public key from raw data based on crypto type.
 func constructPublicKey(data []byte, cryptoType uint16) (types.RecievingPublicKey, error) {
 	switch cryptoType {
-	case CRYPTO_KEY_TYPE_ELGAMAL:
+	case key_certificate.CRYPTO_KEY_TYPE_ELGAMAL:
 		if len(data) != 256 {
 			return nil, oops.Errorf("invalid ElGamal public key length")
 		}
@@ -29,7 +29,7 @@ func constructPublicKey(data []byte, cryptoType uint16) (types.RecievingPublicKe
 // constructSigningPublicKey constructs a signing public key from raw data based on signature type.
 func constructSigningPublicKey(data []byte, sigType uint16) (types.SigningPublicKey, error) {
 	switch sigType {
-	case SIGNATURE_TYPE_ED25519_SHA512:
+	case key_certificate.SIGNATURE_TYPE_ED25519_SHA512:
 		if len(data) != 32 {
 			return nil, oops.Errorf("invalid Ed25519 public key length")
 		}

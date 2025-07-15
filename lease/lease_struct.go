@@ -5,7 +5,7 @@ import (
 	"encoding/binary"
 	"time"
 
-	. "github.com/go-i2p/common/data"
+	"github.com/go-i2p/common/data"
 	"github.com/go-i2p/logger"
 	"github.com/sirupsen/logrus"
 )
@@ -52,7 +52,7 @@ end_date :: Date
 type Lease [LEASE_SIZE]byte
 
 // NewLease creates a new Lease with the provided parameters.
-func NewLease(tunnelGateway Hash, tunnelID uint32, expirationTime time.Time) (*Lease, error) {
+func NewLease(tunnelGateway data.Hash, tunnelID uint32, expirationTime time.Time) (*Lease, error) {
 	log.Debug("Creating new Lease")
 
 	var lease Lease
@@ -67,7 +67,7 @@ func NewLease(tunnelGateway Hash, tunnelID uint32, expirationTime time.Time) (*L
 
 	// Convert and copy expiration date
 	millis := expirationTime.UnixNano() / int64(time.Millisecond)
-	dateBytes := make([]byte, DATE_SIZE)
+	dateBytes := make([]byte, data.DATE_SIZE)
 	binary.BigEndian.PutUint64(dateBytes, uint64(millis))
 	copy(lease[LEASE_TUNNEL_GW_SIZE+LEASE_TUNNEL_ID_SIZE:], dateBytes)
 
@@ -80,21 +80,21 @@ func NewLease(tunnelGateway Hash, tunnelID uint32, expirationTime time.Time) (*L
 }
 
 // TunnelGateway returns the tunnel gateway as a Hash.
-func (lease Lease) TunnelGateway() (hash Hash) {
+func (lease Lease) TunnelGateway() (hash data.Hash) {
 	copy(hash[:], lease[:LEASE_TUNNEL_GW_SIZE])
 	return
 }
 
 // TunnelID returns the tunnel id as a uint23.
 func (lease Lease) TunnelID() uint32 {
-	i := Integer(lease[LEASE_TUNNEL_GW_SIZE : LEASE_TUNNEL_GW_SIZE+LEASE_TUNNEL_ID_SIZE])
+	i := data.Integer(lease[LEASE_TUNNEL_GW_SIZE : LEASE_TUNNEL_GW_SIZE+LEASE_TUNNEL_ID_SIZE])
 	return uint32(
 		i.Int(),
 	)
 }
 
 // Date returns the date as an I2P Date.
-func (lease Lease) Date() (date Date) {
+func (lease Lease) Date() (date data.Date) {
 	copy(date[:], lease[LEASE_TUNNEL_GW_SIZE+LEASE_TUNNEL_ID_SIZE:])
 	return
 }

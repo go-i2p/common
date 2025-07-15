@@ -6,8 +6,8 @@ import (
 	"github.com/go-i2p/logger"
 	"github.com/samber/oops"
 
-	. "github.com/go-i2p/common/certificate"
-	. "github.com/go-i2p/common/key_certificate"
+	"github.com/go-i2p/common/certificate"
+	"github.com/go-i2p/common/key_certificate"
 	elgamal "github.com/go-i2p/crypto/elg"
 	"github.com/go-i2p/crypto/types"
 	"github.com/sirupsen/logrus"
@@ -69,7 +69,7 @@ total length: 387+ bytes
 //
 // https://geti2p.net/spec/common-structures#keysandcert
 type KeysAndCert struct {
-	KeyCertificate  *KeyCertificate
+	KeyCertificate  *key_certificate.KeyCertificate
 	ReceivingPublic types.RecievingPublicKey
 	Padding         []byte
 	SigningPublic   types.SigningPublicKey
@@ -78,7 +78,7 @@ type KeysAndCert struct {
 // NewKeysAndCert creates a new KeysAndCert instance with the provided parameters.
 // It validates the sizes of the provided keys and padding before assembling the struct.
 func NewKeysAndCert(
-	keyCertificate *KeyCertificate,
+	keyCertificate *key_certificate.KeyCertificate,
 	publicKey types.RecievingPublicKey,
 	padding []byte,
 	signingPublicKey types.SigningPublicKey,
@@ -192,7 +192,7 @@ func (keys_and_cert *KeysAndCert) SigningPublicKey() (signing_public_key types.S
 }
 
 // Certificate returns the certificate.
-func (keys_and_cert *KeysAndCert) Certificate() (cert Certificate) {
+func (keys_and_cert *KeysAndCert) Certificate() (cert certificate.Certificate) {
 	return keys_and_cert.KeyCertificate.Certificate
 }
 
@@ -218,7 +218,7 @@ func ReadKeysAndCert(data []byte) (*KeysAndCert, []byte, error) {
 		return &keys_and_cert, remainder, err
 	}
 
-	keys_and_cert.KeyCertificate, remainder, err = NewKeyCertificate(data[KEYS_AND_CERT_DATA_SIZE:])
+	keys_and_cert.KeyCertificate, remainder, err = key_certificate.NewKeyCertificate(data[KEYS_AND_CERT_DATA_SIZE:])
 	if err != nil {
 		log.WithError(err).Error("Failed to create keyCertificate")
 		return &keys_and_cert, remainder, err
@@ -314,7 +314,7 @@ func ReadKeysAndCertElgAndEd25519(data []byte) (keysAndCert *KeysAndCert, remain
 
 	// Extract the certificate
 	certData := data[totalKeySize:]
-	keysAndCert.KeyCertificate, remainder, err = NewKeyCertificate(certData)
+	keysAndCert.KeyCertificate, remainder, err = key_certificate.NewKeyCertificate(certData)
 	if err != nil {
 		log.WithError(err).Error("Failed to read keyCertificate")
 		return

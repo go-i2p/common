@@ -5,7 +5,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	. "github.com/go-i2p/common/data"
+	"github.com/go-i2p/common/data"
 )
 
 func TestTunnelGateway(t *testing.T) {
@@ -34,7 +34,7 @@ func TestTunnelID(t *testing.T) {
 	lease := Lease(lease_bytes)
 
 	tunnelID := lease.TunnelID()
-	assert.Equal(tunnelID, uint32(Integer(expectedTunnelIDBytes).Int()))
+	assert.Equal(tunnelID, uint32(data.Integer(expectedTunnelIDBytes).Int()))
 }
 
 func TestDate(t *testing.T) {
