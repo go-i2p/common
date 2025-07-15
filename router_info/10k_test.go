@@ -181,7 +181,7 @@ func processAllRouterInfoFiles(t *testing.T, tempDir, targetDir string) error {
 		if shouldProcessFile(file) {
 			if err := processRouterInfoFile(t, tempDir, targetDir, file, d); err != nil {
 				t.Logf("Failed to process file %s: %v", file.Name(), err)
-				//continue
+				// continue
 				return err
 			}
 		}

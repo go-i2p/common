@@ -2,7 +2,6 @@
 package lease_set
 
 // Sizes of various structures in an I2P LeaseSet
-//
 const (
 	LEASE_SET_PUBKEY_SIZE = 256
 	LEASE_SET_SPK_SIZE    = 128
