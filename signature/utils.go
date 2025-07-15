@@ -17,6 +17,8 @@ import (
 // modified accordingly to handle the correct signature length.
 func ReadSignature(data []byte, sigType int) (sig Signature, remainder []byte, err error) {
 	var sigLength int
+	// Determine signature length based on algorithm type
+	// Each signature algorithm has a fixed-length output that must be validated
 	switch sigType {
 	case SIGNATURE_TYPE_DSA_SHA1:
 		sigLength = DSA_SHA1_SIZE
@@ -43,11 +45,16 @@ func ReadSignature(data []byte, sigType int) (sig Signature, remainder []byte, e
 		return
 	}
 
+	// Validate that input data contains enough bytes for the signature
+	// This prevents buffer overflow and ensures data integrity during parsing
 	if len(data) < sigLength {
 		err = oops.Errorf("insufficient data to read signature: need %d bytes, have %d", sigLength, len(data))
 		log.WithError(err).Error("Failed to read Signature")
 		return
 	}
+	
+	// Extract signature bytes and prepare remainder for further processing
+	// Creates a new Signature struct with validated data and type information
 	sig = Signature{
 		sigType: sigType,
 		data:    data[:sigLength],
