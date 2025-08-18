@@ -407,6 +407,7 @@ func (router_info *RouterInfo) GoodVersion() (bool, error) {
 		if v[1] == "9" {
 			val, _ := strconv.Atoi(v[2])
 			if val >= MIN_GOOD_VERSION && val <= MAX_GOOD_VERSION {
+				log.WithField("version", version).Debug("Version is in good range")
 				return true, nil
 			}
 		}
