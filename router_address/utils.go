@@ -49,7 +49,7 @@ func ReadRouterAddress(routerAddressData []byte) (router_address RouterAddress, 
 			"at":     "(RouterAddress) ReadNewRouterAddress",
 			"reason": "error parsing options",
 			"error":  err,
-		}).Error("error parsing RozuterAddress")
+		}).Error("error parsing RouterAddress")
 	}
 	return
 }

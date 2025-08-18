@@ -20,17 +20,22 @@ func consolidateNetDb(sourcePath string, destPath string) error {
 
 	// Walk through all subdirectories
 	return filepath.Walk(sourcePath, func(path string, info os.FileInfo, err error) error {
+		fmt.Println("Visiting:", path)
 		if err != nil {
 			return oops.Errorf("error accessing path %q: %v", path, err)
 		}
 
 		// Skip if it's a directory
 		if info.IsDir() {
+			fmt.Println("Skipping directory:", path)
 			return nil
 		}
 
+		fmt.Println("Processing file:", info.Name())
+
 		// Check if this is a routerInfo file
 		if strings.HasPrefix(info.Name(), "routerInfo-") && strings.HasSuffix(info.Name(), ".dat") {
+			fmt.Println("Found routerInfo file:", info.Name())
 			// Create source file path
 			srcFile := path
 
@@ -100,7 +105,8 @@ func cleanupTempDir(path string) error {
 
 func createTempNetDbDir() (string, error) {
 	// Get system's temp directory in a platform-independent way
-	baseDir := os.TempDir()
+	baseDir, _ := os.Getwd() //os.TempDir()
+	baseDir = filepath.Join(baseDir, "temp")
 
 	// Create unique directory name with timestamp
 	timestamp := time.Now().Unix()
@@ -197,7 +203,7 @@ func shouldProcessFile(file os.DirEntry) bool {
 
 // processRouterInfoFile handles the complete processing of a single router info file.
 func processRouterInfoFile(t *testing.T, tempDir, targetDir string, file os.DirEntry, fileIndex int) error {
-	log.Println("RI LOAD: ", fileIndex, file.Name())
+	fmt.Println("RI LOAD: ", fileIndex, file.Name())
 
 	data, err := readRouterInfoFile(tempDir, file.Name())
 	if err != nil {

@@ -270,7 +270,10 @@ func TestRouterInfoGoodVersion(t *testing.T) {
 	routerInfo, err := generateTestRouterInfo(t, time.Now())
 	assert.Nil(err, "RouterInfo creation should not return an error")
 
-	isGoodVersion := routerInfo.GoodVersion()
+	isGoodVersion, err := routerInfo.GoodVersion()
+	if err != nil {
+		assert.Fail("GoodVersion returned an error")
+	}
 	assert.IsType(true, isGoodVersion, "GoodVersion should return a boolean")
 }
 

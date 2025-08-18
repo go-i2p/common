@@ -395,24 +395,24 @@ func (router_info *RouterInfo) RouterVersion() string {
 }
 
 // GoodVersion checks if the RouterInfo version is acceptable.
-func (router_info *RouterInfo) GoodVersion() bool {
+func (router_info *RouterInfo) GoodVersion() (bool, error) {
 	log.Debug("Checking if RouterVersion is good")
 	version := router_info.RouterVersion()
 	v := strings.Split(version, ".")
 	if len(v) != 3 {
 		log.WithField("version", version).Warn("Invalid version format")
-		return false
+		return false, oops.Errorf("invalid version format: %s", version)
 	}
 	if v[0] == "0" {
 		if v[1] == "9" {
 			val, _ := strconv.Atoi(v[2])
 			if val >= MIN_GOOD_VERSION && val <= MAX_GOOD_VERSION {
-				return true
+				return true, nil
 			}
 		}
 	}
 	log.WithField("version", version).Warn("Version not in good range")
-	return false
+	return false, oops.Errorf("version not in good range: %s", version)
 }
 
 // UnCongested checks if the RouterInfo indicates the router is not congested.
