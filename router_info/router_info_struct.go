@@ -398,46 +398,101 @@ func (router_info *RouterInfo) RouterVersion() string {
 func (router_info *RouterInfo) GoodVersion() (bool, error) {
 	log.Debug("Checking if RouterVersion is good")
 	version := router_info.RouterVersion()
+
+	versionParts, err := parseAndValidateVersionString(version)
+	if err != nil {
+		return false, err
+	}
+
+	majorVersion, err := validateMajorVersion(versionParts[0], version)
+	if err != nil {
+		return false, err
+	}
+
+	minorVersion, err := validateMinorVersion(versionParts[1], majorVersion, version)
+	if err != nil {
+		return false, err
+	}
+
+	isValid, err := validatePatchVersionRange(versionParts[2], minorVersion, version)
+	if err != nil {
+		return false, err
+	}
+
+	if isValid {
+		log.WithField("version", version).Debug("Version is in good range")
+		return true, nil
+	}
+
+	log.WithField("version", version).Warn("Version not in good range")
+	return false, oops.Errorf("version not in good range: %s", version)
+}
+
+// parseAndValidateVersionString splits version string and validates format.
+func parseAndValidateVersionString(version string) ([]string, error) {
 	v := strings.Split(version, ".")
 	if len(v) != 3 {
 		log.WithField("version", version).Warn("Invalid version format", v)
-		return false, oops.Errorf("invalid version format: %s", version)
+		return nil, oops.Errorf("invalid version format: %s", version)
 	}
+
 	v[0] = cleanString(v[0])
 	v[1] = cleanString(v[1])
 	v[2] = cleanString(v[2])
 	log.WithField("version", version).Debugf("Checking version: '%s''%s''%s'", v[0], v[1], v[2])
-	pos0, err := strconv.Atoi(v[0])
+
+	return v, nil
+}
+
+// validateMajorVersion parses and validates the major version component.
+func validateMajorVersion(majorStr, version string) (int, error) {
+	pos0, err := strconv.Atoi(majorStr)
 	if err != nil {
 		log.WithError(err).Error("Failed to parse version component 0")
-		return false, oops.Errorf("Failed to parse version component 0: '%s' '%s'", v[0], err)
+		return 0, oops.Errorf("Failed to parse version component 0: '%s' '%s'", majorStr, err)
 	}
-	if pos0 == 0 {
-		pos1, err := strconv.Atoi(v[1])
-		if err != nil {
-			log.WithError(err).Error("Failed to parse version component 1")
-			return false, oops.Errorf("Failed to parse version component 1: '%s'", v[1])
-		}
-		if pos1 == 9 {
-			val, err := strconv.Atoi(v[2])
-			if err != nil {
-				log.WithError(err).Error("Failed to parse version component 2")
-				return false, oops.Errorf("Failed to parse version component 2: '%s'", v[2])
-			}
-			if val >= MIN_GOOD_VERSION && val <= MAX_GOOD_VERSION {
-				log.WithField("version", version).Debug("Version is in good range")
-				return true, nil
-			}
-		} else {
-			log.WithField("version", version).Debug("Invalid version at position 1:", v[1])
-			return false, oops.Errorf("Invalid version at position 0: %s", v[1])
-		}
-	} else {
-		log.WithField("version", version).Debug("Invalid version at position 0:", v[0])
-		return false, oops.Errorf("Invalid version at position 0: %s", v[0])
+
+	if pos0 != 0 {
+		log.WithField("version", version).Debug("Invalid version at position 0:", majorStr)
+		return 0, oops.Errorf("Invalid version at position 0: %s", majorStr)
 	}
-	log.WithField("version", version).Warn("Version not in good range")
-	return false, oops.Errorf("version not in good range: %s", version)
+
+	return pos0, nil
+}
+
+// validateMinorVersion parses and validates the minor version component.
+func validateMinorVersion(minorStr string, majorVersion int, version string) (int, error) {
+	if majorVersion != 0 {
+		return 0, oops.Errorf("Invalid major version: %d", majorVersion)
+	}
+
+	pos1, err := strconv.Atoi(minorStr)
+	if err != nil {
+		log.WithError(err).Error("Failed to parse version component 1")
+		return 0, oops.Errorf("Failed to parse version component 1: '%s'", minorStr)
+	}
+
+	if pos1 != 9 {
+		log.WithField("version", version).Debug("Invalid version at position 1:", minorStr)
+		return 0, oops.Errorf("Invalid version at position 0: %s", minorStr)
+	}
+
+	return pos1, nil
+}
+
+// validatePatchVersionRange parses and validates the patch version is within acceptable range.
+func validatePatchVersionRange(patchStr string, minorVersion int, version string) (bool, error) {
+	if minorVersion != 9 {
+		return false, oops.Errorf("Invalid minor version: %d", minorVersion)
+	}
+
+	val, err := strconv.Atoi(patchStr)
+	if err != nil {
+		log.WithError(err).Error("Failed to parse version component 2")
+		return false, oops.Errorf("Failed to parse version component 2: '%s'", patchStr)
+	}
+
+	return val >= MIN_GOOD_VERSION && val <= MAX_GOOD_VERSION, nil
 }
 
 // UnCongested checks if the RouterInfo indicates the router is not congested.
