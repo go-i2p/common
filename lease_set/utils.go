@@ -83,111 +83,187 @@ func ReadDestinationFromLeaseSet(data []byte) (dest destination.Destination, rem
 func ReadLeaseSet(data []byte) (LeaseSet, error) {
 	log.Debug("Reading LeaseSet")
 
-	if len(data) < 387 {
-		return LeaseSet{}, oops.Errorf("LeaseSet data too short to contain Destination")
+	if err := validateLeaseSetDataLength(data); err != nil {
+		return LeaseSet{}, err
 	}
 
-	// Parse destination
 	dest, remainder, err := ReadDestinationFromLeaseSet(data)
 	if err != nil {
 		return LeaseSet{}, oops.Errorf("failed to read destination: %w", err)
 	}
 
-	// Parse encryption key (256 bytes)
-	if len(remainder) < LEASE_SET_PUBKEY_SIZE {
-		return LeaseSet{}, oops.Errorf("LeaseSet data too short for encryption key")
+	encryptionKey, remainder, err := parseEncryptionKey(remainder)
+	if err != nil {
+		return LeaseSet{}, err
 	}
-	var encKeyBytes [LEASE_SET_PUBKEY_SIZE]byte
-	copy(encKeyBytes[:], remainder[:LEASE_SET_PUBKEY_SIZE])
-	encryptionKey := elgamal.ElgPublicKey(encKeyBytes)
-	remainder = remainder[LEASE_SET_PUBKEY_SIZE:]
 
-	// Parse signing key (128 bytes or variable based on certificate)
-	sigKeySize := LEASE_SET_SPK_SIZE
+	signingKey, remainder, err := parseSigningKey(remainder, dest)
+	if err != nil {
+		return LeaseSet{}, err
+	}
+
+	leaseCount, leases, remainder, err := parseLeases(remainder)
+	if err != nil {
+		return LeaseSet{}, err
+	}
+
+	signature, err := parseSignature(remainder, dest)
+	if err != nil {
+		return LeaseSet{}, err
+	}
+
+	return assembleLeaseSetFromParsedData(dest, encryptionKey, signingKey, leaseCount, leases, signature), nil
+}
+
+// validateLeaseSetDataLength checks if data has minimum required length for a LeaseSet.
+func validateLeaseSetDataLength(data []byte) error {
+	if len(data) < 387 {
+		return oops.Errorf("LeaseSet data too short to contain Destination")
+	}
+	return nil
+}
+
+// parseEncryptionKey extracts and validates the encryption key from lease set data.
+func parseEncryptionKey(data []byte) (elgamal.ElgPublicKey, []byte, error) {
+	if len(data) < LEASE_SET_PUBKEY_SIZE {
+		return elgamal.ElgPublicKey{}, nil, oops.Errorf("LeaseSet data too short for encryption key")
+	}
+
+	var encKeyBytes [LEASE_SET_PUBKEY_SIZE]byte
+	copy(encKeyBytes[:], data[:LEASE_SET_PUBKEY_SIZE])
+	encryptionKey := elgamal.ElgPublicKey(encKeyBytes)
+	remainder := data[LEASE_SET_PUBKEY_SIZE:]
+
+	return encryptionKey, remainder, nil
+}
+
+// parseSigningKey extracts and constructs the signing key based on certificate type.
+func parseSigningKey(data []byte, dest destination.Destination) (types.SigningPublicKey, []byte, error) {
 	cert := dest.Certificate()
 	kind, err := cert.Type()
 	if err != nil {
 		log.WithFields(logrus.Fields{
-			"at":     "ReadLeaseSet",
+			"at":     "parseSigningKey",
 			"reason": "invalid certificate type",
 		}).Error("error parsing certificate type")
-		return LeaseSet{}, oops.Errorf("invalid certificate type: %v", err)
+		return nil, nil, oops.Errorf("invalid certificate type: %v", err)
 	}
+
+	sigKeySize := determineSigningKeySize(cert, kind)
+	if len(data) < sigKeySize {
+		return nil, nil, oops.Errorf("LeaseSet data too short for signing key")
+	}
+
+	signingKey, err := constructSigningKey(data[:sigKeySize], cert, kind)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return signingKey, data[sigKeySize:], nil
+}
+
+// determineSigningKeySize calculates the signing key size based on certificate type.
+func determineSigningKeySize(cert certificate.Certificate, kind int) int {
 	if kind == certificate.CERT_KEY {
 		keyCert, err := key_certificate.KeyCertificateFromCertificate(cert)
 		if err == nil {
-			sigKeySize = keyCert.SignatureSize()
+			return keyCert.SignatureSize()
 		}
 	}
+	return LEASE_SET_SPK_SIZE
+}
 
-	if len(remainder) < sigKeySize {
-		return LeaseSet{}, oops.Errorf("LeaseSet data too short for signing key")
-	}
-
-	var signingKey types.SigningPublicKey
+// constructSigningKey builds the appropriate signing key based on certificate type.
+func constructSigningKey(keyData []byte, cert certificate.Certificate, kind int) (types.SigningPublicKey, error) {
 	if kind == certificate.CERT_KEY {
 		keyCert, err := key_certificate.KeyCertificateFromCertificate(cert)
 		if err == nil {
-			signingKey, err = keyCert.ConstructSigningPublicKey(remainder[:sigKeySize])
+			signingKey, err := keyCert.ConstructSigningPublicKey(keyData)
 			if err != nil {
-				return LeaseSet{}, oops.Errorf("failed to construct signing key: %w", err)
+				return nil, oops.Errorf("failed to construct signing key: %w", err)
 			}
+			return signingKey, nil
 		}
-	} else {
-		// Default DSA key
-		var dsaKey [LEASE_SET_SPK_SIZE]byte
-		copy(dsaKey[:], remainder[:LEASE_SET_SPK_SIZE])
-		signingKey = dsa.DSAPublicKey(dsaKey)
 	}
-	remainder = remainder[sigKeySize:]
 
-	// Parse lease count (1 byte)
-	if len(remainder) < 1 {
-		return LeaseSet{}, oops.Errorf("LeaseSet data too short for lease count")
+	// Default DSA key
+	var dsaKey [LEASE_SET_SPK_SIZE]byte
+	copy(dsaKey[:], keyData)
+	return dsa.DSAPublicKey(dsaKey), nil
+}
+
+// parseLeases extracts the lease count and individual leases from the data.
+func parseLeases(data []byte) (int, []lease.Lease, []byte, error) {
+	if len(data) < 1 {
+		return 0, nil, nil, oops.Errorf("LeaseSet data too short for lease count")
 	}
-	leaseCount := int(remainder[0])
+
+	leaseCount := int(data[0])
 	if leaseCount > 16 {
-		return LeaseSet{}, oops.Errorf("invalid lease count: %d (max 16)", leaseCount)
+		return 0, nil, nil, oops.Errorf("invalid lease count: %d (max 16)", leaseCount)
 	}
-	remainder = remainder[1:]
 
-	// Parse leases
+	remainder := data[1:]
 	if len(remainder) < leaseCount*lease.LEASE_SIZE {
-		return LeaseSet{}, oops.Errorf("LeaseSet data too short for leases")
+		return 0, nil, nil, oops.Errorf("LeaseSet data too short for leases")
 	}
 
+	leases := extractLeases(remainder, leaseCount)
+	remainder = remainder[leaseCount*lease.LEASE_SIZE:]
+
+	return leaseCount, leases, remainder, nil
+}
+
+// extractLeases copies lease data into individual lease structures.
+func extractLeases(data []byte, leaseCount int) []lease.Lease {
 	var leases []lease.Lease
 	for i := 0; i < leaseCount; i++ {
 		var l lease.Lease
-		copy(l[:], remainder[i*lease.LEASE_SIZE:(i+1)*lease.LEASE_SIZE])
+		copy(l[:], data[i*lease.LEASE_SIZE:(i+1)*lease.LEASE_SIZE])
 		leases = append(leases, l)
 	}
-	remainder = remainder[leaseCount*lease.LEASE_SIZE:]
+	return leases
+}
 
-	// Parse signature
-	sigSize := LEASE_SET_SIG_SIZE
+// parseSignature extracts and creates the signature from the remaining data.
+func parseSignature(data []byte, dest destination.Destination) (sig.Signature, error) {
+	cert := dest.Certificate()
+	kind, _ := cert.Type()
+
+	sigSize := determineSignatureSize(cert, kind)
+	if len(data) < sigSize {
+		return sig.Signature{}, oops.Errorf("LeaseSet data too short for signature")
+	}
+
+	sigType := determineSignatureType(cert, kind)
+	return sig.NewSignatureFromBytes(data[:sigSize], sigType), nil
+}
+
+// determineSignatureSize calculates the signature size based on certificate type.
+func determineSignatureSize(cert certificate.Certificate, kind int) int {
 	if kind == certificate.CERT_KEY {
 		keyCert, err := key_certificate.KeyCertificateFromCertificate(cert)
 		if err == nil {
-			sigSize = keyCert.SignatureSize()
+			return keyCert.SignatureSize()
 		}
 	}
+	return LEASE_SET_SIG_SIZE
+}
 
-	if len(remainder) < sigSize {
-		return LeaseSet{}, oops.Errorf("LeaseSet data too short for signature")
-	}
-
-	sigType := sig.SIGNATURE_TYPE_DSA_SHA1
+// determineSignatureType returns the appropriate signature type for the certificate.
+func determineSignatureType(cert certificate.Certificate, kind int) int {
 	if kind == certificate.CERT_KEY {
 		keyCert, err := key_certificate.KeyCertificateFromCertificate(cert)
 		if err == nil {
-			sigType = keyCert.SigningPublicKeyType()
+			return keyCert.SigningPublicKeyType()
 		}
 	}
+	return sig.SIGNATURE_TYPE_DSA_SHA1
+}
 
-	signature := sig.NewSignatureFromBytes(remainder[:sigSize], sigType)
-
-	leaseSet := LeaseSet{
+// assembleLeaseSetFromParsedData creates the final LeaseSet structure from parsed components.
+func assembleLeaseSetFromParsedData(dest destination.Destination, encryptionKey elgamal.ElgPublicKey, signingKey types.SigningPublicKey, leaseCount int, leases []lease.Lease, signature sig.Signature) LeaseSet {
+	return LeaseSet{
 		dest:          dest,
 		encryptionKey: encryptionKey,
 		signingKey:    signingKey,
@@ -195,6 +271,4 @@ func ReadLeaseSet(data []byte) (LeaseSet, error) {
 		leases:        leases,
 		signature:     signature,
 	}
-
-	return leaseSet, nil
 }
