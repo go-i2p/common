@@ -114,6 +114,8 @@ func TestCreateRouterInfo(t *testing.T) {
 	}
 	// create some dummy addresses
 	options := map[string]string{}
+	// default here to a very old version
+	options["router.version"] = "0.9.29"
 	routerAddress, err := router_address.NewRouterAddress(3, <-time.After(1*time.Second), "NTCP2", options)
 	if err != nil {
 		t.Fatalf("Failed to create router address: %v\n", err)

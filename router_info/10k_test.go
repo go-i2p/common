@@ -214,6 +214,11 @@ func processRouterInfoFile(t *testing.T, tempDir, targetDir string, file os.DirE
 	if err != nil {
 		return fmt.Errorf("failed to parse router info: %v", err)
 	}
+	gv, err := routerInfo.GoodVersion()
+	if err != nil {
+		t.Logf("RI goodness check failed, may be ephemeral: %s", err)
+	}
+	t.Logf("Router version is %s, Good: %v", routerInfo.RouterVersion(), gv)
 
 	if err := writeRouterInfoFile(targetDir, file.Name(), routerInfo); err != nil {
 		return fmt.Errorf("failed to write router info: %v", err)

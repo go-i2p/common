@@ -400,17 +400,41 @@ func (router_info *RouterInfo) GoodVersion() (bool, error) {
 	version := router_info.RouterVersion()
 	v := strings.Split(version, ".")
 	if len(v) != 3 {
-		log.WithField("version", version).Warn("Invalid version format")
+		log.WithField("version", version).Warn("Invalid version format", v)
 		return false, oops.Errorf("invalid version format: %s", version)
 	}
-	if v[0] == "0" {
-		if v[1] == "9" {
-			val, _ := strconv.Atoi(v[2])
+	v[0] = cleanString(v[0])
+	v[1] = cleanString(v[1])
+	v[2] = cleanString(v[2])
+	log.WithField("version", version).Debugf("Checking version: '%s''%s''%s'", v[0], v[1], v[2])
+	pos0, err := strconv.Atoi(v[0])
+	if err != nil {
+		log.WithError(err).Error("Failed to parse version component 0")
+		return false, oops.Errorf("Failed to parse version component 0: '%s' '%s'", v[0], err)
+	}
+	if pos0 == 0 {
+		pos1, err := strconv.Atoi(v[1])
+		if err != nil {
+			log.WithError(err).Error("Failed to parse version component 1")
+			return false, oops.Errorf("Failed to parse version component 1: '%s'", v[1])
+		}
+		if pos1 == 9 {
+			val, err := strconv.Atoi(v[2])
+			if err != nil {
+				log.WithError(err).Error("Failed to parse version component 2")
+				return false, oops.Errorf("Failed to parse version component 2: '%s'", v[2])
+			}
 			if val >= MIN_GOOD_VERSION && val <= MAX_GOOD_VERSION {
 				log.WithField("version", version).Debug("Version is in good range")
 				return true, nil
 			}
+		} else {
+			log.WithField("version", version).Debug("Invalid version at position 1:", v[1])
+			return false, oops.Errorf("Invalid version at position 0: %s", v[1])
 		}
+	} else {
+		log.WithField("version", version).Debug("Invalid version at position 0:", v[0])
+		return false, oops.Errorf("Invalid version at position 0: %s", v[0])
 	}
 	log.WithField("version", version).Warn("Version not in good range")
 	return false, oops.Errorf("version not in good range: %s", version)
