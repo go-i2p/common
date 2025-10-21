@@ -22,6 +22,8 @@ Contents
 // https://geti2p.net/spec/common-structures#sessionkey
 type SessionKey [SESSION_KEY_SIZE]byte
 
+var log = logger.GetGoI2PLogger()
+
 // NewSessionKey creates a new *SessionKey from []byte using ReadSessionKey.
 // Returns a pointer to SessionKey unlike ReadSessionKey.
 func NewSessionKey(data []byte) (session_key *SessionKey, remainder []byte, err error) {

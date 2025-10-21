@@ -10,7 +10,6 @@ import (
 	"github.com/go-i2p/common/certificate"
 	"github.com/go-i2p/common/key_certificate"
 	"github.com/go-i2p/crypto/types"
-	"github.com/go-i2p/logger"
 )
 
 var log = logger.GetGoI2PLogger()
