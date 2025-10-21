@@ -5,8 +5,8 @@ import (
 	"encoding/binary"
 	"fmt"
 
+	"github.com/go-i2p/logger"
 	"github.com/samber/oops"
-	"github.com/sirupsen/logrus"
 
 	"github.com/go-i2p/common/data"
 )
@@ -14,7 +14,7 @@ import (
 // readCertificate creates a new Certificate from []byte
 // Deprecated: Use ReadCertificate instead. This function will be removed in v2.0.
 func readCertificate(data []byte) (certificate Certificate, err error) {
-	log.WithFields(logrus.Fields{
+	log.WithFields(logger.Fields{
 		"at":     "readCertificate",
 		"reason": "deprecated function called",
 	}).Debug("readCertificate is deprecated, use ReadCertificate instead")
@@ -56,7 +56,7 @@ func parseCertificateFromData(bytes []byte) (Certificate, error) {
 func handleEmptyCertificateData(certificate Certificate) (Certificate, error) {
 	certificate.kind = data.Integer([]byte{CERT_EMPTY_PAYLOAD_SIZE})
 	certificate.len = data.Integer([]byte{CERT_EMPTY_PAYLOAD_SIZE})
-	log.WithFields(logrus.Fields{
+	log.WithFields(logger.Fields{
 		"at":                       "(Certificate) ReadCertificate",
 		"certificate_bytes_length": CERT_EMPTY_PAYLOAD_SIZE,
 		"reason":                   "too short (len < CERT_MIN_SIZE)" + fmt.Sprintf("%d", certificate.kind.Int()),
@@ -86,7 +86,7 @@ func handleShortCertificateData(certificate Certificate, bytes []byte) (Certific
 	// No payload for short certificates
 	certificate.payload = []byte{}
 
-	log.WithFields(logrus.Fields{
+	log.WithFields(logger.Fields{
 		"at":                       "(Certificate) ReadCertificate",
 		"certificate_bytes_length": len(bytes),
 		"reason":                   "too short (len < CERT_MIN_SIZE), kind=" + fmt.Sprintf("%d", certificate.kind.Int()),
@@ -105,7 +105,7 @@ func handleValidCertificateData(certificate Certificate, bytes []byte) (Certific
 		return certificate, err
 	}
 
-	log.WithFields(logrus.Fields{
+	log.WithFields(logger.Fields{
 		"type":   certificate.kind.Int(),
 		"length": certificate.len.Int(),
 	}).Debug("Successfully created new certificate")
@@ -117,7 +117,7 @@ func handleValidCertificateData(certificate Certificate, bytes []byte) (Certific
 func validateCertificatePayloadLength(certificate Certificate, bytes []byte, payloadLength int) error {
 	if certificate.len.Int() > len(bytes)-CERT_MIN_SIZE {
 		err := oops.Errorf("certificate parsing warning: certificate data is shorter than specified by length")
-		log.WithFields(logrus.Fields{
+		log.WithFields(logger.Fields{
 			"at":                         "(Certificate) ReadCertificate",
 			"certificate_bytes_length":   certificate.len.Int(),
 			"certificate_payload_length": payloadLength,
@@ -151,7 +151,7 @@ func calculateRemainder(data []byte, certificate Certificate) []byte {
 
 // logCertificateReadCompletion logs detailed information about the completed certificate reading operation.
 func logCertificateReadCompletion(certificate Certificate, data []byte, remainder []byte) {
-	log.WithFields(logrus.Fields{
+	log.WithFields(logger.Fields{
 		"certificate_length": certificate.length(),
 		"input_length":       len(data),
 		"remainder_length":   len(remainder),
@@ -163,7 +163,7 @@ func logCertificateReadCompletion(certificate Certificate, data []byte, remainde
 func GetSignatureTypeFromCertificate(cert Certificate) (int, error) {
 	kind, err := cert.Type()
 	if err != nil {
-		log.WithFields(logrus.Fields{"at": "GetSignatureTypeFromCertificate", "reason": "invalid certificate type"}).Error(err.Error())
+		log.WithFields(logger.Fields{"at": "GetSignatureTypeFromCertificate", "reason": "invalid certificate type"}).Error(err.Error())
 		return CERT_EMPTY_PAYLOAD_SIZE, err
 	}
 	if kind != CERT_KEY {

@@ -2,8 +2,8 @@
 package lease
 
 import (
+	"github.com/go-i2p/logger"
 	"github.com/samber/oops"
-	"github.com/sirupsen/logrus"
 )
 
 // ADDED: ReadLease parses a Lease structure from raw byte data according to I2P specification.
@@ -18,7 +18,7 @@ func ReadLease(data []byte) (lease Lease, remainder []byte, err error) {
 	// Ensures that buffer underflows cannot occur during lease field extraction
 	if len(data) < LEASE_SIZE {
 		err = oops.Errorf("error parsing lease: not enough data")
-		log.WithFields(logrus.Fields{
+		log.WithFields(logger.Fields{
 			"data_length":     len(data),
 			"required_length": LEASE_SIZE,
 		}).Error("Failed to read lease: insufficient data")
@@ -30,7 +30,7 @@ func ReadLease(data []byte) (lease Lease, remainder []byte, err error) {
 	copy(lease[:], data[:LEASE_SIZE])
 	remainder = data[LEASE_SIZE:]
 
-	log.WithFields(logrus.Fields{
+	log.WithFields(logger.Fields{
 		"tunnel_id":        lease.TunnelID(),
 		"expiration":       lease.Date().Time(),
 		"remainder_length": len(remainder),
@@ -60,7 +60,7 @@ func NewLeaseFromBytes(data []byte) (lease *Lease, remainder []byte, err error) 
 	// Many I2P APIs expect lease pointers for efficient memory management
 	lease = &l
 
-	log.WithFields(logrus.Fields{
+	log.WithFields(logger.Fields{
 		"tunnel_id":        lease.TunnelID(),
 		"expiration":       lease.Date().Time(),
 		"remainder_length": len(remainder),

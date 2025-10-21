@@ -15,7 +15,6 @@ import (
 	"github.com/samber/oops"
 
 	"github.com/go-i2p/logger"
-	"github.com/sirupsen/logrus"
 )
 
 var log = logger.GetGoI2PLogger()
@@ -76,7 +75,7 @@ func validateSigningKeySize(dest destination.Destination, signingKey types.Signi
 	cert := dest.Certificate()
 	kind, err := cert.Type()
 	if err != nil {
-		log.WithFields(logrus.Fields{
+		log.WithFields(logger.Fields{
 			"at":     "validateSigningKeySize",
 			"reason": "invalid certificate type",
 		}).Error("error parsing certificate type")
@@ -164,7 +163,7 @@ func assembleLeaseSet(dest destination.Destination, encryptionKey types.Receivin
 
 // logLeaseSetCreationSuccess logs detailed information about the successfully created LeaseSet.
 func logLeaseSetCreationSuccess(leaseSet LeaseSet) {
-	log.WithFields(logrus.Fields{
+	log.WithFields(logger.Fields{
 		"destination_length":    len(leaseSet.dest.KeysAndCert.Bytes()),
 		"encryption_key_length": len(leaseSet.encryptionKey.Bytes()),
 		"signing_key_length":    len(leaseSet.signingKey.Bytes()),
@@ -176,7 +175,7 @@ func logLeaseSetCreationSuccess(leaseSet LeaseSet) {
 func getSignatureType(cert certificate.Certificate) int {
 	kind, err := cert.Type()
 	if err != nil {
-		log.WithFields(logrus.Fields{
+		log.WithFields(logger.Fields{
 			"at":     "getSignatureType",
 			"reason": "invalid certificate type",
 		}).Error("error parsing certificate type")
@@ -275,7 +274,7 @@ func (lease_set LeaseSet) LeaseCount() (count int, err error) {
 	log.Debug("Retrieving LeaseCount from LeaseSet")
 	count = lease_set.leaseCount
 	if count > 16 {
-		log.WithFields(logrus.Fields{
+		log.WithFields(logger.Fields{
 			"at":          "(LeaseSet) LeaseCount",
 			"lease_count": count,
 			"reason":      "more than 16 leases",

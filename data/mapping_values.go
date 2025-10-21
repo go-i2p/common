@@ -3,8 +3,8 @@ package data
 import (
 	"sort"
 
+	"github.com/go-i2p/logger"
 	"github.com/samber/oops"
-	"github.com/sirupsen/logrus"
 )
 
 // MappingValues represents the parsed key value pairs inside of an I2P Mapping.
@@ -13,20 +13,20 @@ type MappingValues [][2]I2PString
 // Get retrieves the value for a given key from MappingValues.
 func (m MappingValues) Get(key I2PString) I2PString {
 	keyBytes, _ := key.Data()
-	log.WithFields(logrus.Fields{
+	log.WithFields(logger.Fields{
 		"key": string(keyBytes),
 	}).Debug("Searching for key in MappingValues")
 	for _, pair := range m {
 		kb, _ := pair[0][0:].Data()
 		if kb == keyBytes {
-			log.WithFields(logrus.Fields{
+			log.WithFields(logger.Fields{
 				"key":   string(keyBytes),
 				"value": string(pair[1][1:]),
 			}).Debug("Found matching key in MappingValues")
 			return pair[1]
 		}
 	}
-	log.WithFields(logrus.Fields{
+	log.WithFields(logger.Fields{
 		"key": string(keyBytes),
 	}).Debug("Key not found in MappingValues")
 	return nil
@@ -40,7 +40,7 @@ func ValuesToMapping(values MappingValues) *Mapping {
 	// Default length to 2 * len
 	// 1 byte for ';'
 	// 1 byte for '='
-	log.WithFields(logrus.Fields{
+	log.WithFields(logger.Fields{
 		"values_count": len(values),
 	}).Debug("Converting MappingValues to Mapping")
 	baseLength := 2 * len(values)
@@ -50,7 +50,7 @@ func ValuesToMapping(values MappingValues) *Mapping {
 		}
 	}
 
-	log.WithFields(logrus.Fields{
+	log.WithFields(logger.Fields{
 		"mapping_size": baseLength,
 	}).Debug("Created Mapping from MappingValues")
 
@@ -78,7 +78,7 @@ func mappingOrder(values MappingValues) {
 // The remaining bytes after the specified length are also returned.
 // Returns a list of errors that occurred during parsing.
 func ReadMappingValues(remainder []byte, map_length Integer) (values *MappingValues, remainder_bytes []byte, errs []error) {
-	log.WithFields(logrus.Fields{
+	log.WithFields(logger.Fields{
 		"input_length": len(remainder),
 		"map_length":   map_length.Int(),
 	}).Debug("Reading MappingValues")
@@ -90,7 +90,7 @@ func ReadMappingValues(remainder []byte, map_length Integer) (values *MappingVal
 
 	map_values := make(MappingValues, 0)
 	if errs = validateMappingLength(remainder, map_length); len(errs) > 0 {
-		log.WithFields(logrus.Fields{
+		log.WithFields(logger.Fields{
 			"error_count": len(errs),
 		}).Warn("Mapping length validation warnings")
 	}
@@ -99,7 +99,7 @@ func ReadMappingValues(remainder []byte, map_length Integer) (values *MappingVal
 	remainder_updated, map_values, errs = parseKeyValuePairs(remainder, map_values, errs)
 	values = &map_values
 
-	log.WithFields(logrus.Fields{
+	log.WithFields(logger.Fields{
 		"values_count":     len(map_values),
 		"remainder_length": len(remainder_updated),
 		"error_count":      len(errs),
@@ -111,7 +111,7 @@ func ReadMappingValues(remainder []byte, map_length Integer) (values *MappingVal
 // validateMappingInput checks if the input data is valid for mapping parsing.
 func validateMappingInput(remainder []byte) error {
 	if len(remainder) < 1 {
-		log.WithFields(logrus.Fields{
+		log.WithFields(logger.Fields{
 			"at":     "(Mapping) Values",
 			"reason": "data shorter than expected",
 		}).Error("mapping contained no data")
@@ -127,7 +127,7 @@ func validateMappingLength(remainder []byte, map_length Integer) []error {
 	mapping_len := len(remainder)
 
 	if mapping_len > int_map_length {
-		log.WithFields(logrus.Fields{
+		log.WithFields(logger.Fields{
 			"at":                   "(Mapping) Values",
 			"mapping_bytes_length": mapping_len,
 			"mapping_length_field": int_map_length,
@@ -135,7 +135,7 @@ func validateMappingLength(remainder []byte, map_length Integer) []error {
 		}).Warn("mapping format warning")
 		errs = append(errs, oops.Errorf("warning parsing mapping: data exists beyond length of mapping"))
 	} else if int_map_length > mapping_len {
-		log.WithFields(logrus.Fields{
+		log.WithFields(logger.Fields{
 			"at":                   "(Mapping) Values",
 			"mapping_bytes_length": mapping_len,
 			"mapping_length_field": int_map_length,
@@ -261,7 +261,7 @@ func hasMinimumBytesForKeyValuePair(remainder []byte) bool {
 	// Minimum byte length required: 2 bytes for each string length,
 	// at least 1 byte per string, one byte for =, one byte for ;
 	if len(remainder) < 6 {
-		log.WithFields(logrus.Fields{
+		log.WithFields(logger.Fields{
 			"at":     "(Mapping) Values",
 			"reason": "mapping format violation",
 		}).Warn("mapping format violation, too few bytes for a kv pair")
@@ -288,7 +288,7 @@ func checkForDuplicateKey(key_str I2PString, encounteredKeysMap map[string]bool)
 	keyAsString := string(keyBytes)
 	_, ok := encounteredKeysMap[keyAsString]
 	if ok {
-		log.WithFields(logrus.Fields{
+		log.WithFields(logger.Fields{
 			"at":     "(Mapping) Values",
 			"reason": "duplicate key in mapping",
 			"key":    string(key_str),
@@ -302,7 +302,7 @@ func checkForDuplicateKey(key_str I2PString, encounteredKeysMap map[string]bool)
 // validateAndConsumeDelimiter checks for the expected delimiter and consumes it from remainder.
 func validateAndConsumeDelimiter(remainder []byte, delimiter byte, delimiterName string) ([]byte, error) {
 	if !beginsWith(remainder, delimiter) {
-		log.WithFields(logrus.Fields{
+		log.WithFields(logger.Fields{
 			"at":     "(Mapping) Values",
 			"reason": "expected " + delimiterName,
 			"value:": string(remainder),

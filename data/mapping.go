@@ -1,8 +1,8 @@
 package data
 
 import (
+	"github.com/go-i2p/logger"
 	"github.com/samber/oops"
-	"github.com/sirupsen/logrus"
 )
 
 /*
@@ -50,7 +50,7 @@ func (mapping Mapping) Values() MappingValues {
 		log.Debug("Mapping values are nil, returning empty MappingValues")
 		return MappingValues{}
 	}
-	log.WithFields(logrus.Fields{
+	log.WithFields(logger.Fields{
 		"values_count": len(*mapping.vals),
 	}).Debug("Retrieved Mapping values")
 	return *mapping.vals
@@ -82,7 +82,7 @@ func (mapping *Mapping) HasDuplicateKeys() bool {
 	for _, pair := range values {
 		key, _ := pair[0].Data()
 		if _, present := seen_values[key]; present {
-			log.WithFields(logrus.Fields{
+			log.WithFields(logger.Fields{
 				"duplicate_key": key,
 			}).Warn("Found duplicate key in Mapping")
 			return true
@@ -96,7 +96,7 @@ func (mapping *Mapping) HasDuplicateKeys() bool {
 
 // GoMapToMapping converts a Go map of unformatted strings to *Mapping.
 func GoMapToMapping(gomap map[string]string) (mapping *Mapping, err error) {
-	log.WithFields(logrus.Fields{
+	log.WithFields(logger.Fields{
 		"input_map_size": len(gomap),
 	}).Debug("Converting Go map to Mapping")
 	map_vals := MappingValues{}
@@ -119,7 +119,7 @@ func GoMapToMapping(gomap map[string]string) (mapping *Mapping, err error) {
 		)
 	}
 	mapping = ValuesToMapping(map_vals)
-	log.WithFields(logrus.Fields{
+	log.WithFields(logger.Fields{
 		"mapping_size": len(map_vals),
 	}).Debug("Successfully converted Go map to Mapping")
 	return
@@ -129,7 +129,7 @@ func GoMapToMapping(gomap map[string]string) (mapping *Mapping, err error) {
 // The remaining bytes after the specified length are also returned.
 // Returns a list of errors that occurred during parsing.
 func ReadMapping(bytes []byte) (mapping Mapping, remainder []byte, err []error) {
-	log.WithFields(logrus.Fields{
+	log.WithFields(logger.Fields{
 		"input_length": len(bytes),
 	}).Debug("Reading Mapping from bytes")
 
@@ -155,7 +155,7 @@ func ReadMapping(bytes []byte) (mapping Mapping, remainder []byte, err []error) 
 // validateMappingInputData checks if the input data meets minimum requirements.
 func validateMappingInputData(bytes []byte) error {
 	if len(bytes) < MAPPING_MIN_SIZE {
-		log.WithFields(logrus.Fields{
+		log.WithFields(logger.Fields{
 			"at":     "ReadMapping",
 			"reason": "zero length",
 		}).Warn("mapping format violation")
@@ -184,7 +184,7 @@ func processMappingData(mapping Mapping, remainder []byte, size *Integer, err []
 
 // handleInsufficientData processes mapping when there's insufficient data for the declared size.
 func handleInsufficientData(mapping Mapping, remainder []byte, size *Integer, err []error) (Mapping, []byte, []error) {
-	log.WithFields(logrus.Fields{
+	log.WithFields(logger.Fields{
 		"expected_size": size.Int(),
 		"actual_size":   len(remainder),
 	}).Warn("mapping format violation: mapping length exceeds provided data")
@@ -226,7 +226,7 @@ func processNormalMappingData(mapping Mapping, remainder []byte, size *Integer, 
 
 // logAndAppendMappingValueErrors logs and appends errors from mapping value parsing.
 func logAndAppendMappingValueErrors(err []error) []error {
-	log.WithFields(logrus.Fields{
+	log.WithFields(logger.Fields{
 		"at":     "ReadMapping",
 		"reason": "error parsing mapping values",
 	}).Warn("mapping format violation")
@@ -237,7 +237,7 @@ func logAndAppendMappingValueErrors(err []error) []error {
 
 // handleExtraDataBeyondMapping processes cases where extra bytes exist beyond the mapping length.
 func handleExtraDataBeyondMapping(remainder []byte, size *Integer, err []error) []error {
-	log.WithFields(logrus.Fields{
+	log.WithFields(logger.Fields{
 		"expected_size": size.Int(),
 		"actual_size":   len(remainder),
 	}).Error("mapping format violation: data exists beyond length of mapping")
@@ -248,7 +248,7 @@ func handleExtraDataBeyondMapping(remainder []byte, size *Integer, err []error) 
 
 // logMappingCompletionDetails logs detailed information about the completed mapping parsing.
 func logMappingCompletionDetails(mapping Mapping, remainder []byte, err []error) {
-	log.WithFields(logrus.Fields{
+	log.WithFields(logger.Fields{
 		"mapping_size":     mapping.size.Int(),
 		"values_count":     len(*mapping.vals),
 		"remainder_length": len(remainder),
@@ -259,14 +259,14 @@ func logMappingCompletionDetails(mapping Mapping, remainder []byte, err []error)
 // NewMapping creates a new *Mapping from []byte using ReadMapping.
 // Returns a pointer to Mapping unlike ReadMapping.
 func NewMapping(bytes []byte) (values *Mapping, remainder []byte, err []error) {
-	log.WithFields(logrus.Fields{
+	log.WithFields(logger.Fields{
 		"input_length": len(bytes),
 	}).Debug("Creating new Mapping")
 
 	objvalues, remainder, err := ReadMapping(bytes)
 	values = &objvalues
 
-	log.WithFields(logrus.Fields{
+	log.WithFields(logger.Fields{
 		"values_count":     len(values.Values()),
 		"remainder_length": len(remainder),
 		"error_count":      len(err),

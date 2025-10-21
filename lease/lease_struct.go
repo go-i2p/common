@@ -7,7 +7,6 @@ import (
 
 	"github.com/go-i2p/common/data"
 	"github.com/go-i2p/logger"
-	"github.com/sirupsen/logrus"
 )
 
 var log = logger.GetGoI2PLogger()
@@ -78,7 +77,7 @@ func NewLease(tunnelGateway data.Hash, tunnelID uint32, expirationTime time.Time
 	binary.BigEndian.PutUint64(dateBytes, uint64(millis))
 	copy(lease[LEASE_TUNNEL_GW_SIZE+LEASE_TUNNEL_ID_SIZE:], dateBytes)
 
-	log.WithFields(logrus.Fields{
+	log.WithFields(logger.Fields{
 		"tunnel_id":  tunnelID,
 		"expiration": expirationTime,
 	}).Debug("Successfully created new Lease")

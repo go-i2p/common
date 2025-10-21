@@ -4,7 +4,7 @@ package destination
 import (
 	"strings"
 
-	"github.com/sirupsen/logrus"
+	"github.com/go-i2p/logger"
 
 	"github.com/go-i2p/common/keys_and_cert"
 	"github.com/go-i2p/crypto/types"
@@ -35,7 +35,7 @@ type Destination struct {
 // The remaining bytes after the specified length are also returned.
 // Returns a list of errors that occurred during parsing.
 func ReadDestination(data []byte) (destination Destination, remainder []byte, err error) {
-	log.WithFields(logrus.Fields{
+	log.WithFields(logger.Fields{
 		"input_length": len(data),
 	}).Debug("Reading Destination from bytes")
 
@@ -44,7 +44,7 @@ func ReadDestination(data []byte) (destination Destination, remainder []byte, er
 		keys_and_cert_obj,
 	}
 
-	log.WithFields(logrus.Fields{
+	log.WithFields(logger.Fields{
 		"remainder_length": len(remainder),
 	}).Debug("Successfully read Destination from bytes")
 
@@ -58,7 +58,7 @@ func (destination Destination) Bytes() []byte {
 
 	bytes := destination.KeysAndCert.Bytes()
 
-	log.WithFields(logrus.Fields{
+	log.WithFields(logger.Fields{
 		"bytes_length": len(bytes),
 	}).Debug("Successfully serialized Destination to bytes")
 
@@ -74,7 +74,7 @@ func (destination Destination) Base32Address() (str string) {
 	str = strings.Trim(base32.EncodeToString(hash[:]), "=")
 	str = str + I2P_BASE32_SUFFIX
 
-	log.WithFields(logrus.Fields{
+	log.WithFields(logger.Fields{
 		"base32_address": str,
 	}).Debug("Generated Base32 address for Destination")
 
@@ -88,7 +88,7 @@ func (destination Destination) Base64() string {
 	dest := destination.KeysAndCert.Bytes()
 	base64Address := base64.EncodeToString(dest)
 
-	log.WithFields(logrus.Fields{
+	log.WithFields(logger.Fields{
 		"base64_address_length": len(base64Address),
 	}).Debug("Generated Base64 address for Destination")
 

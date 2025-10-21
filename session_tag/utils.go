@@ -4,7 +4,6 @@ package session_tag
 import (
 	"github.com/go-i2p/logger"
 	"github.com/samber/oops"
-	"github.com/sirupsen/logrus"
 )
 
 var log = logger.GetGoI2PLogger()
@@ -14,7 +13,7 @@ var log = logger.GetGoI2PLogger()
 // Returns a list of errors that occurred during parsing.
 func ReadSessionTag(bytes []byte) (info SessionTag, remainder []byte, err error) {
 	if len(bytes) < SessionTagSize {
-		log.WithFields(logrus.Fields{
+		log.WithFields(logger.Fields{
 			"at":          "(SessionTag) ReadSessionTag",
 			"data_length": len(bytes),
 			"required":    SessionTagSize,
@@ -26,7 +25,7 @@ func ReadSessionTag(bytes []byte) (info SessionTag, remainder []byte, err error)
 	copy(info.value[:], bytes[:SessionTagSize])
 	remainder = bytes[SessionTagSize:]
 
-	log.WithFields(logrus.Fields{
+	log.WithFields(logger.Fields{
 		"remainder_length": len(remainder),
 	}).Debug("Successfully read SessionTag from data")
 
@@ -43,7 +42,7 @@ func NewSessionTag(data []byte) (session_tag *SessionTag, remainder []byte, err 
 		return nil, remainder, err
 	}
 	session_tag = &sessionTag
-	log.WithFields(logrus.Fields{
+	log.WithFields(logger.Fields{
 		"remainder_length": len(remainder),
 	}).Debug("Successfully created new SessionTag")
 	return

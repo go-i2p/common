@@ -6,7 +6,6 @@ import (
 
 	"github.com/go-i2p/logger"
 	"github.com/samber/oops"
-	"github.com/sirupsen/logrus"
 )
 
 var log = logger.GetGoI2PLogger()
@@ -19,7 +18,7 @@ var log = logger.GetGoI2PLogger()
 func intFromBytes(number []byte) (value int, err error) {
 	numLen := len(number)
 	if numLen == 0 {
-		log.WithFields(logrus.Fields{"at": "intFromBytes", "reason": "empty input slice"}).Error("cannot convert empty byte slice to integer")
+		log.WithFields(logger.Fields{"at": "intFromBytes", "reason": "empty input slice"}).Error("cannot convert empty byte slice to integer")
 		err = oops.Errorf("intFromBytes: empty input slice")
 		return 0, err
 	}
@@ -65,7 +64,7 @@ func stopValueRead(err error) bool {
 // Used in: mapping.go
 func beginsWith(bytes []byte, chr byte) bool {
 	result := len(bytes) != 0 && bytes[0] == chr
-	log.WithFields(logrus.Fields{
+	log.WithFields(logger.Fields{
 		"bytes_length":  len(bytes),
 		"expected_char": string(chr),
 		"result":        result,

@@ -1,8 +1,8 @@
 package data
 
 import (
+	"github.com/go-i2p/logger"
 	"github.com/samber/oops"
-	"github.com/sirupsen/logrus"
 )
 
 /*
@@ -27,7 +27,7 @@ type I2PString []byte
 // Returns error if the specified does not match the actual length or the string is otherwise invalid.
 func (str I2PString) Length() (length int, err error) {
 	if len(str) == 0 {
-		log.WithFields(logrus.Fields{
+		log.WithFields(logger.Fields{
 			"at":     "(I2PString) Length",
 			"reason": "no data",
 		}).Error("error parsing string")
@@ -43,7 +43,7 @@ func (str I2PString) Length() (length int, err error) {
 	str_len := len(str)
 
 	if length > (str_len - 1) {
-		log.WithFields(logrus.Fields{
+		log.WithFields(logger.Fields{
 			"at":                  "(I2PString) Length",
 			"string_bytes_length": str_len,
 			"string_length_field": length,
@@ -53,7 +53,7 @@ func (str I2PString) Length() (length int, err error) {
 	}
 
 	if (str_len - 1) > length {
-		log.WithFields(logrus.Fields{
+		log.WithFields(logger.Fields{
 			"at":                  "(I2PString) Length",
 			"string_bytes_length": str_len,
 			"string_length_field": length,
@@ -98,7 +98,7 @@ func (str I2PString) Data() (data string, err error) {
 		return "", nil
 	}
 	data = string(str[1 : length+1])
-	log.WithFields(logrus.Fields{
+	log.WithFields(logger.Fields{
 		"data_length": len(data),
 	}).Debug("Retrieved I2PString data")
 	return data, nil
@@ -107,12 +107,12 @@ func (str I2PString) Data() (data string, err error) {
 // ToI2PString converts a Go string to an I2PString.
 // Returns error if the string exceeds STRING_MAX_SIZE.
 func ToI2PString(data string) (str I2PString, err error) {
-	log.WithFields(logrus.Fields{
+	log.WithFields(logger.Fields{
 		"input_length": len(data),
 	}).Debug("Converting string to I2PString")
 	data_len := len(data)
 	if data_len > STRING_MAX_SIZE {
-		log.WithFields(logrus.Fields{
+		log.WithFields(logger.Fields{
 			"at":         "ToI2PI2PString",
 			"string_len": data_len,
 			"max_len":    STRING_MAX_SIZE,
@@ -124,7 +124,7 @@ func ToI2PString(data string) (str I2PString, err error) {
 	i2p_string := []byte{byte(data_len)}
 	i2p_string = append(i2p_string, []byte(data)...)
 	str = I2PString(i2p_string)
-	log.WithFields(logrus.Fields{
+	log.WithFields(logger.Fields{
 		"i2pstring_length": len(str),
 	}).Debug("Successfully converted string to I2PString")
 	return
@@ -139,7 +139,7 @@ func ReadI2PString(data []byte) (str I2PString, remainder []byte, err error) {
 		log.WithError(err).Error("Passed data with len == 0")
 		return
 	}
-	log.WithFields(logrus.Fields{
+	log.WithFields(logger.Fields{
 		"input_length": len(data),
 	}).Debug("Reading I2PString from bytes")
 	length, _, err := NewInteger(data, 1)
@@ -162,13 +162,13 @@ func ReadI2PString(data []byte) (str I2PString, remainder []byte, err error) {
 	l, err := str.Length()
 	if l != data_len-1 {
 		err = ErrLengthMismatch
-		log.WithFields(logrus.Fields{
+		log.WithFields(logger.Fields{
 			"expected_length": data_len - 1,
 			"actual_length":   l,
 		}).Error("I2PString length mismatch")
 		return
 	}
-	log.WithFields(logrus.Fields{
+	log.WithFields(logger.Fields{
 		"string_length":    l,
 		"remainder_length": len(remainder),
 	}).Debug("Successfully read I2PString from bytes")

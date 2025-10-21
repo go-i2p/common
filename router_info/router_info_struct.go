@@ -16,7 +16,7 @@ import (
 	"github.com/go-i2p/crypto/types"
 	"github.com/samber/oops"
 
-	"github.com/sirupsen/logrus"
+	"github.com/go-i2p/logger"
 )
 
 /*
@@ -152,7 +152,7 @@ func NewRouterInfo(
 
 	routerInfo.signature = signature
 
-	log.WithFields(logrus.Fields{
+	log.WithFields(logger.Fields{
 		"router_identity": routerIdentity,
 		"published":       publishedDate,
 		"address_count":   len(addresses),
@@ -525,7 +525,7 @@ func (router_info *RouterInfo) Reachable() bool {
 	}
 	// return strings.Contains(caps, "R")
 	reachable := strings.Contains(caps, "R")
-	log.WithFields(logrus.Fields{
+	log.WithFields(logger.Fields{
 		"reachable": reachable,
 		"reason":    "R capability",
 	}).Debug("Checked RouterInfo reachability")
@@ -588,7 +588,7 @@ func ReadRouterInfo(bytes []byte) (info RouterInfo, remainder []byte, err error)
 		return
 	}
 
-	log.WithFields(logrus.Fields{
+	log.WithFields(logger.Fields{
 		"router_identity":  info.router_identity,
 		"published":        info.published,
 		"address_count":    len(info.addresses),
@@ -602,7 +602,7 @@ func ReadRouterInfo(bytes []byte) (info RouterInfo, remainder []byte, err error)
 func parseRouterInfoCore(bytes []byte) (info RouterInfo, remainder []byte, err error) {
 	info.router_identity, remainder, err = router_identity.ReadRouterIdentity(bytes)
 	if err != nil {
-		log.WithFields(logrus.Fields{
+		log.WithFields(logger.Fields{
 			"at":           "(RouterInfo) parseRouterInfoCore",
 			"data_len":     len(bytes),
 			"required_len": ROUTER_INFO_MIN_SIZE,
@@ -613,7 +613,7 @@ func parseRouterInfoCore(bytes []byte) (info RouterInfo, remainder []byte, err e
 
 	info.published, remainder, err = data.NewDate(remainder)
 	if err != nil {
-		log.WithFields(logrus.Fields{
+		log.WithFields(logger.Fields{
 			"at":           "(RouterInfo) parseRouterInfoCore",
 			"data_len":     len(remainder),
 			"required_len": data.DATE_SIZE,
@@ -624,7 +624,7 @@ func parseRouterInfoCore(bytes []byte) (info RouterInfo, remainder []byte, err e
 
 	info.size, remainder, err = data.NewInteger(remainder, 1)
 	if err != nil {
-		log.WithFields(logrus.Fields{
+		log.WithFields(logger.Fields{
 			"at":           "(RouterInfo) parseRouterInfoCore",
 			"data_len":     len(remainder),
 			"required_len": info.size.Int(),
@@ -644,7 +644,7 @@ func parseRouterAddresses(size *data.Integer, remainder []byte) ([]*router_addre
 		address, more, err := router_address.ReadRouterAddress(remainder)
 		remainder = more
 		if err != nil {
-			log.WithFields(logrus.Fields{
+			log.WithFields(logger.Fields{
 				"at":       "(RouterInfo) parseRouterAddresses",
 				"data_len": len(remainder),
 				"reason":   "not enough data",
@@ -711,7 +711,7 @@ func hasCriticalMappingErrors(errs []error) bool {
 
 // logCriticalMappingErrors logs critical mapping parsing errors.
 func logCriticalMappingErrors(remainder []byte, errs []error) {
-	log.WithFields(logrus.Fields{
+	log.WithFields(logger.Fields{
 		"at":       "(RouterInfo) parsePeerSizeAndOptions",
 		"data_len": len(remainder),
 		"reason":   "not enough data",
@@ -720,7 +720,7 @@ func logCriticalMappingErrors(remainder []byte, errs []error) {
 
 // logMappingWarnings logs warnings about extra data beyond mapping length.
 func logMappingWarnings() {
-	log.WithFields(logrus.Fields{
+	log.WithFields(logger.Fields{
 		"at":     "(RouterInfo) parsePeerSizeAndOptions",
 		"reason": "extra data beyond mapping length",
 	}).Warn("mapping format violation")
@@ -732,7 +732,7 @@ func parseRouterInfoSignature(router_identity *router_identity.RouterIdentity, r
 	cert := router_identity.Certificate()
 	kind, err := cert.Type()
 	if err != nil {
-		log.WithFields(logrus.Fields{
+		log.WithFields(logger.Fields{
 			"at":     "(RouterInfo) parseRouterInfoSignature",
 			"reason": "invalid certificate type",
 		}).Error("error parsing router info signature")
@@ -743,7 +743,7 @@ func parseRouterInfoSignature(router_identity *router_identity.RouterIdentity, r
 		log.WithError(err).Error("Failed to read Certificate Data")
 		return nil, remainder, err
 	}
-	log.WithFields(logrus.Fields{
+	log.WithFields(logger.Fields{
 		"at":            "(RouterInfo) parseRouterInfoSignature",
 		"cert_type":     kind,
 		"cert_length":   certData,
@@ -758,20 +758,20 @@ func parseRouterInfoSignature(router_identity *router_identity.RouterIdentity, r
 
 	// Enhanced signature type validation
 	if sigType <= signature.SIGNATURE_TYPE_RSA_SHA256_2048 || sigType > signature.SIGNATURE_TYPE_REDDSA_SHA512_ED25519 {
-		log.WithFields(logrus.Fields{
+		log.WithFields(logger.Fields{
 			"sigType": sigType,
 			"cert":    cert,
 		}).Error("Invalid signature type detected")
 		return nil, remainder, oops.Errorf("invalid signature type: %d", sigType)
 	}
 
-	log.WithFields(logrus.Fields{
+	log.WithFields(logger.Fields{
 		"sigType": sigType,
 	}).Debug("Got sigType")
 
 	signature, remainder, err := signature.NewSignature(remainder, sigType)
 	if err != nil {
-		log.WithFields(logrus.Fields{
+		log.WithFields(logger.Fields{
 			"at":       "(RouterInfo) parseRouterInfoSignature",
 			"data_len": len(remainder),
 			"reason":   "not enough data",

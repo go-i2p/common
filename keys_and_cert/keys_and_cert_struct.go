@@ -10,7 +10,7 @@ import (
 	"github.com/go-i2p/common/certificate"
 	"github.com/go-i2p/common/key_certificate"
 	"github.com/go-i2p/crypto/types"
-	"github.com/sirupsen/logrus"
+	"github.com/go-i2p/logger"
 )
 
 var log = logger.GetGoI2PLogger()
@@ -97,7 +97,7 @@ func NewKeysAndCert(
 	// Validate public key size
 	if publicKey != nil {
 		if publicKey.Len() != pubKeySize {
-			log.WithFields(logrus.Fields{
+			log.WithFields(logger.Fields{
 				"expected_size": pubKeySize,
 				"actual_size":   publicKey.Len(),
 			}).Error("Invalid publicKey size")
@@ -108,7 +108,7 @@ func NewKeysAndCert(
 	if signingPublicKey != nil {
 		// Validate signing key size
 		if signingPublicKey.Len() != sigKeySize {
-			log.WithFields(logrus.Fields{
+			log.WithFields(logger.Fields{
 				"expected_size": sigKeySize,
 				"actual_size":   signingPublicKey.Len(),
 			}).Error("Invalid signingPublicKey size")
@@ -119,7 +119,7 @@ func NewKeysAndCert(
 	// Calculate expected padding size
 	expectedPaddingSize := KEYS_AND_CERT_DATA_SIZE - pubKeySize - sigKeySize
 	if len(padding) != expectedPaddingSize {
-		log.WithFields(logrus.Fields{
+		log.WithFields(logger.Fields{
 			"expected_size": expectedPaddingSize,
 			"actual_size":   len(padding),
 		}).Error("Invalid padding size")
@@ -133,7 +133,7 @@ func NewKeysAndCert(
 		SigningPublic:   signingPublicKey,
 	}
 
-	/*log.WithFields(logrus.Fields{
+	/*log.WithFields(logger.Fields{
 		"public_key_length":         publicKey.Len(),
 		"signing_public_key_length": signingPublicKey.Len(),
 		"padding_length":            len(padding),
@@ -169,7 +169,7 @@ func (keys_and_cert KeysAndCert) Bytes() []byte {
 		certlen = len(keys_and_cert.KeyCertificate.Bytes())
 	}
 	// bytes = append(bytes, keys_and_cert.KeyCertificate.Bytes()...)
-	log.WithFields(logrus.Fields{
+	log.WithFields(logger.Fields{
 		"bytes":                bytes,
 		"padding":              keys_and_cert.Padding,
 		"bytes_length":         len(bytes),
@@ -199,7 +199,7 @@ func (keys_and_cert *KeysAndCert) Certificate() (cert certificate.Certificate) {
 // ReadKeysAndCert creates a new *KeysAndCert from []byte using ReadKeysAndCert.
 // Returns a pointer to KeysAndCert unlike ReadKeysAndCert.
 func ReadKeysAndCert(data []byte) (*KeysAndCert, []byte, error) {
-	log.WithFields(logrus.Fields{
+	log.WithFields(logger.Fields{
 		"input_length": len(data),
 	}).Debug("Reading KeysAndCert from data")
 	var err error
@@ -208,7 +208,7 @@ func ReadKeysAndCert(data []byte) (*KeysAndCert, []byte, error) {
 
 	data_len := len(data)
 	if data_len < KEYS_AND_CERT_MIN_SIZE {
-		log.WithFields(logrus.Fields{
+		log.WithFields(logger.Fields{
 			"at":           "ReadKeysAndCert",
 			"data_len":     data_len,
 			"required_len": KEYS_AND_CERT_MIN_SIZE,
@@ -251,7 +251,7 @@ func ReadKeysAndCert(data []byte) (*KeysAndCert, []byte, error) {
 		return &keys_and_cert, remainder, err
 	}
 
-	log.WithFields(logrus.Fields{
+	log.WithFields(logger.Fields{
 		"public_key_type":         keys_and_cert.KeyCertificate.PublicKeyType(),
 		"signing_public_key_type": keys_and_cert.KeyCertificate.SigningPublicKeyType(),
 		"padding_length":          len(keys_and_cert.Padding),
@@ -263,7 +263,7 @@ func ReadKeysAndCert(data []byte) (*KeysAndCert, []byte, error) {
 
 // ReadKeysAndCertElgAndEd25519 reads KeysAndCert with fixed ElGamal and Ed25519 key sizes.
 func ReadKeysAndCertElgAndEd25519(data []byte) (keysAndCert *KeysAndCert, remainder []byte, err error) {
-	log.WithFields(logrus.Fields{
+	log.WithFields(logger.Fields{
 		"input_length": len(data),
 	}).Debug("Reading KeysAndCert from data")
 
@@ -320,7 +320,7 @@ func ReadKeysAndCertElgAndEd25519(data []byte) (keysAndCert *KeysAndCert, remain
 		return
 	}
 
-	log.WithFields(logrus.Fields{
+	log.WithFields(logger.Fields{
 		"public_key_type":         "ElGamal",
 		"signing_public_key_type": "Ed25519",
 		"padding_length":          len(keysAndCert.Padding),

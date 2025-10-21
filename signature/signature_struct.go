@@ -4,7 +4,7 @@ package signature
 import (
 	"fmt"
 
-	"github.com/sirupsen/logrus"
+	"github.com/go-i2p/logger"
 )
 
 /*
@@ -47,7 +47,7 @@ func NewSignature(data []byte, sigType int) (signature *Signature, remainder []b
 		return nil, remainder, err
 	}
 	signature = &sig
-	log.WithFields(logrus.Fields{
+	log.WithFields(logger.Fields{
 		"signature_length": sig.Len(),
 		"remainder_length": len(remainder),
 	}).Debug("Successfully created new Signature")

@@ -2,10 +2,8 @@
 package session_key
 
 import (
+	"github.com/go-i2p/logger"
 	"github.com/samber/oops"
-	"github.com/sirupsen/logrus"
-
-	log "github.com/sirupsen/logrus"
 )
 
 /*
@@ -43,7 +41,7 @@ func NewSessionKey(data []byte) (session_key *SessionKey, remainder []byte, err 
 // Returns a list of errors that occurred during parsing.
 func ReadSessionKey(bytes []byte) (info SessionKey, remainder []byte, err error) {
 	if len(bytes) < SESSION_KEY_SIZE {
-		log.WithFields(logrus.Fields{
+		log.WithFields(logger.Fields{
 			"at":          "(SessionKey) ReadSessionKey",
 			"data_length": len(bytes),
 			"required":    SESSION_KEY_SIZE,
@@ -55,7 +53,7 @@ func ReadSessionKey(bytes []byte) (info SessionKey, remainder []byte, err error)
 	copy(info[:], bytes[:SESSION_KEY_SIZE])
 	remainder = bytes[SESSION_KEY_SIZE:]
 
-	log.WithFields(logrus.Fields{
+	log.WithFields(logger.Fields{
 		"remainder_length": len(remainder),
 	}).Debug("Successfully read SessionKey from data")
 

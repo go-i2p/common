@@ -13,8 +13,8 @@ import (
 	"github.com/go-i2p/crypto/dsa"
 	elgamal "github.com/go-i2p/crypto/elg"
 	"github.com/go-i2p/crypto/types"
+	"github.com/go-i2p/logger"
 	"github.com/samber/oops"
-	"github.com/sirupsen/logrus"
 )
 
 // ReadDestinationFromLeaseSet reads the destination from lease set data.
@@ -142,7 +142,7 @@ func parseSigningKey(data []byte, dest destination.Destination) (types.SigningPu
 	cert := dest.Certificate()
 	kind, err := cert.Type()
 	if err != nil {
-		log.WithFields(logrus.Fields{
+		log.WithFields(logger.Fields{
 			"at":     "parseSigningKey",
 			"reason": "invalid certificate type",
 		}).Error("error parsing certificate type")

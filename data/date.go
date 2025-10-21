@@ -4,8 +4,8 @@ package data
 import (
 	"time"
 
+	"github.com/go-i2p/logger"
 	"github.com/samber/oops"
-	"github.com/sirupsen/logrus"
 )
 
 /*
@@ -54,7 +54,7 @@ func (date Date) Time() (date_time time.Time) {
 // Any data after DATE_SIZE is returned as a remainder.
 func ReadDate(data []byte) (date Date, remainder []byte, err error) {
 	if len(data) < 8 {
-		log.WithFields(logrus.Fields{
+		log.WithFields(logger.Fields{
 			"data": data,
 		}).Error("ReadDate: data is too short")
 		err = oops.Errorf("ReadDate: data is too short")
@@ -62,7 +62,7 @@ func ReadDate(data []byte) (date Date, remainder []byte, err error) {
 	}
 	copy(date[:], data[:8])
 	remainder = data[8:]
-	log.WithFields(logrus.Fields{
+	log.WithFields(logger.Fields{
 		"date_value":       date.Int(),
 		"remainder_length": len(remainder),
 	}).Debug("Successfully read Date from data")
@@ -79,7 +79,7 @@ func NewDate(data []byte) (date *Date, remainder []byte, err error) {
 	}
 
 	date = &objdate
-	log.WithFields(logrus.Fields{
+	log.WithFields(logger.Fields{
 		"date_value":       date.Int(),
 		"remainder_length": len(remainder),
 	}).Debug("Successfully created new Date")
@@ -100,7 +100,7 @@ func DateFromTime(t time.Time) (date *Date, err error) {
 		msec >>= 8
 	}
 
-	log.WithFields(logrus.Fields{
+	log.WithFields(logger.Fields{
 		"date_value": date.Int(),
 		"time":       t,
 	}).Debug("Successfully created Date from time.Time")

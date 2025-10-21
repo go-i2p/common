@@ -5,8 +5,8 @@ import (
 	"encoding/binary"
 	"time"
 
+	"github.com/go-i2p/logger"
 	"github.com/samber/oops"
-	"github.com/sirupsen/logrus"
 
 	"github.com/go-i2p/common/data"
 )
@@ -23,21 +23,21 @@ func ReadRouterAddress(routerAddressData []byte) (router_address RouterAddress, 
 	}
 	router_address.TransportCost, remainder, err = data.NewInteger(routerAddressData, 1)
 	if err != nil {
-		log.WithFields(logrus.Fields{
+		log.WithFields(logger.Fields{
 			"at":     "(RouterAddress) ReadNewRouterAddress",
 			"reason": "error parsing cost",
 		}).Warn("error parsing RouterAddress")
 	}
 	router_address.ExpirationDate, remainder, err = data.NewDate(remainder)
 	if err != nil {
-		log.WithFields(logrus.Fields{
+		log.WithFields(logger.Fields{
 			"at":     "(RouterAddress) ReadNewRouterAddress",
 			"reason": "error parsing expiration",
 		}).Error("error parsing RouterAddress")
 	}
 	router_address.TransportType, remainder, err = data.ReadI2PString(remainder)
 	if err != nil {
-		log.WithFields(logrus.Fields{
+		log.WithFields(logger.Fields{
 			"at":     "(RouterAddress) ReadNewRouterAddress",
 			"reason": "error parsing transport_style",
 		}).Error("error parsing RouterAddress")
@@ -45,7 +45,7 @@ func ReadRouterAddress(routerAddressData []byte) (router_address RouterAddress, 
 	var errs []error
 	router_address.TransportOptions, remainder, errs = data.NewMapping(remainder)
 	for _, err := range errs {
-		log.WithFields(logrus.Fields{
+		log.WithFields(logger.Fields{
 			"at":     "(RouterAddress) ReadNewRouterAddress",
 			"reason": "error parsing options",
 			"error":  err,
@@ -98,7 +98,7 @@ func NewRouterAddress(cost uint8, expiration time.Time, transportType string, op
 		TransportOptions: transportOptions,
 	}
 
-	log.WithFields(logrus.Fields{
+	log.WithFields(logger.Fields{
 		"cost":          cost,
 		"expiration":    expiration,
 		"transportType": transportType,

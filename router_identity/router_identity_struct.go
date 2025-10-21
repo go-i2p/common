@@ -8,7 +8,6 @@ import (
 	"github.com/go-i2p/common/keys_and_cert"
 	"github.com/go-i2p/crypto/types"
 	"github.com/go-i2p/logger"
-	"github.com/sirupsen/logrus"
 )
 
 var log = logger.GetGoI2PLogger()
@@ -57,7 +56,7 @@ func NewRouterIdentity(publicKey types.ReceivingPublicKey, signingPublicKey type
 		KeysAndCert: keysAndCert,
 	}
 
-	log.WithFields(logrus.Fields{
+	log.WithFields(logger.Fields{
 		"public_key_type":         keyCert.PublicKeyType(),
 		"signing_public_key_type": keyCert.SigningPublicKeyType(),
 		"padding_length":          len(padding),
@@ -71,7 +70,7 @@ func NewRouterIdentity(publicKey types.ReceivingPublicKey, signingPublicKey type
 // Returns a list of errors that occurred during parsing.
 // Moved from: router_identity.go
 func ReadRouterIdentity(data []byte) (router_identity *RouterIdentity, remainder []byte, err error) {
-	log.WithFields(logrus.Fields{
+	log.WithFields(logger.Fields{
 		"input_length": len(data),
 	}).Debug("Reading RouterIdentity from data")
 	keys_and_cert, remainder, err := keys_and_cert.ReadKeysAndCert(data)
@@ -82,7 +81,7 @@ func ReadRouterIdentity(data []byte) (router_identity *RouterIdentity, remainder
 	router_identity = &RouterIdentity{
 		keys_and_cert,
 	}
-	log.WithFields(logrus.Fields{
+	log.WithFields(logger.Fields{
 		"remainder_length": len(remainder),
 	}).Debug("Successfully read RouterIdentity")
 	return
