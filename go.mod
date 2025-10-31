@@ -3,7 +3,7 @@ module github.com/go-i2p/common
 go 1.24.2
 
 require (
-	github.com/go-i2p/crypto v0.0.0-20251021023906-563014aad97d
+	github.com/go-i2p/crypto v0.0.1
 	github.com/go-i2p/logger v0.0.1
 	github.com/samber/oops v1.19.0
 	github.com/stretchr/testify v1.10.0
