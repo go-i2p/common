@@ -25,7 +25,3 @@ require (
 	golang.org/x/text v0.27.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
-
-replace github.com/go-i2p/crypto => ../crypto
-
-replace github.com/go-i2p/elgamal => ../elgamal
