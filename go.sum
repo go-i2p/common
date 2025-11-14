@@ -4,8 +4,6 @@ github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSs
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc h1:U9qPSI2PIWSS1VwoXQT9A3Wy9MM3WgvqSxFWenqJduM=
 github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
-github.com/go-i2p/crypto v0.0.1 h1:04yo8tX9+CRkT5zugEPhyJQ38syeXIW+1GykDfbB418=
-github.com/go-i2p/crypto v0.0.1/go.mod h1:ni/LJcr7MrPhXmYbQ2b5enpe8ppT3qhfiwr3I1QJeZM=
 github.com/go-i2p/logger v0.0.1 h1:OFDZMjqiNXbPIm+SDxiwYtI6ocC3mb9V/t5kvZ+6XQ0=
 github.com/go-i2p/logger v0.0.1/go.mod h1:te7Zj3g3oMeIl8uBXAgO62UKmZ6m6kHRNg1Mm+X8Hzk=
 github.com/google/go-cmp v0.7.0 h1:wk8382ETsv4JYUZwIsn6YpYiWiBsYLSJiTsyBybVuN8=
