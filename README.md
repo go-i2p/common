@@ -135,6 +135,7 @@ func main() {
 ## Requirements
 
 - **Go Version**: 1.24.2 or later
+- **I2P Specification**: 0.9.67 (June 2025)
 - **Dependencies**:
   - `github.com/go-i2p/go-i2p` - Core I2P library
   - `github.com/go-i2p/logger` - Structured logging wrapper
