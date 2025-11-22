@@ -10,31 +10,53 @@ package key_certificate
 const (
 	// KEYCERT_SIGN_DSA_SHA1 identifies DSA with SHA-1 signature algorithm (type 0).
 	// This is the legacy signature type used in early I2P implementations.
-	// Deprecated for new router identities as of version 0.9.58 due to security concerns.
+	//
+	// DEPRECATED: This algorithm is deprecated for new router identities as of I2P 0.9.58.
+	// Use KEYCERT_SIGN_ED25519 (type 7) for new implementations.
+	// SHA-1 is cryptographically weak and DSA keys provide insufficient security for modern standards.
+	// Maintained only for backward compatibility with legacy destinations and router identities.
 	KEYCERT_SIGN_DSA_SHA1 = 0
 
 	// KEYCERT_SIGN_P256 identifies ECDSA-SHA256-P256 signature algorithm (type 1).
 	// Uses NIST P-256 elliptic curve with SHA-256 hash function.
 	// Provides 128-bit security level with 64-byte signatures.
+	//
+	// DEPRECATED: This algorithm is deprecated for new implementations.
+	// Use KEYCERT_SIGN_ED25519 (type 7) for better performance and security.
+	// Maintained for compatibility with older destinations only.
 	KEYCERT_SIGN_P256 = 1
 
 	// KEYCERT_SIGN_P384 identifies ECDSA-SHA384-P384 signature algorithm (type 2).
 	// Uses NIST P-384 elliptic curve with SHA-384 hash function.
 	// Provides 192-bit security level with 96-byte signatures.
+	//
+	// DEPRECATED: This algorithm is deprecated for new implementations.
+	// Use KEYCERT_SIGN_ED25519 (type 7) for better performance.
+	// Rarely used; maintained for compatibility with legacy systems only.
 	KEYCERT_SIGN_P384 = 2
 
 	// KEYCERT_SIGN_P521 identifies ECDSA-SHA512-P521 signature algorithm (type 3).
 	// Uses NIST P-521 elliptic curve with SHA-512 hash function.
 	// Provides 256-bit security level with 132-byte signatures.
+	//
+	// DEPRECATED: This algorithm is deprecated for new implementations.
+	// Use KEYCERT_SIGN_ED25519 (type 7) for better performance.
+	// Rarely used; maintained for compatibility with legacy systems only.
 	KEYCERT_SIGN_P521 = 3
 
 	// KEYCERT_SIGN_RSA2048 identifies RSA-SHA256-2048 signature algorithm (type 4).
 	// Uses 2048-bit RSA keys with SHA-256 hash function.
+	//
+	// DEPRECATED: This algorithm is deprecated for new implementations.
+	// Use KEYCERT_SIGN_ED25519 (type 7) for better performance and smaller signatures.
 	// Primarily used for offline signing operations, rarely for router identities.
 	KEYCERT_SIGN_RSA2048 = 4
 
 	// KEYCERT_SIGN_RSA3072 identifies RSA-SHA384-3072 signature algorithm (type 5).
 	// Uses 3072-bit RSA keys with SHA-384 hash function.
+	//
+	// DEPRECATED: This algorithm is deprecated for new implementations.
+	// Use KEYCERT_SIGN_ED25519 (type 7) for better performance and smaller signatures.
 	// Enhanced security variant for offline signing operations.
 	KEYCERT_SIGN_RSA3072 = 5
 
@@ -99,7 +121,11 @@ const (
 const (
 	// KEYCERT_CRYPTO_ELG identifies ElGamal encryption algorithm (type 0).
 	// Traditional I2P encryption using 2048-bit ElGamal keys.
-	// Used for legacy compatibility and session key exchange.
+	//
+	// DEPRECATED: This algorithm is deprecated for Router Identities as of I2P 0.9.58.
+	// Use KEYCERT_CRYPTO_X25519 (type 4) for new router identities.
+	// ElGamal is computationally expensive and provides weaker security than modern alternatives.
+	// Still used for legacy compatibility and Destination encryption, but should be avoided for new RIs.
 	KEYCERT_CRYPTO_ELG = 0
 
 	// KEYCERT_CRYPTO_P256 identifies ECDH-P256 encryption algorithm (type 1).
