@@ -14,7 +14,7 @@ var log = logger.GetGoI2PLogger()
 
 /*
 [RouterIdentity]
-Accurate for version 0.9.49
+Accurate for version 0.9.67
 
 Description
 Defines the way to uniquely identify a particular router

@@ -12,7 +12,7 @@ var log = logger.GetGoI2PLogger()
 
 /*
 [I2P Certificate]
-Accurate for version 0.9.49
+Accurate for version 0.9.67
 
 Description
 A certifificate is a container for various receipts of proof of works used throughout the I2P network.

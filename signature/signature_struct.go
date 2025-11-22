@@ -9,7 +9,7 @@ import (
 
 /*
 [Signature]
-Accurate for version 0.9.49
+Accurate for version 0.9.67
 
 Description
 This structure represents the signature of some data.

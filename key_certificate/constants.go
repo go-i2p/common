@@ -3,7 +3,7 @@ package key_certificate
 
 // Key Certificate Signing Key Types define the cryptographic signature algorithms
 // supported by I2P Key Certificates for digital signature operations.
-// These constants map to specific cryptographic algorithms as defined in I2P specification 0.9.49.
+// These constants map to specific cryptographic algorithms as defined in I2P specification 0.9.67.
 // https://geti2p.net/spec/common-structures#certificate
 
 // Key Certificate Signing Key Types

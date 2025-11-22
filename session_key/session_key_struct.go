@@ -8,7 +8,7 @@ import (
 
 /*
 [SessionKey]
-Accurate for version 0.9.49
+Accurate for version 0.9.67
 
 Description
 This structure is used for symmetric AES256 encryption and decryption.

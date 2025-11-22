@@ -13,7 +13,7 @@ var log = logger.GetGoI2PLogger()
 
 /*
 [Lease]
-Accurate for version 0.9.49
+Accurate for version 0.9.67
 
 Description
 Defines the authorization for a particular tunnel to receive messages targeting a Destination.

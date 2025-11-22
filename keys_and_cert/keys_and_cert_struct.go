@@ -16,7 +16,7 @@ var log = logger.GetGoI2PLogger()
 
 /*
 [KeysAndCert]
-Accurate for version 0.9.49
+Accurate for version 0.9.67
 
 Description
 An encryption public key, a signing public key, and a certificate, used as either a RouterIdentity or a Destination.

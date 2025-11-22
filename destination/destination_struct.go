@@ -15,7 +15,7 @@ import (
 
 /*
 [Destination]
-Accurate for version 0.9.49
+Accurate for version 0.9.67
 
 Description
 A Destination defines a particular endpoint to which messages can be directed for secure delivery.

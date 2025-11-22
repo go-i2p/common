@@ -7,7 +7,7 @@
 Package lease implements the I2P lease common data structure
 
 Package lease implements the I2P Lease common data structure according to
-specification version 0.9.49.
+specification version 0.9.67.
 
 ADDED: A Lease defines the authorization for a particular tunnel to receive
 messages targeting a Destination. Each lease contains the SHA256 hash of the
@@ -61,7 +61,7 @@ const (
 )
 ```
 Sizes in bytes of various components of a Lease according to I2P specification
-version 0.9.49
+version 0.9.67
 
 #### type Lease
 

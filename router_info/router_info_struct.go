@@ -21,7 +21,7 @@ import (
 
 /*
 [RouterInfo]
-Accurate for version 0.9.49
+Accurate for version 0.9.67
 
 Description
 Defines all of the data that a router wants to public for the network to see. The

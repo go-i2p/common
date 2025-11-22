@@ -9,7 +9,7 @@ import (
 
 /*
 [SessionTag]
-Accurate for version 0.9.49
+Accurate for version 0.9.67
 
 Description
 A random number

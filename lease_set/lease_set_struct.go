@@ -10,7 +10,7 @@ import (
 
 /*
 [LeaseSet]
-Accurate for version 0.9.49
+Accurate for version 0.9.67
 
 Description
 Contains all of the currently authorized Leases for a particular Destination, the

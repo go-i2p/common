@@ -1,7 +1,7 @@
 // Package lease implements the I2P lease common data structure
 package lease
 
-// Sizes in bytes of various components of a Lease according to I2P specification version 0.9.49
+// Sizes in bytes of various components of a Lease according to I2P specification version 0.9.67
 const (
 	// LEASE_SIZE defines the total size of a complete I2P Lease structure in bytes.
 	// A Lease consists of 32 bytes for tunnel gateway hash, 4 bytes for tunnel ID, and 8 bytes for end date.

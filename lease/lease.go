@@ -1,4 +1,4 @@
-// Package lease implements the I2P Lease common data structure according to specification version 0.9.49.
+// Package lease implements the I2P Lease common data structure according to specification version 0.9.67.
 //
 // ADDED: A Lease defines the authorization for a particular tunnel to receive messages targeting a Destination.
 // Each lease contains the SHA256 hash of the RouterIdentity of the gateway router, the tunnel identifier,

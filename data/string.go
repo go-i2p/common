@@ -7,7 +7,7 @@ import (
 
 /*
 [I2P String]
-Accurate for version 0.9.49
+Accurate for version 0.9.67
 
 Description
 Represents a UTF-8 encoded string.

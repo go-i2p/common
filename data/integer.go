@@ -9,7 +9,7 @@ import (
 
 /*
 [I2P Integer]
-Accurate for version 0.9.49
+Accurate for version 0.9.67
 
 Description
 Represents a non-negative integer.

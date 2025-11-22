@@ -7,7 +7,7 @@ import (
 
 /*
 [I2P Mapping]
-Accurate for version 0.9.49
+Accurate for version 0.9.67
 
 Description
 A set of key/value mappings or properties
