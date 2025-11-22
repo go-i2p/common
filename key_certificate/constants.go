@@ -52,6 +52,43 @@ const (
 	// Uses Ed25519ph (pre-hashed) variant with SHA-512 for large message efficiency.
 	// Optimized for offline signing of large datasets.
 	KEYCERT_SIGN_ED25519PH = 8
+
+	// Types 9-10 are reserved for GOST signature algorithms.
+	// Not required for this Go implementation of I2P.
+
+	// KEYCERT_SIGN_REDDSA_ED25519 identifies RedDSA-SHA512-Ed25519 signature algorithm (type 11).
+	// Uses RedDSA (randomized EdDSA) variant with SHA-512 for enhanced security.
+	// Supported for Destinations and EncryptedLeaseSets only, not Router Identities.
+	// Added in I2P specification 0.9.39.
+	KEYCERT_SIGN_REDDSA_ED25519 = 11
+
+	// Post-Quantum Signature Types (Reserved for Future Implementation)
+	// Types 12-20 are reserved for MLDSA (Module-Lattice-Based Digital Signature Algorithm)
+	// post-quantum signatures as defined in Proposal 169.
+	// These types are not yet implemented but reserved for future quantum-resistant signatures.
+	// Reference: Proposal 169 (Post-Quantum Cryptography)
+
+	// KEYCERT_SIGN_MLDSA_RESERVED_START marks the beginning of the MLDSA reserved range (type 12).
+	KEYCERT_SIGN_MLDSA_RESERVED_START = 12
+
+	// KEYCERT_SIGN_MLDSA_RESERVED_END marks the end of the MLDSA reserved range (type 20).
+	KEYCERT_SIGN_MLDSA_RESERVED_END = 20
+
+	// Experimental and Reserved Signature Type Ranges
+	// These ranges are reserved for experimental implementations and future expansion.
+	// Reference: I2P specification 0.9.67
+
+	// KEYCERT_SIGN_EXPERIMENTAL_START marks the beginning of the experimental signature type range (type 65280).
+	// This range (65280-65534) is reserved for testing and experimental signature algorithms.
+	KEYCERT_SIGN_EXPERIMENTAL_START = 65280
+
+	// KEYCERT_SIGN_EXPERIMENTAL_END marks the end of the experimental signature type range (type 65534).
+	// Experimental types should not be used in production I2P networks.
+	KEYCERT_SIGN_EXPERIMENTAL_END = 65534
+
+	// KEYCERT_SIGN_FUTURE_EXPANSION is reserved for future signature algorithm expansion (type 65535).
+	// This type is reserved but not currently defined in the I2P specification.
+	KEYCERT_SIGN_FUTURE_EXPANSION = 65535
 )
 
 // Key Certificate Public Key Types define the cryptographic encryption algorithms
@@ -84,6 +121,47 @@ const (
 	// Uses Curve25519 for high-performance Elliptic Curve Diffie-Hellman.
 	// Modern standard offering excellent security with optimized implementation.
 	KEYCERT_CRYPTO_X25519 = 4
+
+	// Post-Quantum Hybrid Encryption Types (I2P Spec 0.9.67+)
+	// These types combine post-quantum MLKEM (Module-Lattice-Based KEM) with X25519
+	// to provide both quantum resistance and backward compatibility.
+	// Reserved for LeaseSet encryption only, not for Router Identities.
+	// Reference: Proposal 169 (Post-Quantum Cryptography)
+
+	// KEYCERT_CRYPTO_MLKEM512_X25519 identifies MLKEM512+X25519 hybrid encryption (type 5).
+	// Combines MLKEM-512 post-quantum KEM with X25519 for quantum-resistant encryption.
+	// Provides NIST security level 1 (equivalent to AES-128) with 32-byte public keys.
+	// Only supported for LeaseSet encryption as of I2P 0.9.67.
+	KEYCERT_CRYPTO_MLKEM512_X25519 = 5
+
+	// KEYCERT_CRYPTO_MLKEM768_X25519 identifies MLKEM768+X25519 hybrid encryption (type 6).
+	// Combines MLKEM-768 post-quantum KEM with X25519 for enhanced quantum resistance.
+	// Provides NIST security level 3 (equivalent to AES-192) with 32-byte public keys.
+	// Only supported for LeaseSet encryption as of I2P 0.9.67.
+	KEYCERT_CRYPTO_MLKEM768_X25519 = 6
+
+	// KEYCERT_CRYPTO_MLKEM1024_X25519 identifies MLKEM1024+X25519 hybrid encryption (type 7).
+	// Combines MLKEM-1024 post-quantum KEM with X25519 for maximum quantum resistance.
+	// Provides NIST security level 5 (equivalent to AES-256) with 32-byte public keys.
+	// Only supported for LeaseSet encryption as of I2P 0.9.67.
+	KEYCERT_CRYPTO_MLKEM1024_X25519 = 7
+
+	// KEYCERT_CRYPTO_RESERVED_NONE is reserved for future use (type 255).
+	// Reserved by Proposal 169 for potential "no encryption" designation.
+	// Not currently implemented in any I2P version.
+	KEYCERT_CRYPTO_RESERVED_NONE = 255
+
+	// Experimental and Reserved Encryption Type Ranges
+	// These ranges are reserved for experimental implementations and future expansion.
+	// Reference: I2P specification 0.9.67
+
+	// KEYCERT_CRYPTO_EXPERIMENTAL_START marks the beginning of the experimental encryption type range (type 65280).
+	// This range (65280-65534) is reserved for testing and experimental encryption algorithms.
+	KEYCERT_CRYPTO_EXPERIMENTAL_START = 65280
+
+	// KEYCERT_CRYPTO_EXPERIMENTAL_END marks the end of the experimental encryption type range (type 65534).
+	// Experimental types should not be used in production I2P networks.
+	KEYCERT_CRYPTO_EXPERIMENTAL_END = 65534
 )
 
 // Minimum size constants define the minimum byte requirements
@@ -165,6 +243,21 @@ const (
 	// KEYCERT_CRYPTO_X25519_SIZE defines the size of X25519 public keys (32 bytes).
 	// Curve25519 public key for high-performance Diffie-Hellman key exchange.
 	KEYCERT_CRYPTO_X25519_SIZE = 32
+
+	// KEYCERT_CRYPTO_MLKEM512_X25519_SIZE defines the size of MLKEM512+X25519 public keys (32 bytes).
+	// Hybrid post-quantum encryption key combining MLKEM-512 and X25519.
+	// The public key size remains 32 bytes for X25519 compatibility.
+	KEYCERT_CRYPTO_MLKEM512_X25519_SIZE = 32
+
+	// KEYCERT_CRYPTO_MLKEM768_X25519_SIZE defines the size of MLKEM768+X25519 public keys (32 bytes).
+	// Hybrid post-quantum encryption key combining MLKEM-768 and X25519.
+	// The public key size remains 32 bytes for X25519 compatibility.
+	KEYCERT_CRYPTO_MLKEM768_X25519_SIZE = 32
+
+	// KEYCERT_CRYPTO_MLKEM1024_X25519_SIZE defines the size of MLKEM1024+X25519 public keys (32 bytes).
+	// Hybrid post-quantum encryption key combining MLKEM-1024 and X25519.
+	// The public key size remains 32 bytes for X25519 compatibility.
+	KEYCERT_CRYPTO_MLKEM1024_X25519_SIZE = 32
 )
 
 // Key Certificate structure size constants define the standard sizes

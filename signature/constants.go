@@ -82,7 +82,38 @@ const (
 	// Uses Ed25519ph (pre-hashed) variant with SHA-512 for efficient large message signing.
 	SIGNATURE_TYPE_EDDSA_SHA512_ED25519PH = 8
 
+	// Types 9-10 are reserved for GOST signature algorithms.
+	// Not required for this Go implementation of I2P.
+
 	// SIGNATURE_TYPE_REDDSA_SHA512_ED25519 identifies RedDSA-SHA512-Ed25519 signature algorithm (type 11).
 	// Uses RedDSA randomized variant of Ed25519 with SHA-512 for enhanced security properties.
 	SIGNATURE_TYPE_REDDSA_SHA512_ED25519 = 11
+
+	// Post-Quantum Signature Types (Reserved for Future Implementation)
+	// Types 12-20 are reserved for MLDSA (Module-Lattice-Based Digital Signature Algorithm)
+	// post-quantum signatures as defined in Proposal 169.
+	// These types are not yet implemented but reserved for future quantum-resistant signatures.
+	// Reference: Proposal 169 (Post-Quantum Cryptography)
+
+	// SIGNATURE_TYPE_MLDSA_RESERVED_START marks the beginning of the MLDSA reserved range (type 12).
+	SIGNATURE_TYPE_MLDSA_RESERVED_START = 12
+
+	// SIGNATURE_TYPE_MLDSA_RESERVED_END marks the end of the MLDSA reserved range (type 20).
+	SIGNATURE_TYPE_MLDSA_RESERVED_END = 20
+
+	// Experimental and Reserved Signature Type Ranges
+	// These ranges are reserved for experimental implementations and future expansion.
+	// Reference: I2P specification 0.9.67
+
+	// SIGNATURE_TYPE_EXPERIMENTAL_START marks the beginning of the experimental signature type range (type 65280).
+	// This range (65280-65534) is reserved for testing and experimental signature algorithms.
+	SIGNATURE_TYPE_EXPERIMENTAL_START = 65280
+
+	// SIGNATURE_TYPE_EXPERIMENTAL_END marks the end of the experimental signature type range (type 65534).
+	// Experimental types should not be used in production I2P networks.
+	SIGNATURE_TYPE_EXPERIMENTAL_END = 65534
+
+	// SIGNATURE_TYPE_FUTURE_EXPANSION is reserved for future signature algorithm expansion (type 65535).
+	// This type is reserved but not currently defined in the I2P specification.
+	SIGNATURE_TYPE_FUTURE_EXPANSION = 65535
 )
