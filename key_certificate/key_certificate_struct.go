@@ -374,24 +374,37 @@ func (keyCertificate KeyCertificate) ConstructSigningPublicKey(data []byte) (sig
 	log.WithFields(logger.Fields{
 		"input_length": len(data),
 	}).Debug("Constructing signingPublicKey from keyCertificate")
+
 	signing_key_type := keyCertificate.SigningPublicKeyType()
-	log.WithFields(logger.Fields{
-		"signing_key_type": signing_key_type,
-		"data_len":         len(data),
-		"required_len":     KEYCERT_SPK_SIZE,
-	}).Error("DEBUG: About to construct signing public key")
+	logSigningKeyDebug(signing_key_type, len(data))
 
 	if err = validateSigningKeyData(len(data), keyCertificate.SignatureSize()); err != nil {
 		return
 	}
 
+	signing_public_key, err = selectSigningKeyConstructor(signing_key_type, data)
+	return
+}
+
+// logSigningKeyDebug logs debug information about the signing key construction.
+func logSigningKeyDebug(signing_key_type int, data_len int) {
+	log.WithFields(logger.Fields{
+		"signing_key_type": signing_key_type,
+		"data_len":         data_len,
+		"required_len":     KEYCERT_SPK_SIZE,
+	}).Error("DEBUG: About to construct signing public key")
+}
+
+// selectSigningKeyConstructor selects and invokes the appropriate key constructor based on signing key type.
+// Returns the constructed signing public key or an error if the key type is unknown or unimplemented.
+func selectSigningKeyConstructor(signing_key_type int, data []byte) (types.SigningPublicKey, error) {
 	switch signing_key_type {
 	case KEYCERT_SIGN_DSA_SHA1:
-		signing_public_key = constructDSAKey(data)
+		return constructDSAKey(data), nil
 	case KEYCERT_SIGN_P256:
-		signing_public_key = constructECDSAP256Key(data)
+		return constructECDSAP256Key(data), nil
 	case KEYCERT_SIGN_P384:
-		signing_public_key = constructECDSAP384Key(data)
+		return constructECDSAP384Key(data), nil
 	case KEYCERT_SIGN_P521:
 		panic("unimplemented P521SigningPublicKey")
 	case KEYCERT_SIGN_RSA2048:
@@ -401,17 +414,15 @@ func (keyCertificate KeyCertificate) ConstructSigningPublicKey(data []byte) (sig
 	case KEYCERT_SIGN_RSA4096:
 		panic("unimplemented RSA4096SigningPublicKey")
 	case KEYCERT_SIGN_ED25519:
-		signing_public_key = constructEd25519Key(data)
+		return constructEd25519Key(data), nil
 	case KEYCERT_SIGN_ED25519PH:
-		signing_public_key = constructEd25519PHKey(data)
+		return constructEd25519PHKey(data), nil
 	default:
 		log.WithFields(logger.Fields{
 			"signing_key_type": signing_key_type,
 		}).Warn("Unknown signing key type")
 		return nil, oops.Errorf("unknown signing key type")
 	}
-
-	return
 }
 
 // SignatureSize return the size of a Signature corresponding to the Key Certificate's signingPublicKey type.
