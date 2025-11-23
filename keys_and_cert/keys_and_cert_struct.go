@@ -94,35 +94,18 @@ func NewKeysAndCert(
 	sigKeySize := keyCertificate.SignatureSize()
 
 	// Validate public key size
-	if publicKey != nil {
-		if publicKey.Len() != pubKeySize {
-			log.WithFields(logger.Fields{
-				"expected_size": pubKeySize,
-				"actual_size":   publicKey.Len(),
-			}).Error("Invalid publicKey size")
-			return nil, oops.Errorf("publicKey has invalid size: expected %d, got %d", pubKeySize, publicKey.Len())
-		}
+	if err := validatePublicKeySize(publicKey, pubKeySize); err != nil {
+		return nil, err
 	}
 
-	if signingPublicKey != nil {
-		// Validate signing key size
-		if signingPublicKey.Len() != sigKeySize {
-			log.WithFields(logger.Fields{
-				"expected_size": sigKeySize,
-				"actual_size":   signingPublicKey.Len(),
-			}).Error("Invalid signingPublicKey size")
-			return nil, oops.Errorf("signingPublicKey has invalid size: expected %d, got %d", sigKeySize, signingPublicKey.Len())
-		}
+	// Validate signing key size
+	if err := validateSigningKeySize(signingPublicKey, sigKeySize); err != nil {
+		return nil, err
 	}
 
-	// Calculate expected padding size
-	expectedPaddingSize := KEYS_AND_CERT_DATA_SIZE - pubKeySize - sigKeySize
-	if len(padding) != expectedPaddingSize {
-		log.WithFields(logger.Fields{
-			"expected_size": expectedPaddingSize,
-			"actual_size":   len(padding),
-		}).Error("Invalid padding size")
-		return nil, oops.Errorf("invalid padding size")
+	// Validate padding size
+	if err := validatePaddingSize(padding, pubKeySize, sigKeySize); err != nil {
+		return nil, err
 	}
 
 	keysAndCert := &KeysAndCert{
@@ -139,6 +122,50 @@ func NewKeysAndCert(
 	}).Debug("Successfully created KeysAndCert")*/
 
 	return keysAndCert, nil
+}
+
+// validatePublicKeySize validates that the public key has the expected size.
+// Returns error if the key is non-nil and has an incorrect size.
+func validatePublicKeySize(publicKey types.ReceivingPublicKey, expectedSize int) error {
+	if publicKey != nil {
+		if publicKey.Len() != expectedSize {
+			log.WithFields(logger.Fields{
+				"expected_size": expectedSize,
+				"actual_size":   publicKey.Len(),
+			}).Error("Invalid publicKey size")
+			return oops.Errorf("publicKey has invalid size: expected %d, got %d", expectedSize, publicKey.Len())
+		}
+	}
+	return nil
+}
+
+// validateSigningKeySize validates that the signing public key has the expected size.
+// Returns error if the key is non-nil and has an incorrect size.
+func validateSigningKeySize(signingPublicKey types.SigningPublicKey, expectedSize int) error {
+	if signingPublicKey != nil {
+		if signingPublicKey.Len() != expectedSize {
+			log.WithFields(logger.Fields{
+				"expected_size": expectedSize,
+				"actual_size":   signingPublicKey.Len(),
+			}).Error("Invalid signingPublicKey size")
+			return oops.Errorf("signingPublicKey has invalid size: expected %d, got %d", expectedSize, signingPublicKey.Len())
+		}
+	}
+	return nil
+}
+
+// validatePaddingSize validates that the padding has the expected size based on key sizes.
+// Returns error if the padding size is incorrect.
+func validatePaddingSize(padding []byte, pubKeySize, sigKeySize int) error {
+	expectedPaddingSize := KEYS_AND_CERT_DATA_SIZE - pubKeySize - sigKeySize
+	if len(padding) != expectedPaddingSize {
+		log.WithFields(logger.Fields{
+			"expected_size": expectedPaddingSize,
+			"actual_size":   len(padding),
+		}).Error("Invalid padding size")
+		return oops.Errorf("invalid padding size")
+	}
+	return nil
 }
 
 // Bytes returns the entire keyCertificate in []byte form, trims payload to specified length.
