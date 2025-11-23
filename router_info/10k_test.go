@@ -105,7 +105,7 @@ func cleanupTempDir(path string) error {
 
 func createTempNetDbDir() (string, error) {
 	// Get system's temp directory in a platform-independent way
-	baseDir, _ := os.Getwd() //os.TempDir()
+	baseDir, _ := os.Getwd() // os.TempDir()
 	baseDir = filepath.Join(baseDir, "temp")
 
 	// Create unique directory name with timestamp
