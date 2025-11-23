@@ -16,7 +16,14 @@ var log = logger.GetGoI2PLogger()
 // The map provides a lookup table for determining the expected size of public keys
 // based on their cryptographic algorithm type identifier.
 var CryptoPublicKeySizes = map[uint16]int{
-	KEYCERT_CRYPTO_ELG: 256,
+	KEYCERT_CRYPTO_ELG:              KEYCERT_CRYPTO_ELG_SIZE,
+	KEYCERT_CRYPTO_P256:             KEYCERT_CRYPTO_P256_SIZE,
+	KEYCERT_CRYPTO_P384:             KEYCERT_CRYPTO_P384_SIZE,
+	KEYCERT_CRYPTO_P521:             KEYCERT_CRYPTO_P521_SIZE,
+	KEYCERT_CRYPTO_X25519:           KEYCERT_CRYPTO_X25519_SIZE,
+	KEYCERT_CRYPTO_MLKEM512_X25519:  KEYCERT_CRYPTO_MLKEM512_X25519_SIZE,
+	KEYCERT_CRYPTO_MLKEM768_X25519:  KEYCERT_CRYPTO_MLKEM768_X25519_SIZE,
+	KEYCERT_CRYPTO_MLKEM1024_X25519: KEYCERT_CRYPTO_MLKEM1024_X25519_SIZE,
 }
 
 // SignaturePublicKeySizes maps signature types to their public key sizes in bytes.

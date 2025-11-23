@@ -15,6 +15,139 @@ go get github.com/go-i2p/common
 
 ## Usage
 
+### Creating Key Certificates (New Simplified API)
+
+The library now provides simplified constructors for common key certificate types:
+
+```go
+package main
+
+import (
+    "fmt"
+    "github.com/go-i2p/common/key_certificate"
+)
+
+func main() {
+    // Modern Ed25519/X25519 key certificate (recommended)
+    keyCert, err := key_certificate.NewEd25519X25519KeyCertificate()
+    if err != nil {
+        fmt.Printf("Error: %v\n", err)
+        return
+    }
+    
+    fmt.Printf("Signing type: %d\n", keyCert.SigningPublicKeyType())
+    fmt.Printf("Crypto type: %d\n", keyCert.PublicKeyType())
+    
+    // Or create with custom key types
+    keyCert, err = key_certificate.NewKeyCertificateWithTypes(
+        key_certificate.KEYCERT_SIGN_ED25519,
+        key_certificate.KEYCERT_CRYPTO_X25519,
+    )
+}
+```
+
+### Getting Key Sizes Without Object Creation
+
+Query key sizes for padding calculations without creating certificate objects:
+
+```go
+package main
+
+import (
+    "fmt"
+    "github.com/go-i2p/common/key_certificate"
+    "github.com/go-i2p/common/keys_and_cert"
+)
+
+func main() {
+    // Get size information for key types
+    sizes, err := key_certificate.GetKeySizes(
+        key_certificate.KEYCERT_SIGN_ED25519,
+        key_certificate.KEYCERT_CRYPTO_X25519,
+    )
+    if err != nil {
+        fmt.Printf("Error: %v\n", err)
+        return
+    }
+    
+    // Calculate padding size
+    paddingSize := keys_and_cert.KEYS_AND_CERT_DATA_SIZE - 
+        (sizes.CryptoPublicKeySize + sizes.SigningPublicKeySize)
+    
+    fmt.Printf("Signature size: %d bytes\n", sizes.SignatureSize)
+    fmt.Printf("Signing public key size: %d bytes\n", sizes.SigningPublicKeySize)
+    fmt.Printf("Crypto public key size: %d bytes\n", sizes.CryptoPublicKeySize)
+    fmt.Printf("Required padding: %d bytes\n", paddingSize)
+}
+```
+
+### Using the Certificate Builder Pattern
+
+For complex certificate construction scenarios:
+
+```go
+package main
+
+import (
+    "fmt"
+    "github.com/go-i2p/common/certificate"
+)
+
+func main() {
+    // Build a key certificate using fluent interface
+    cert, err := certificate.NewCertificateBuilder().
+        WithKeyTypes(certificate.KEYCERT_SIGN_ED25519, certificate.KEYCERT_CRYPTO_X25519).
+        Build()
+    if err != nil {
+        fmt.Printf("Error: %v\n", err)
+        return
+    }
+    
+    // Or build a certificate with custom payload
+    customPayload := []byte{0x01, 0x02, 0x03, 0x04}
+    cert, err = certificate.NewCertificateBuilder().
+        WithType(certificate.CERT_SIGNED).
+        WithPayload(customPayload).
+        Build()
+}
+```
+
+### Simple Integer Encoding
+
+Use the new encoding utilities for cleaner binary encoding:
+
+```go
+package main
+
+import (
+    "fmt"
+    "github.com/go-i2p/common/data"
+)
+
+func main() {
+    // Encode integers without error handling (for valid values)
+    signingType := data.EncodeUint16(7)  // Ed25519
+    cryptoType := data.EncodeUint16(4)   // X25519
+    
+    fmt.Printf("Signing type bytes: %v\n", signingType[:])
+    fmt.Printf("Crypto type bytes: %v\n", cryptoType[:])
+    
+    // Decode back to integers
+    sigValue := data.DecodeUint16(signingType)
+    cryptoValue := data.DecodeUint16(cryptoType)
+    
+    fmt.Printf("Decoded signing: %d, crypto: %d\n", sigValue, cryptoValue)
+    
+    // For variable-length encoding with validation
+    bytes, err := data.EncodeIntN(1234, 2)
+    if err != nil {
+        fmt.Printf("Error: %v\n", err)
+        return
+    }
+    fmt.Printf("Encoded bytes: %v\n", bytes)
+}
+```
+
 ### Basic Certificate Parsing
 
 ```go

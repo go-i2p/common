@@ -1,0 +1,188 @@
+// Package certificate implements the certificate common-structure of I2P.
+package certificate
+
+import (
+	"encoding/binary"
+
+	"github.com/go-i2p/logger"
+	"github.com/samber/oops"
+)
+
+// CertificateBuilder provides a fluent interface for building certificates.
+// This pattern simplifies certificate construction, especially for complex cases
+// with custom payloads or key types.
+//
+// Example usage:
+//
+//	cert, err := certificate.NewCertificateBuilder().
+//	    WithKeyTypes(certificate.KEYCERT_SIGN_ED25519, certificate.KEYCERT_CRYPTO_X25519).
+//	    Build()
+type CertificateBuilder struct {
+	certType    uint8
+	payload     []byte
+	signingType *int
+	cryptoType  *int
+	payloadSet  bool
+}
+
+// NewCertificateBuilder creates a new certificate builder with default NULL type.
+func NewCertificateBuilder() *CertificateBuilder {
+	return &CertificateBuilder{
+		certType:   CERT_NULL,
+		payload:    []byte{},
+		payloadSet: false,
+	}
+}
+
+// WithType sets the certificate type.
+// Valid types are: CERT_NULL, CERT_HASHCASH, CERT_HIDDEN, CERT_SIGNED, CERT_MULTIPLE, CERT_KEY.
+//
+// Example:
+//
+//	builder.WithType(certificate.CERT_KEY)
+func (cb *CertificateBuilder) WithType(certType uint8) *CertificateBuilder {
+	cb.certType = certType
+	return cb
+}
+
+// WithKeyTypes sets signing and crypto key types (for CERT_KEY type).
+// This is a convenience method that automatically:
+//   - Sets the certificate type to CERT_KEY
+//   - Builds the appropriate 4-byte payload
+//
+// Parameters:
+//   - signingType: The signing key type (e.g., 7 for Ed25519)
+//   - cryptoType: The crypto key type (e.g., 4 for X25519)
+//
+// Example:
+//
+//	builder.WithKeyTypes(7, 4) // Ed25519 signing, X25519 crypto
+func (cb *CertificateBuilder) WithKeyTypes(signingType, cryptoType int) *CertificateBuilder {
+	cb.certType = CERT_KEY
+	cb.signingType = &signingType
+	cb.cryptoType = &cryptoType
+	cb.payloadSet = false // Key types will generate payload in Build()
+
+	log.WithFields(logger.Fields{
+		"signing_type": signingType,
+		"crypto_type":  cryptoType,
+	}).Debug("Certificate builder: key types set")
+
+	return cb
+}
+
+// WithPayload sets custom payload data.
+// This overrides any payload that would be generated from key types.
+//
+// Example:
+//
+//	builder.WithType(certificate.CERT_SIGNED).WithPayload(signatureData)
+func (cb *CertificateBuilder) WithPayload(payload []byte) *CertificateBuilder {
+	cb.payload = make([]byte, len(payload))
+	copy(cb.payload, payload)
+	cb.payloadSet = true
+
+	log.WithFields(logger.Fields{
+		"payload_length": len(payload),
+	}).Debug("Certificate builder: custom payload set")
+
+	return cb
+}
+
+// Build creates the certificate with the configured options.
+// Returns error if the configuration is invalid.
+//
+// Example:
+//
+//	cert, err := NewCertificateBuilder().
+//	    WithKeyTypes(7, 4).
+//	    Build()
+func (cb *CertificateBuilder) Build() (*Certificate, error) {
+	// Validate certificate type
+	if err := cb.validateCertificateType(); err != nil {
+		return nil, err
+	}
+
+	// Build payload if needed
+	if err := cb.buildPayloadIfNeeded(); err != nil {
+		return nil, err
+	}
+
+	// Create the certificate
+	cert, err := NewCertificateWithType(cb.certType, cb.payload)
+	if err != nil {
+		return nil, oops.Errorf("failed to build certificate: %w", err)
+	}
+
+	log.WithFields(logger.Fields{
+		"cert_type":      cb.certType,
+		"payload_length": len(cb.payload),
+	}).Debug("Certificate builder: successfully built certificate")
+
+	return cert, nil
+}
+
+// validateCertificateType validates that the certificate type is valid.
+func (cb *CertificateBuilder) validateCertificateType() error {
+	switch cb.certType {
+	case CERT_NULL, CERT_HASHCASH, CERT_HIDDEN, CERT_SIGNED, CERT_MULTIPLE, CERT_KEY:
+		return nil
+	default:
+		return oops.Errorf("invalid certificate type: %d", cb.certType)
+	}
+}
+
+// buildPayloadIfNeeded builds the payload from key types if not already set.
+func (cb *CertificateBuilder) buildPayloadIfNeeded() error {
+	// If payload is already set (via WithPayload), use it
+	if cb.payloadSet {
+		return nil
+	}
+
+	// If key types are set, build payload from them
+	if cb.signingType != nil && cb.cryptoType != nil {
+		cb.payload = cb.buildKeyTypePayload()
+		return nil
+	}
+
+	// For KEY certificates without key types, require explicit payload
+	if cb.certType == CERT_KEY && len(cb.payload) == 0 {
+		return oops.Errorf("KEY certificates require either key types or explicit payload")
+	}
+
+	// For NULL certificates, ensure empty payload
+	if cb.certType == CERT_NULL {
+		cb.payload = []byte{}
+	}
+
+	return nil
+}
+
+// buildKeyTypePayload builds a 4-byte payload from signing and crypto types.
+func (cb *CertificateBuilder) buildKeyTypePayload() []byte {
+	payload := make([]byte, 4)
+
+	// Write signing key type (2 bytes, big endian)
+	binary.BigEndian.PutUint16(payload[0:2], uint16(*cb.signingType))
+
+	// Write crypto key type (2 bytes, big endian)
+	binary.BigEndian.PutUint16(payload[2:4], uint16(*cb.cryptoType))
+
+	return payload
+}
+
+// BuildKeyTypePayload is a convenience function to build key type payload without using builder.
+// This is useful when you just need to generate the payload bytes.
+//
+// Parameters:
+//   - signingType: The signing key type
+//   - cryptoType: The crypto key type
+//
+// Returns:
+//   - []byte: The 4-byte payload [signing_type][crypto_type]
+func BuildKeyTypePayload(signingType, cryptoType int) []byte {
+	payload := make([]byte, 4)
+	binary.BigEndian.PutUint16(payload[0:2], uint16(signingType))
+	binary.BigEndian.PutUint16(payload[2:4], uint16(cryptoType))
+	return payload
+}
