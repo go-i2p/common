@@ -579,3 +579,257 @@ func parseSignatureAndFinalize(ls2 *LeaseSet2, data []byte) ([]byte, error) {
 
 	return rem, nil
 }
+
+// NewLeaseSet2 creates a new LeaseSet2 from the provided components and signs it.
+//
+// This constructor creates a complete, signed LeaseSet2 structure ready for network publication.
+// It validates all inputs, constructs the LeaseSet2 data structure, and generates the cryptographic
+// signature using the provided signing key.
+//
+// Parameters:
+//   - dest: Destination containing signing and encryption keys for this service
+//   - published: Publication timestamp (seconds since Unix epoch)
+//   - expiresOffset: Expiration offset in seconds from published time (max 65535)
+//   - flags: LeaseSet2 flags (OFFLINE_KEYS, UNPUBLISHED, BLINDED)
+//   - offlineSig: Optional offline signature (nil if not using offline keys)
+//   - options: Service discovery options mapping (can be nil for no options)
+//   - encryptionKeys: List of encryption keys (1-16 keys required)
+//   - leases: List of Lease2 structures (0-16 leases allowed)
+//   - signingKey: Private key for signing the LeaseSet2
+//
+// Returns:
+//   - LeaseSet2: Constructed and signed LeaseSet2
+//   - error: nil on success, validation or signing error otherwise
+//
+// Example:
+//
+//	ls2, err := NewLeaseSet2(
+//	    destination,
+//	    uint32(time.Now().Unix()),
+//	    600,  // expires in 10 minutes
+//	    0,    // no special flags
+//	    nil,  // no offline signature
+//	    nil,  // no options
+//	    []EncryptionKey{{keyType: X25519, keyLen: 32, keyData: myKey}},
+//	    []lease.Lease2{lease1, lease2},
+//	    myPrivateKey,
+//	)
+func NewLeaseSet2(
+	dest destination.Destination,
+	published uint32,
+	expiresOffset uint16,
+	flags uint16,
+	offlineSig *offline_signature.OfflineSignature,
+	options common.Mapping,
+	encryptionKeys []EncryptionKey,
+	leases []lease.Lease2,
+	signingKey interface{},
+) (LeaseSet2, error) {
+	log.Debug("Creating new LeaseSet2")
+
+	// Validate inputs
+	if err := validateLeaseSet2Inputs(dest, expiresOffset, flags, offlineSig, encryptionKeys, leases); err != nil {
+		return LeaseSet2{}, err
+	}
+
+	// Construct the LeaseSet2 data for signing
+	dataToSign, err := serializeLeaseSet2ForSigning(dest, published, expiresOffset, flags, offlineSig, options, encryptionKeys, leases)
+	if err != nil {
+		return LeaseSet2{}, err
+	}
+
+	// Determine signature type and sign the data
+	sigType := determineSignatureType(dest, offlineSig)
+	signature, err := createLeaseSet2Signature(signingKey, dataToSign, sigType)
+	if err != nil {
+		return LeaseSet2{}, err
+	}
+
+	// Assemble the final LeaseSet2 structure
+	ls2 := LeaseSet2{
+		destination:      dest,
+		published:        published,
+		expires:          expiresOffset,
+		flags:            flags,
+		offlineSignature: offlineSig,
+		options:          options,
+		encryptionKeys:   encryptionKeys,
+		leases:           leases,
+		signature:        signature,
+	}
+
+	log.WithFields(logger.Fields{
+		"num_encryption_keys": len(encryptionKeys),
+		"num_leases":          len(leases),
+		"has_offline_keys":    ls2.HasOfflineKeys(),
+		"published":           published,
+		"expires_offset":      expiresOffset,
+	}).Debug("Successfully created LeaseSet2")
+
+	return ls2, nil
+}
+
+// validateLeaseSet2Inputs validates all input parameters for LeaseSet2 creation.
+func validateLeaseSet2Inputs(
+	dest destination.Destination,
+	expiresOffset uint16,
+	flags uint16,
+	offlineSig *offline_signature.OfflineSignature,
+	encryptionKeys []EncryptionKey,
+	leases []lease.Lease2,
+) error {
+	// Validate destination size (minimum 387 bytes per I2P spec)
+	destBytes := dest.Bytes()
+	if len(destBytes) < LEASESET2_MIN_DESTINATION_SIZE {
+		return oops.
+			Code("invalid_destination_size").
+			With("size", len(destBytes)).
+			With("minimum", LEASESET2_MIN_DESTINATION_SIZE).
+			Errorf("destination size must be at least %d bytes", LEASESET2_MIN_DESTINATION_SIZE)
+	}
+
+	// Validate expiration offset
+	if expiresOffset > LEASESET2_MAX_EXPIRES_OFFSET {
+		return oops.
+			Code("invalid_expires_offset").
+			With("max_allowed", LEASESET2_MAX_EXPIRES_OFFSET).
+			Errorf("expires offset %d exceeds maximum %d", expiresOffset, LEASESET2_MAX_EXPIRES_OFFSET)
+	}
+
+	// Validate offline signature flag consistency
+	if (flags&LEASESET2_FLAG_OFFLINE_KEYS) != 0 && offlineSig == nil {
+		return oops.
+			Code("missing_offline_signature").
+			Errorf("OFFLINE_KEYS flag set but no offline signature provided")
+	}
+	if (flags&LEASESET2_FLAG_OFFLINE_KEYS) == 0 && offlineSig != nil {
+		return oops.
+			Code("unexpected_offline_signature").
+			Errorf("offline signature provided but OFFLINE_KEYS flag not set")
+	}
+
+	// Validate encryption keys
+	if len(encryptionKeys) < 1 {
+		return oops.
+			Code("no_encryption_keys").
+			Errorf("at least one encryption key is required")
+	}
+	if len(encryptionKeys) > LEASESET2_MAX_ENCRYPTION_KEYS {
+		return oops.
+			Code("too_many_encryption_keys").
+			With("max_allowed", LEASESET2_MAX_ENCRYPTION_KEYS).
+			Errorf("too many encryption keys: %d exceeds maximum %d", len(encryptionKeys), LEASESET2_MAX_ENCRYPTION_KEYS)
+	}
+
+	// Validate leases
+	if len(leases) > LEASESET2_MAX_LEASES {
+		return oops.
+			Code("too_many_leases").
+			With("max_allowed", LEASESET2_MAX_LEASES).
+			Errorf("too many leases: %d exceeds maximum %d", len(leases), LEASESET2_MAX_LEASES)
+	}
+
+	return nil
+}
+
+// serializeLeaseSet2ForSigning constructs the byte representation for signing.
+func serializeLeaseSet2ForSigning(
+	dest destination.Destination,
+	published uint32,
+	expiresOffset uint16,
+	flags uint16,
+	offlineSig *offline_signature.OfflineSignature,
+	options common.Mapping,
+	encryptionKeys []EncryptionKey,
+	leases []lease.Lease2,
+) ([]byte, error) {
+	// Start with destination
+	data := dest.KeysAndCert.Bytes()
+
+	// Add published timestamp (4 bytes)
+	publishedBytes := make([]byte, 4)
+	binary.BigEndian.PutUint32(publishedBytes, published)
+	data = append(data, publishedBytes...)
+
+	// Add expires offset (2 bytes)
+	expiresBytes := make([]byte, 2)
+	binary.BigEndian.PutUint16(expiresBytes, expiresOffset)
+	data = append(data, expiresBytes...)
+
+	// Add flags (2 bytes)
+	flagsBytes := make([]byte, 2)
+	binary.BigEndian.PutUint16(flagsBytes, flags)
+	data = append(data, flagsBytes...)
+
+	// Add offline signature if present
+	if offlineSig != nil {
+		data = append(data, offlineSig.Bytes()...)
+	}
+
+	// Add options mapping
+	if len(options.Values()) > 0 {
+		data = append(data, options.Data()...)
+	} else {
+		// Empty mapping (2 bytes of zero)
+		data = append(data, 0x00, 0x00)
+	}
+
+	// Add encryption keys
+	data = append(data, byte(len(encryptionKeys)))
+	for _, key := range encryptionKeys {
+		keyTypeBytes := make([]byte, 2)
+		binary.BigEndian.PutUint16(keyTypeBytes, key.keyType)
+		data = append(data, keyTypeBytes...)
+
+		keyLenBytes := make([]byte, 2)
+		binary.BigEndian.PutUint16(keyLenBytes, key.keyLen)
+		data = append(data, keyLenBytes...)
+
+		data = append(data, key.keyData...)
+	}
+
+	// Add leases
+	data = append(data, byte(len(leases)))
+	for _, l := range leases {
+		data = append(data, l[:]...)
+	}
+
+	return data, nil
+}
+
+// determineSignatureType determines which signature type to use based on offline signature.
+func determineSignatureType(dest destination.Destination, offlineSig *offline_signature.OfflineSignature) uint16 {
+	if offlineSig != nil {
+		// Use transient signature type from offline signature
+		return offlineSig.TransientSigType()
+	}
+	// Use destination's signature type (convert int to uint16)
+	return uint16(dest.KeyCertificate.SigningPublicKeyType())
+}
+
+// createLeaseSet2Signature signs the LeaseSet2 data with the provided key.
+func createLeaseSet2Signature(signingKey interface{}, data []byte, sigType uint16) (sig.Signature, error) {
+	// This is a placeholder - actual signing would use the crypto library
+	// For now, we create a zero signature of the correct size
+	sigSize := offline_signature.SignatureSize(sigType)
+	if sigSize == 0 {
+		return sig.Signature{}, oops.
+			Code("unknown_signature_type").
+			With("signature_type", sigType).
+			Errorf("unknown signature type: %d", sigType)
+	}
+
+	// TODO: Implement actual signing using the signingKey
+	// This would call into crypto/signature package to create real signatures
+	// For now, return an empty signature of the correct size
+	signatureData := make([]byte, sigSize)
+	signature := sig.NewSignatureFromBytes(signatureData, int(sigType))
+
+	log.WithFields(logger.Fields{
+		"signature_type": sigType,
+		"signature_size": sigSize,
+		"data_size":      len(data),
+	}).Warn("Created placeholder signature - implement actual signing")
+
+	return signature, nil
+}

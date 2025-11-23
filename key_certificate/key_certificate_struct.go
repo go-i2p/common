@@ -330,18 +330,24 @@ func constructECDSAP384Key(data []byte) types.SigningPublicKey {
 
 // constructEd25519Key constructs an Ed25519 signing public key from certificate data.
 // Ed25519 provides excellent security with 32-byte keys and fast verification.
+// IMPORTANT: Must properly initialize the Ed25519PublicKey slice before copying.
 func constructEd25519Key(data []byte) types.SigningPublicKey {
-	var ed25519_key ed25519.Ed25519PublicKey
-	copy(ed25519_key[:], data[KEYCERT_SPK_SIZE-KEYCERT_SIGN_ED25519_SIZE:KEYCERT_SPK_SIZE])
+	// Extract the 32-byte Ed25519 key data from the fixed position
+	keyData := data[KEYCERT_SPK_SIZE-KEYCERT_SIGN_ED25519_SIZE : KEYCERT_SPK_SIZE]
+	// Create Ed25519PublicKey from the extracted bytes (proper initialization)
+	ed25519_key := ed25519.Ed25519PublicKey(keyData)
 	log.Debug("Constructed Ed25519PublicKey")
 	return ed25519_key
 }
 
 // constructEd25519PHKey constructs an Ed25519ph (pre-hashed) signing public key from certificate data.
 // Uses the same key format as Ed25519 but with pre-hashing for efficiency.
+// IMPORTANT: Must properly initialize the Ed25519PublicKey slice before copying.
 func constructEd25519PHKey(data []byte) types.SigningPublicKey {
-	var ed25519ph_key ed25519.Ed25519PublicKey
-	copy(ed25519ph_key[:], data[KEYCERT_SPK_SIZE-KEYCERT_SIGN_ED25519PH_SIZE:KEYCERT_SPK_SIZE])
+	// Extract the 32-byte Ed25519ph key data from the fixed position
+	keyData := data[KEYCERT_SPK_SIZE-KEYCERT_SIGN_ED25519PH_SIZE : KEYCERT_SPK_SIZE]
+	// Create Ed25519PublicKey from the extracted bytes (proper initialization)
+	ed25519ph_key := ed25519.Ed25519PublicKey(keyData)
 	log.Debug("Constructed Ed25519PHPublicKey")
 	return ed25519ph_key
 }

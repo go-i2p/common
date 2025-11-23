@@ -16,6 +16,10 @@ const (
 	// = 395 bytes
 	LEASESET2_HEADER_MIN_SIZE = 395
 
+	// LEASESET2_MIN_DESTINATION_SIZE is the minimum size for a valid I2P Destination.
+	// This is 387 bytes: 384 bytes for KeysAndCert data + minimum 3 bytes for certificate.
+	LEASESET2_MIN_DESTINATION_SIZE = 387
+
 	// LEASESET2_PUBLISHED_SIZE is the size of the published timestamp field (4 bytes, seconds since epoch).
 	LEASESET2_PUBLISHED_SIZE = 4
 
