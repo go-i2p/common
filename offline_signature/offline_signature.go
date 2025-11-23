@@ -68,60 +68,117 @@ var (
 func ReadOfflineSignature(data []byte, destinationSigType uint16) (OfflineSignature, []byte, error) {
 	var offlineSig OfflineSignature
 
-	// Validate minimum length (4 bytes expires + 2 bytes sigtype)
-	if len(data) < EXPIRES_SIZE+SIGTYPE_SIZE {
-		return offlineSig, data, fmt.Errorf("%w: need at least %d bytes, got %d",
-			ErrInsufficientData, EXPIRES_SIZE+SIGTYPE_SIZE, len(data))
+	if err := validateMinimumOfflineSignatureData(len(data)); err != nil {
+		return offlineSig, data, err
 	}
 
-	// Parse expires timestamp (4 bytes, big-endian)
-	offlineSig.expires = binary.BigEndian.Uint32(data[0:4])
+	expires, sigtype, rem := parseOfflineSignatureHeader(data)
+	offlineSig.expires = expires
+	offlineSig.sigtype = sigtype
 
-	// Parse transient signature type (2 bytes, big-endian)
-	offlineSig.sigtype = binary.BigEndian.Uint16(data[4:6])
-
-	// Get transient public key size
-	transientKeySize := SigningPublicKeySize(offlineSig.sigtype)
-	if transientKeySize == 0 {
-		return offlineSig, data, fmt.Errorf("%w: transient key type %d",
-			ErrUnknownSignatureType, offlineSig.sigtype)
+	transientKeySize, err := validateTransientKeyType(sigtype)
+	if err != nil {
+		return offlineSig, data, err
 	}
 
-	// Validate we have enough data for transient public key
-	if len(data) < EXPIRES_SIZE+SIGTYPE_SIZE+transientKeySize {
-		return offlineSig, data, fmt.Errorf("%w: need %d bytes for transient key, got %d",
-			ErrInsufficientData, EXPIRES_SIZE+SIGTYPE_SIZE+transientKeySize, len(data))
+	if err := validateTransientKeyData(len(rem), transientKeySize); err != nil {
+		return offlineSig, data, err
 	}
 
-	// Extract transient public key
-	offset := EXPIRES_SIZE + SIGTYPE_SIZE
-	offlineSig.transientPublicKey = make([]byte, transientKeySize)
-	copy(offlineSig.transientPublicKey, data[offset:offset+transientKeySize])
-	offset += transientKeySize
+	transientKey, rem := extractTransientPublicKey(rem, transientKeySize)
+	offlineSig.transientPublicKey = transientKey
 
-	// Get signature size for destination's signature type
-	signatureSize := SignatureSize(destinationSigType)
-	if signatureSize == 0 {
-		return offlineSig, data, fmt.Errorf("%w: destination signature type %d",
-			ErrUnknownSignatureType, destinationSigType)
+	signatureSize, err := validateDestinationSignatureType(destinationSigType)
+	if err != nil {
+		return offlineSig, data, err
 	}
 
-	// Validate we have enough data for signature
-	if len(data) < offset+signatureSize {
-		return offlineSig, data, fmt.Errorf("%w: need %d bytes for signature, got %d",
-			ErrInsufficientData, offset+signatureSize, len(data))
+	if err := validateSignatureData(len(rem), signatureSize); err != nil {
+		return offlineSig, data, err
 	}
 
-	// Extract signature
-	offlineSig.signature = make([]byte, signatureSize)
-	copy(offlineSig.signature, data[offset:offset+signatureSize])
-	offset += signatureSize
-
-	// Store destination signature type for later validation
+	signature, remainder := extractSignature(rem, signatureSize)
+	offlineSig.signature = signature
 	offlineSig.destinationSigType = destinationSigType
 
-	// Return the parsed OfflineSignature and remaining data
-	return offlineSig, data[offset:], nil
+	return offlineSig, remainder, nil
+}
+
+// validateMinimumOfflineSignatureData validates that data has sufficient bytes for header fields.
+// Returns error if data is too short for expires and sigtype fields.
+func validateMinimumOfflineSignatureData(dataLen int) error {
+	minSize := EXPIRES_SIZE + SIGTYPE_SIZE
+	if dataLen < minSize {
+		return fmt.Errorf("%w: need at least %d bytes, got %d",
+			ErrInsufficientData, minSize, dataLen)
+	}
+	return nil
+}
+
+// parseOfflineSignatureHeader parses the expires timestamp and transient signature type from data.
+// Returns expires, sigtype, and remaining data after header extraction.
+func parseOfflineSignatureHeader(data []byte) (uint32, uint16, []byte) {
+	expires := binary.BigEndian.Uint32(data[0:4])
+	sigtype := binary.BigEndian.Uint16(data[4:6])
+	return expires, sigtype, data[EXPIRES_SIZE+SIGTYPE_SIZE:]
+}
+
+// validateTransientKeyType validates the transient signature type and returns its key size.
+// Returns error if the signature type is unknown or unsupported.
+func validateTransientKeyType(sigtype uint16) (int, error) {
+	transientKeySize := SigningPublicKeySize(sigtype)
+	if transientKeySize == 0 {
+		return 0, fmt.Errorf("%w: transient key type %d",
+			ErrUnknownSignatureType, sigtype)
+	}
+	return transientKeySize, nil
+}
+
+// validateTransientKeyData validates that sufficient data exists for the transient public key.
+// Returns error if insufficient data remains for the key.
+func validateTransientKeyData(dataLen int, transientKeySize int) error {
+	if dataLen < transientKeySize {
+		return fmt.Errorf("%w: need %d bytes for transient key, got %d",
+			ErrInsufficientData, transientKeySize, dataLen)
+	}
+	return nil
+}
+
+// extractTransientPublicKey extracts the transient public key from data.
+// Returns the key bytes and remaining data after extraction.
+func extractTransientPublicKey(data []byte, transientKeySize int) ([]byte, []byte) {
+	transientPublicKey := make([]byte, transientKeySize)
+	copy(transientPublicKey, data[:transientKeySize])
+	return transientPublicKey, data[transientKeySize:]
+}
+
+// validateDestinationSignatureType validates the destination signature type and returns its signature size.
+// Returns error if the signature type is unknown or unsupported.
+func validateDestinationSignatureType(destinationSigType uint16) (int, error) {
+	signatureSize := SignatureSize(destinationSigType)
+	if signatureSize == 0 {
+		return 0, fmt.Errorf("%w: destination signature type %d",
+			ErrUnknownSignatureType, destinationSigType)
+	}
+	return signatureSize, nil
+}
+
+// validateSignatureData validates that sufficient data exists for the signature.
+// Returns error if insufficient data remains for the signature.
+func validateSignatureData(dataLen int, signatureSize int) error {
+	if dataLen < signatureSize {
+		return fmt.Errorf("%w: need %d bytes for signature, got %d",
+			ErrInsufficientData, signatureSize, dataLen)
+	}
+	return nil
+}
+
+// extractSignature extracts the signature from data.
+// Returns the signature bytes and remaining data after extraction.
+func extractSignature(data []byte, signatureSize int) ([]byte, []byte) {
+	signature := make([]byte, signatureSize)
+	copy(signature, data[:signatureSize])
+	return signature, data[signatureSize:]
 }
 
 // NewOfflineSignature creates a new OfflineSignature from raw components.
