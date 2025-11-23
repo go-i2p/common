@@ -16,49 +16,67 @@ import (
 // If a different signature type is expected based on context, this function should be
 // modified accordingly to handle the correct signature length.
 func ReadSignature(data []byte, sigType int) (sig Signature, remainder []byte, err error) {
-	var sigLength int
-	// Determine signature length based on algorithm type
-	// Each signature algorithm has a fixed-length output that must be validated
+	sigLength, err := getSignatureLength(sigType)
+	if err != nil {
+		return
+	}
+
+	if err = validateSignatureData(data, sigLength); err != nil {
+		return
+	}
+
+	sig, remainder = extractSignatureData(data, sigType, sigLength)
+	return
+}
+
+// getSignatureLength determines the signature length based on the algorithm type.
+// Each signature algorithm has a fixed-length output that must be validated.
+// Returns an error if the signature type is unsupported.
+func getSignatureLength(sigType int) (int, error) {
 	switch sigType {
 	case SIGNATURE_TYPE_DSA_SHA1:
-		sigLength = DSA_SHA1_SIZE
+		return DSA_SHA1_SIZE, nil
 	case SIGNATURE_TYPE_ECDSA_SHA256_P256:
-		sigLength = ECDSA_SHA256_P256_SIZE
+		return ECDSA_SHA256_P256_SIZE, nil
 	case SIGNATURE_TYPE_ECDSA_SHA384_P384:
-		sigLength = ECDSA_SHA384_P384_SIZE
+		return ECDSA_SHA384_P384_SIZE, nil
 	case SIGNATURE_TYPE_ECDSA_SHA512_P521:
-		sigLength = ECDSA_SHA512_P512_SIZE
+		return ECDSA_SHA512_P512_SIZE, nil
 	case SIGNATURE_TYPE_RSA_SHA256_2048:
-		sigLength = RSA_SHA256_2048_SIZE
+		return RSA_SHA256_2048_SIZE, nil
 	case SIGNATURE_TYPE_RSA_SHA384_3072:
-		sigLength = RSA_SHA384_3072_SIZE
+		return RSA_SHA384_3072_SIZE, nil
 	case SIGNATURE_TYPE_RSA_SHA512_4096:
-		sigLength = RSA_SHA512_4096_SIZE
+		return RSA_SHA512_4096_SIZE, nil
 	case SIGNATURE_TYPE_EDDSA_SHA512_ED25519:
-		sigLength = EdDSA_SHA512_Ed25519_SIZE
+		return EdDSA_SHA512_Ed25519_SIZE, nil
 	case SIGNATURE_TYPE_EDDSA_SHA512_ED25519PH:
-		sigLength = EdDSA_SHA512_Ed25519ph_SIZE
+		return EdDSA_SHA512_Ed25519ph_SIZE, nil
 	case SIGNATURE_TYPE_REDDSA_SHA512_ED25519:
-		sigLength = RedDSA_SHA512_Ed25519_SIZE
+		return RedDSA_SHA512_Ed25519_SIZE, nil
 	default:
-		err = oops.Errorf("unsupported signature type: %d", sigType)
-		return
+		return 0, oops.Errorf("unsupported signature type: %d", sigType)
 	}
+}
 
-	// Validate that input data contains enough bytes for the signature
-	// This prevents buffer overflow and ensures data integrity during parsing
+// validateSignatureData validates that input data contains enough bytes for the signature.
+// This prevents buffer overflow and ensures data integrity during parsing.
+func validateSignatureData(data []byte, sigLength int) error {
 	if len(data) < sigLength {
-		err = oops.Errorf("insufficient data to read signature: need %d bytes, have %d", sigLength, len(data))
+		err := oops.Errorf("insufficient data to read signature: need %d bytes, have %d", sigLength, len(data))
 		log.WithError(err).Error("Failed to read Signature")
-		return
+		return err
 	}
+	return nil
+}
 
-	// Extract signature bytes and prepare remainder for further processing
-	// Creates a new Signature struct with validated data and type information
-	sig = Signature{
+// extractSignatureData extracts signature bytes and prepares remainder for further processing.
+// Creates a new Signature struct with validated data and type information.
+func extractSignatureData(data []byte, sigType int, sigLength int) (Signature, []byte) {
+	sig := Signature{
 		sigType: sigType,
 		data:    data[:sigLength],
 	}
-	remainder = data[sigLength:]
-	return
+	remainder := data[sigLength:]
+	return sig, remainder
 }
