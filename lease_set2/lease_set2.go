@@ -426,20 +426,24 @@ func parseSingleEncryptionKey(ls2 *LeaseSet2, keyIndex int, data []byte) ([]byte
 
 // parseLeases parses the Lease2 structures from the data.
 // Returns remaining data after parsing or error if validation or parsing fails.
-func parseLeases(ls2 *LeaseSet2, data []byte) ([]byte, error) {
-	if len(data) < 1 {
+// validateLeaseCountData validates that data has at least one byte for lease count.
+// Returns error if insufficient data is available.
+func validateLeaseCountData(dataLen int) error {
+	if dataLen < 1 {
 		err := oops.
 			Code("missing_lease_count").
 			Errorf("insufficient data for lease count")
 		log.WithFields(logger.Fields{
-			"at": "parseLeases",
+			"at": "validateLeaseCountData",
 		}).Error(err.Error())
-		return nil, err
+		return err
 	}
+	return nil
+}
 
-	numLeases := int(data[0])
-	data = data[1:]
-
+// validateLeaseCount validates that the lease count is within allowed limits.
+// Returns error if lease count exceeds maximum.
+func validateLeaseCount(numLeases int) error {
 	if numLeases > LEASESET2_MAX_LEASES {
 		err := oops.
 			Code("invalid_lease_count").
@@ -447,14 +451,19 @@ func parseLeases(ls2 *LeaseSet2, data []byte) ([]byte, error) {
 			With("max_allowed", LEASESET2_MAX_LEASES).
 			Errorf("invalid lease count: %d (max %d)", numLeases, LEASESET2_MAX_LEASES)
 		log.WithFields(logger.Fields{
-			"at":          "parseLeases",
+			"at":          "validateLeaseCount",
 			"num_leases":  numLeases,
 			"max_allowed": LEASESET2_MAX_LEASES,
 		}).Error(err.Error())
-		return nil, err
+		return err
 	}
+	return nil
+}
 
-	ls2.leases = make([]lease.Lease2, numLeases)
+// parseLease2Array parses an array of Lease2 objects from data.
+// Returns the parsed leases, remaining data, and any error encountered.
+func parseLease2Array(numLeases int, data []byte) ([]lease.Lease2, []byte, error) {
+	leases := make([]lease.Lease2, numLeases)
 	for i := 0; i < numLeases; i++ {
 		lease2, rem, err := lease.ReadLease2(data)
 		if err != nil {
@@ -463,19 +472,39 @@ func parseLeases(ls2 *LeaseSet2, data []byte) ([]byte, error) {
 				With("lease_index", i).
 				Wrapf(err, "failed to parse Lease2 %d", i)
 			log.WithFields(logger.Fields{
-				"at":          "parseLeases",
+				"at":          "parseLease2Array",
 				"lease_index": i,
 			}).Error(err.Error())
-			return nil, err
+			return nil, nil, err
 		}
-		ls2.leases[i] = lease2
+		leases[i] = lease2
 		data = rem
 		log.WithFields(logger.Fields{
 			"lease_index": i,
 		}).Debug("Parsed Lease2")
 	}
+	return leases, data, nil
+}
 
-	return data, nil
+func parseLeases(ls2 *LeaseSet2, data []byte) ([]byte, error) {
+	if err := validateLeaseCountData(len(data)); err != nil {
+		return nil, err
+	}
+
+	numLeases := int(data[0])
+	data = data[1:]
+
+	if err := validateLeaseCount(numLeases); err != nil {
+		return nil, err
+	}
+
+	leases, remainder, err := parseLease2Array(numLeases, data)
+	if err != nil {
+		return nil, err
+	}
+
+	ls2.leases = leases
+	return remainder, nil
 }
 
 // parseSignatureAndFinalize parses the signature and logs the successful completion.
