@@ -17,65 +17,108 @@ import (
 	"github.com/samber/oops"
 )
 
-// ReadDestinationFromLeaseSet reads the destination from lease set data.
-func ReadDestinationFromLeaseSet(data []byte) (dest destination.Destination, remainder []byte, err error) {
-	fmt.Printf("Reading Destination from LeaseSet, input_length=%d\n", len(data))
-
-	if len(data) < 387 { // Minimum size of Destination (384 keys + 3 bytes for minimum certificate)
-		err = oops.Errorf("LeaseSet data too short to contain Destination")
+// validateDestinationMinSize validates that data has minimum size for destination parsing.
+// Returns error if data is too short to contain a valid destination.
+func validateDestinationMinSize(dataLen int) error {
+	const minDestinationSize = 387
+	if dataLen < minDestinationSize {
+		err := oops.Errorf("LeaseSet data too short to contain Destination")
 		fmt.Printf("Error: %v\n", err)
-		return
+		return err
 	}
+	return nil
+}
 
-	certDataStart := 384
+// parseCertificateFromLeaseSet extracts and validates the certificate from lease set data.
+// Returns the certificate type, length, and any error encountered.
+func parseCertificateFromLeaseSet(data []byte, certDataStart int) (int, int, error) {
 	certData := data[certDataStart:]
-
 	cert, _, err := certificate.ReadCertificate(certData)
 	if err != nil {
 		fmt.Printf("Failed to read Certificate from LeaseSet: %v\n", err)
-		return
+		return 0, 0, err
 	}
 
 	kind, err := cert.Type()
 	if err != nil {
 		fmt.Printf("Error reading certificate type: %v\n", err)
-		return
+		return 0, 0, err
 	}
+
 	certLength, err := cert.Length()
 	if err != nil {
 		fmt.Printf("Failed to read Certificate Length: %v\n", err)
-		return
+		return 0, 0, err
 	}
 
-	certTotalLength := 3 + int(certLength)
+	return kind, int(certLength), nil
+}
+
+// calculateDestinationLength computes the total destination length from certificate data.
+// Returns the calculated length and logs debug information.
+func calculateDestinationLength(certDataStart int, certLength int) int {
+	certTotalLength := 3 + certLength
 	destinationLength := certDataStart + certTotalLength
 
 	fmt.Printf("Certificate details:\n")
-	fmt.Printf("  certType: %d\n", kind)
 	fmt.Printf("  certLength: %d\n", certLength)
 	fmt.Printf("  certTotalLength: %d\n", certTotalLength)
 	fmt.Printf("  destinationLength: %d\n", destinationLength)
 
-	if len(data) < destinationLength {
-		err = oops.Errorf("LeaseSet data too short to contain full Destination")
+	return destinationLength
+}
+
+// validateDestinationDataSize validates that data contains the full destination.
+// Returns error if data is too short for the calculated destination length.
+func validateDestinationDataSize(dataLen, destinationLength int) error {
+	if dataLen < destinationLength {
+		err := oops.Errorf("LeaseSet data too short to contain full Destination")
 		fmt.Printf("Error: %v\n", err)
-		return
+		return err
 	}
+	return nil
+}
 
+// extractDestinationFromData reads the destination and calculates remainder.
+// Returns the destination, remaining data, and any error encountered.
+func extractDestinationFromData(data []byte, destinationLength int) (destination.Destination, []byte, error) {
 	destinationData := data[:destinationLength]
-
 	keysAndCert, _, err := keys_and_cert.ReadKeysAndCert(destinationData)
 	if err != nil {
-		fmt.Printf("Failed to read KeysAndCert: %v\n", err) // 32 / 0 error
+		fmt.Printf("Failed to read KeysAndCert: %v\n", err)
+		return destination.Destination{}, nil, err
+	}
+
+	dest := destination.Destination{
+		KeysAndCert: keysAndCert,
+	}
+	remainder := data[destinationLength:]
+
+	return dest, remainder, nil
+}
+
+// ReadDestinationFromLeaseSet reads the destination from lease set data.
+func ReadDestinationFromLeaseSet(data []byte) (dest destination.Destination, remainder []byte, err error) {
+	fmt.Printf("Reading Destination from LeaseSet, input_length=%d\n", len(data))
+
+	if err = validateDestinationMinSize(len(data)); err != nil {
 		return
 	}
 
-	dest = destination.Destination{
-		KeysAndCert: keysAndCert,
+	const certDataStart = 384
+	kind, certLength, err := parseCertificateFromLeaseSet(data, certDataStart)
+	if err != nil {
+		return
+	}
+	fmt.Printf("  certType: %d\n", kind)
+
+	destinationLength := calculateDestinationLength(certDataStart, certLength)
+
+	if err = validateDestinationDataSize(len(data), destinationLength); err != nil {
+		return
 	}
 
-	remainder = data[destinationLength:]
-
+	dest, remainder, err = extractDestinationFromData(data, destinationLength)
 	return
 }
 
