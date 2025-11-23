@@ -138,19 +138,61 @@ func (ls2 *LeaseSet2) Signature() sig.Signature {
 func ReadLeaseSet2(data []byte) (ls2 LeaseSet2, remainder []byte, err error) {
 	log.Debug("Parsing LeaseSet2 structure")
 
+	// Parse destination and header fields
+	data, err = parseDestinationAndHeader(&ls2, data)
+	if err != nil {
+		return
+	}
+
+	// Parse optional offline signature
+	data, err = parseOfflineSignature(&ls2, data)
+	if err != nil {
+		return
+	}
+
+	// Parse options mapping
+	data, err = parseOptionsMapping(&ls2, data)
+	if err != nil {
+		return
+	}
+
+	// Parse encryption keys
+	data, err = parseEncryptionKeys(&ls2, data)
+	if err != nil {
+		return
+	}
+
+	// Parse Lease2 structures
+	data, err = parseLeases(&ls2, data)
+	if err != nil {
+		return
+	}
+
+	// Parse signature and finalize
+	remainder, err = parseSignatureAndFinalize(&ls2, data)
+	if err != nil {
+		return
+	}
+
+	return
+}
+
+// parseDestinationAndHeader validates minimum size and parses the destination and header fields.
+// Returns remaining data after parsing or error if validation or parsing fails.
+func parseDestinationAndHeader(ls2 *LeaseSet2, data []byte) ([]byte, error) {
 	// Validate minimum size
 	if len(data) < LEASESET2_MIN_SIZE {
-		err = oops.
+		err := oops.
 			Code("lease_set2_too_short").
 			With("data_length", len(data)).
 			With("minimum_required", LEASESET2_MIN_SIZE).
 			Errorf("data too short for LeaseSet2: got %d bytes, need at least %d", len(data), LEASESET2_MIN_SIZE)
 		log.WithFields(logger.Fields{
-			"at":          "ReadLeaseSet2",
+			"at":          "parseDestinationAndHeader",
 			"data_length": len(data),
 			"min_size":    LEASESET2_MIN_SIZE,
 		}).Error(err.Error())
-		return
+		return nil, err
 	}
 
 	// Parse destination
@@ -160,10 +202,10 @@ func ReadLeaseSet2(data []byte) (ls2 LeaseSet2, remainder []byte, err error) {
 			Code("destination_parse_failed").
 			Wrapf(err, "failed to parse destination in LeaseSet2")
 		log.WithFields(logger.Fields{
-			"at":     "ReadLeaseSet2",
+			"at":     "parseDestinationAndHeader",
 			"reason": "destination parse failed",
 		}).Error(err.Error())
-		return
+		return nil, err
 	}
 	ls2.destination = dest
 	data = rem
@@ -175,10 +217,10 @@ func ReadLeaseSet2(data []byte) (ls2 LeaseSet2, remainder []byte, err error) {
 			With("remaining_length", len(data)).
 			Errorf("insufficient data for LeaseSet2 header fields")
 		log.WithFields(logger.Fields{
-			"at":               "ReadLeaseSet2",
+			"at":               "parseDestinationAndHeader",
 			"remaining_length": len(data),
 		}).Error(err.Error())
-		return
+		return nil, err
 	}
 
 	// Parse published timestamp (4 bytes)
@@ -199,171 +241,202 @@ func ReadLeaseSet2(data []byte) (ls2 LeaseSet2, remainder []byte, err error) {
 		"flags":     ls2.flags,
 	}).Debug("Parsed LeaseSet2 header")
 
-	// Parse optional offline signature if flag is set
-	if ls2.HasOfflineKeys() {
-		// Get destination signature type for offline signature parsing
-		destSigType := uint16(ls2.destination.KeyCertificate.SigningPublicKeyType())
+	return data, nil
+}
 
-		offlineSig, rem, err2 := offline_signature.ReadOfflineSignature(data, destSigType)
-		if err2 != nil {
-			err = oops.
-				Code("offline_signature_parse_failed").
-				Wrapf(err2, "failed to parse offline signature in LeaseSet2")
-			log.WithFields(logger.Fields{
-				"at":     "ReadLeaseSet2",
-				"reason": "offline signature parse failed",
-			}).Error(err.Error())
-			return
-		}
-		ls2.offlineSignature = &offlineSig
-		data = rem
-		log.Debug("Parsed offline signature")
+// parseOfflineSignature parses the optional offline signature if the offline keys flag is set.
+// Returns remaining data after parsing or error if parsing fails.
+func parseOfflineSignature(ls2 *LeaseSet2, data []byte) ([]byte, error) {
+	if !ls2.HasOfflineKeys() {
+		return data, nil
 	}
 
-	// Parse options mapping
-	// Use temporary variable to avoid shadowing 'data' package name
-	dataForMapping := data
-	mapping, rem, errs := common.ReadMapping(dataForMapping)
-	if len(errs) > 0 {
+	// Get destination signature type for offline signature parsing
+	destSigType := uint16(ls2.destination.KeyCertificate.SigningPublicKeyType())
+
+	offlineSig, rem, err := offline_signature.ReadOfflineSignature(data, destSigType)
+	if err != nil {
 		err = oops.
+			Code("offline_signature_parse_failed").
+			Wrapf(err, "failed to parse offline signature in LeaseSet2")
+		log.WithFields(logger.Fields{
+			"at":     "parseOfflineSignature",
+			"reason": "offline signature parse failed",
+		}).Error(err.Error())
+		return nil, err
+	}
+	ls2.offlineSignature = &offlineSig
+	data = rem
+	log.Debug("Parsed offline signature")
+
+	return data, nil
+}
+
+// parseOptionsMapping parses the options mapping containing service record options.
+// Returns remaining data after parsing or error if parsing fails.
+func parseOptionsMapping(ls2 *LeaseSet2, data []byte) ([]byte, error) {
+	mapping, rem, errs := common.ReadMapping(data)
+	if len(errs) > 0 {
+		err := oops.
 			Code("options_parse_failed").
 			Wrapf(errs[0], "failed to parse options mapping in LeaseSet2")
 		log.WithFields(logger.Fields{
-			"at":     "ReadLeaseSet2",
+			"at":     "parseOptionsMapping",
 			"reason": "options mapping parse failed",
 		}).Error(err.Error())
-		return
+		return nil, err
 	}
 	ls2.options = mapping
-	data = rem
 	log.Debug("Parsed options mapping")
 
-	// Parse encryption keys
+	return rem, nil
+}
+
+// parseEncryptionKeys parses the encryption keys from the data.
+// Returns remaining data after parsing or error if validation or parsing fails.
+func parseEncryptionKeys(ls2 *LeaseSet2, data []byte) ([]byte, error) {
 	if len(data) < 1 {
-		err = oops.
+		err := oops.
 			Code("missing_encryption_key_count").
 			Errorf("insufficient data for encryption key count")
 		log.WithFields(logger.Fields{
-			"at": "ReadLeaseSet2",
+			"at": "parseEncryptionKeys",
 		}).Error(err.Error())
-		return
+		return nil, err
 	}
 
 	numKeys := int(data[0])
 	data = data[1:]
 
 	if numKeys < 1 || numKeys > LEASESET2_MAX_ENCRYPTION_KEYS {
-		err = oops.
+		err := oops.
 			Code("invalid_encryption_key_count").
 			With("num_keys", numKeys).
 			With("max_allowed", LEASESET2_MAX_ENCRYPTION_KEYS).
 			Errorf("invalid encryption key count: %d (must be 1-%d)", numKeys, LEASESET2_MAX_ENCRYPTION_KEYS)
 		log.WithFields(logger.Fields{
-			"at":       "ReadLeaseSet2",
+			"at":       "parseEncryptionKeys",
 			"num_keys": numKeys,
 		}).Error(err.Error())
-		return
+		return nil, err
 	}
 
 	ls2.encryptionKeys = make([]EncryptionKey, numKeys)
 	for i := 0; i < numKeys; i++ {
-		// Validate data for key type and length fields
-		if len(data) < LEASESET2_ENCRYPTION_KEY_TYPE_SIZE+LEASESET2_ENCRYPTION_KEY_LENGTH_SIZE {
-			err = oops.
-				Code("encryption_key_header_too_short").
-				With("key_index", i).
-				With("remaining_length", len(data)).
-				Errorf("insufficient data for encryption key %d header", i)
-			log.WithFields(logger.Fields{
-				"at":        "ReadLeaseSet2",
-				"key_index": i,
-			}).Error(err.Error())
-			return
+		var err error
+		data, err = parseSingleEncryptionKey(ls2, i, data)
+		if err != nil {
+			return nil, err
 		}
-
-		// Parse key type (2 bytes)
-		keyType := binary.BigEndian.Uint16(data[:LEASESET2_ENCRYPTION_KEY_TYPE_SIZE])
-		data = data[LEASESET2_ENCRYPTION_KEY_TYPE_SIZE:]
-
-		// Parse key length (2 bytes)
-		keyLen := binary.BigEndian.Uint16(data[:LEASESET2_ENCRYPTION_KEY_LENGTH_SIZE])
-		data = data[LEASESET2_ENCRYPTION_KEY_LENGTH_SIZE:]
-
-		// Validate key data length
-		if len(data) < int(keyLen) {
-			err = oops.
-				Code("encryption_key_data_too_short").
-				With("key_index", i).
-				With("required_length", keyLen).
-				With("remaining_length", len(data)).
-				Errorf("insufficient data for encryption key %d data", i)
-			log.WithFields(logger.Fields{
-				"at":        "ReadLeaseSet2",
-				"key_index": i,
-				"key_len":   keyLen,
-			}).Error(err.Error())
-			return
-		}
-
-		// Extract key data
-		keyData := make([]byte, keyLen)
-		copy(keyData, data[:keyLen])
-		data = data[keyLen:]
-
-		ls2.encryptionKeys[i] = EncryptionKey{
-			keyType: keyType,
-			keyLen:  keyLen,
-			keyData: keyData,
-		}
-
-		log.WithFields(logger.Fields{
-			"key_index": i,
-			"key_type":  keyType,
-			"key_len":   keyLen,
-		}).Debug("Parsed encryption key")
 	}
 
-	// Parse Lease2 structures
+	return data, nil
+}
+
+// parseSingleEncryptionKey parses a single encryption key at the specified index.
+// Returns remaining data after parsing or error if validation or parsing fails.
+func parseSingleEncryptionKey(ls2 *LeaseSet2, keyIndex int, data []byte) ([]byte, error) {
+	// Validate data for key type and length fields
+	if len(data) < LEASESET2_ENCRYPTION_KEY_TYPE_SIZE+LEASESET2_ENCRYPTION_KEY_LENGTH_SIZE {
+		err := oops.
+			Code("encryption_key_header_too_short").
+			With("key_index", keyIndex).
+			With("remaining_length", len(data)).
+			Errorf("insufficient data for encryption key %d header", keyIndex)
+		log.WithFields(logger.Fields{
+			"at":        "parseSingleEncryptionKey",
+			"key_index": keyIndex,
+		}).Error(err.Error())
+		return nil, err
+	}
+
+	// Parse key type (2 bytes)
+	keyType := binary.BigEndian.Uint16(data[:LEASESET2_ENCRYPTION_KEY_TYPE_SIZE])
+	data = data[LEASESET2_ENCRYPTION_KEY_TYPE_SIZE:]
+
+	// Parse key length (2 bytes)
+	keyLen := binary.BigEndian.Uint16(data[:LEASESET2_ENCRYPTION_KEY_LENGTH_SIZE])
+	data = data[LEASESET2_ENCRYPTION_KEY_LENGTH_SIZE:]
+
+	// Validate key data length
+	if len(data) < int(keyLen) {
+		err := oops.
+			Code("encryption_key_data_too_short").
+			With("key_index", keyIndex).
+			With("required_length", keyLen).
+			With("remaining_length", len(data)).
+			Errorf("insufficient data for encryption key %d data", keyIndex)
+		log.WithFields(logger.Fields{
+			"at":        "parseSingleEncryptionKey",
+			"key_index": keyIndex,
+			"key_len":   keyLen,
+		}).Error(err.Error())
+		return nil, err
+	}
+
+	// Extract key data
+	keyData := make([]byte, keyLen)
+	copy(keyData, data[:keyLen])
+	data = data[keyLen:]
+
+	ls2.encryptionKeys[keyIndex] = EncryptionKey{
+		keyType: keyType,
+		keyLen:  keyLen,
+		keyData: keyData,
+	}
+
+	log.WithFields(logger.Fields{
+		"key_index": keyIndex,
+		"key_type":  keyType,
+		"key_len":   keyLen,
+	}).Debug("Parsed encryption key")
+
+	return data, nil
+}
+
+// parseLeases parses the Lease2 structures from the data.
+// Returns remaining data after parsing or error if validation or parsing fails.
+func parseLeases(ls2 *LeaseSet2, data []byte) ([]byte, error) {
 	if len(data) < 1 {
-		err = oops.
+		err := oops.
 			Code("missing_lease_count").
 			Errorf("insufficient data for lease count")
 		log.WithFields(logger.Fields{
-			"at": "ReadLeaseSet2",
+			"at": "parseLeases",
 		}).Error(err.Error())
-		return
+		return nil, err
 	}
 
 	numLeases := int(data[0])
 	data = data[1:]
 
 	if numLeases > LEASESET2_MAX_LEASES {
-		err = oops.
+		err := oops.
 			Code("invalid_lease_count").
 			With("num_leases", numLeases).
 			With("max_allowed", LEASESET2_MAX_LEASES).
 			Errorf("invalid lease count: %d (max %d)", numLeases, LEASESET2_MAX_LEASES)
 		log.WithFields(logger.Fields{
-			"at":          "ReadLeaseSet2",
+			"at":          "parseLeases",
 			"num_leases":  numLeases,
 			"max_allowed": LEASESET2_MAX_LEASES,
 		}).Error(err.Error())
-		return
+		return nil, err
 	}
 
 	ls2.leases = make([]lease.Lease2, numLeases)
 	for i := 0; i < numLeases; i++ {
-		lease2, rem, err2 := lease.ReadLease2(data)
-		if err2 != nil {
+		lease2, rem, err := lease.ReadLease2(data)
+		if err != nil {
 			err = oops.
 				Code("lease2_parse_failed").
 				With("lease_index", i).
-				Wrapf(err2, "failed to parse Lease2 %d", i)
+				Wrapf(err, "failed to parse Lease2 %d", i)
 			log.WithFields(logger.Fields{
-				"at":          "ReadLeaseSet2",
+				"at":          "parseLeases",
 				"lease_index": i,
 			}).Error(err.Error())
-			return
+			return nil, err
 		}
 		ls2.leases[i] = lease2
 		data = rem
@@ -372,6 +445,12 @@ func ReadLeaseSet2(data []byte) (ls2 LeaseSet2, remainder []byte, err error) {
 		}).Debug("Parsed Lease2")
 	}
 
+	return data, nil
+}
+
+// parseSignatureAndFinalize parses the signature and logs the successful completion.
+// Returns remaining data after parsing or error if parsing fails.
+func parseSignatureAndFinalize(ls2 *LeaseSet2, data []byte) ([]byte, error) {
 	// Determine signature type
 	var sigType int
 	if ls2.HasOfflineKeys() && ls2.offlineSignature != nil {
@@ -389,13 +468,12 @@ func ReadLeaseSet2(data []byte) (ls2 LeaseSet2, remainder []byte, err error) {
 			Code("signature_parse_failed").
 			Wrapf(err, "failed to parse signature in LeaseSet2")
 		log.WithFields(logger.Fields{
-			"at":       "ReadLeaseSet2",
+			"at":       "parseSignatureAndFinalize",
 			"sig_type": sigType,
 		}).Error(err.Error())
-		return
+		return nil, err
 	}
 	ls2.signature = signature
-	remainder = rem
 
 	log.WithFields(logger.Fields{
 		"num_encryption_keys": len(ls2.encryptionKeys),
@@ -405,5 +483,5 @@ func ReadLeaseSet2(data []byte) (ls2 LeaseSet2, remainder []byte, err error) {
 		"is_blinded":          ls2.IsBlinded(),
 	}).Debug("Successfully parsed LeaseSet2")
 
-	return
+	return rem, nil
 }
