@@ -366,49 +366,86 @@ func parseEncryptionKeys(ls2 *LeaseSet2, data []byte) ([]byte, error) {
 // parseSingleEncryptionKey parses a single encryption key at the specified index.
 // Returns remaining data after parsing or error if validation or parsing fails.
 func parseSingleEncryptionKey(ls2 *LeaseSet2, keyIndex int, data []byte) ([]byte, error) {
-	// Validate data for key type and length fields
-	if len(data) < LEASESET2_ENCRYPTION_KEY_TYPE_SIZE+LEASESET2_ENCRYPTION_KEY_LENGTH_SIZE {
-		err := oops.
-			Code("encryption_key_header_too_short").
-			With("key_index", keyIndex).
-			With("remaining_length", len(data)).
-			Errorf("insufficient data for encryption key %d header", keyIndex)
-		log.WithFields(logger.Fields{
-			"at":        "parseSingleEncryptionKey",
-			"key_index": keyIndex,
-		}).Error(err.Error())
+	if err := validateEncryptionKeyHeaderData(len(data), keyIndex); err != nil {
 		return nil, err
 	}
 
-	// Parse key type (2 bytes)
+	keyType, keyLen, rem := extractEncryptionKeyHeader(data)
+
+	if err := validateEncryptionKeyDataLength(len(rem), keyLen, keyIndex); err != nil {
+		return nil, err
+	}
+
+	keyData, remainder := extractEncryptionKeyData(rem, keyLen)
+
+	storeEncryptionKey(ls2, keyIndex, keyType, keyLen, keyData)
+
+	return remainder, nil
+}
+
+// validateEncryptionKeyHeaderData validates that data has sufficient bytes for key type and length.
+// Returns error if data is too short for encryption key header.
+func validateEncryptionKeyHeaderData(dataLen int, keyIndex int) error {
+	requiredSize := LEASESET2_ENCRYPTION_KEY_TYPE_SIZE + LEASESET2_ENCRYPTION_KEY_LENGTH_SIZE
+	if dataLen < requiredSize {
+		err := oops.
+			Code("encryption_key_header_too_short").
+			With("key_index", keyIndex).
+			With("remaining_length", dataLen).
+			Errorf("insufficient data for encryption key %d header", keyIndex)
+		log.WithFields(logger.Fields{
+			"at":        "validateEncryptionKeyHeaderData",
+			"key_index": keyIndex,
+		}).Error(err.Error())
+		return err
+	}
+	return nil
+}
+
+// extractEncryptionKeyHeader extracts the key type and length from data.
+// Returns key type, key length, and remaining data after extraction.
+func extractEncryptionKeyHeader(data []byte) (uint16, uint16, []byte) {
 	keyType := binary.BigEndian.Uint16(data[:LEASESET2_ENCRYPTION_KEY_TYPE_SIZE])
 	data = data[LEASESET2_ENCRYPTION_KEY_TYPE_SIZE:]
 
-	// Parse key length (2 bytes)
 	keyLen := binary.BigEndian.Uint16(data[:LEASESET2_ENCRYPTION_KEY_LENGTH_SIZE])
 	data = data[LEASESET2_ENCRYPTION_KEY_LENGTH_SIZE:]
 
-	// Validate key data length
-	if len(data) < int(keyLen) {
+	return keyType, keyLen, data
+}
+
+// validateEncryptionKeyDataLength validates that data has sufficient bytes for key data.
+// Returns error if insufficient data remains for the specified key length.
+func validateEncryptionKeyDataLength(dataLen int, keyLen uint16, keyIndex int) error {
+	if dataLen < int(keyLen) {
 		err := oops.
 			Code("encryption_key_data_too_short").
 			With("key_index", keyIndex).
 			With("required_length", keyLen).
-			With("remaining_length", len(data)).
+			With("remaining_length", dataLen).
 			Errorf("insufficient data for encryption key %d data", keyIndex)
 		log.WithFields(logger.Fields{
-			"at":        "parseSingleEncryptionKey",
+			"at":        "validateEncryptionKeyDataLength",
 			"key_index": keyIndex,
 			"key_len":   keyLen,
 		}).Error(err.Error())
-		return nil, err
+		return err
 	}
+	return nil
+}
 
-	// Extract key data
+// extractEncryptionKeyData extracts the encryption key data from the byte slice.
+// Returns the key data and remaining bytes after extraction.
+func extractEncryptionKeyData(data []byte, keyLen uint16) ([]byte, []byte) {
 	keyData := make([]byte, keyLen)
 	copy(keyData, data[:keyLen])
 	data = data[keyLen:]
+	return keyData, data
+}
 
+// storeEncryptionKey stores the parsed encryption key in the LeaseSet2 structure.
+// Logs the parsed key information at debug level.
+func storeEncryptionKey(ls2 *LeaseSet2, keyIndex int, keyType uint16, keyLen uint16, keyData []byte) {
 	ls2.encryptionKeys[keyIndex] = EncryptionKey{
 		keyType: keyType,
 		keyLen:  keyLen,
@@ -420,8 +457,6 @@ func parseSingleEncryptionKey(ls2 *LeaseSet2, keyIndex int, data []byte) ([]byte
 		"key_type":  keyType,
 		"key_len":   keyLen,
 	}).Debug("Parsed encryption key")
-
-	return data, nil
 }
 
 // parseLeases parses the Lease2 structures from the data.
