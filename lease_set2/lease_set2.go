@@ -179,59 +179,70 @@ func ReadLeaseSet2(data []byte) (ls2 LeaseSet2, remainder []byte, err error) {
 
 // parseDestinationAndHeader validates minimum size and parses the destination and header fields.
 // Returns remaining data after parsing or error if validation or parsing fails.
-func parseDestinationAndHeader(ls2 *LeaseSet2, data []byte) ([]byte, error) {
-	// Validate minimum size
-	if len(data) < LEASESET2_MIN_SIZE {
+// validateLeaseSet2MinSize validates that data meets minimum LeaseSet2 size requirements.
+// Returns error if data is too short to contain a valid LeaseSet2.
+func validateLeaseSet2MinSize(dataLen int) error {
+	if dataLen < LEASESET2_MIN_SIZE {
 		err := oops.
 			Code("lease_set2_too_short").
-			With("data_length", len(data)).
+			With("data_length", dataLen).
 			With("minimum_required", LEASESET2_MIN_SIZE).
-			Errorf("data too short for LeaseSet2: got %d bytes, need at least %d", len(data), LEASESET2_MIN_SIZE)
+			Errorf("data too short for LeaseSet2: got %d bytes, need at least %d", dataLen, LEASESET2_MIN_SIZE)
 		log.WithFields(logger.Fields{
-			"at":          "parseDestinationAndHeader",
-			"data_length": len(data),
+			"at":          "validateLeaseSet2MinSize",
+			"data_length": dataLen,
 			"min_size":    LEASESET2_MIN_SIZE,
 		}).Error(err.Error())
-		return nil, err
+		return err
 	}
+	return nil
+}
 
-	// Parse destination
+// parseDestinationField parses the destination from data and updates the LeaseSet2.
+// Returns remaining data after destination or error if parsing fails.
+func parseDestinationField(ls2 *LeaseSet2, data []byte) ([]byte, error) {
 	dest, rem, err := destination.ReadDestination(data)
 	if err != nil {
 		err = oops.
 			Code("destination_parse_failed").
 			Wrapf(err, "failed to parse destination in LeaseSet2")
 		log.WithFields(logger.Fields{
-			"at":     "parseDestinationAndHeader",
+			"at":     "parseDestinationField",
 			"reason": "destination parse failed",
 		}).Error(err.Error())
 		return nil, err
 	}
 	ls2.destination = dest
-	data = rem
+	return rem, nil
+}
 
-	// Validate remaining data for header fields
-	if len(data) < LEASESET2_PUBLISHED_SIZE+LEASESET2_EXPIRES_SIZE+LEASESET2_FLAGS_SIZE {
-		err = oops.
+// validateHeaderDataSize validates that remaining data is sufficient for header fields.
+// Returns error if insufficient data remains for published, expires, and flags fields.
+func validateHeaderDataSize(dataLen int) error {
+	requiredSize := LEASESET2_PUBLISHED_SIZE + LEASESET2_EXPIRES_SIZE + LEASESET2_FLAGS_SIZE
+	if dataLen < requiredSize {
+		err := oops.
 			Code("header_too_short").
-			With("remaining_length", len(data)).
+			With("remaining_length", dataLen).
 			Errorf("insufficient data for LeaseSet2 header fields")
 		log.WithFields(logger.Fields{
-			"at":               "parseDestinationAndHeader",
-			"remaining_length": len(data),
+			"at":               "validateHeaderDataSize",
+			"remaining_length": dataLen,
 		}).Error(err.Error())
-		return nil, err
+		return err
 	}
+	return nil
+}
 
-	// Parse published timestamp (4 bytes)
+// parseHeaderFields parses published timestamp, expires offset, and flags from data.
+// Updates LeaseSet2 fields and returns remaining data after header parsing.
+func parseHeaderFields(ls2 *LeaseSet2, data []byte) []byte {
 	ls2.published = binary.BigEndian.Uint32(data[:LEASESET2_PUBLISHED_SIZE])
 	data = data[LEASESET2_PUBLISHED_SIZE:]
 
-	// Parse expires offset (2 bytes)
 	ls2.expires = binary.BigEndian.Uint16(data[:LEASESET2_EXPIRES_SIZE])
 	data = data[LEASESET2_EXPIRES_SIZE:]
 
-	// Parse flags (2 bytes)
 	ls2.flags = binary.BigEndian.Uint16(data[:LEASESET2_FLAGS_SIZE])
 	data = data[LEASESET2_FLAGS_SIZE:]
 
@@ -241,7 +252,26 @@ func parseDestinationAndHeader(ls2 *LeaseSet2, data []byte) ([]byte, error) {
 		"flags":     ls2.flags,
 	}).Debug("Parsed LeaseSet2 header")
 
-	return data, nil
+	return data
+}
+
+func parseDestinationAndHeader(ls2 *LeaseSet2, data []byte) ([]byte, error) {
+	if err := validateLeaseSet2MinSize(len(data)); err != nil {
+		return nil, err
+	}
+
+	rem, err := parseDestinationField(ls2, data)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := validateHeaderDataSize(len(rem)); err != nil {
+		return nil, err
+	}
+
+	rem = parseHeaderFields(ls2, rem)
+
+	return rem, nil
 }
 
 // parseOfflineSignature parses the optional offline signature if the offline keys flag is set.
