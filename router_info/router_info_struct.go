@@ -727,57 +727,91 @@ func logMappingWarnings() {
 }
 
 // parseRouterInfoSignature extracts signature type from certificate and reads the signature.
-func parseRouterInfoSignature(router_identity *router_identity.RouterIdentity, remainder []byte) (*signature.Signature, []byte, error) {
-	// Add debug logging for certificate inspection
+// getCertificateTypeFromIdentity extracts and validates the certificate type from router identity.
+// Returns the certificate type, certificate data, and any error encountered.
+func getCertificateTypeFromIdentity(router_identity *router_identity.RouterIdentity) (int, []byte, error) {
 	cert := router_identity.Certificate()
 	kind, err := cert.Type()
 	if err != nil {
 		log.WithFields(logger.Fields{
-			"at":     "(RouterInfo) parseRouterInfoSignature",
+			"at":     "getCertificateTypeFromIdentity",
 			"reason": "invalid certificate type",
 		}).Error("error parsing router info signature")
-		return nil, remainder, oops.Errorf("invalid certificate type: %v", err)
+		return 0, nil, oops.Errorf("invalid certificate type: %v", err)
 	}
+
 	certData, err := cert.Data()
 	if err != nil {
 		log.WithError(err).Error("Failed to read Certificate Data")
-		return nil, remainder, err
+		return 0, nil, err
 	}
+
 	log.WithFields(logger.Fields{
-		"at":            "(RouterInfo) parseRouterInfoSignature",
-		"cert_type":     kind,
-		"cert_length":   certData,
-		"remainder_len": len(remainder),
+		"at":          "getCertificateTypeFromIdentity",
+		"cert_type":   kind,
+		"cert_length": certData,
 	}).Debug("Processing certificate")
 
+	return kind, certData, nil
+}
+
+// getSignatureTypeFromCert extracts the signature type from a certificate.
+// Returns the signature type and any error encountered.
+func getSignatureTypeFromCert(cert certificate.Certificate) (int, error) {
 	sigType, err := certificate.GetSignatureTypeFromCertificate(cert)
 	if err != nil {
 		log.WithError(err).Error("Failed to get signature type from certificate")
-		return nil, remainder, oops.Errorf("certificate signature type error: %v", err)
+		return 0, oops.Errorf("certificate signature type error: %v", err)
 	}
+	return sigType, nil
+}
 
-	// Enhanced signature type validation
+// validateSignatureType validates that the signature type is within acceptable range.
+// Returns error if signature type is invalid.
+func validateSignatureType(sigType int, cert certificate.Certificate) error {
 	if sigType <= signature.SIGNATURE_TYPE_RSA_SHA256_2048 || sigType > signature.SIGNATURE_TYPE_REDDSA_SHA512_ED25519 {
 		log.WithFields(logger.Fields{
 			"sigType": sigType,
 			"cert":    cert,
 		}).Error("Invalid signature type detected")
-		return nil, remainder, oops.Errorf("invalid signature type: %d", sigType)
+		return oops.Errorf("invalid signature type: %d", sigType)
 	}
-
 	log.WithFields(logger.Fields{
 		"sigType": sigType,
 	}).Debug("Got sigType")
+	return nil
+}
 
-	signature, remainder, err := signature.NewSignature(remainder, sigType)
+// parseSignatureData parses the signature from data using the specified signature type.
+// Returns the parsed signature, remaining data, and any error encountered.
+func parseSignatureData(data []byte, sigType int) (*signature.Signature, []byte, error) {
+	sig, remainder, err := signature.NewSignature(data, sigType)
 	if err != nil {
 		log.WithFields(logger.Fields{
-			"at":       "(RouterInfo) parseRouterInfoSignature",
-			"data_len": len(remainder),
+			"at":       "parseSignatureData",
+			"data_len": len(data),
 			"reason":   "not enough data",
 		}).Error("error parsing router info")
 		return nil, remainder, oops.Errorf("error parsing router info: not enough data to read signature")
 	}
+	return sig, remainder, nil
+}
 
-	return signature, remainder, nil
+func parseRouterInfoSignature(router_identity *router_identity.RouterIdentity, remainder []byte) (*signature.Signature, []byte, error) {
+	_, _, err := getCertificateTypeFromIdentity(router_identity)
+	if err != nil {
+		return nil, remainder, err
+	}
+
+	cert := router_identity.Certificate()
+	sigType, err := getSignatureTypeFromCert(cert)
+	if err != nil {
+		return nil, remainder, err
+	}
+
+	if err := validateSignatureType(sigType, cert); err != nil {
+		return nil, remainder, err
+	}
+
+	return parseSignatureData(remainder, sigType)
 }
