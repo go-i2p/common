@@ -134,43 +134,93 @@ func ToI2PString(data string) (str I2PString, err error) {
 // The remaining bytes after the specified length are also returned.
 // Returns a list of errors that occurred during parsing.
 func ReadI2PString(data []byte) (str I2PString, remainder []byte, err error) {
-	if len(data) == 0 {
-		err = ErrZeroLength
-		log.WithError(err).Error("Passed data with len == 0")
+	if err = validateI2PStringData(data); err != nil {
 		return
 	}
+
 	log.WithFields(logger.Fields{
 		"input_length": len(data),
 	}).Debug("Reading I2PString from bytes")
-	length, _, err := NewInteger(data, 1)
+
+	length, err := parseI2PStringLength(data)
 	if err != nil {
-		log.WithError(err).Error("Failed to read I2PString length")
 		return
 	}
-	data_len := length.Int() + 1
-	if data_len > len(data) {
-		log.Errorf("I2PString length %d exceeds available data %d", data_len-1, len(data)-1)
-		err = ErrDataTooShort
-		log.WithError(err).Error("Failed to read I2PString")
-		// Return partial data consistently with other parsing functions like ReadInteger
+
+	if err = validateI2PStringDataLength(data, length); err != nil {
 		str = data
 		remainder = nil
 		return
 	}
-	str = data[:data_len]
-	remainder = data[data_len:]
-	l, err := str.Length()
-	if l != data_len-1 {
-		err = ErrLengthMismatch
-		log.WithFields(logger.Fields{
-			"expected_length": data_len - 1,
-			"actual_length":   l,
-		}).Error("I2PString length mismatch")
+
+	str, remainder = extractI2PStringData(data, length)
+
+	if err = verifyI2PStringLength(str, length); err != nil {
 		return
 	}
+
 	log.WithFields(logger.Fields{
-		"string_length":    l,
+		"string_length":    length,
 		"remainder_length": len(remainder),
 	}).Debug("Successfully read I2PString from bytes")
 	return
+}
+
+// validateI2PStringData validates that data is not empty.
+// Returns error if data has zero length.
+func validateI2PStringData(data []byte) error {
+	if len(data) == 0 {
+		err := ErrZeroLength
+		log.WithError(err).Error("Passed data with len == 0")
+		return err
+	}
+	return nil
+}
+
+// parseI2PStringLength parses the length field from the I2PString data.
+// Returns the length value and any error encountered during parsing.
+func parseI2PStringLength(data []byte) (int, error) {
+	length, _, err := NewInteger(data, 1)
+	if err != nil {
+		log.WithError(err).Error("Failed to read I2PString length")
+		return 0, err
+	}
+	return length.Int(), nil
+}
+
+// validateI2PStringDataLength validates that sufficient data exists for the specified string length.
+// Returns error if data is too short for the specified length.
+func validateI2PStringDataLength(data []byte, length int) error {
+	data_len := length + 1
+	if data_len > len(data) {
+		log.Errorf("I2PString length %d exceeds available data %d", length, len(data)-1)
+		err := ErrDataTooShort
+		log.WithError(err).Error("Failed to read I2PString")
+		return err
+	}
+	return nil
+}
+
+// extractI2PStringData extracts the I2PString and remainder from data.
+// Returns the string bytes and remaining data after extraction.
+func extractI2PStringData(data []byte, length int) (I2PString, []byte) {
+	data_len := length + 1
+	str := data[:data_len]
+	remainder := data[data_len:]
+	return str, remainder
+}
+
+// verifyI2PStringLength verifies that the extracted string's length matches the expected length.
+// Returns error if there is a length mismatch.
+func verifyI2PStringLength(str I2PString, expectedLength int) error {
+	l, err := str.Length()
+	if l != expectedLength {
+		err = ErrLengthMismatch
+		log.WithFields(logger.Fields{
+			"expected_length": expectedLength,
+			"actual_length":   l,
+		}).Error("I2PString length mismatch")
+		return err
+	}
+	return nil
 }
