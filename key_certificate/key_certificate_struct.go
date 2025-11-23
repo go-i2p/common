@@ -59,57 +59,88 @@ func NewKeyCertificate(bytes []byte) (key_certificate *KeyCertificate, remainder
 		"input_length": len(bytes),
 	}).Debug("Creating new keyCertificate")
 
-	// Parse the base certificate structure first to extract type and payload
-	// This validates the certificate header and extracts the key-specific data
-	var cert certificate.Certificate
-	cert, remainder, err = certificate.ReadCertificate(bytes)
+	cert, remainder, err := parseBaseCertificate(bytes)
 	if err != nil {
-		log.WithError(err).Error("Failed to read Certificate")
-		return
-	}
-
-	// Validate that this is specifically a Key Certificate type
-	// Only CERT_KEY type certificates can be converted to KeyCertificate structures
-	kind, err := cert.Type()
-	if err != nil {
-		log.WithFields(logger.Fields{"at": "NewKeyCertificate", "reason": "invalid certificate type"}).Error(err.Error())
 		return nil, remainder, err
 	}
-	if kind != certificate.CERT_KEY {
-		return nil, remainder, oops.Errorf("invalid certificate type: %d", kind)
+
+	if err = validateKeyCertificateType(cert); err != nil {
+		return nil, remainder, err
 	}
 
-	// Ensure the certificate payload contains sufficient data for key type fields
-	// Key certificates require at least 4 bytes: 2 for signing key type, 2 for crypto key type
 	certData, err := cert.Data()
 	if err != nil {
 		return nil, remainder, err
 	}
+
+	if err = validateKeyCertificateDataLength(certData); err != nil {
+		return nil, remainder, err
+	}
+
+	spkType, cpkType := extractKeyTypes(certData)
+
+	key_certificate = buildKeyCertificate(cert, spkType, cpkType)
+
+	return
+}
+
+// parseBaseCertificate reads and validates the base certificate structure.
+// Returns the parsed certificate, remaining bytes, and any error encountered.
+func parseBaseCertificate(bytes []byte) (certificate.Certificate, []byte, error) {
+	cert, remainder, err := certificate.ReadCertificate(bytes)
+	if err != nil {
+		log.WithError(err).Error("Failed to read Certificate")
+		return cert, remainder, err
+	}
+	return cert, remainder, nil
+}
+
+// validateKeyCertificateType validates that the certificate is specifically a Key Certificate type.
+// Only CERT_KEY type certificates can be converted to KeyCertificate structures.
+func validateKeyCertificateType(cert certificate.Certificate) error {
+	kind, err := cert.Type()
+	if err != nil {
+		log.WithFields(logger.Fields{"at": "validateKeyCertificateType", "reason": "invalid certificate type"}).Error(err.Error())
+		return err
+	}
+	if kind != certificate.CERT_KEY {
+		return oops.Errorf("invalid certificate type: %d", kind)
+	}
+	return nil
+}
+
+// validateKeyCertificateDataLength ensures the certificate payload contains sufficient data for key type fields.
+// Key certificates require at least 4 bytes: 2 for signing key type, 2 for crypto key type.
+func validateKeyCertificateDataLength(certData []byte) error {
 	if len(certData) < 4 {
-		return nil, remainder, oops.Errorf("key certificate data too short")
+		return oops.Errorf("key certificate data too short")
 	}
 	log.Println("Certificate Data in NewKeyCertificate: ", certData[0:2], certData[2:4])
+	return nil
+}
 
-	// Extract the signing public key type from the first 2 bytes of certificate data
-	// This determines which signature algorithm will be used for this certificate
+// extractKeyTypes extracts the signing public key type and crypto public key type from certificate data.
+// Returns the signing key type and crypto key type as I2P Integers.
+func extractKeyTypes(certData []byte) (data.Integer, data.Integer) {
 	spkType, _ := data.ReadInteger(certData[0:2], 2)
-	// Extract the crypto public key type from bytes 2-3 of certificate data
-	// This determines which encryption algorithm will be used for this certificate
 	cpkType, _ := data.ReadInteger(certData[2:4], 2)
-	key_certificate = &KeyCertificate{
+	log.Println("cpkType in NewKeyCertificate: ", cpkType.Int(), "spkType in NewKeyCertificate: ", spkType.Int())
+	return spkType, cpkType
+}
+
+// buildKeyCertificate constructs a KeyCertificate from the parsed components.
+// Returns a fully initialized KeyCertificate with logging of the created key types.
+func buildKeyCertificate(cert certificate.Certificate, spkType, cpkType data.Integer) *KeyCertificate {
+	key_certificate := &KeyCertificate{
 		Certificate: cert,
 		CpkType:     cpkType,
 		SpkType:     spkType,
 	}
-	log.Println("cpkType in NewKeyCertificate: ", cpkType.Int(), "spkType in NewKeyCertificate: ", spkType.Int())
-
 	log.WithFields(logger.Fields{
-		"spk_type":         key_certificate.SpkType.Int(),
-		"cpk_type":         key_certificate.CpkType.Int(),
-		"remainder_length": len(remainder),
+		"spk_type": key_certificate.SpkType.Int(),
+		"cpk_type": key_certificate.CpkType.Int(),
 	}).Debug("Successfully created new keyCertificate")
-
-	return
+	return key_certificate
 }
 
 // KeyCertificateFromCertificate creates a KeyCertificate from an existing Certificate
