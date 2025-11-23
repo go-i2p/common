@@ -116,6 +116,90 @@ func (ls2 *LeaseSet2) Signature() sig.Signature {
 	return ls2.signature
 }
 
+// Bytes returns the complete LeaseSet2 structure as a byte array.
+// This serializes all components in the proper order according to I2P specification 0.9.67.
+//
+// The serialization includes:
+//  1. Destination (387+ bytes)
+//  2. Published timestamp (4 bytes)
+//  3. Expires offset (2 bytes)
+//  4. Flags (2 bytes)
+//  5. Offline signature if present (variable length)
+//  6. Options mapping (2+ bytes)
+//  7. Encryption keys with count (5+ bytes per key)
+//  8. Lease2 structures with count (40 bytes per lease)
+//  9. Signature (variable length)
+//
+// Returns the serialized LeaseSet2 or error if serialization fails.
+func (ls2 *LeaseSet2) Bytes() ([]byte, error) {
+	result := make([]byte, 0)
+
+	// Add destination
+	result = append(result, ls2.destination.KeysAndCert.Bytes()...)
+
+	// Add published timestamp (4 bytes)
+	publishedBytes := make([]byte, 4)
+	binary.BigEndian.PutUint32(publishedBytes, ls2.published)
+	result = append(result, publishedBytes...)
+
+	// Add expires offset (2 bytes)
+	expiresBytes := make([]byte, 2)
+	binary.BigEndian.PutUint16(expiresBytes, ls2.expires)
+	result = append(result, expiresBytes...)
+
+	// Add flags (2 bytes)
+	flagsBytes := make([]byte, 2)
+	binary.BigEndian.PutUint16(flagsBytes, ls2.flags)
+	result = append(result, flagsBytes...)
+
+	// Add offline signature if present
+	if ls2.offlineSignature != nil {
+		result = append(result, ls2.offlineSignature.Bytes()...)
+	}
+
+	// Add options mapping
+	if len(ls2.options.Values()) > 0 {
+		result = append(result, ls2.options.Data()...)
+	} else {
+		// Empty mapping (2 bytes of zero)
+		result = append(result, 0x00, 0x00)
+	}
+
+	// Add encryption keys
+	result = append(result, byte(len(ls2.encryptionKeys)))
+	for _, key := range ls2.encryptionKeys {
+		keyTypeBytes := make([]byte, 2)
+		binary.BigEndian.PutUint16(keyTypeBytes, key.KeyType)
+		result = append(result, keyTypeBytes...)
+
+		keyLenBytes := make([]byte, 2)
+		binary.BigEndian.PutUint16(keyLenBytes, key.KeyLen)
+		result = append(result, keyLenBytes...)
+
+		result = append(result, key.KeyData...)
+	}
+
+	// Add leases
+	result = append(result, byte(len(ls2.leases)))
+	for _, l := range ls2.leases {
+		result = append(result, l.Bytes()...)
+	}
+
+	// Add signature
+	result = append(result, ls2.signature.Bytes()...)
+
+	log.WithFields(logger.Fields{
+		"total_size":       len(result),
+		"destination_size": len(ls2.destination.KeysAndCert.Bytes()),
+		"encryption_keys":  len(ls2.encryptionKeys),
+		"leases":           len(ls2.leases),
+		"has_offline_sig":  ls2.offlineSignature != nil,
+		"options_count":    len(ls2.options.Values()),
+	}).Debug("Serialized LeaseSet2 to bytes")
+
+	return result, nil
+}
+
 // ReadLeaseSet2 parses a LeaseSet2 structure from the provided byte slice.
 // Returns the parsed LeaseSet2, remaining bytes, and any error encountered.
 //

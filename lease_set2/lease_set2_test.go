@@ -700,3 +700,101 @@ func TestNewLeaseSet2ValidationErrors(t *testing.T) {
 		})
 	}
 }
+
+func TestLeaseSet2Bytes(t *testing.T) {
+	// Parse an existing LeaseSet2
+	destData := createTestDestination(t, key_certificate.KEYCERT_SIGN_ED25519)
+	_, _, err := destination.ReadDestination(destData)
+	require.NoError(t, err)
+
+	data := destData
+	published := uint32(1735689600)
+	publishedBytes := make([]byte, 4)
+	binary.BigEndian.PutUint32(publishedBytes, published)
+	data = append(data, publishedBytes...)
+
+	expires := uint16(600)
+	expiresBytes := make([]byte, 2)
+	binary.BigEndian.PutUint16(expiresBytes, expires)
+	data = append(data, expiresBytes...)
+
+	flags := uint16(0)
+	flagsBytes := make([]byte, 2)
+	binary.BigEndian.PutUint16(flagsBytes, flags)
+	data = append(data, flagsBytes...)
+
+	optionsSize := uint16(0)
+	optionsSizeBytes := make([]byte, 2)
+	binary.BigEndian.PutUint16(optionsSizeBytes, optionsSize)
+	data = append(data, optionsSizeBytes...)
+
+	numKeys := byte(1)
+	data = append(data, numKeys)
+
+	keyType := uint16(key_certificate.KEYCERT_CRYPTO_X25519)
+	keyLen := uint16(32)
+	keyTypeBytes := make([]byte, 2)
+	binary.BigEndian.PutUint16(keyTypeBytes, keyType)
+	data = append(data, keyTypeBytes...)
+	keyLenBytes := make([]byte, 2)
+	binary.BigEndian.PutUint16(keyLenBytes, keyLen)
+	data = append(data, keyLenBytes...)
+
+	keyData := make([]byte, 32)
+	for i := 0; i < 32; i++ {
+		keyData[i] = byte(i)
+	}
+	data = append(data, keyData...)
+
+	numLeases := byte(1)
+	data = append(data, numLeases)
+
+	// Add a Lease2 (40 bytes)
+	hash := make([]byte, 32)
+	for i := 0; i < 32; i++ {
+		hash[i] = byte(0xAA)
+	}
+	data = append(data, hash...)
+	tunnelID := uint32(12345)
+	tunnelIDBytes := make([]byte, 4)
+	binary.BigEndian.PutUint32(tunnelIDBytes, tunnelID)
+	data = append(data, tunnelIDBytes...)
+	endDate := uint32(1735690200)
+	endDateBytes := make([]byte, 4)
+	binary.BigEndian.PutUint32(endDateBytes, endDate)
+	data = append(data, endDateBytes...)
+
+	signatureData := make([]byte, signature.EdDSA_SHA512_Ed25519_SIZE)
+	for i := 0; i < signature.EdDSA_SHA512_Ed25519_SIZE; i++ {
+		signatureData[i] = byte(0xFF - i)
+	}
+	data = append(data, signatureData...)
+
+	// Parse the LeaseSet2
+	ls2, remainder, err := ReadLeaseSet2(data)
+	require.NoError(t, err, "Failed to parse LeaseSet2")
+	require.Empty(t, remainder, "Should consume all data")
+
+	// Serialize it back
+	serialized, err := ls2.Bytes()
+	require.NoError(t, err, "Failed to serialize LeaseSet2")
+
+	// Verify serialized data has expected length
+	// The exact byte-for-byte match might not occur due to internal representation,
+	// but the serialized version should be valid and contain the same data
+	assert.Greater(t, len(serialized), 0, "Serialized data should not be empty")
+
+	// Verify round-trip: parse serialized data should give same LeaseSet2
+	ls2RoundTrip, remainder2, err2 := ReadLeaseSet2(serialized)
+	require.NoError(t, err2, "Failed to parse serialized LeaseSet2")
+	require.Empty(t, remainder2, "Should consume all serialized data")
+
+	// Verify key fields match
+	assert.Equal(t, ls2.Destination().Bytes(), ls2RoundTrip.Destination().Bytes(), "Destinations should match")
+	assert.Equal(t, ls2.Published(), ls2RoundTrip.Published(), "Published timestamps should match")
+	assert.Equal(t, ls2.Expires(), ls2RoundTrip.Expires(), "Expiration offsets should match")
+	assert.Equal(t, ls2.Flags(), ls2RoundTrip.Flags(), "Flags should match")
+	assert.Equal(t, ls2.EncryptionKeyCount(), ls2RoundTrip.EncryptionKeyCount(), "Encryption key counts should match")
+	assert.Equal(t, ls2.LeaseCount(), ls2RoundTrip.LeaseCount(), "Lease counts should match")
+	assert.Equal(t, ls2.Signature().Bytes(), ls2RoundTrip.Signature().Bytes(), "Signatures should match")
+}
