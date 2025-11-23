@@ -144,7 +144,7 @@ type LeaseSet2 struct {
 // EncryptionKey represents a single encryption key entry in LeaseSet2.
 // Each entry contains the key type, length, and the actual key data.
 type EncryptionKey struct {
-	keyType uint16 // Encryption key type (2 bytes) - see key_certificate constants
-	keyLen  uint16 // Length of the key data (2 bytes)
-	keyData []byte // Encryption key data (keyLen bytes)
+	KeyType uint16 // Encryption key type (2 bytes) - see key_certificate constants
+	KeyLen  uint16 // Length of the key data (2 bytes)
+	KeyData []byte // Encryption key data (keyLen bytes)
 }

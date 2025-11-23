@@ -576,9 +576,9 @@ func TestNewLeaseSet2(t *testing.T) {
 	}
 
 	encKey := EncryptionKey{
-		keyType: key_certificate.KEYCERT_CRYPTO_X25519,
-		keyLen:  32,
-		keyData: make([]byte, 32),
+		KeyType: key_certificate.KEYCERT_CRYPTO_X25519,
+		KeyLen:  32,
+		KeyData: make([]byte, 32),
 	}
 
 	hash := make([]byte, 32)
@@ -626,9 +626,9 @@ func TestNewLeaseSet2ValidationErrors(t *testing.T) {
 	require.NoError(t, err)
 
 	encKey := EncryptionKey{
-		keyType: key_certificate.KEYCERT_CRYPTO_X25519,
-		keyLen:  32,
-		keyData: make([]byte, 32),
+		KeyType: key_certificate.KEYCERT_CRYPTO_X25519,
+		KeyLen:  32,
+		KeyData: make([]byte, 32),
 	}
 
 	testCases := []struct {

@@ -447,9 +447,9 @@ func extractEncryptionKeyData(data []byte, keyLen uint16) ([]byte, []byte) {
 // Logs the parsed key information at debug level.
 func storeEncryptionKey(ls2 *LeaseSet2, keyIndex int, keyType uint16, keyLen uint16, keyData []byte) {
 	ls2.encryptionKeys[keyIndex] = EncryptionKey{
-		keyType: keyType,
-		keyLen:  keyLen,
-		keyData: keyData,
+		KeyType: keyType,
+		KeyLen:  keyLen,
+		KeyData: keyData,
 	}
 
 	log.WithFields(logger.Fields{
@@ -778,14 +778,14 @@ func serializeLeaseSet2ForSigning(
 	data = append(data, byte(len(encryptionKeys)))
 	for _, key := range encryptionKeys {
 		keyTypeBytes := make([]byte, 2)
-		binary.BigEndian.PutUint16(keyTypeBytes, key.keyType)
+		binary.BigEndian.PutUint16(keyTypeBytes, key.KeyType)
 		data = append(data, keyTypeBytes...)
 
 		keyLenBytes := make([]byte, 2)
-		binary.BigEndian.PutUint16(keyLenBytes, key.keyLen)
+		binary.BigEndian.PutUint16(keyLenBytes, key.KeyLen)
 		data = append(data, keyLenBytes...)
 
-		data = append(data, key.keyData...)
+		data = append(data, key.KeyData...)
 	}
 
 	// Add leases
