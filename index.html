@@ -13,7 +13,7 @@
         <a href="index.html">go-i2p/common</a>
       </h2>
       <div class="repo-meta">
-        📝 136 commits
+        📝 137 commits
          • 📜 MIT License
       </div>
     </div>
@@ -44,7 +44,7 @@
       <div class="repo-stats">
         
         <div class="repo-stat">
-          <span>📝</span> <span>136 commits</span>
+          <span>📝</span> <span>137 commits</span>
         </div>
         
         
@@ -80,6 +80,135 @@ go get github.com/go-i2p/common
 <hr>
 
 <h2 id="usage">Usage</h2>
+
+<h3 id="creating-key-certificates-new-simplified-api">Creating Key Certificates (New Simplified API)</h3>
+
+<p>The library now provides simplified constructors for common key certificate types:</p>
+
+<pre><code class="language-go">package main
+
+import (
+    &quot;fmt&quot;
+    &quot;github.com/go-i2p/common/key_certificate&quot;
+)
+
+func main() {
+    // Modern Ed25519/X25519 key certificate (recommended)
+    keyCert, err := key_certificate.NewEd25519X25519KeyCertificate()
+    if err != nil {
+        fmt.Printf(&quot;Error: %v\n&quot;, err)
+        return
+    }
+    
+    fmt.Printf(&quot;Signing type: %d\n&quot;, keyCert.SigningPublicKeyType())
+    fmt.Printf(&quot;Crypto type: %d\n&quot;, keyCert.PublicKeyType())
+    
+    // Or create with custom key types
+    keyCert, err = key_certificate.NewKeyCertificateWithTypes(
+        key_certificate.KEYCERT_SIGN_ED25519,
+        key_certificate.KEYCERT_CRYPTO_X25519,
+    )
+}
+</code></pre>
+
+<h3 id="getting-key-sizes-without-object-creation">Getting Key Sizes Without Object Creation</h3>
+
+<p>Query key sizes for padding calculations without creating certificate objects:</p>
+
+<pre><code class="language-go">package main
+
+import (
+    &quot;fmt&quot;
+    &quot;github.com/go-i2p/common/key_certificate&quot;
+    &quot;github.com/go-i2p/common/keys_and_cert&quot;
+)
+
+func main() {
+    // Get size information for key types
+    sizes, err := key_certificate.GetKeySizes(
+        key_certificate.KEYCERT_SIGN_ED25519,
+        key_certificate.KEYCERT_CRYPTO_X25519,
+    )
+    if err != nil {
+        fmt.Printf(&quot;Error: %v\n&quot;, err)
+        return
+    }
+    
+    // Calculate padding size
+    paddingSize := keys_and_cert.KEYS_AND_CERT_DATA_SIZE - 
+        (sizes.CryptoPublicKeySize + sizes.SigningPublicKeySize)
+    
+    fmt.Printf(&quot;Signature size: %d bytes\n&quot;, sizes.SignatureSize)
+    fmt.Printf(&quot;Signing public key size: %d bytes\n&quot;, sizes.SigningPublicKeySize)
+    fmt.Printf(&quot;Crypto public key size: %d bytes\n&quot;, sizes.CryptoPublicKeySize)
+    fmt.Printf(&quot;Required padding: %d bytes\n&quot;, paddingSize)
+}
+</code></pre>
+
+<h3 id="using-the-certificate-builder-pattern">Using the Certificate Builder Pattern</h3>
+
+<p>For complex certificate construction scenarios:</p>
+
+<pre><code class="language-go">package main
+
+import (
+    &quot;fmt&quot;
+    &quot;github.com/go-i2p/common/certificate&quot;
+)
+
+func main() {
+    // Build a key certificate using fluent interface
+    cert, err := certificate.NewCertificateBuilder().
+        WithKeyTypes(certificate.KEYCERT_SIGN_ED25519, certificate.KEYCERT_CRYPTO_X25519).
+        Build()
+    if err != nil {
+        fmt.Printf(&quot;Error: %v\n&quot;, err)
+        return
+    }
+    
+    // Or build a certificate with custom payload
+    customPayload := []byte{0x01, 0x02, 0x03, 0x04}
+    cert, err = certificate.NewCertificateBuilder().
+        WithType(certificate.CERT_SIGNED).
+        WithPayload(customPayload).
+        Build()
+}
+</code></pre>
+
+<h3 id="simple-integer-encoding">Simple Integer Encoding</h3>
+
+<p>Use the new encoding utilities for cleaner binary encoding:</p>
+
+<pre><code class="language-go">package main
+
+import (
+    &quot;fmt&quot;
+    &quot;github.com/go-i2p/common/data&quot;
+)
+
+func main() {
+    // Encode integers without error handling (for valid values)
+    signingType := data.EncodeUint16(7)  // Ed25519
+    cryptoType := data.EncodeUint16(4)   // X25519
+    
+    fmt.Printf(&quot;Signing type bytes: %v\n&quot;, signingType[:])
+    fmt.Printf(&quot;Crypto type bytes: %v\n&quot;, cryptoType[:])
+    
+    // Decode back to integers
+    sigValue := data.DecodeUint16(signingType)
+    cryptoValue := data.DecodeUint16(cryptoType)
+    
+    fmt.Printf(&quot;Decoded signing: %d, crypto: %d\n&quot;, sigValue, cryptoValue)
+    
+    // For variable-length encoding with validation
+    bytes, err := data.EncodeIntN(1234, 2)
+    if err != nil {
+        fmt.Printf(&quot;Error: %v\n&quot;, err)
+        return
+    }
+    fmt.Printf(&quot;Encoded bytes: %v\n&quot;, bytes)
+}
+</code></pre>
 
 <h3 id="basic-certificate-parsing">Basic Certificate Parsing</h3>
 
@@ -255,7 +384,7 @@ go test -fuzz=FuzzCertificate ./certificate/
                 eyedeekay
               </div>
               <div class="contributor-commits">
-                136 commits
+                137 commits
               </div>
             </div>
           </div>
@@ -267,7 +396,7 @@ go test -fuzz=FuzzCertificate ./certificate/
     </main>
     
     <footer class="page-footer">
-      <p>Generated on 2025-11-23 17:11:00 • <a href="https://github.com/go-i2p/common" target="_blank">View on GitHub</a></p>
+      <p>Generated on 2025-11-23 18:03:16 • <a href="https://github.com/go-i2p/common" target="_blank">View on GitHub</a></p>
     </footer>
   </div>
 </body>
