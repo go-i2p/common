@@ -224,67 +224,112 @@ func (keys_and_cert *KeysAndCert) Certificate() (cert certificate.Certificate) {
 
 // ReadKeysAndCert creates a new *KeysAndCert from []byte using ReadKeysAndCert.
 // Returns a pointer to KeysAndCert unlike ReadKeysAndCert.
-func ReadKeysAndCert(data []byte) (*KeysAndCert, []byte, error) {
-	log.WithFields(logger.Fields{
-		"input_length": len(data),
-	}).Debug("Reading KeysAndCert from data")
-	var err error
-	var remainder []byte
-	var keys_and_cert KeysAndCert
-
-	data_len := len(data)
-	if data_len < KEYS_AND_CERT_MIN_SIZE {
+// validateKeysAndCertDataSize validates that data meets minimum KeysAndCert size requirements.
+// Returns error if data is too short to contain a valid KeysAndCert structure.
+func validateKeysAndCertDataSize(dataLen int) error {
+	if dataLen < KEYS_AND_CERT_MIN_SIZE {
 		log.WithFields(logger.Fields{
-			"at":           "ReadKeysAndCert",
-			"data_len":     data_len,
+			"at":           "validateKeysAndCertDataSize",
+			"data_len":     dataLen,
 			"required_len": KEYS_AND_CERT_MIN_SIZE,
 			"reason":       "not enough data",
 		}).Error("error parsing keys and cert")
-		err = oops.Errorf("error parsing KeysAndCert: data is smaller than minimum valid size")
-		return &keys_and_cert, remainder, err
+		return oops.Errorf("error parsing KeysAndCert: data is smaller than minimum valid size")
 	}
+	return nil
+}
 
-	keys_and_cert.KeyCertificate, remainder, err = key_certificate.NewKeyCertificate(data[KEYS_AND_CERT_DATA_SIZE:])
+// parseKeyCertificateFromData parses a KeyCertificate from data at the specified offset.
+// Returns the parsed certificate, remaining data, and any error encountered.
+func parseKeyCertificateFromData(data []byte, offset int) (*key_certificate.KeyCertificate, []byte, error) {
+	keyCert, remainder, err := key_certificate.NewKeyCertificate(data[offset:])
 	if err != nil {
 		log.WithError(err).Error("Failed to create keyCertificate")
-		return &keys_and_cert, remainder, err
+		return nil, remainder, err
 	}
+	return keyCert, remainder, nil
+}
 
-	// Get the actual key sizes from the certificate
-	pubKeySize := keys_and_cert.KeyCertificate.CryptoSize()
-	sigKeySize := keys_and_cert.KeyCertificate.SignatureSize()
-
-	// Construct public key
-	keys_and_cert.ReceivingPublic, err = keys_and_cert.KeyCertificate.ConstructPublicKey(data[:pubKeySize])
+// constructPublicKeyFromCert constructs a public key using data and the key certificate.
+// Returns the constructed public key or error if construction fails.
+func constructPublicKeyFromCert(keyCert *key_certificate.KeyCertificate, data []byte) (types.ReceivingPublicKey, error) {
+	pubKeySize := keyCert.CryptoSize()
+	pubKey, err := keyCert.ConstructPublicKey(data[:pubKeySize])
 	if err != nil {
 		log.WithError(err).Error("Failed to construct publicKey")
-		return &keys_and_cert, remainder, err
+		return nil, err
 	}
+	return pubKey, nil
+}
 
-	// Calculate padding size and extract padding
+// extractPaddingFromData extracts padding bytes based on key sizes.
+// Returns padding slice or nil if no padding is required.
+func extractPaddingFromData(data []byte, pubKeySize, sigKeySize int) []byte {
 	paddingSize := KEYS_AND_CERT_DATA_SIZE - pubKeySize - sigKeySize
 	if paddingSize > 0 {
-		keys_and_cert.Padding = make([]byte, paddingSize)
-		copy(keys_and_cert.Padding, data[pubKeySize:pubKeySize+paddingSize])
+		padding := make([]byte, paddingSize)
+		copy(padding, data[pubKeySize:pubKeySize+paddingSize])
+		return padding
 	}
+	return nil
+}
 
-	// Construct signing public key
-	keys_and_cert.SigningPublic, err = keys_and_cert.KeyCertificate.ConstructSigningPublicKey(
+// constructSigningKeyFromCert constructs a signing public key using data and the key certificate.
+// Returns the constructed signing key or error if construction fails.
+func constructSigningKeyFromCert(keyCert *key_certificate.KeyCertificate, data []byte, sigKeySize int) (types.SigningPublicKey, error) {
+	sigKey, err := keyCert.ConstructSigningPublicKey(
 		data[KEYS_AND_CERT_DATA_SIZE-sigKeySize : KEYS_AND_CERT_DATA_SIZE],
 	)
 	if err != nil {
 		log.WithError(err).Error("Failed to construct signingPublicKey")
-		return &keys_and_cert, remainder, err
+		return nil, err
+	}
+	return sigKey, nil
+}
+
+func ReadKeysAndCert(data []byte) (*KeysAndCert, []byte, error) {
+	log.WithFields(logger.Fields{
+		"input_length": len(data),
+	}).Debug("Reading KeysAndCert from data")
+
+	if err := validateKeysAndCertDataSize(len(data)); err != nil {
+		return &KeysAndCert{}, nil, err
+	}
+
+	keyCert, remainder, err := parseKeyCertificateFromData(data, KEYS_AND_CERT_DATA_SIZE)
+	if err != nil {
+		return &KeysAndCert{}, remainder, err
+	}
+
+	pubKey, err := constructPublicKeyFromCert(keyCert, data)
+	if err != nil {
+		return &KeysAndCert{KeyCertificate: keyCert}, remainder, err
+	}
+
+	pubKeySize := keyCert.CryptoSize()
+	sigKeySize := keyCert.SignatureSize()
+	padding := extractPaddingFromData(data, pubKeySize, sigKeySize)
+
+	sigKey, err := constructSigningKeyFromCert(keyCert, data, sigKeySize)
+	if err != nil {
+		return &KeysAndCert{KeyCertificate: keyCert, ReceivingPublic: pubKey, Padding: padding}, remainder, err
+	}
+
+	keysAndCert := &KeysAndCert{
+		KeyCertificate:  keyCert,
+		ReceivingPublic: pubKey,
+		Padding:         padding,
+		SigningPublic:   sigKey,
 	}
 
 	log.WithFields(logger.Fields{
-		"public_key_type":         keys_and_cert.KeyCertificate.PublicKeyType(),
-		"signing_public_key_type": keys_and_cert.KeyCertificate.SigningPublicKeyType(),
-		"padding_length":          len(keys_and_cert.Padding),
+		"public_key_type":         keyCert.PublicKeyType(),
+		"signing_public_key_type": keyCert.SigningPublicKeyType(),
+		"padding_length":          len(padding),
 		"remainder_length":        len(remainder),
 	}).Debug("Successfully read KeysAndCert")
 
-	return &keys_and_cert, remainder, err
+	return keysAndCert, remainder, nil
 }
 
 // validateMinimumDataLength validates that the data has sufficient length for parsing.
