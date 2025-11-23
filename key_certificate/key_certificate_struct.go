@@ -277,6 +277,66 @@ func (keyCertificate *KeyCertificate) SigningPublicKeySize() int {
 	}
 }
 
+// validateSigningKeyData validates that sufficient data is available for signing key construction.
+// Returns an error if the data length is insufficient for the required signature size.
+func validateSigningKeyData(dataLen, requiredSize int) error {
+	if dataLen < requiredSize {
+		log.WithFields(logger.Fields{
+			"at":           "validateSigningKeyData",
+			"data_len":     dataLen,
+			"required_len": KEYCERT_SPK_SIZE,
+			"reason":       "not enough data",
+		}).Error("error constructing signing public key")
+		return oops.Errorf("error constructing signing public key: not enough data")
+	}
+	return nil
+}
+
+// constructDSAKey constructs a DSA-SHA1 signing public key from certificate data.
+// Legacy DSA-SHA1 signing key construction for backwards compatibility.
+func constructDSAKey(data []byte) types.SigningPublicKey {
+	var dsa_key dsa.DSAPublicKey
+	copy(dsa_key[:], data[KEYCERT_SPK_SIZE-KEYCERT_SIGN_DSA_SHA1_SIZE:KEYCERT_SPK_SIZE])
+	log.Debug("Constructed DSAPublicKey")
+	return dsa_key
+}
+
+// constructECDSAP256Key constructs an ECDSA P-256 signing public key from certificate data.
+// Provides 128-bit security level with compact 64-byte keys.
+func constructECDSAP256Key(data []byte) types.SigningPublicKey {
+	var ec_p256_key ecdsa.ECP256PublicKey
+	copy(ec_p256_key[:], data[KEYCERT_SPK_SIZE-KEYCERT_SIGN_P256_SIZE:KEYCERT_SPK_SIZE])
+	log.Debug("Constructed P256PublicKey")
+	return ec_p256_key
+}
+
+// constructECDSAP384Key constructs an ECDSA P-384 signing public key from certificate data.
+// Provides 192-bit security level with 96-byte keys.
+func constructECDSAP384Key(data []byte) types.SigningPublicKey {
+	var ec_p384_key ecdsa.ECP384PublicKey
+	copy(ec_p384_key[:], data[KEYCERT_SPK_SIZE-KEYCERT_SIGN_P384_SIZE:KEYCERT_SPK_SIZE])
+	log.Debug("Constructed P384PublicKey")
+	return ec_p384_key
+}
+
+// constructEd25519Key constructs an Ed25519 signing public key from certificate data.
+// Ed25519 provides excellent security with 32-byte keys and fast verification.
+func constructEd25519Key(data []byte) types.SigningPublicKey {
+	var ed25519_key ed25519.Ed25519PublicKey
+	copy(ed25519_key[:], data[KEYCERT_SPK_SIZE-KEYCERT_SIGN_ED25519_SIZE:KEYCERT_SPK_SIZE])
+	log.Debug("Constructed Ed25519PublicKey")
+	return ed25519_key
+}
+
+// constructEd25519PHKey constructs an Ed25519ph (pre-hashed) signing public key from certificate data.
+// Uses the same key format as Ed25519 but with pre-hashing for efficiency.
+func constructEd25519PHKey(data []byte) types.SigningPublicKey {
+	var ed25519ph_key ed25519.Ed25519PublicKey
+	copy(ed25519ph_key[:], data[KEYCERT_SPK_SIZE-KEYCERT_SIGN_ED25519PH_SIZE:KEYCERT_SPK_SIZE])
+	log.Debug("Constructed Ed25519PHPublicKey")
+	return ed25519ph_key
+}
+
 // ConstructSigningPublicKey returns a SingingPublicKey constructed using any excess data that may be stored in the KeyCertificate.
 // Returns any errors encountered while parsing.
 func (keyCertificate KeyCertificate) ConstructSigningPublicKey(data []byte) (signing_public_key types.SigningPublicKey, err error) {
@@ -289,90 +349,31 @@ func (keyCertificate KeyCertificate) ConstructSigningPublicKey(data []byte) (sig
 		"data_len":         len(data),
 		"required_len":     KEYCERT_SPK_SIZE,
 	}).Error("DEBUG: About to construct signing public key")
-	data_len := len(data)
-	// Validate sufficient data is available for the signing key algorithm
-	// Each signing algorithm requires a specific amount of key material
-	if data_len < keyCertificate.SignatureSize() {
-		log.WithFields(logger.Fields{
-			"at":           "(keyCertificate) ConstructSigningPublicKey",
-			"data_len":     data_len,
-			"required_len": KEYCERT_SPK_SIZE,
-			"reason":       "not enough data",
-		}).Error("error constructing signing public key")
-		err = oops.Errorf("error constructing signing public key: not enough data")
+
+	if err = validateSigningKeyData(len(data), keyCertificate.SignatureSize()); err != nil {
 		return
 	}
-	// Construct the appropriate signing public key based on algorithm type
-	// Key material is extracted from the certificate data using algorithm-specific offsets
+
 	switch signing_key_type {
 	case KEYCERT_SIGN_DSA_SHA1:
-		// Legacy DSA-SHA1 signing key construction for backwards compatibility
-		// DSA keys use the full signing key size and are extracted from the end of data
-		var dsa_key dsa.DSAPublicKey
-		copy(dsa_key[:], data[KEYCERT_SPK_SIZE-KEYCERT_SIGN_DSA_SHA1_SIZE:KEYCERT_SPK_SIZE])
-		signing_public_key = dsa_key
-		log.Debug("Constructed DSAPublicKey")
+		signing_public_key = constructDSAKey(data)
 	case KEYCERT_SIGN_P256:
-		// ECDSA P-256 signing key for modern elliptic curve signatures
-		// Provides 128-bit security level with compact 64-byte keys
-		var ec_p256_key ecdsa.ECP256PublicKey
-		copy(ec_p256_key[:], data[KEYCERT_SPK_SIZE-KEYCERT_SIGN_P256_SIZE:KEYCERT_SPK_SIZE])
-		signing_public_key = ec_p256_key
-		log.Debug("Constructed P256PublicKey")
+		signing_public_key = constructECDSAP256Key(data)
 	case KEYCERT_SIGN_P384:
-		// ECDSA P-384 signing key for enhanced security applications
-		// Provides 192-bit security level with 96-byte keys
-		var ec_p384_key ecdsa.ECP384PublicKey
-		copy(ec_p384_key[:], data[KEYCERT_SPK_SIZE-KEYCERT_SIGN_P384_SIZE:KEYCERT_SPK_SIZE])
-		signing_public_key = ec_p384_key
-		log.Debug("Constructed P384PublicKey")
+		signing_public_key = constructECDSAP384Key(data)
 	case KEYCERT_SIGN_P521:
-		// ECDSA P-521 implementation is not yet available
-		// This represents the highest security ECDSA variant but requires implementation
-		/*var ec_p521_key crypto.ECP521PublicKey
-		copy(ec_p521_key[:], data[KEYCERT_SPK_SIZE-KEYCERT_SIGN_P521_SIZE:KEYCERT_SPK_SIZE])
-		signing_public_key = ec_p521_key
-		log.Debug("Constructed P521PublicKey")*/
 		panic("unimplemented P521SigningPublicKey")
 	case KEYCERT_SIGN_RSA2048:
-		// RSA-2048 implementation is reserved for future offline signing support
-		// Large RSA keys are not commonly used in I2P router operations
-		/*var rsa2048_key crypto.RSA2048PublicKey
-		copy(rsa2048_key[:], data[KEYCERT_SPK_SIZE-KEYCERT_SIGN_RSA2048_SIZE:KEYCERT_SPK_SIZE])
-		signing_public_key = rsa2048_key
-		log.Debug("Constructed RSA2048PublicKey")*/
 		panic("unimplemented RSA2048SigningPublicKey")
 	case KEYCERT_SIGN_RSA3072:
-		// RSA-3072 implementation is reserved for future enhanced security offline signing
-		/*var rsa3072_key crypto.RSA3072PublicKey
-		copy(rsa3072_key[:], data[KEYCERT_SPK_SIZE-KEYCERT_SIGN_RSA3072_SIZE:KEYCERT_SPK_SIZE])
-		signing_public_key = rsa3072_key
-		log.Debug("Constructed RSA3072PublicKey")*/
 		panic("unimplemented RSA3072SigningPublicKey")
 	case KEYCERT_SIGN_RSA4096:
-		// RSA-4096 implementation is reserved for future maximum security offline signing
-		/*var rsa4096_key crypto.RSA4096PublicKey
-		copy(rsa4096_key[:], data[KEYCERT_SPK_SIZE-KEYCERT_SIGN_RSA4096_SIZE:KEYCERT_SPK_SIZE])
-		signing_public_key = rsa4096_key
-		log.Debug("Constructed RSA4096PublicKey")*/
 		panic("unimplemented RSA4096SigningPublicKey")
 	case KEYCERT_SIGN_ED25519:
-		// Ed25519 signing key construction for modern high-performance signatures
-		// Ed25519 provides excellent security with 32-byte keys and fast verification
-		var ed25519_key ed25519.Ed25519PublicKey
-		copy(ed25519_key[:], data[KEYCERT_SPK_SIZE-KEYCERT_SIGN_ED25519_SIZE:KEYCERT_SPK_SIZE])
-		signing_public_key = ed25519_key
-		log.Debug("Constructed Ed25519PublicKey")
+		signing_public_key = constructEd25519Key(data)
 	case KEYCERT_SIGN_ED25519PH:
-		// Ed25519ph (pre-hashed) signing key for large message optimization
-		// Uses the same key format as Ed25519 but with pre-hashing for efficiency
-		var ed25519ph_key ed25519.Ed25519PublicKey
-		copy(ed25519ph_key[:], data[KEYCERT_SPK_SIZE-KEYCERT_SIGN_ED25519PH_SIZE:KEYCERT_SPK_SIZE])
-		signing_public_key = ed25519ph_key
-		log.Debug("Constructed Ed25519PHPublicKey")
+		signing_public_key = constructEd25519PHKey(data)
 	default:
-		// Handle unknown or unsupported signing key types gracefully
-		// This prevents crashes when encountering newer algorithm types or corrupted data
 		log.WithFields(logger.Fields{
 			"signing_key_type": signing_key_type,
 		}).Warn("Unknown signing key type")
