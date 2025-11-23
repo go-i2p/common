@@ -145,56 +145,34 @@ func buildKeyCertificate(cert certificate.Certificate, spkType, cpkType data.Int
 
 // KeyCertificateFromCertificate creates a KeyCertificate from an existing Certificate
 func KeyCertificateFromCertificate(cert certificate.Certificate) (*KeyCertificate, error) {
-	// Validate certificate type before proceeding with conversion
-	// Only Key Certificate types contain the required key type information
-	kind, err := cert.Type()
-	if err != nil {
-		log.WithFields(logger.Fields{"at": "KeyCertificateFromCertificate", "reason": "invalid certificate type"}).Error(err.Error())
-	}
-	if kind != certificate.CERT_KEY {
-		return nil, oops.Errorf("expected Key Certificate type, got %d", kind)
+	if err := validateKeyCertificateType(cert); err != nil {
+		return nil, err
 	}
 
-	certdata, err := cert.Data()
+	certData, err := cert.Data()
 	if err != nil {
 		return nil, err
 	}
-	fmt.Printf("Certificate Data Length in KeyCertificateFromCertificate: %d\n", len(certdata))
-	fmt.Printf("Certificate Data Bytes in KeyCertificateFromCertificate: %v\n", certdata)
 
-	// Ensure certificate contains minimum required data for key type extraction
-	// Key certificates need at least 4 bytes for signing and crypto key type identifiers
-	if len(certdata) < 4 {
-		return nil, oops.Errorf("certificate payload too short in KeyCertificateFromCertificate")
+	if err := validateKeyCertificateDataLength(certData); err != nil {
+		return nil, err
 	}
 
-	// Extract raw bytes for signing public key type (first 2 bytes)
-	// This identifies which signature algorithm is specified in the certificate
-	spkTypeBytes := certdata[0:2]
-	// Extract raw bytes for crypto public key type (next 2 bytes)
-	// This identifies which encryption algorithm is specified in the certificate
-	cpkTypeBytes := certdata[2:4]
+	spkType, cpkType := extractKeyTypes(certData)
+	logExtractedKeyTypes(certData, spkType, cpkType)
 
-	fmt.Printf("cpkTypeBytes in KeyCertificateFromCertificate: %v\n", cpkTypeBytes)
-	fmt.Printf("spkTypeBytes in KeyCertificateFromCertificate: %v\n", spkTypeBytes)
+	keyCert := buildKeyCertificate(cert, spkType, cpkType)
+	return keyCert, nil
+}
 
-	// Convert raw bytes to I2P Integer types for algorithm identification
-	// These integers will be used to determine key sizes and construction methods
-	spkType := data.Integer(spkTypeBytes)
-	cpkType := data.Integer(cpkTypeBytes)
-
+// logExtractedKeyTypes logs detailed debug information about extracted key types.
+func logExtractedKeyTypes(certData []byte, spkType, cpkType data.Integer) {
+	fmt.Printf("Certificate Data Length in KeyCertificateFromCertificate: %d\n", len(certData))
+	fmt.Printf("Certificate Data Bytes in KeyCertificateFromCertificate: %v\n", certData)
+	fmt.Printf("cpkTypeBytes in KeyCertificateFromCertificate: %v\n", certData[2:4])
+	fmt.Printf("spkTypeBytes in KeyCertificateFromCertificate: %v\n", certData[0:2])
 	fmt.Printf("cpkType (Int) in KeyCertificateFromCertificate: %d\n", cpkType.Int())
 	fmt.Printf("spkType (Int) in KeyCertificateFromCertificate: %d\n", spkType.Int())
-
-	// Construct the KeyCertificate with extracted type information
-	// This creates a specialized certificate that can construct cryptographic keys
-	keyCert := &KeyCertificate{
-		Certificate: cert,
-		CpkType:     cpkType,
-		SpkType:     spkType,
-	}
-
-	return keyCert, nil
 }
 
 // Data returns the raw []byte contained in the Certificate.
