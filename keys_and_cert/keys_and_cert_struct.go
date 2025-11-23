@@ -387,36 +387,60 @@ func extractKeyCertificate(data []byte, totalKeySize int) (*key_certificate.KeyC
 	return keyCert, remainder, nil
 }
 
-// ReadKeysAndCertElgAndEd25519 reads KeysAndCert with fixed ElGamal and Ed25519 key sizes.
-func ReadKeysAndCertElgAndEd25519(data []byte) (keysAndCert *KeysAndCert, remainder []byte, err error) {
+// logElgEd25519KeysDebug logs debug information for ElGamal/Ed25519 KeysAndCert parsing.
+func logElgEd25519KeysDebug(dataLen int) {
 	log.WithFields(logger.Fields{
-		"input_length": len(data),
+		"input_length": dataLen,
 	}).Debug("Reading KeysAndCert from data")
+}
 
-	const (
-		pubKeySize    = 256
-		sigKeySize    = 32
-		totalKeySize  = 384
-		paddingSize   = totalKeySize - pubKeySize - sigKeySize
-		minDataLength = totalKeySize + 3
-	)
+// getElgEd25519KeySizes returns the key sizes for ElGamal and Ed25519 keys.
+func getElgEd25519KeySizes() (pubKeySize, sigKeySize, totalKeySize, paddingSize, minDataLength int) {
+	pubKeySize = 256
+	sigKeySize = 32
+	totalKeySize = 384
+	paddingSize = totalKeySize - pubKeySize - sigKeySize
+	minDataLength = totalKeySize + 3
+	return
+}
 
-	if err = validateMinimumDataLength(len(data), minDataLength); err != nil {
-		return
-	}
-
-	keysAndCert = &KeysAndCert{}
-
-	keysAndCert.ReceivingPublic, err = extractElGamalPublicKey(data, pubKeySize)
+// extractElgEd25519Keys extracts the ElGamal public key, padding, and Ed25519 signing key from data.
+func extractElgEd25519Keys(data []byte, pubKeySize, paddingSize, sigKeySize int) (pubKey types.ReceivingPublicKey, padding []byte, sigKey types.SigningPublicKey, err error) {
+	pubKey, err = extractElGamalPublicKey(data, pubKeySize)
 	if err != nil {
 		return
 	}
 
 	paddingStart := pubKeySize
 	paddingEnd := paddingStart + paddingSize
-	keysAndCert.Padding = extractPaddingData(data, paddingStart, paddingEnd)
+	padding = extractPaddingData(data, paddingStart, paddingEnd)
 
-	keysAndCert.SigningPublic, err = extractEd25519SigningKey(data, paddingEnd, sigKeySize)
+	sigKey, err = extractEd25519SigningKey(data, paddingEnd, sigKeySize)
+	return
+}
+
+// logElgEd25519Success logs successful parsing of ElGamal/Ed25519 KeysAndCert.
+func logElgEd25519Success(paddingLen, remainderLen int) {
+	log.WithFields(logger.Fields{
+		"public_key_type":         "ElGamal",
+		"signing_public_key_type": "Ed25519",
+		"padding_length":          paddingLen,
+		"remainder_length":        remainderLen,
+	}).Debug("Successfully read KeysAndCert")
+}
+
+// ReadKeysAndCertElgAndEd25519 reads KeysAndCert with fixed ElGamal and Ed25519 key sizes.
+func ReadKeysAndCertElgAndEd25519(data []byte) (keysAndCert *KeysAndCert, remainder []byte, err error) {
+	logElgEd25519KeysDebug(len(data))
+
+	pubKeySize, sigKeySize, totalKeySize, paddingSize, minDataLength := getElgEd25519KeySizes()
+
+	if err = validateMinimumDataLength(len(data), minDataLength); err != nil {
+		return
+	}
+
+	keysAndCert = &KeysAndCert{}
+	keysAndCert.ReceivingPublic, keysAndCert.Padding, keysAndCert.SigningPublic, err = extractElgEd25519Keys(data, pubKeySize, paddingSize, sigKeySize)
 	if err != nil {
 		return
 	}
@@ -426,12 +450,6 @@ func ReadKeysAndCertElgAndEd25519(data []byte) (keysAndCert *KeysAndCert, remain
 		return
 	}
 
-	log.WithFields(logger.Fields{
-		"public_key_type":         "ElGamal",
-		"signing_public_key_type": "Ed25519",
-		"padding_length":          len(keysAndCert.Padding),
-		"remainder_length":        len(remainder),
-	}).Debug("Successfully read KeysAndCert")
-
+	logElgEd25519Success(len(keysAndCert.Padding), len(remainder))
 	return
 }
