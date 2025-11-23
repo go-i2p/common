@@ -287,62 +287,97 @@ func ReadKeysAndCert(data []byte) (*KeysAndCert, []byte, error) {
 	return &keys_and_cert, remainder, err
 }
 
+// validateMinimumDataLength validates that the data has sufficient length for parsing.
+// Returns an error if the data is smaller than the minimum required size.
+func validateMinimumDataLength(dataLen, minDataLength int) error {
+	if dataLen < minDataLength {
+		err := oops.Errorf("error parsing KeysAndCert: data is smaller than minimum valid size, got %d bytes", dataLen)
+		log.WithError(err).Error("Data is smaller than minimum valid size")
+		return err
+	}
+	return nil
+}
+
+// extractElGamalPublicKey extracts and validates an ElGamal public key from the data.
+// Returns the public key or an error if the data is invalid.
+func extractElGamalPublicKey(data []byte, pubKeySize int) (types.ReceivingPublicKey, error) {
+	publicKeyData := data[:pubKeySize]
+	if len(publicKeyData) != pubKeySize {
+		err := oops.Errorf("invalid ElGamal public key length")
+		log.WithError(err).Error("Invalid ElGamal public key length")
+		return nil, err
+	}
+	var elgPublicKey elgamal.ElgPublicKey
+	copy(elgPublicKey[:], publicKeyData)
+	return elgPublicKey, nil
+}
+
+// extractPaddingData extracts padding bytes from the data at the specified range.
+// Returns a copy of the padding data.
+func extractPaddingData(data []byte, paddingStart, paddingEnd int) []byte {
+	return data[paddingStart:paddingEnd]
+}
+
+// extractEd25519SigningKey extracts and validates an Ed25519 signing public key from the data.
+// Returns the signing key or an error if the data is invalid.
+func extractEd25519SigningKey(data []byte, offset, sigKeySize int) (types.SigningPublicKey, error) {
+	signingPubKeyData := data[offset : offset+sigKeySize]
+	if len(signingPubKeyData) != sigKeySize {
+		err := oops.Errorf("invalid Ed25519 public key length")
+		log.WithError(err).Error("Invalid Ed25519 public key length")
+		return nil, err
+	}
+	return ed25519.Ed25519PublicKey(signingPubKeyData), nil
+}
+
+// extractKeyCertificate parses and extracts a KeyCertificate from the data.
+// Returns the certificate, remaining data, and any error encountered.
+func extractKeyCertificate(data []byte, totalKeySize int) (*key_certificate.KeyCertificate, []byte, error) {
+	certData := data[totalKeySize:]
+	keyCert, remainder, err := key_certificate.NewKeyCertificate(certData)
+	if err != nil {
+		log.WithError(err).Error("Failed to read keyCertificate")
+		return nil, nil, err
+	}
+	return keyCert, remainder, nil
+}
+
 // ReadKeysAndCertElgAndEd25519 reads KeysAndCert with fixed ElGamal and Ed25519 key sizes.
 func ReadKeysAndCertElgAndEd25519(data []byte) (keysAndCert *KeysAndCert, remainder []byte, err error) {
 	log.WithFields(logger.Fields{
 		"input_length": len(data),
 	}).Debug("Reading KeysAndCert from data")
 
-	// Constants based on fixed key sizes
 	const (
-		pubKeySize    = 256                                    // ElGamal public key size
-		sigKeySize    = 32                                     // Ed25519 public key size
-		totalKeySize  = 384                                    // KEYS_AND_CERT_DATA_SIZE
-		paddingSize   = totalKeySize - pubKeySize - sigKeySize // 96 bytes
+		pubKeySize    = 256
+		sigKeySize    = 32
+		totalKeySize  = 384
+		paddingSize   = totalKeySize - pubKeySize - sigKeySize
 		minDataLength = totalKeySize + 3
 	)
 
-	dataLen := len(data)
-	if dataLen < minDataLength {
-		err = oops.Errorf("error parsing KeysAndCert: data is smaller than minimum valid size, got %d bytes", dataLen)
-		log.WithError(err).Error("Data is smaller than minimum valid size")
+	if err = validateMinimumDataLength(len(data), minDataLength); err != nil {
 		return
 	}
 
-	// Initialize KeysAndCert
 	keysAndCert = &KeysAndCert{}
 
-	// Extract public key
-	publicKeyData := data[:pubKeySize]
-	if len(publicKeyData) != pubKeySize {
-		err = oops.Errorf("invalid ElGamal public key length")
-		log.WithError(err).Error("Invalid ElGamal public key length")
+	keysAndCert.ReceivingPublic, err = extractElGamalPublicKey(data, pubKeySize)
+	if err != nil {
 		return
 	}
-	var elgPublicKey elgamal.ElgPublicKey
-	copy(elgPublicKey[:], publicKeyData)
-	keysAndCert.ReceivingPublic = elgPublicKey
 
-	// Extract padding
 	paddingStart := pubKeySize
 	paddingEnd := paddingStart + paddingSize
-	keysAndCert.Padding = data[paddingStart:paddingEnd]
+	keysAndCert.Padding = extractPaddingData(data, paddingStart, paddingEnd)
 
-	// Extract signing public key
-	signingPubKeyData := data[paddingEnd : paddingEnd+sigKeySize]
-	if len(signingPubKeyData) != sigKeySize {
-		err = oops.Errorf("invalid Ed25519 public key length")
-		log.WithError(err).Error("Invalid Ed25519 public key length")
+	keysAndCert.SigningPublic, err = extractEd25519SigningKey(data, paddingEnd, sigKeySize)
+	if err != nil {
 		return
 	}
-	edPublicKey := ed25519.Ed25519PublicKey(signingPubKeyData)
-	keysAndCert.SigningPublic = edPublicKey
 
-	// Extract the certificate
-	certData := data[totalKeySize:]
-	keysAndCert.KeyCertificate, remainder, err = key_certificate.NewKeyCertificate(certData)
+	keysAndCert.KeyCertificate, remainder, err = extractKeyCertificate(data, totalKeySize)
 	if err != nil {
-		log.WithError(err).Error("Failed to read keyCertificate")
 		return
 	}
 
