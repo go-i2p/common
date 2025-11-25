@@ -2,6 +2,7 @@
 package data
 
 import (
+	"math"
 	"time"
 
 	"github.com/go-i2p/logger"
@@ -106,4 +107,41 @@ func DateFromTime(t time.Time) (date *Date, err error) {
 	}).Debug("Successfully created Date from time.Time")
 
 	return
+}
+
+// NewDateFromUnix creates a Date from a Unix timestamp (seconds) with validation.
+// Returns error if timestamp is negative or exceeds maximum safe value.
+func NewDateFromUnix(timestamp int64) (*Date, error) {
+	if timestamp < 0 {
+		return nil, oops.Errorf("timestamp cannot be negative: %d", timestamp)
+	}
+	// I2P dates are milliseconds since epoch, stored as 8-byte big-endian integer
+	// Maximum safe value is when milliseconds fit in int64
+	maxTimestamp := int64(math.MaxInt64 / 1000)
+	if timestamp > maxTimestamp {
+		return nil, oops.Errorf("timestamp too large: %d (max %d)", timestamp, maxTimestamp)
+	}
+	return DateFromTime(time.Unix(timestamp, 0))
+}
+
+// NewDateFromMillis creates a Date from milliseconds since epoch with validation.
+// Returns error if milliseconds is negative.
+func NewDateFromMillis(millis int64) (*Date, error) {
+	if millis < 0 {
+		return nil, oops.Errorf("milliseconds cannot be negative: %d", millis)
+	}
+	seconds := millis / 1000
+	nanos := (millis % 1000) * 1000000
+	return DateFromTime(time.Unix(seconds, nanos))
+}
+
+// IsZero returns true if the date represents zero time (undefined/null).
+// According to I2P spec, a date value of 0 means undefined or null.
+func (d Date) IsZero() bool {
+	for _, b := range d {
+		if b != 0 {
+			return false
+		}
+	}
+	return true
 }
