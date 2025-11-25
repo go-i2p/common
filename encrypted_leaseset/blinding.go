@@ -99,7 +99,11 @@ func CreateBlindedDestination(dest destination.Destination, secret []byte, date 
 	}
 
 	// Create new Ed25519 signing public key from blinded bytes
-	blindedSigningKey := ed25519.Ed25519PublicKey(blindedPubKey[:])
+	blindedSigningKey, err := ed25519.NewEd25519PublicKey(blindedPubKey[:])
+	if err != nil {
+		return destination.Destination{},
+			oops.Wrapf(ErrBlindingFailed, "failed to create blinded signing key: %w", err)
+	}
 
 	// Create new KeysAndCert with the blinded signing key, keeping the same
 	// encryption key, padding, and key certificate

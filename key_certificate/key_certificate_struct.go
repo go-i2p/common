@@ -330,26 +330,40 @@ func constructECDSAP384Key(data []byte) types.SigningPublicKey {
 
 // constructEd25519Key constructs an Ed25519 signing public key from certificate data.
 // Ed25519 provides excellent security with 32-byte keys and fast verification.
-// IMPORTANT: Must properly initialize the Ed25519PublicKey slice before copying.
-func constructEd25519Key(data []byte) types.SigningPublicKey {
-	// Extract the 32-byte Ed25519 key data from the fixed position
-	keyData := data[KEYCERT_SPK_SIZE-KEYCERT_SIGN_ED25519_SIZE : KEYCERT_SPK_SIZE]
-	// Create Ed25519PublicKey from the extracted bytes (proper initialization)
-	ed25519_key := ed25519.Ed25519PublicKey(keyData)
+// The input data should be exactly 32 bytes (the Ed25519 public key).
+func constructEd25519Key(data []byte) (types.SigningPublicKey, error) {
+	// For Ed25519, we expect exactly 32 bytes
+	if len(data) != KEYCERT_SIGN_ED25519_SIZE {
+		return nil, oops.Errorf("invalid Ed25519 key data length: expected %d, got %d",
+			KEYCERT_SIGN_ED25519_SIZE, len(data))
+	}
+
+	// Create Ed25519PublicKey from the bytes using safe constructor
+	ed25519_key, err := ed25519.NewEd25519PublicKey(data)
+	if err != nil {
+		return nil, oops.Wrapf(err, "failed to construct Ed25519 public key")
+	}
 	log.Debug("Constructed Ed25519PublicKey")
-	return ed25519_key
+	return ed25519_key, nil
 }
 
 // constructEd25519PHKey constructs an Ed25519ph (pre-hashed) signing public key from certificate data.
 // Uses the same key format as Ed25519 but with pre-hashing for efficiency.
-// IMPORTANT: Must properly initialize the Ed25519PublicKey slice before copying.
-func constructEd25519PHKey(data []byte) types.SigningPublicKey {
-	// Extract the 32-byte Ed25519ph key data from the fixed position
-	keyData := data[KEYCERT_SPK_SIZE-KEYCERT_SIGN_ED25519PH_SIZE : KEYCERT_SPK_SIZE]
-	// Create Ed25519PublicKey from the extracted bytes (proper initialization)
-	ed25519ph_key := ed25519.Ed25519PublicKey(keyData)
+// The input data should be exactly 32 bytes (the Ed25519 public key).
+func constructEd25519PHKey(data []byte) (types.SigningPublicKey, error) {
+	// For Ed25519ph, we expect exactly 32 bytes
+	if len(data) != KEYCERT_SIGN_ED25519PH_SIZE {
+		return nil, oops.Errorf("invalid Ed25519ph key data length: expected %d, got %d",
+			KEYCERT_SIGN_ED25519PH_SIZE, len(data))
+	}
+
+	// Create Ed25519PublicKey from the bytes using safe constructor
+	ed25519ph_key, err := ed25519.NewEd25519PublicKey(data)
+	if err != nil {
+		return nil, oops.Wrapf(err, "failed to construct Ed25519ph public key")
+	}
 	log.Debug("Constructed Ed25519PHPublicKey")
-	return ed25519ph_key
+	return ed25519ph_key, nil
 }
 
 // ConstructSigningPublicKey returns a SingingPublicKey constructed using any excess data that may be stored in the KeyCertificate.
@@ -398,9 +412,9 @@ func selectSigningKeyConstructor(signing_key_type int, data []byte) (types.Signi
 	case KEYCERT_SIGN_RSA4096:
 		panic("unimplemented RSA4096SigningPublicKey")
 	case KEYCERT_SIGN_ED25519:
-		return constructEd25519Key(data), nil
+		return constructEd25519Key(data)
 	case KEYCERT_SIGN_ED25519PH:
-		return constructEd25519PHKey(data), nil
+		return constructEd25519PHKey(data)
 	default:
 		log.WithFields(logger.Fields{
 			"signing_key_type": signing_key_type,

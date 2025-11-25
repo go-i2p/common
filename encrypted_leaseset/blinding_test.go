@@ -14,39 +14,39 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// createTestEd25519Destination creates a destination with Ed25519 signature type for testing
+// createTestEd25519Destination creates a destination with Ed25519 signature type for testing.
+// For blinding tests, we only need a valid Ed25519 signing key - the encryption key is not used.
 func createTestEd25519Destination(t *testing.T) destination.Destination {
 	t.Helper()
 
-	// Generate Ed25519 key pair
+	// Generate Ed25519 key pair (this is what gets blinded)
 	publicKey, _, err := ed25519.GenerateEd25519KeyPair()
 	require.NoError(t, err, "Failed to generate Ed25519 key pair")
 
-	// Create ElGamal encryption key (256 bytes)
-	encryptionKey := make([]byte, 256)
-	_, _ = rand.Read(encryptionKey)
+	// Create a simple destination from raw bytes (like other tests do)
+	// This creates a minimal 387-byte destination with ElGamal + Ed25519
+	destBytes := make([]byte, 391)
 
-	// Create KEY certificate for Ed25519
-	keyCert, err := key_certificate.NewKeyCertificateWithTypes(
-		key_certificate.KEYCERT_SIGN_ED25519, // Ed25519 signing
-		key_certificate.KEYCERT_CRYPTO_ELG,   // ElGamal encryption
-	)
-	require.NoError(t, err, "Failed to create key certificate")
+	// First 384 bytes: encryption public key (256) + padding (96) + signing key placeholder (32)
+	_, _ = rand.Read(destBytes[:384])
 
-	// Padding should be 128 - 32 (Ed25519) = 96 bytes
-	padding := make([]byte, 96)
-	_, _ = rand.Read(padding)
+	// Copy actual Ed25519 public key to the signing key position (last 32 bytes of the 384-byte block)
+	copy(destBytes[352:384], publicKey.Bytes())
 
-	// Create KeysAndCert
-	keysAndCert, err := keys_and_cert.NewKeysAndCert(
-		keyCert,
-		nil, // ReceivingPublic will be constructed from raw bytes
-		padding,
-		publicKey,
-	)
-	require.NoError(t, err, "Failed to create KeysAndCert")
+	// Certificate (7 bytes): type=KEY(5), length=4, sigtype=Ed25519(7), cryptotype=ElGamal(0)
+	destBytes[384] = 0x05 // CERT_KEY
+	destBytes[385] = 0x00 // length high byte
+	destBytes[386] = 0x04 // length low byte (4)
+	destBytes[387] = 0x00 // signing key type high byte
+	destBytes[388] = 0x07 // signing key type low byte (Ed25519=7)
+	destBytes[389] = 0x00 // crypto key type high byte
+	destBytes[390] = 0x00 // crypto key type low byte (ElGamal=0)
 
-	return destination.Destination{KeysAndCert: keysAndCert}
+	// Parse the destination from bytes
+	dest, _, err := destination.ReadDestination(destBytes)
+	require.NoError(t, err, "Failed to read destination")
+
+	return dest
 }
 
 // TestCreateBlindedDestination tests successful blinding of an Ed25519 destination

@@ -56,4 +56,9 @@ const (
 
 	// Minimum signature size for Ed25519 (most common signature type)
 	ENCRYPTED_LEASESET_MIN_SIGNATURE_SIZE int = 64
+
+	// ENCRYPTED_LEASESET_MIN_DESTINATION_SIZE is the minimum size for a destination (387 bytes)
+	// Includes ElGamal encryption key (256 bytes) + Ed25519 signing key (32 bytes) +
+	// padding (96 bytes) + certificate (3 bytes minimum)
+	ENCRYPTED_LEASESET_MIN_DESTINATION_SIZE int = 387
 )

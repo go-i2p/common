@@ -172,12 +172,15 @@ func parseEncryptionKey(data []byte) (elgamal.ElgPublicKey, []byte, error) {
 		return elgamal.ElgPublicKey{}, nil, oops.Errorf("LeaseSet data too short for encryption key")
 	}
 
-	var encKeyBytes [LEASE_SET_PUBKEY_SIZE]byte
-	copy(encKeyBytes[:], data[:LEASE_SET_PUBKEY_SIZE])
-	encryptionKey := elgamal.ElgPublicKey(encKeyBytes)
+	encKeyBytes := data[:LEASE_SET_PUBKEY_SIZE]
+	encryptionKeyPtr, err := elgamal.NewElgPublicKey(encKeyBytes)
+	if err != nil {
+		return elgamal.ElgPublicKey{}, nil, oops.Wrapf(err, "failed to construct ElGamal public key")
+	}
 	remainder := data[LEASE_SET_PUBKEY_SIZE:]
 
-	return encryptionKey, remainder, nil
+	// NewElgPublicKey returns a pointer, dereference it
+	return *encryptionKeyPtr, remainder, nil
 }
 
 // parseSigningKey extracts and constructs the signing key based on certificate type.
@@ -230,9 +233,11 @@ func constructSigningKey(keyData []byte, cert certificate.Certificate, kind int)
 	}
 
 	// Default DSA key
-	var dsaKey [LEASE_SET_SPK_SIZE]byte
-	copy(dsaKey[:], keyData)
-	return dsa.DSAPublicKey(dsaKey), nil
+	dsaKey, err := dsa.NewDSAPublicKey(keyData)
+	if err != nil {
+		return nil, oops.Wrapf(err, "failed to construct DSA public key")
+	}
+	return dsaKey, nil
 }
 
 // parseLeases extracts the lease count and individual leases from the data.

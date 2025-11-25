@@ -372,7 +372,11 @@ func extractEd25519SigningKey(data []byte, offset, sigKeySize int) (types.Signin
 		log.WithError(err).Error("Invalid Ed25519 public key length")
 		return nil, err
 	}
-	return ed25519.Ed25519PublicKey(signingPubKeyData), nil
+	ed25519Key, err := ed25519.NewEd25519PublicKey(signingPubKeyData)
+	if err != nil {
+		return nil, oops.Wrapf(err, "failed to construct Ed25519 signing key")
+	}
+	return ed25519Key, nil
 }
 
 // extractKeyCertificate parses and extracts a KeyCertificate from the data.

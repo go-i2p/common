@@ -33,7 +33,11 @@ func constructSigningPublicKey(data []byte, sigType uint16) (types.SigningPublic
 		if len(data) != 32 {
 			return nil, oops.Errorf("invalid Ed25519 public key length")
 		}
-		return ed25519.Ed25519PublicKey(data), nil
+		ed25519Key, err := ed25519.NewEd25519PublicKey(data)
+		if err != nil {
+			return nil, oops.Wrapf(err, "failed to construct Ed25519 signing key")
+		}
+		return ed25519Key, nil
 	// Handle other signature types...
 	default:
 		return nil, oops.Errorf("unsupported signature key type: %d", sigType)
