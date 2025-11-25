@@ -9,3 +9,9 @@ package base64
 // This encoding is essential for I2P destination addresses, router identifiers, and network data structures.
 // Example usage: Used in .b64.i2p addresses and binary data serialization across I2P protocols.
 const I2PEncodeAlphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-~"
+
+// MAX_ENCODE_SIZE defines the maximum number of bytes that can be base64 encoded in a single operation.
+// This limit prevents excessive memory allocation and ensures reasonable processing times.
+// The limit of 10MB is sufficient for all I2P protocol needs including router infos,
+// destinations, and lease sets, while preventing potential DoS through memory exhaustion.
+const MAX_ENCODE_SIZE = 10 * 1024 * 1024 // 10 MB

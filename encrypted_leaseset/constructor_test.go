@@ -51,7 +51,11 @@ func TestNewEncryptedLeaseSet(t *testing.T) {
 	require.NoError(t, err)
 
 	// Verify fields
-	assert.Equal(t, blindedDest.Base32Address(), els.BlindedDestination().Base32Address())
+	blindedAddr, err := blindedDest.Base32Address()
+	require.NoError(t, err)
+	elsAddr, err := els.BlindedDestination().Base32Address()
+	require.NoError(t, err)
+	assert.Equal(t, blindedAddr, elsAddr)
 	assert.Equal(t, published, els.Published())
 	assert.Equal(t, expires, els.Expires())
 	assert.Equal(t, flags, els.Flags())

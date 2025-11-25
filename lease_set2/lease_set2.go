@@ -135,7 +135,11 @@ func (ls2 *LeaseSet2) Bytes() ([]byte, error) {
 	result := make([]byte, 0)
 
 	// Add destination
-	result = append(result, ls2.destination.KeysAndCert.Bytes()...)
+	destBytes, err := ls2.destination.KeysAndCert.Bytes()
+	if err != nil {
+		return nil, oops.Errorf("failed to serialize destination: %w", err)
+	}
+	result = append(result, destBytes...)
 
 	// Add published timestamp (4 bytes)
 	publishedBytes := make([]byte, 4)
@@ -190,7 +194,7 @@ func (ls2 *LeaseSet2) Bytes() ([]byte, error) {
 
 	log.WithFields(logger.Fields{
 		"total_size":       len(result),
-		"destination_size": len(ls2.destination.KeysAndCert.Bytes()),
+		"destination_size": len(destBytes),
 		"encryption_keys":  len(ls2.encryptionKeys),
 		"leases":           len(ls2.leases),
 		"has_offline_sig":  ls2.offlineSignature != nil,
@@ -763,7 +767,10 @@ func validateLeaseSet2Inputs(
 	leases []lease.Lease2,
 ) error {
 	// Validate destination size (minimum 387 bytes per I2P spec)
-	destBytes := dest.Bytes()
+	destBytes, err := dest.Bytes()
+	if err != nil {
+		return oops.Errorf("invalid destination: %w", err)
+	}
 	if len(destBytes) < LEASESET2_MIN_DESTINATION_SIZE {
 		return oops.
 			Code("invalid_destination_size").
@@ -828,7 +835,10 @@ func serializeLeaseSet2ForSigning(
 	leases []lease.Lease2,
 ) ([]byte, error) {
 	// Start with destination
-	data := dest.KeysAndCert.Bytes()
+	data, err := dest.KeysAndCert.Bytes()
+	if err != nil {
+		return nil, oops.Errorf("failed to serialize destination KeysAndCert: %w", err)
+	}
 
 	// Add published timestamp (4 bytes)
 	publishedBytes := make([]byte, 4)

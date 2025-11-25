@@ -36,3 +36,19 @@ func DecodeString(str string) ([]byte, error) {
 	// Validates character set conformity and padding structure before decoding
 	return I2PEncoding.DecodeString(str)
 }
+
+// EncodeToStringSafe encodes binary data to a base64 string with input validation.
+// Unlike EncodeToString, this function validates the input data size to prevent
+// excessive memory allocation and potential DoS attacks. Use this function when
+// encoding untrusted or user-provided data.
+// Returns an error if data is empty or exceeds MAX_ENCODE_SIZE.
+// Example: EncodeToStringSafe([]byte{72, 101, 108, 108, 111}) returns "SGVsbG8-", nil
+func EncodeToStringSafe(data []byte) (string, error) {
+	if len(data) == 0 {
+		return "", ErrEmptyData
+	}
+	if len(data) > MAX_ENCODE_SIZE {
+		return "", ErrDataTooLarge
+	}
+	return I2PEncoding.EncodeToString(data), nil
+}

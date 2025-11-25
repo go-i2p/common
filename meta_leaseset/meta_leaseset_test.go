@@ -203,7 +203,11 @@ func TestReadMetaLeaseSetMinimalValid(t *testing.T) {
 	assert.False(t, mls.IsUnpublished())
 	assert.Nil(t, mls.OfflineSignature())
 	assert.Equal(t, 1, mls.NumEntries())
-	assert.Equal(t, dest.Base32Address(), mls.Destination().Base32Address())
+	destAddr, err := dest.Base32Address()
+	assert.NoError(t, err)
+	mlsAddr, err := mls.Destination().Base32Address()
+	assert.NoError(t, err)
+	assert.Equal(t, destAddr, mlsAddr)
 }
 
 // TestReadMetaLeaseSetMultipleEntries tests parsing with multiple entries

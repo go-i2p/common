@@ -68,15 +68,21 @@ func TestCreateBlindedDestination(t *testing.T) {
 		"Blinded destination should have same signature type")
 
 	// Verify signing keys are different (blinded != original)
-	origKey := dest.SigningPublicKey()
-	blindedKey := blindedDest.SigningPublicKey()
+	origKey, err := dest.SigningPublicKey()
+	require.NoError(t, err)
+	blindedKey, err := blindedDest.SigningPublicKey()
+	require.NoError(t, err)
 	assert.NotEqual(t, origKey.Bytes(), blindedKey.Bytes(),
 		"Blinded signing key should be different from original")
 
 	// Verify blinding is deterministic (same input = same output)
 	blindedDest2, err := CreateBlindedDestination(dest, secret, date)
 	require.NoError(t, err, "Second CreateBlindedDestination should succeed")
-	assert.Equal(t, blindedDest.SigningPublicKey().Bytes(), blindedDest2.SigningPublicKey().Bytes(),
+	blindedKey1, err := blindedDest.SigningPublicKey()
+	require.NoError(t, err)
+	blindedKey2, err := blindedDest2.SigningPublicKey()
+	require.NoError(t, err)
+	assert.Equal(t, blindedKey1.Bytes(), blindedKey2.Bytes(),
 		"Blinding should be deterministic")
 }
 
@@ -97,7 +103,11 @@ func TestCreateBlindedDestinationDifferentDates(t *testing.T) {
 	require.NoError(t, err, "CreateBlindedDestination for date2 should succeed")
 
 	// Verify different dates produce different blinded keys
-	assert.NotEqual(t, blindedDest1.SigningPublicKey().Bytes(), blindedDest2.SigningPublicKey().Bytes(),
+	key1, err := blindedDest1.SigningPublicKey()
+	require.NoError(t, err)
+	key2, err := blindedDest2.SigningPublicKey()
+	require.NoError(t, err)
+	assert.NotEqual(t, key1.Bytes(), key2.Bytes(),
 		"Different dates should produce different blinded keys")
 }
 
@@ -255,7 +265,11 @@ func TestBlindingRoundTrip(t *testing.T) {
 			assert.True(t, valid, "Round-trip verification should succeed")
 
 			// Verify blinded key is actually different
-			assert.NotEqual(t, original.SigningPublicKey().Bytes(), blinded.SigningPublicKey().Bytes(),
+			origKey, err := original.SigningPublicKey()
+			require.NoError(t, err)
+			blindedKey, err := blinded.SigningPublicKey()
+			require.NoError(t, err)
+			assert.NotEqual(t, origKey.Bytes(), blindedKey.Bytes(),
 				"Blinded key must differ from original")
 		})
 	}
@@ -277,9 +291,13 @@ func TestBlindingDeterminism(t *testing.T) {
 	}
 
 	// All should have identical signing keys
-	firstKey := blindings[0].SigningPublicKey().Bytes()
+	firstKey, err := blindings[0].SigningPublicKey()
+	require.NoError(t, err)
+	firstKeyBytes := firstKey.Bytes()
 	for i := 1; i < 5; i++ {
-		assert.Equal(t, firstKey, blindings[i].SigningPublicKey().Bytes(),
+		key, err := blindings[i].SigningPublicKey()
+		require.NoError(t, err)
+		assert.Equal(t, firstKeyBytes, key.Bytes(),
 			"Blinding iteration %d should match first blinding", i)
 	}
 }

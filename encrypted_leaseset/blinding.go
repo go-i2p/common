@@ -77,7 +77,11 @@ func CreateBlindedDestination(dest destination.Destination, secret []byte, date 
 	}
 
 	// Get the original Ed25519 signing public key (32 bytes)
-	originalSigningKey := dest.SigningPublicKey()
+	originalSigningKey, err := dest.SigningPublicKey()
+	if err != nil {
+		return destination.Destination{},
+			oops.Wrapf(ErrBlindingFailed, "failed to get signing public key: %w", err)
+	}
 
 	// Verify we have exactly 32 bytes for Ed25519
 	if originalSigningKey.Len() != 32 {
@@ -157,13 +161,19 @@ func VerifyBlindedSignature(blinded, original destination.Destination, alpha [32
 	}
 
 	// Get original signing key
-	originalKey := original.SigningPublicKey()
+	originalKey, err := original.SigningPublicKey()
+	if err != nil {
+		return false
+	}
 	if originalKey.Len() != 32 {
 		return false
 	}
 
 	// Get blinded signing key
-	blindedKey := blinded.SigningPublicKey()
+	blindedKey, err := blinded.SigningPublicKey()
+	if err != nil {
+		return false
+	}
 	if blindedKey.Len() != 32 {
 		return false
 	}

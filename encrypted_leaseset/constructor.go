@@ -134,6 +134,11 @@ func validateEncryptedLeaseSetInputs(
 	}
 
 	// Validate expiration offset
+	if expiresOffset == 0 {
+		return oops.
+			Code("invalid_expires_offset").
+			Errorf("expires offset cannot be zero")
+	}
 	if expiresOffset > ENCRYPTED_LEASESET_MAX_EXPIRES_OFFSET {
 		return oops.
 			Code("invalid_expires_offset").

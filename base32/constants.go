@@ -16,3 +16,9 @@ const I2PEncodeAlphabet = "abcdefghijklmnopqrstuvwxyz234567"
 // generating destination addresses, router identifiers, and other base32-encoded data
 // within the I2P ecosystem. It ensures consistent encoding/decoding behavior.
 var I2PEncoding *b32.Encoding = b32.NewEncoding(I2PEncodeAlphabet)
+
+// MAX_ENCODE_SIZE defines the maximum number of bytes that can be base32 encoded in a single operation.
+// This limit prevents excessive memory allocation and ensures reasonable processing times.
+// The limit of 10MB is sufficient for all I2P protocol needs including router infos,
+// destinations, and lease sets, while preventing potential DoS through memory exhaustion.
+const MAX_ENCODE_SIZE = 10 * 1024 * 1024 // 10 MB

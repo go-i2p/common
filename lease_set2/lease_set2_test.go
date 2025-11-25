@@ -105,7 +105,11 @@ func TestReadLeaseSet2MinimalValid(t *testing.T) {
 	assert.Nil(t, ls2.OfflineSignature())
 	assert.Equal(t, 1, ls2.EncryptionKeyCount())
 	assert.Equal(t, 0, ls2.LeaseCount())
-	assert.Equal(t, dest.Base32Address(), ls2.Destination().Base32Address())
+	destAddr, err := dest.Base32Address()
+	require.NoError(t, err)
+	ls2Addr, err := ls2.Destination().Base32Address()
+	require.NoError(t, err)
+	assert.Equal(t, destAddr, ls2Addr)
 }
 
 func TestReadLeaseSet2TooShort(t *testing.T) {
@@ -566,7 +570,8 @@ func TestNewLeaseSet2(t *testing.T) {
 	t.Logf("Parsed destination, remainder: %d bytes", len(remainder))
 
 	// Validate destination size meets requirements
-	destBytes := dest.KeysAndCert.Bytes()
+	destBytes, err := dest.KeysAndCert.Bytes()
+	require.NoError(t, err)
 	t.Logf("Destination Bytes() returns: %d bytes", len(destBytes))
 	t.Logf("  ReceivingPublic: %d bytes", len(dest.KeysAndCert.ReceivingPublic.Bytes()))
 	t.Logf("  Padding: %d bytes", len(dest.KeysAndCert.Padding))
@@ -607,12 +612,19 @@ func TestNewLeaseSet2(t *testing.T) {
 
 	if err != nil {
 		t.Logf("Error creating LeaseSet2: %v", err)
-		t.Logf("Destination bytes length: %d", len(dest.KeysAndCert.Bytes()))
+		destBytesForLog, err2 := dest.KeysAndCert.Bytes()
+		if err2 == nil {
+			t.Logf("Destination bytes length: %d", len(destBytesForLog))
+		}
 		// Skip strict assertions if destination is too small for validation
 		return
 	}
 
-	assert.Equal(t, dest.Base32Address(), ls2.Destination().Base32Address())
+	destAddr2, err := dest.Base32Address()
+	require.NoError(t, err)
+	ls2Addr2, err := ls2.Destination().Base32Address()
+	require.NoError(t, err)
+	assert.Equal(t, destAddr2, ls2Addr2)
 	assert.Equal(t, published, ls2.Published())
 	assert.Equal(t, expiresOffset, ls2.Expires())
 	assert.Equal(t, 1, ls2.EncryptionKeyCount())
@@ -790,7 +802,11 @@ func TestLeaseSet2Bytes(t *testing.T) {
 	require.Empty(t, remainder2, "Should consume all serialized data")
 
 	// Verify key fields match
-	assert.Equal(t, ls2.Destination().Bytes(), ls2RoundTrip.Destination().Bytes(), "Destinations should match")
+	origDestBytes, err := ls2.Destination().Bytes()
+	require.NoError(t, err)
+	roundTripDestBytes, err := ls2RoundTrip.Destination().Bytes()
+	require.NoError(t, err)
+	assert.Equal(t, origDestBytes, roundTripDestBytes, "Destinations should match")
 	assert.Equal(t, ls2.Published(), ls2RoundTrip.Published(), "Published timestamps should match")
 	assert.Equal(t, ls2.Expires(), ls2RoundTrip.Expires(), "Expiration offsets should match")
 	assert.Equal(t, ls2.Flags(), ls2RoundTrip.Flags(), "Flags should match")

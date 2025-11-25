@@ -159,10 +159,13 @@ func (els *EncryptedLeaseSet) DecryptInnerData(authCookie []byte, privateKey int
 		return nil, oops.Errorf("invalid LeaseSet2 in decrypted data: %w", err)
 	}
 
-	log.WithFields(logger.Fields{
-		"destination": innerLS2.Destination().Base32Address()[:16] + "...",
-		"num_leases":  len(innerLS2.Leases()),
-	}).Info("Successfully decrypted and parsed EncryptedLeaseSet")
+	logFields := logger.Fields{
+		"num_leases": len(innerLS2.Leases()),
+	}
+	if addr, err := innerLS2.Destination().Base32Address(); err == nil {
+		logFields["destination"] = addr[:16] + "..."
+	}
+	log.WithFields(logFields).Info("Successfully decrypted and parsed EncryptedLeaseSet")
 
 	return &innerLS2, nil
 }

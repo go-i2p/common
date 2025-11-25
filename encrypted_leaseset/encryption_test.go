@@ -436,7 +436,11 @@ func TestEncryptionForwardSecrecy(t *testing.T) {
 	require.NoError(t, err)
 
 	// Both should produce the same LeaseSet2
-	assert.Equal(t, decrypted1.Destination().Base32Address(), decrypted2.Destination().Base32Address())
+	decr1Addr, err := decrypted1.Destination().Base32Address()
+	require.NoError(t, err)
+	decr2Addr, err := decrypted2.Destination().Base32Address()
+	require.NoError(t, err)
+	assert.Equal(t, decr1Addr, decr2Addr)
 }
 
 // TestEncryptionWithMultipleCookies tests that different cookies produce different encryptions

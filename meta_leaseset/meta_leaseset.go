@@ -575,7 +575,11 @@ func (mls *MetaLeaseSet) Bytes() ([]byte, error) {
 	result := make([]byte, 0)
 
 	// Add destination
-	result = append(result, mls.destination.KeysAndCert.Bytes()...)
+	destBytes, err := mls.destination.KeysAndCert.Bytes()
+	if err != nil {
+		return nil, oops.Errorf("failed to serialize destination: %w", err)
+	}
+	result = append(result, destBytes...)
 
 	// Add published timestamp (4 bytes)
 	publishedBytes := make([]byte, 4)
@@ -622,7 +626,7 @@ func (mls *MetaLeaseSet) Bytes() ([]byte, error) {
 
 	log.WithFields(logger.Fields{
 		"total_size":       len(result),
-		"destination_size": len(mls.destination.KeysAndCert.Bytes()),
+		"destination_size": len(destBytes),
 		"num_entries":      mls.numEntries,
 		"has_offline_sig":  mls.offlineSignature != nil,
 		"options_count":    len(mls.options.Values()),
