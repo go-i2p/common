@@ -35,8 +35,10 @@ func TestDestinationAddressGeneration(t *testing.T) {
 	dest := Destination{KeysAndCert: keysAndCert}
 
 	// Test that addresses are generated
-	base32Addr := dest.Base32Address()
-	base64Addr := dest.Base64()
+	base32Addr, err := dest.Base32Address()
+	assert.Nil(err, "Base32Address() should not error")
+	base64Addr, err := dest.Base64()
+	assert.Nil(err, "Base64() should not error")
 
 	// Verify addresses are not empty
 	assert.NotEmpty(base32Addr, "Base32 address should not be empty")
@@ -47,7 +49,8 @@ func TestDestinationAddressGeneration(t *testing.T) {
 
 	// The key test: verify that the methods use full destination data,
 	// not just certificate data
-	fullDestBytes := dest.KeysAndCert.Bytes()
+	fullDestBytes, err := dest.KeysAndCert.Bytes()
+	assert.Nil(err, "KeysAndCert.Bytes() should not error")
 	cert := dest.KeysAndCert.Certificate()
 	certBytes := cert.Bytes()
 
@@ -57,7 +60,8 @@ func TestDestinationAddressGeneration(t *testing.T) {
 
 	// Verify that the hash input is the full destination data
 	hash := types.SHA256(fullDestBytes)
-	expectedBase32 := dest.Base32Address()
+	expectedBase32, err := dest.Base32Address()
+	assert.Nil(err, "Base32Address() should not error")
 
 	// The generated address should be based on full destination hash
 	assert.Contains(expectedBase32, ".b32.i2p", "Address should be properly formatted")
@@ -87,7 +91,8 @@ func TestDestinationBytes(t *testing.T) {
 	assert.Empty(remainder, "Should consume all data")
 
 	// Serialize back to bytes
-	serializedData := dest.Bytes()
+	serializedData, err := dest.Bytes()
+	assert.Nil(err, "Bytes() should not error")
 
 	// Verify that serialized data matches original data
 	assert.Equal(originalData, serializedData, "Serialized destination should match original data")
@@ -99,6 +104,15 @@ func TestDestinationBytes(t *testing.T) {
 	assert.Empty(remainder2, "Should consume all serialized data")
 
 	// Verify that both destinations generate the same addresses
-	assert.Equal(dest.Base32Address(), dest2.Base32Address(), "Round-trip destinations should have same Base32 address")
-	assert.Equal(dest.Base64(), dest2.Base64(), "Round-trip destinations should have same Base64 address")
+	base32_1, err := dest.Base32Address()
+	assert.Nil(err, "Base32Address() should not error")
+	base32_2, err := dest2.Base32Address()
+	assert.Nil(err, "Base32Address() should not error")
+	assert.Equal(base32_1, base32_2, "Round-trip destinations should have same Base32 address")
+
+	base64_1, err := dest.Base64()
+	assert.Nil(err, "Base64() should not error")
+	base64_2, err := dest2.Base64()
+	assert.Nil(err, "Base64() should not error")
+	assert.Equal(base64_1, base64_2, "Round-trip destinations should have same Base64 address")
 }

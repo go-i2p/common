@@ -124,6 +124,30 @@ func NewKeysAndCert(
 	return keysAndCert, nil
 }
 
+// Validate checks if the KeysAndCert is fully initialized.
+// Returns an error if any required field is nil or invalid.
+func (kac *KeysAndCert) Validate() error {
+	if kac == nil {
+		return oops.Errorf("KeysAndCert is nil")
+	}
+	if kac.KeyCertificate == nil {
+		return oops.Errorf("KeyCertificate is required")
+	}
+	if kac.ReceivingPublic == nil {
+		return oops.Errorf("ReceivingPublic key is required")
+	}
+	if kac.SigningPublic == nil {
+		return oops.Errorf("SigningPublic key is required")
+	}
+	return nil
+}
+
+// IsValid returns true if the KeysAndCert is fully initialized.
+// This is a convenience method that calls Validate() and returns false if there's an error.
+func (kac *KeysAndCert) IsValid() bool {
+	return kac.Validate() == nil
+}
+
 // validatePublicKeySize validates that the public key has the expected size.
 // Returns error if the key is non-nil and has an incorrect size.
 func validatePublicKeySize(publicKey types.ReceivingPublicKey, expectedSize int) error {
@@ -169,7 +193,12 @@ func validatePaddingSize(padding []byte, pubKeySize, sigKeySize int) error {
 }
 
 // Bytes returns the entire keyCertificate in []byte form, trims payload to specified length.
-func (keys_and_cert KeysAndCert) Bytes() []byte {
+// Returns an error if the KeysAndCert is not fully initialized.
+func (keys_and_cert KeysAndCert) Bytes() ([]byte, error) {
+	if err := keys_and_cert.Validate(); err != nil {
+		return nil, err
+	}
+
 	bytes := []byte{}
 	rpublen := 0
 	if keys_and_cert.ReceivingPublic != nil {
@@ -204,17 +233,25 @@ func (keys_and_cert KeysAndCert) Bytes() []byte {
 		"spk_bytes_length":     spublen,
 		"cert_bytes_length":    certlen,
 	}).Debug("Retrieved bytes from KeysAndCert")
-	return bytes
+	return bytes, nil
 }
 
 // PublicKey returns the public key as a types.publicKey.
-func (keys_and_cert *KeysAndCert) PublicKey() (key types.ReceivingPublicKey) {
-	return keys_and_cert.ReceivingPublic
+// Returns an error if the KeysAndCert is not fully initialized.
+func (keys_and_cert *KeysAndCert) PublicKey() (types.ReceivingPublicKey, error) {
+	if err := keys_and_cert.Validate(); err != nil {
+		return nil, err
+	}
+	return keys_and_cert.ReceivingPublic, nil
 }
 
 // SigningPublicKey returns the signing public key.
-func (keys_and_cert *KeysAndCert) SigningPublicKey() (signing_public_key types.SigningPublicKey) {
-	return keys_and_cert.SigningPublic
+// Returns an error if the KeysAndCert is not fully initialized.
+func (keys_and_cert *KeysAndCert) SigningPublicKey() (types.SigningPublicKey, error) {
+	if err := keys_and_cert.Validate(); err != nil {
+		return nil, err
+	}
+	return keys_and_cert.SigningPublic, nil
 }
 
 // Certificate returns the certificate.
@@ -293,17 +330,17 @@ func ReadKeysAndCert(data []byte) (*KeysAndCert, []byte, error) {
 	}).Debug("Reading KeysAndCert from data")
 
 	if err := validateKeysAndCertDataSize(len(data)); err != nil {
-		return &KeysAndCert{}, nil, err
+		return nil, nil, err
 	}
 
 	keyCert, remainder, err := parseKeyCertificateFromData(data, KEYS_AND_CERT_DATA_SIZE)
 	if err != nil {
-		return &KeysAndCert{}, remainder, err
+		return nil, remainder, err
 	}
 
 	pubKey, err := constructPublicKeyFromCert(keyCert, data)
 	if err != nil {
-		return &KeysAndCert{KeyCertificate: keyCert}, remainder, err
+		return nil, remainder, err
 	}
 
 	pubKeySize := keyCert.CryptoSize()
@@ -312,7 +349,7 @@ func ReadKeysAndCert(data []byte) (*KeysAndCert, []byte, error) {
 
 	sigKey, err := constructSigningKeyFromCert(keyCert, data, sigKeySize)
 	if err != nil {
-		return &KeysAndCert{KeyCertificate: keyCert, ReceivingPublic: pubKey, Padding: padding}, remainder, err
+		return nil, remainder, err
 	}
 
 	keysAndCert := &KeysAndCert{

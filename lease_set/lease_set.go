@@ -172,7 +172,7 @@ func logLeaseSetCreationSuccess(leaseSet LeaseSet) {
 }
 
 // getSignatureType determines the signature type from a certificate
-func getSignatureType(cert certificate.Certificate) int {
+func getSignatureType(cert *certificate.Certificate) int {
 	kind, err := cert.Type()
 	if err != nil {
 		log.WithFields(logger.Fields{

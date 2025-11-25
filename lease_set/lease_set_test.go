@@ -133,7 +133,7 @@ func generateTestRouterInfo(t *testing.T) (*router_info.RouterInfo, types.Receiv
 		t.Fatalf("Failed to generate random padding: %v\n", err)
 	}
 	// Create RouterIdentity
-	routerIdentity, err := router_identity.NewRouterIdentity(elg_pubkey, ed25519_pubkey, *cert, padding)
+	routerIdentity, err := router_identity.NewRouterIdentity(elg_pubkey, ed25519_pubkey, cert, padding)
 	if err != nil {
 		t.Fatalf("Failed to create router identity: %v\n", err)
 	}

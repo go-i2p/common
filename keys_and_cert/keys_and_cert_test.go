@@ -122,7 +122,8 @@ func TestCertificateWithValidDataElgAndEd25519(t *testing.T) {
 	keysAndCert := createValidKeyAndCert(t)
 
 	// Serialize KeysAndCert to bytes
-	serialized := keysAndCert.Bytes()
+	serialized, err := keysAndCert.Bytes()
+	assert.Nil(err, "Bytes() should not error for valid KeysAndCert")
 
 	// Deserialize KeysAndCert from bytes
 	parsedKeysAndCert, remainder, err := ReadKeysAndCertElgAndEd25519(serialized)
@@ -163,10 +164,11 @@ func TestPublicKeyWithBadData(t *testing.T) {
 	data = append(data, cert_data...)
 	keys_and_cert, _, err := ReadKeysAndCert(data)
 
-	pub_key := keys_and_cert.PublicKey()
+	pub_key, pub_key_err := keys_and_cert.PublicKey()
 	if assert.NotNil(err) {
 		assert.Equal("error parsing KeysAndCert: data is smaller than minimum valid size", err.Error())
 	}
+	assert.NotNil(pub_key_err)
 	assert.Nil(pub_key)
 }
 
@@ -182,7 +184,8 @@ func TestPublicKeyWithBadCertificate(t *testing.T) {
 	if assert.NotNil(err) {
 		log.WithError(err).Debug("Correctly got error")
 	}
-	pub_key := keys_and_cert.PublicKey()
+	pub_key, pub_key_err := keys_and_cert.PublicKey()
+	assert.NotNil(pub_key_err)
 	assert.Nil(pub_key)
 }
 
@@ -227,8 +230,9 @@ func TestSigningPublicKeyWithBadData(t *testing.T) {
 	data = append(data, cert_data...)
 	keys_and_cert, _, err := ReadKeysAndCert(data)
 
-	signing_pub_key := keys_and_cert.SigningPublicKey()
+	signing_pub_key, signing_key_err := keys_and_cert.SigningPublicKey()
 	assert.NotNil(err)
+	assert.NotNil(signing_key_err)
 	assert.Nil(signing_pub_key)
 }
 
@@ -241,8 +245,9 @@ func TestSigningPublicKeyWithBadCertificate(t *testing.T) {
 	data = append(data, pub_key_data...)
 	data = append(data, cert_data...)
 	keys_and_cert, _, err := ReadKeysAndCert(data)
-	signing_pub_key := keys_and_cert.SigningPublicKey()
+	signing_pub_key, signing_key_err := keys_and_cert.SigningPublicKey()
 	assert.NotNil(err)
+	assert.NotNil(signing_key_err)
 	assert.Nil(signing_pub_key)
 }
 
@@ -351,3 +356,241 @@ func TestNewKeysAndCertWithValidDataWithoutCertificateAndRemainder(t *testing.T)
 
 
 */
+
+// TestValidate tests the Validate() method for various edge cases
+func TestValidate(t *testing.T) {
+	assert := assert.New(t)
+
+	t.Run("nil struct", func(t *testing.T) {
+		var kac *KeysAndCert
+		err := kac.Validate()
+		assert.NotNil(err)
+		assert.Contains(err.Error(), "KeysAndCert is nil")
+	})
+
+	t.Run("missing key certificate", func(t *testing.T) {
+		kac := &KeysAndCert{
+			KeyCertificate:  nil,
+			ReceivingPublic: createDummyReceivingKey(),
+			SigningPublic:   createDummySigningKey(),
+		}
+		err := kac.Validate()
+		assert.NotNil(err)
+		assert.Contains(err.Error(), "KeyCertificate is required")
+	})
+
+	t.Run("missing receiving public key", func(t *testing.T) {
+		kac := &KeysAndCert{
+			KeyCertificate:  createDummyKeyCertificate(t),
+			ReceivingPublic: nil,
+			SigningPublic:   createDummySigningKey(),
+		}
+		err := kac.Validate()
+		assert.NotNil(err)
+		assert.Contains(err.Error(), "ReceivingPublic key is required")
+	})
+
+	t.Run("missing signing public key", func(t *testing.T) {
+		kac := &KeysAndCert{
+			KeyCertificate:  createDummyKeyCertificate(t),
+			ReceivingPublic: createDummyReceivingKey(),
+			SigningPublic:   nil,
+		}
+		err := kac.Validate()
+		assert.NotNil(err)
+		assert.Contains(err.Error(), "SigningPublic key is required")
+	})
+
+	t.Run("valid struct", func(t *testing.T) {
+		kac := createValidKeyAndCert(t)
+		err := kac.Validate()
+		assert.Nil(err)
+	})
+}
+
+// TestIsValid tests the IsValid() convenience method
+func TestIsValid(t *testing.T) {
+	assert := assert.New(t)
+
+	t.Run("nil struct returns false", func(t *testing.T) {
+		var kac *KeysAndCert
+		assert.False(kac.IsValid())
+	})
+
+	t.Run("partial struct returns false", func(t *testing.T) {
+		kac := &KeysAndCert{
+			KeyCertificate: createDummyKeyCertificate(t),
+		}
+		assert.False(kac.IsValid())
+	})
+
+	t.Run("valid struct returns true", func(t *testing.T) {
+		kac := createValidKeyAndCert(t)
+		assert.True(kac.IsValid())
+	})
+}
+
+// TestZeroValueKeysAndCertUnsafe tests that a zero-value KeysAndCert is unsafe
+func TestZeroValueKeysAndCertUnsafe(t *testing.T) {
+	assert := assert.New(t)
+
+	var kac KeysAndCert
+	assert.False(kac.IsValid())
+
+	_, err := kac.Bytes()
+	assert.NotNil(err)
+	assert.Contains(err.Error(), "KeyCertificate is required")
+}
+
+// TestBytesWithInvalidStruct tests that Bytes() returns error for invalid structs
+func TestBytesWithInvalidStruct(t *testing.T) {
+	assert := assert.New(t)
+
+	t.Run("nil key certificate", func(t *testing.T) {
+		kac := &KeysAndCert{
+			ReceivingPublic: createDummyReceivingKey(),
+			SigningPublic:   createDummySigningKey(),
+		}
+		_, err := kac.Bytes()
+		assert.NotNil(err)
+		assert.Contains(err.Error(), "KeyCertificate is required")
+	})
+
+	t.Run("nil receiving key", func(t *testing.T) {
+		kac := &KeysAndCert{
+			KeyCertificate: createDummyKeyCertificate(t),
+			SigningPublic:  createDummySigningKey(),
+		}
+		_, err := kac.Bytes()
+		assert.NotNil(err)
+		assert.Contains(err.Error(), "ReceivingPublic key is required")
+	})
+}
+
+// TestPublicKeyAndSigningPublicKeyValidation tests validation in accessor methods
+func TestPublicKeyAndSigningPublicKeyValidation(t *testing.T) {
+	assert := assert.New(t)
+
+	t.Run("PublicKey returns error on invalid struct", func(t *testing.T) {
+		kac := &KeysAndCert{}
+		_, err := kac.PublicKey()
+		assert.NotNil(err)
+	})
+
+	t.Run("SigningPublicKey returns error on invalid struct", func(t *testing.T) {
+		kac := &KeysAndCert{}
+		_, err := kac.SigningPublicKey()
+		assert.NotNil(err)
+	})
+
+	t.Run("PublicKey returns key on valid struct", func(t *testing.T) {
+		kac := createValidKeyAndCert(t)
+		key, err := kac.PublicKey()
+		assert.Nil(err)
+		assert.NotNil(key)
+	})
+
+	t.Run("SigningPublicKey returns key on valid struct", func(t *testing.T) {
+		kac := createValidKeyAndCert(t)
+		key, err := kac.SigningPublicKey()
+		assert.Nil(err)
+		assert.NotNil(key)
+	})
+}
+
+// TestReadKeysAndCertReturnsNilOnError tests that ReadKeysAndCert returns nil on error
+func TestReadKeysAndCertReturnsNilOnError(t *testing.T) {
+	assert := assert.New(t)
+
+	t.Run("returns nil on insufficient data", func(t *testing.T) {
+		data := make([]byte, 10)
+		kac, _, err := ReadKeysAndCert(data)
+		assert.NotNil(err)
+		assert.Nil(kac)
+	})
+
+	t.Run("returns nil on certificate parse error", func(t *testing.T) {
+		// Create data that's long enough but has invalid certificate
+		data := make([]byte, KEYS_AND_CERT_DATA_SIZE+3)
+		// Set invalid certificate type
+		data[KEYS_AND_CERT_DATA_SIZE] = 0xFF
+		kac, _, err := ReadKeysAndCert(data)
+		assert.NotNil(err)
+		assert.Nil(kac)
+	})
+}
+
+// TestRoundTripKeysAndCert tests round-trip serialization and deserialization
+func TestRoundTripKeysAndCert(t *testing.T) {
+	assert := assert.New(t)
+
+	original := createValidKeyAndCert(t)
+	assert.True(original.IsValid())
+
+	// Serialize
+	serialized, err := original.Bytes()
+	assert.Nil(err)
+	assert.NotEmpty(serialized)
+
+	// Deserialize
+	parsed, remainder, err := ReadKeysAndCert(serialized)
+	assert.Nil(err)
+	assert.Empty(remainder)
+	assert.NotNil(parsed)
+	assert.True(parsed.IsValid())
+
+	// Compare fields
+	assert.Equal(original.KeyCertificate.Bytes(), parsed.KeyCertificate.Bytes())
+	assert.Equal(original.ReceivingPublic.Bytes(), parsed.ReceivingPublic.Bytes())
+	assert.Equal(original.Padding, parsed.Padding)
+	assert.Equal(original.SigningPublic.Bytes(), parsed.SigningPublic.Bytes())
+}
+
+// Helper functions for creating test data
+
+// createDummyKeyCertificate creates a basic KeyCertificate for testing
+func createDummyKeyCertificate(t *testing.T) *key_certificate.KeyCertificate {
+	var payload bytes.Buffer
+	cryptoPublicKeyType, err := data.NewIntegerFromInt(0, 2) // ElGamal
+	if err != nil {
+		t.Fatalf("Failed to create crypto public key type: %v", err)
+	}
+	signingPublicKeyType, err := data.NewIntegerFromInt(7, 2) // Ed25519
+	if err != nil {
+		t.Fatalf("Failed to create signing public key type: %v", err)
+	}
+	payload.Write(*signingPublicKeyType)
+	payload.Write(*cryptoPublicKeyType)
+
+	cert, err := certificate.NewCertificateWithType(certificate.CERT_KEY, payload.Bytes())
+	if err != nil {
+		t.Fatalf("Failed to create certificate: %v", err)
+	}
+
+	keyCert, err := key_certificate.KeyCertificateFromCertificate(cert)
+	if err != nil {
+		t.Fatalf("Failed to create KeyCertificate: %v", err)
+	}
+	return keyCert
+}
+
+// createDummyReceivingKey creates a dummy ElGamal public key for testing
+func createDummyReceivingKey() types.ReceivingPublicKey {
+	var key elgamal.ElgPublicKey
+	// Fill with non-zero data to make it valid
+	for i := range key {
+		key[i] = byte(i % 256)
+	}
+	return key
+}
+
+// createDummySigningKey creates a dummy Ed25519 public key for testing
+func createDummySigningKey() types.SigningPublicKey {
+	keyData := make([]byte, 32)
+	// Fill with non-zero data to make it valid
+	for i := range keyData {
+		keyData[i] = byte(i % 256)
+	}
+	key, _ := ed25519.NewEd25519PublicKey(keyData)
+	return key
+}

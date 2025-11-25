@@ -209,7 +209,7 @@ func parseSigningKey(data []byte, dest destination.Destination) (types.SigningPu
 }
 
 // determineSigningKeySize calculates the signing key size based on certificate type.
-func determineSigningKeySize(cert certificate.Certificate, kind int) int {
+func determineSigningKeySize(cert *certificate.Certificate, kind int) int {
 	if kind == certificate.CERT_KEY {
 		keyCert, err := key_certificate.KeyCertificateFromCertificate(cert)
 		if err == nil {
@@ -220,7 +220,7 @@ func determineSigningKeySize(cert certificate.Certificate, kind int) int {
 }
 
 // constructSigningKey builds the appropriate signing key based on certificate type.
-func constructSigningKey(keyData []byte, cert certificate.Certificate, kind int) (types.SigningPublicKey, error) {
+func constructSigningKey(keyData []byte, cert *certificate.Certificate, kind int) (types.SigningPublicKey, error) {
 	if kind == certificate.CERT_KEY {
 		keyCert, err := key_certificate.KeyCertificateFromCertificate(cert)
 		if err == nil {
@@ -288,7 +288,7 @@ func parseSignature(data []byte, dest destination.Destination) (sig.Signature, e
 }
 
 // determineSignatureSize calculates the signature size based on certificate type.
-func determineSignatureSize(cert certificate.Certificate, kind int) int {
+func determineSignatureSize(cert *certificate.Certificate, kind int) int {
 	if kind == certificate.CERT_KEY {
 		keyCert, err := key_certificate.KeyCertificateFromCertificate(cert)
 		if err == nil {
@@ -299,7 +299,7 @@ func determineSignatureSize(cert certificate.Certificate, kind int) int {
 }
 
 // determineSignatureType returns the appropriate signature type for the certificate.
-func determineSignatureType(cert certificate.Certificate, kind int) int {
+func determineSignatureType(cert *certificate.Certificate, kind int) int {
 	if kind == certificate.CERT_KEY {
 		keyCert, err := key_certificate.KeyCertificateFromCertificate(cert)
 		if err == nil {
