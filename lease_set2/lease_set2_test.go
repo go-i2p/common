@@ -609,7 +609,6 @@ func TestNewLeaseSet2(t *testing.T) {
 		[]lease.Lease2{*lease2},
 		nil,
 	)
-
 	if err != nil {
 		t.Logf("Error creating LeaseSet2: %v", err)
 		destBytesForLog, err2 := dest.KeysAndCert.Bytes()
