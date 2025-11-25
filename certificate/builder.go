@@ -36,13 +36,20 @@ func NewCertificateBuilder() *CertificateBuilder {
 
 // WithType sets the certificate type.
 // Valid types are: CERT_NULL, CERT_HASHCASH, CERT_HIDDEN, CERT_SIGNED, CERT_MULTIPLE, CERT_KEY.
+// Returns error if the certificate type is invalid.
 //
 // Example:
 //
 //	builder.WithType(certificate.CERT_KEY)
-func (cb *CertificateBuilder) WithType(certType uint8) *CertificateBuilder {
+func (cb *CertificateBuilder) WithType(certType uint8) (*CertificateBuilder, error) {
+	if !isValidCertType(certType) {
+		return cb, oops.Errorf("invalid certificate type: %d", certType)
+	}
 	cb.certType = certType
-	return cb
+	log.WithFields(logger.Fields{
+		"cert_type": certType,
+	}).Debug("Certificate builder: type set")
+	return cb, nil
 }
 
 // WithKeyTypes sets signing and crypto key types (for CERT_KEY type).
@@ -54,10 +61,18 @@ func (cb *CertificateBuilder) WithType(certType uint8) *CertificateBuilder {
 //   - signingType: The signing key type (e.g., 7 for Ed25519)
 //   - cryptoType: The crypto key type (e.g., 4 for X25519)
 //
+// Returns error if the key types are invalid (negative values).
+//
 // Example:
 //
 //	builder.WithKeyTypes(7, 4) // Ed25519 signing, X25519 crypto
-func (cb *CertificateBuilder) WithKeyTypes(signingType, cryptoType int) *CertificateBuilder {
+func (cb *CertificateBuilder) WithKeyTypes(signingType, cryptoType int) (*CertificateBuilder, error) {
+	if signingType < 0 {
+		return cb, oops.Errorf("signing type cannot be negative: %d", signingType)
+	}
+	if cryptoType < 0 {
+		return cb, oops.Errorf("crypto type cannot be negative: %d", cryptoType)
+	}
 	cb.certType = CERT_KEY
 	cb.signingType = &signingType
 	cb.cryptoType = &cryptoType
@@ -68,7 +83,7 @@ func (cb *CertificateBuilder) WithKeyTypes(signingType, cryptoType int) *Certifi
 		"crypto_type":  cryptoType,
 	}).Debug("Certificate builder: key types set")
 
-	return cb
+	return cb, nil
 }
 
 // WithPayload sets custom payload data.
@@ -98,9 +113,9 @@ func (cb *CertificateBuilder) WithPayload(payload []byte) *CertificateBuilder {
 //	    WithKeyTypes(7, 4).
 //	    Build()
 func (cb *CertificateBuilder) Build() (*Certificate, error) {
-	// Validate certificate type
-	if err := cb.validateCertificateType(); err != nil {
-		return nil, err
+	// Validate builder configuration
+	if err := cb.Validate(); err != nil {
+		return nil, oops.Errorf("invalid builder configuration: %w", err)
 	}
 
 	// Build payload if needed
@@ -122,13 +137,61 @@ func (cb *CertificateBuilder) Build() (*Certificate, error) {
 	return cert, nil
 }
 
+// Validate checks the builder configuration for consistency.
+// This allows catching configuration errors before calling Build().
+//
+// Example:
+//
+//	builder := NewCertificateBuilder().WithType(CERT_KEY)
+//	if err := builder.Validate(); err != nil {
+//	    // Fix configuration before building
+//	}
+func (cb *CertificateBuilder) Validate() error {
+	if cb == nil {
+		return oops.Errorf("certificate builder is nil")
+	}
+
+	// Validate certificate type
+	if err := cb.validateCertificateType(); err != nil {
+		return err
+	}
+
+	// Validate KEY certificate has either key types or explicit payload
+	if cb.certType == CERT_KEY {
+		if cb.signingType == nil && cb.cryptoType == nil && !cb.payloadSet {
+			return oops.Errorf("KEY certificates require either key types or explicit payload")
+		}
+		if cb.signingType != nil && cb.cryptoType == nil {
+			return oops.Errorf("signing type set but crypto type not set")
+		}
+		if cb.cryptoType != nil && cb.signingType == nil {
+			return oops.Errorf("crypto type set but signing type not set")
+		}
+	}
+
+	// Validate payload consistency
+	if cb.payloadSet && cb.signingType != nil {
+		log.Warn("Both explicit payload and key types set - key types will be ignored")
+	}
+
+	return nil
+}
+
 // validateCertificateType validates that the certificate type is valid.
 func (cb *CertificateBuilder) validateCertificateType() error {
-	switch cb.certType {
-	case CERT_NULL, CERT_HASHCASH, CERT_HIDDEN, CERT_SIGNED, CERT_MULTIPLE, CERT_KEY:
-		return nil
-	default:
+	if !isValidCertType(cb.certType) {
 		return oops.Errorf("invalid certificate type: %d", cb.certType)
+	}
+	return nil
+}
+
+// isValidCertType checks if a certificate type is valid.
+func isValidCertType(certType uint8) bool {
+	switch certType {
+	case CERT_NULL, CERT_HASHCASH, CERT_HIDDEN, CERT_SIGNED, CERT_MULTIPLE, CERT_KEY:
+		return true
+	default:
+		return false
 	}
 }
 
