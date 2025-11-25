@@ -185,7 +185,11 @@ func generateTestRouterInfo(t *testing.T) (*router_info.RouterInfo, types.Receiv
 
 func createTestLease(t *testing.T, index int, routerInfo *router_info.RouterInfo) (*lease.Lease, error) {
 	// Use the provided routerInfo instead of generating a new one
-	tunnelGatewayHash := types.SHA256(routerInfo.RouterIdentity().KeysAndCert.Bytes())
+	identityBytes, err := routerInfo.RouterIdentity().KeysAndCert.Bytes()
+	if err != nil {
+		return nil, err
+	}
+	tunnelGatewayHash := types.SHA256(identityBytes)
 
 	// Create expiration time
 	expiration := time.Now().Add(time.Hour * time.Duration(index+1)) // Different times for each lease
@@ -300,14 +304,17 @@ func generateTestDestination(t *testing.T) (*destination.Destination, types.Rece
 }
 
 // (*router_info.RouterInfo, crypto.PublicKey, types.SigningPublicKey, types.SigningPublicKey, types.SigningPublicKey, error) {
-func createTestLeaseSet(t *testing.T, routerInfo *router_info.RouterInfo, leaseCount int) (LeaseSet, error) {
+func createTestLeaseSet(t *testing.T, routerInfo *router_info.RouterInfo, leaseCount int) (*LeaseSet, error) {
 	// Generate test Destination and client keys
 	dest, encryptionKey, signingKey, signingPrivKey, err := generateTestDestination(t)
 	if err != nil {
-		return LeaseSet{}, oops.Errorf("failed to generate test destination: %v", err)
+		return nil, oops.Errorf("failed to generate test destination: %v", err)
 	}
 
-	destBytes := dest.KeysAndCert.Bytes()
+	destBytes, err := dest.KeysAndCert.Bytes()
+	if err != nil {
+		return nil, oops.Errorf("failed to serialize destination: %v", err)
+	}
 	t.Logf("Destination size: %d bytes", len(destBytes))
 
 	// Ensure the destination size is at least 387 bytes
@@ -320,7 +327,7 @@ func createTestLeaseSet(t *testing.T, routerInfo *router_info.RouterInfo, leaseC
 	for i := 0; i < leaseCount; i++ {
 		testLease, err := createTestLease(t, i, routerInfo)
 		if err != nil {
-			return LeaseSet{}, err
+			return nil, err
 		}
 		leases = append(leases, *testLease)
 	}
@@ -377,6 +384,66 @@ func TestLeaseSetValidation(t *testing.T) {
 	assert.NotNil(err)
 	assert.Equal("invalid lease set: more than 16 leases", err.Error())
 }
+
+func TestLeaseSetValidate(t *testing.T) {
+	t.Run("nil lease set", func(t *testing.T) {
+		var ls *LeaseSet
+		err := ls.Validate()
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "lease set is nil")
+	})
+
+	t.Run("valid lease set", func(t *testing.T) {
+		routerInfo, _, _, _, _, err := generateTestRouterInfo(t)
+		assert.NoError(t, err)
+
+		leaseSet, err := createTestLeaseSet(t, routerInfo, 3)
+		assert.NoError(t, err)
+		assert.NotNil(t, leaseSet)
+
+		err = leaseSet.Validate()
+		assert.NoError(t, err)
+	})
+
+	t.Run("lease set with single lease", func(t *testing.T) {
+		routerInfo, _, _, _, _, err := generateTestRouterInfo(t)
+		assert.NoError(t, err)
+
+		leaseSet, err := createTestLeaseSet(t, routerInfo, 1)
+		assert.NoError(t, err)
+
+		err = leaseSet.Validate()
+		assert.NoError(t, err)
+	})
+
+	t.Run("lease set with maximum leases", func(t *testing.T) {
+		routerInfo, _, _, _, _, err := generateTestRouterInfo(t)
+		assert.NoError(t, err)
+
+		leaseSet, err := createTestLeaseSet(t, routerInfo, 16)
+		assert.NoError(t, err)
+
+		err = leaseSet.Validate()
+		assert.NoError(t, err)
+	})
+}
+
+func TestLeaseSetIsValid(t *testing.T) {
+	t.Run("nil lease set", func(t *testing.T) {
+		var ls *LeaseSet
+		assert.False(t, ls.IsValid())
+	})
+
+	t.Run("valid lease set", func(t *testing.T) {
+		routerInfo, _, _, _, _, err := generateTestRouterInfo(t)
+		assert.NoError(t, err)
+
+		leaseSet, err := createTestLeaseSet(t, routerInfo, 2)
+		assert.NoError(t, err)
+		assert.True(t, leaseSet.IsValid())
+	})
+}
+
 
 /*
 func TestLeaseSetComponents(t *testing.T) {

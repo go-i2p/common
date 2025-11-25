@@ -256,7 +256,11 @@ func createSignerFromPrivateKey(signingPrivateKey types.SigningPrivateKey, sigTy
 
 // signRouterInfoData serializes RouterInfo data and creates a signature.
 func signRouterInfoData(routerInfo *RouterInfo, signer types.Signer, sigType int) (*signature.Signature, error) {
-	dataBytes := routerInfo.serializeWithoutSignature()
+	dataBytes, err := routerInfo.serializeWithoutSignature()
+	if err != nil {
+		log.WithError(err).Error("Failed to serialize RouterInfo for signing")
+		return nil, oops.Errorf("failed to serialize data: %v", err)
+	}
 
 	signatureBytes, err := signer.Sign(dataBytes)
 	if err != nil {
@@ -276,7 +280,11 @@ func signRouterInfoData(routerInfo *RouterInfo, signer types.Signer, sigType int
 // Bytes returns the RouterInfo as a []byte suitable for writing to a stream.
 func (router_info RouterInfo) Bytes() (bytes []byte, err error) {
 	log.Debug("Converting RouterInfo to bytes")
-	bytes = append(bytes, router_info.router_identity.Bytes()...)
+	identityBytes, err := router_info.router_identity.Bytes()
+	if err != nil {
+		return nil, err
+	}
+	bytes = append(bytes, identityBytes...)
 	bytes = append(bytes, router_info.published.Bytes()...)
 	bytes = append(bytes, router_info.size.Bytes()...)
 	for _, router_address := range router_info.addresses {
@@ -292,7 +300,8 @@ func (router_info RouterInfo) Bytes() (bytes []byte, err error) {
 // String returns a string representation of the RouterInfo.
 func (router_info RouterInfo) String() string {
 	log.Debug("Converting RouterInfo to string")
-	str := "Certificate: " + bytesToString(router_info.router_identity.Bytes()) + "\n"
+	identityBytes, _ := router_info.router_identity.Bytes()
+	str := "Certificate: " + bytesToString(identityBytes) + "\n"
 	str += "Published: " + bytesToString(router_info.published.Bytes()) + "\n"
 	str += "Addresses:" + bytesToString(router_info.size.Bytes()) + "\n"
 	for index, router_address := range router_info.addresses {
@@ -311,13 +320,16 @@ func (router_info *RouterInfo) RouterIdentity() *router_identity.RouterIdentity 
 }
 
 // IdentHash returns the identity hash (sha256 sum) for this RouterInfo.
-func (router_info *RouterInfo) IdentHash() data.Hash {
+func (router_info *RouterInfo) IdentHash() (data.Hash, error) {
 	log.Debug("Calculating IdentHash for RouterInfo")
 	// Hash the complete RouterIdentity bytes as per I2P specification
-	identityData := router_info.router_identity.Bytes()
+	identityData, err := router_info.router_identity.Bytes()
+	if err != nil {
+		return data.Hash{}, err
+	}
 	hash := data.HashData(identityData)
 	log.WithField("hash", hash).Debug("Calculated IdentHash for RouterInfo")
-	return hash
+	return hash, nil
 }
 
 // Published returns the date this RouterInfo was published as an I2P Date.
@@ -533,10 +545,14 @@ func (router_info *RouterInfo) Reachable() bool {
 }
 
 // serializeWithoutSignature serializes the RouterInfo up to (but not including) the signature.
-func (ri *RouterInfo) serializeWithoutSignature() []byte {
+func (ri *RouterInfo) serializeWithoutSignature() ([]byte, error) {
 	var bytes []byte
 	// Serialize RouterIdentity
-	bytes = append(bytes, ri.router_identity.Bytes()...)
+	identityBytes, err := ri.router_identity.Bytes()
+	if err != nil {
+		return nil, err
+	}
+	bytes = append(bytes, identityBytes...)
 
 	// Serialize Published Date
 	bytes = append(bytes, ri.published.Bytes()...)
@@ -555,7 +571,7 @@ func (ri *RouterInfo) serializeWithoutSignature() []byte {
 	// Serialize Options
 	bytes = append(bytes, ri.options.Data()...)
 
-	return bytes
+	return bytes, nil
 }
 
 // ReadRouterInfo returns RouterInfo from a []byte.

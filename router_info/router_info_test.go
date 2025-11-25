@@ -317,3 +317,202 @@ func TestRouterInfoPeerSize(t *testing.T) {
 	// We can test this by checking if the method calls the Int() method on the field
 	assert.IsType(0, peerSize, "PeerSize should return an integer")
 }
+
+//
+// Validation Tests
+//
+
+// TestRouterInfoValidate tests the Validate method
+func TestRouterInfoValidate(t *testing.T) {
+	t.Run("valid router info passes validation", func(t *testing.T) {
+		assert := assert.New(t)
+
+		routerInfo, err := generateTestRouterInfo(t, time.Now())
+		assert.Nil(err, "RouterInfo creation should not return an error")
+
+		err = routerInfo.Validate()
+		assert.NoError(err, "Valid RouterInfo should pass validation")
+	})
+
+	t.Run("nil router info fails validation", func(t *testing.T) {
+		assert := assert.New(t)
+
+		var routerInfo *RouterInfo
+		err := routerInfo.Validate()
+		assert.Error(err, "Nil RouterInfo should fail validation")
+		assert.Contains(err.Error(), "router info is nil")
+	})
+
+	t.Run("router info with nil identity fails validation", func(t *testing.T) {
+		assert := assert.New(t)
+
+		publishedDate, err := createPublishedDate(time.Now())
+		assert.Nil(err)
+		sizeInt, peerSizeInt, err := createSizeIntegers([]*router_address.RouterAddress{{}})
+		assert.Nil(err)
+		options, err := data.GoMapToMapping(map[string]string{})
+		assert.Nil(err)
+
+		routerInfo := &RouterInfo{
+			router_identity: nil,
+			published:       publishedDate,
+			size:            sizeInt,
+			addresses:       []*router_address.RouterAddress{{}},
+			peer_size:       peerSizeInt,
+			options:         options,
+			signature:       &signature.Signature{},
+		}
+
+		err = routerInfo.Validate()
+		assert.Error(err, "RouterInfo with nil identity should fail validation")
+		assert.Contains(err.Error(), "router identity is required")
+	})
+
+	t.Run("router info with nil published date fails validation", func(t *testing.T) {
+		assert := assert.New(t)
+
+		keyPair := generateTestKeyPair(t)
+		routerIdentity := assembleTestRouterIdentity(t, keyPair)
+		sizeInt, peerSizeInt, err := createSizeIntegers([]*router_address.RouterAddress{{}})
+		assert.Nil(err)
+		options, err := data.GoMapToMapping(map[string]string{})
+		assert.Nil(err)
+
+		routerInfo := &RouterInfo{
+			router_identity: routerIdentity,
+			published:       nil,
+			size:            sizeInt,
+			addresses:       []*router_address.RouterAddress{{}},
+			peer_size:       peerSizeInt,
+			options:         options,
+			signature:       &signature.Signature{},
+		}
+
+		err = routerInfo.Validate()
+		assert.Error(err, "RouterInfo with nil published date should fail validation")
+		assert.Contains(err.Error(), "published date is required")
+	})
+
+	t.Run("router info with no addresses fails validation", func(t *testing.T) {
+		assert := assert.New(t)
+
+		keyPair := generateTestKeyPair(t)
+		routerIdentity := assembleTestRouterIdentity(t, keyPair)
+		publishedDate, err := createPublishedDate(time.Now())
+		assert.Nil(err)
+		sizeInt, peerSizeInt, err := createSizeIntegers([]*router_address.RouterAddress{})
+		assert.Nil(err)
+		options, err := data.GoMapToMapping(map[string]string{})
+		assert.Nil(err)
+
+		routerInfo := &RouterInfo{
+			router_identity: routerIdentity,
+			published:       publishedDate,
+			size:            sizeInt,
+			addresses:       []*router_address.RouterAddress{},
+			peer_size:       peerSizeInt,
+			options:         options,
+			signature:       &signature.Signature{},
+		}
+
+		err = routerInfo.Validate()
+		assert.Error(err, "RouterInfo with no addresses should fail validation")
+		assert.Contains(err.Error(), "at least one address")
+	})
+
+	t.Run("router info with nil options fails validation", func(t *testing.T) {
+		assert := assert.New(t)
+
+		keyPair := generateTestKeyPair(t)
+		routerIdentity := assembleTestRouterIdentity(t, keyPair)
+		publishedDate, err := createPublishedDate(time.Now())
+		assert.Nil(err)
+		sizeInt, peerSizeInt, err := createSizeIntegers([]*router_address.RouterAddress{{}})
+		assert.Nil(err)
+
+		routerInfo := &RouterInfo{
+			router_identity: routerIdentity,
+			published:       publishedDate,
+			size:            sizeInt,
+			addresses:       []*router_address.RouterAddress{{}},
+			peer_size:       peerSizeInt,
+			options:         nil,
+			signature:       &signature.Signature{},
+		}
+
+		err = routerInfo.Validate()
+		assert.Error(err, "RouterInfo with nil options should fail validation")
+		assert.Contains(err.Error(), "options mapping is required")
+	})
+
+	t.Run("router info with nil signature fails validation", func(t *testing.T) {
+		assert := assert.New(t)
+
+		keyPair := generateTestKeyPair(t)
+		routerIdentity := assembleTestRouterIdentity(t, keyPair)
+		publishedDate, err := createPublishedDate(time.Now())
+		assert.Nil(err)
+		sizeInt, peerSizeInt, err := createSizeIntegers([]*router_address.RouterAddress{{}})
+		assert.Nil(err)
+
+		// Create a valid mapping for options
+		options, err := data.GoMapToMapping(map[string]string{"test": "value"})
+		assert.Nil(err, "Creating mapping should not fail")
+
+		routerInfo := &RouterInfo{
+			router_identity: routerIdentity,
+			published:       publishedDate,
+			size:            sizeInt,
+			addresses:       []*router_address.RouterAddress{{}},
+			peer_size:       peerSizeInt,
+			options:         options,
+			signature:       nil,
+		}
+
+		err = routerInfo.Validate()
+		assert.Error(err, "RouterInfo with nil signature should fail validation")
+		assert.Contains(err.Error(), "signature is required")
+	})
+}
+
+// TestRouterInfoIsValid tests the IsValid convenience method
+func TestRouterInfoIsValid(t *testing.T) {
+	t.Run("valid router info returns true", func(t *testing.T) {
+		assert := assert.New(t)
+
+		routerInfo, err := generateTestRouterInfo(t, time.Now())
+		assert.Nil(err, "RouterInfo creation should not return an error")
+
+		assert.True(routerInfo.IsValid(), "Valid RouterInfo should return true for IsValid")
+	})
+
+	t.Run("nil router info returns false", func(t *testing.T) {
+		assert := assert.New(t)
+
+		var routerInfo *RouterInfo
+		assert.False(routerInfo.IsValid(), "Nil RouterInfo should return false for IsValid")
+	})
+
+	t.Run("router info with nil identity returns false", func(t *testing.T) {
+		assert := assert.New(t)
+
+		publishedDate, err := createPublishedDate(time.Now())
+		assert.Nil(err)
+		sizeInt, peerSizeInt, err := createSizeIntegers([]*router_address.RouterAddress{{}})
+		assert.Nil(err)
+		options, err := data.GoMapToMapping(map[string]string{})
+		assert.Nil(err)
+
+		routerInfo := &RouterInfo{
+			router_identity: nil,
+			published:       publishedDate,
+			size:            sizeInt,
+			addresses:       []*router_address.RouterAddress{{}},
+			peer_size:       peerSizeInt,
+			options:         options,
+			signature:       &signature.Signature{},
+		}
+
+		assert.False(routerInfo.IsValid(), "RouterInfo with nil identity should return false for IsValid")
+	})
+}

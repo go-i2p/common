@@ -19,40 +19,83 @@ import (
 
 var log = logger.GetGoI2PLogger()
 
+// Validate checks if the LeaseSet is properly initialized and valid.
+// Returns an error if the lease set is nil or has invalid field values.
+func (ls *LeaseSet) Validate() error {
+	if ls == nil {
+		return oops.Errorf("lease set is nil")
+	}
+	if ls.leaseCount == 0 {
+		return oops.Errorf("lease set must have at least one lease")
+	}
+	if ls.leaseCount > 16 {
+		return oops.Errorf("lease set cannot have more than 16 leases")
+	}
+	if len(ls.leases) != ls.leaseCount {
+		return oops.Errorf("lease count mismatch: count field is %d but have %d leases",
+			ls.leaseCount, len(ls.leases))
+	}
+	if ls.encryptionKey == nil {
+		return oops.Errorf("encryption key is required")
+	}
+	if len(ls.encryptionKey.Bytes()) != LEASE_SET_PUBKEY_SIZE {
+		return oops.Errorf("invalid encryption key size: got %d, expected %d",
+			len(ls.encryptionKey.Bytes()), LEASE_SET_PUBKEY_SIZE)
+	}
+	if ls.signingKey == nil {
+		return oops.Errorf("signing key is required")
+	}
+	if err := ls.signature.Validate(); err != nil {
+		return oops.Errorf("invalid signature: %w", err)
+	}
+	return nil
+}
+
+// IsValid returns true if the LeaseSet is properly initialized and valid.
+// This is a convenience method that calls Validate() and returns false if there's an error.
+func (ls *LeaseSet) IsValid() bool {
+	return ls.Validate() == nil
+}
+
 // NewLeaseSet creates a new LeaseSet from the provided components.
+// Returns a pointer to LeaseSet for consistency with other constructors.
 func NewLeaseSet(
 	dest destination.Destination,
 	encryptionKey types.ReceivingPublicKey,
 	signingKey types.SigningPublicKey,
 	leases []lease.Lease,
 	signingPrivateKey types.SigningPrivateKey,
-) (LeaseSet, error) {
+) (*LeaseSet, error) {
 	log.Debug("Creating new LeaseSet")
 
 	if err := validateLeaseSetInputs(dest, encryptionKey, signingKey, leases); err != nil {
-		return LeaseSet{}, err
+		return nil, err
 	}
 
 	dbytes, err := serializeLeaseSetData(dest, encryptionKey, signingKey, leases)
 	if err != nil {
-		return LeaseSet{}, err
+		return nil, err
 	}
 
 	signature, err := createLeaseSetSignature(signingPrivateKey, dbytes)
 	if err != nil {
-		return LeaseSet{}, err
+		return nil, err
 	}
 
 	leaseSet := assembleLeaseSet(dest, encryptionKey, signingKey, leases, signature)
 
 	logLeaseSetCreationSuccess(leaseSet)
-	return leaseSet, nil
+	return &leaseSet, nil
 }
 
 // validateLeaseSetInputs validates all input parameters for LeaseSet creation.
 func validateLeaseSetInputs(dest destination.Destination, encryptionKey types.ReceivingPublicKey, signingKey types.SigningPublicKey, leases []lease.Lease) error {
 	// Validate destination size
-	if len(dest.KeysAndCert.Bytes()) < 387 {
+	destBytes, err := dest.KeysAndCert.Bytes()
+	if err != nil {
+		return oops.Errorf("failed to serialize destination: %w", err)
+	}
+	if len(destBytes) < 387 {
 		return oops.Errorf("invalid destination: minimum size is 387 bytes")
 	}
 
@@ -107,7 +150,11 @@ func serializeLeaseSetData(dest destination.Destination, encryptionKey types.Rec
 	dbytes := make([]byte, 0)
 
 	// Add Destination
-	dbytes = append(dbytes, dest.KeysAndCert.Bytes()...)
+	destBytes, err := dest.KeysAndCert.Bytes()
+	if err != nil {
+		return nil, oops.Errorf("failed to serialize destination: %w", err)
+	}
+	dbytes = append(dbytes, destBytes...)
 
 	// Add encryption key
 	dbytes = append(dbytes, encryptionKey.Bytes()...)
@@ -163,8 +210,13 @@ func assembleLeaseSet(dest destination.Destination, encryptionKey types.Receivin
 
 // logLeaseSetCreationSuccess logs detailed information about the successfully created LeaseSet.
 func logLeaseSetCreationSuccess(leaseSet LeaseSet) {
+	destBytes, err := leaseSet.dest.KeysAndCert.Bytes()
+	if err != nil {
+		log.WithError(err).Warn("Failed to serialize destination for logging")
+		return
+	}
 	log.WithFields(logger.Fields{
-		"destination_length":    len(leaseSet.dest.KeysAndCert.Bytes()),
+		"destination_length":    len(destBytes),
 		"encryption_key_length": len(leaseSet.encryptionKey.Bytes()),
 		"signing_key_length":    len(leaseSet.signingKey.Bytes()),
 		"lease_count":           leaseSet.leaseCount,
@@ -195,7 +247,11 @@ func (lease_set LeaseSet) Bytes() ([]byte, error) {
 	var result []byte
 
 	// Add destination
-	result = append(result, lease_set.dest.KeysAndCert.Bytes()...)
+	destBytes, err := lease_set.dest.KeysAndCert.Bytes()
+	if err != nil {
+		return nil, oops.Errorf("failed to serialize destination: %w", err)
+	}
+	result = append(result, destBytes...)
 
 	// Add encryption key
 	result = append(result, lease_set.encryptionKey.Bytes()...)

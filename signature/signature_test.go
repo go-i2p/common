@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestReadSignatureErrors(t *testing.T) {
@@ -78,3 +79,119 @@ func TestNewSignature(t *testing.T) {
 	assert.Equal(sig.Type(), sigType, "signature type should match input")
 	assert.Equal(rem, data[sigLength:], "remainder should be sliced from data ")
 }
+
+func TestSignatureValidate(t *testing.T) {
+	t.Run("nil signature", func(t *testing.T) {
+		var sig *Signature
+		err := sig.Validate()
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "signature is nil")
+	})
+
+	t.Run("valid EdDSA signature", func(t *testing.T) {
+		data := make([]byte, EdDSA_SHA512_Ed25519_SIZE)
+		for i := range data {
+			data[i] = byte(i % 256)
+		}
+		sig := NewSignatureFromBytes(data, SIGNATURE_TYPE_EDDSA_SHA512_ED25519)
+		err := sig.Validate()
+		require.NoError(t, err)
+	})
+
+	t.Run("valid DSA signature", func(t *testing.T) {
+		data := make([]byte, DSA_SHA1_SIZE)
+		for i := range data {
+			data[i] = byte(i % 256)
+		}
+		sig := NewSignatureFromBytes(data, SIGNATURE_TYPE_DSA_SHA1)
+		err := sig.Validate()
+		require.NoError(t, err)
+	})
+
+	t.Run("valid RSA-2048 signature", func(t *testing.T) {
+		data := make([]byte, RSA_SHA256_2048_SIZE)
+		for i := range data {
+			data[i] = byte(i % 256)
+		}
+		sig := NewSignatureFromBytes(data, SIGNATURE_TYPE_RSA_SHA256_2048)
+		err := sig.Validate()
+		require.NoError(t, err)
+	})
+
+	t.Run("invalid signature type", func(t *testing.T) {
+		data := make([]byte, 64)
+		sig := NewSignatureFromBytes(data, 9999)
+		err := sig.Validate()
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "invalid signature type")
+		assert.Contains(t, err.Error(), "9999")
+	})
+
+	t.Run("incorrect data size for type", func(t *testing.T) {
+		// EdDSA should be 64 bytes, but provide 40
+		data := make([]byte, DSA_SHA1_SIZE)
+		sig := NewSignatureFromBytes(data, SIGNATURE_TYPE_EDDSA_SHA512_ED25519)
+		err := sig.Validate()
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "signature data size mismatch")
+		assert.Contains(t, err.Error(), "got 40 bytes, expected 64 bytes")
+	})
+
+	t.Run("empty data", func(t *testing.T) {
+		sig := NewSignatureFromBytes([]byte{}, SIGNATURE_TYPE_EDDSA_SHA512_ED25519)
+		err := sig.Validate()
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "signature data size mismatch")
+	})
+
+	t.Run("all supported signature types", func(t *testing.T) {
+		testCases := []struct {
+			sigType int
+			size    int
+		}{
+			{SIGNATURE_TYPE_DSA_SHA1, DSA_SHA1_SIZE},
+			{SIGNATURE_TYPE_ECDSA_SHA256_P256, ECDSA_SHA256_P256_SIZE},
+			{SIGNATURE_TYPE_ECDSA_SHA384_P384, ECDSA_SHA384_P384_SIZE},
+			{SIGNATURE_TYPE_ECDSA_SHA512_P521, ECDSA_SHA512_P512_SIZE},
+			{SIGNATURE_TYPE_RSA_SHA256_2048, RSA_SHA256_2048_SIZE},
+			{SIGNATURE_TYPE_RSA_SHA384_3072, RSA_SHA384_3072_SIZE},
+			{SIGNATURE_TYPE_RSA_SHA512_4096, RSA_SHA512_4096_SIZE},
+			{SIGNATURE_TYPE_EDDSA_SHA512_ED25519, EdDSA_SHA512_Ed25519_SIZE},
+			{SIGNATURE_TYPE_EDDSA_SHA512_ED25519PH, EdDSA_SHA512_Ed25519ph_SIZE},
+			{SIGNATURE_TYPE_REDDSA_SHA512_ED25519, RedDSA_SHA512_Ed25519_SIZE},
+		}
+
+		for _, tc := range testCases {
+			data := make([]byte, tc.size)
+			sig := NewSignatureFromBytes(data, tc.sigType)
+			err := sig.Validate()
+			require.NoError(t, err, "signature type %d should be valid", tc.sigType)
+		}
+	})
+}
+
+func TestSignatureIsValid(t *testing.T) {
+	t.Run("nil signature", func(t *testing.T) {
+		var sig *Signature
+		assert.False(t, sig.IsValid())
+	})
+
+	t.Run("valid signature", func(t *testing.T) {
+		data := make([]byte, EdDSA_SHA512_Ed25519_SIZE)
+		sig := NewSignatureFromBytes(data, SIGNATURE_TYPE_EDDSA_SHA512_ED25519)
+		assert.True(t, sig.IsValid())
+	})
+
+	t.Run("invalid signature type", func(t *testing.T) {
+		data := make([]byte, 64)
+		sig := NewSignatureFromBytes(data, 9999)
+		assert.False(t, sig.IsValid())
+	})
+
+	t.Run("incorrect data size", func(t *testing.T) {
+		data := make([]byte, 40)
+		sig := NewSignatureFromBytes(data, SIGNATURE_TYPE_EDDSA_SHA512_ED25519)
+		assert.False(t, sig.IsValid())
+	})
+}
+
