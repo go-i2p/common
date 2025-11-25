@@ -352,6 +352,164 @@ func TestNewEncryptedLeaseSetRoundTrip(t *testing.T) {
 	assert.Equal(t, ls2.Published(), decrypted.Published())
 }
 
+// TestEncryptedLeaseSetValidate tests validation methods
+func TestEncryptedLeaseSetValidate(t *testing.T) {
+	t.Run("nil encrypted lease set", func(t *testing.T) {
+		var els *EncryptedLeaseSet
+		err := els.Validate()
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "encrypted lease set is nil")
+	})
+
+	t.Run("valid encrypted lease set", func(t *testing.T) {
+		blindedDest := createTestEd25519Destination(t)
+		ls2 := createTestLeaseSet2(t)
+
+		recipientPub, _, err := x25519.GenerateKey(rand.Reader)
+		require.NoError(t, err)
+
+		var cookie [32]byte
+		_, err = rand.Read(cookie[:])
+		require.NoError(t, err)
+
+		encryptedData, err := EncryptInnerLeaseSet2(ls2, cookie, &recipientPub)
+		require.NoError(t, err)
+
+		published := uint32(time.Now().Unix())
+		expires := uint16(600)
+		flags := uint16(ENCRYPTED_LEASESET_FLAG_BLINDED)
+
+		_, signingPriv, err := ed25519.GenerateEd25519KeyPair()
+		require.NoError(t, err)
+
+		els, err := NewEncryptedLeaseSet(
+			blindedDest,
+			published,
+			expires,
+			flags,
+			nil,
+			data.Mapping{},
+			cookie,
+			encryptedData,
+			signingPriv,
+		)
+		require.NoError(t, err)
+
+		err = els.Validate()
+		assert.NoError(t, err)
+	})
+
+	t.Run("zero expires offset", func(t *testing.T) {
+		blindedDest := createTestEd25519Destination(t)
+		ls2 := createTestLeaseSet2(t)
+
+		recipientPub, _, err := x25519.GenerateKey(rand.Reader)
+		require.NoError(t, err)
+
+		var cookie [32]byte
+		_, err = rand.Read(cookie[:])
+		require.NoError(t, err)
+
+		encryptedData, err := EncryptInnerLeaseSet2(ls2, cookie, &recipientPub)
+		require.NoError(t, err)
+
+		published := uint32(time.Now().Unix())
+		expires := uint16(0) // Invalid: zero
+		flags := uint16(ENCRYPTED_LEASESET_FLAG_BLINDED)
+
+		_, signingPriv, err := ed25519.GenerateEd25519KeyPair()
+		require.NoError(t, err)
+
+		// Constructor should reject zero expires
+		_, err = NewEncryptedLeaseSet(
+			blindedDest,
+			published,
+			expires,
+			flags,
+			nil,
+			data.Mapping{},
+			cookie,
+			encryptedData,
+			signingPriv,
+		)
+		require.Error(t, err)
+	})
+
+	t.Run("empty encrypted data", func(t *testing.T) {
+		blindedDest := createTestEd25519Destination(t)
+
+		published := uint32(time.Now().Unix())
+		expires := uint16(600)
+		flags := uint16(ENCRYPTED_LEASESET_FLAG_BLINDED)
+
+		var cookie [32]byte
+		_, err := rand.Read(cookie[:])
+		require.NoError(t, err)
+
+		_, signingPriv, err := ed25519.GenerateEd25519KeyPair()
+		require.NoError(t, err)
+
+		// Constructor should reject empty encrypted data
+		_, err = NewEncryptedLeaseSet(
+			blindedDest,
+			published,
+			expires,
+			flags,
+			nil,
+			data.Mapping{},
+			cookie,
+			[]byte{}, // Empty
+			signingPriv,
+		)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "encrypted inner data cannot be empty")
+	})
+}
+
+// TestEncryptedLeaseSetIsValid tests IsValid convenience method
+func TestEncryptedLeaseSetIsValid(t *testing.T) {
+	t.Run("nil encrypted lease set", func(t *testing.T) {
+		var els *EncryptedLeaseSet
+		assert.False(t, els.IsValid())
+	})
+
+	t.Run("valid encrypted lease set", func(t *testing.T) {
+		blindedDest := createTestEd25519Destination(t)
+		ls2 := createTestLeaseSet2(t)
+
+		recipientPub, _, err := x25519.GenerateKey(rand.Reader)
+		require.NoError(t, err)
+
+		var cookie [32]byte
+		_, err = rand.Read(cookie[:])
+		require.NoError(t, err)
+
+		encryptedData, err := EncryptInnerLeaseSet2(ls2, cookie, &recipientPub)
+		require.NoError(t, err)
+
+		published := uint32(time.Now().Unix())
+		expires := uint16(600)
+		flags := uint16(ENCRYPTED_LEASESET_FLAG_BLINDED)
+
+		_, signingPriv, err := ed25519.GenerateEd25519KeyPair()
+		require.NoError(t, err)
+
+		els, err := NewEncryptedLeaseSet(
+			blindedDest,
+			published,
+			expires,
+			flags,
+			nil,
+			data.Mapping{},
+			cookie,
+			encryptedData,
+			signingPriv,
+		)
+		require.NoError(t, err)
+		assert.True(t, els.IsValid())
+	})
+}
+
 // BenchmarkNewEncryptedLeaseSet benchmarks constructor performance
 func BenchmarkNewEncryptedLeaseSet(b *testing.B) {
 	// Setup

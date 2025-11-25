@@ -61,12 +61,12 @@ func NewEncryptedLeaseSet(
 	cookie [32]byte,
 	encryptedInnerData []byte,
 	signingKey interface{},
-) (EncryptedLeaseSet, error) {
+) (*EncryptedLeaseSet, error) {
 	log.Debug("Creating new EncryptedLeaseSet")
 
 	// Validate inputs
 	if err := validateEncryptedLeaseSetInputs(blindedDest, expiresOffset, flags, offlineSig, encryptedInnerData); err != nil {
-		return EncryptedLeaseSet{}, err
+		return nil, err
 	}
 
 	// Calculate inner length
@@ -77,14 +77,14 @@ func NewEncryptedLeaseSet(
 		blindedDest, published, expiresOffset, flags, offlineSig, options, cookie, innerLength, encryptedInnerData,
 	)
 	if err != nil {
-		return EncryptedLeaseSet{}, err
+		return nil, err
 	}
 
 	// Determine signature type and sign the data
 	sigType := determineEncryptedLeaseSetSignatureType(blindedDest, offlineSig)
 	signature, err := createEncryptedLeaseSetSignature(signingKey, dataToSign, sigType)
 	if err != nil {
-		return EncryptedLeaseSet{}, err
+		return nil, err
 	}
 
 	// Assemble the final EncryptedLeaseSet structure
@@ -109,7 +109,7 @@ func NewEncryptedLeaseSet(
 		"expires_offset":   expiresOffset,
 	}).Debug("Successfully created EncryptedLeaseSet")
 
-	return els, nil
+	return &els, nil
 }
 
 // validateEncryptedLeaseSetInputs validates all input parameters for EncryptedLeaseSet creation.
@@ -121,7 +121,10 @@ func validateEncryptedLeaseSetInputs(
 	encryptedInnerData []byte,
 ) error {
 	// Validate blinded destination size (minimum 387 bytes per I2P spec)
-	destBytes := blindedDest.Bytes()
+	destBytes, err := blindedDest.Bytes()
+	if err != nil {
+		return oops.Errorf("failed to serialize blinded destination: %w", err)
+	}
 	if len(destBytes) < ENCRYPTED_LEASESET_MIN_DESTINATION_SIZE {
 		return oops.
 			Code("invalid_destination_size").
@@ -186,7 +189,11 @@ func serializeEncryptedLeaseSetForSigning(
 	result := make([]byte, 0)
 
 	// Add blinded destination
-	result = append(result, blindedDest.KeysAndCert.Bytes()...)
+	destBytes, err := blindedDest.KeysAndCert.Bytes()
+	if err != nil {
+		return nil, oops.Errorf("failed to serialize blinded destination: %w", err)
+	}
+	result = append(result, destBytes...)
 
 	// Add published timestamp (4 bytes)
 	publishedBytes := make([]byte, 4)

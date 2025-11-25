@@ -444,7 +444,6 @@ func TestLeaseSetIsValid(t *testing.T) {
 	})
 }
 
-
 /*
 func TestLeaseSetComponents(t *testing.T) {
 	assert := assert.New(t)

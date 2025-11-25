@@ -194,4 +194,3 @@ func TestSignatureIsValid(t *testing.T) {
 		assert.False(t, sig.IsValid())
 	})
 }
-

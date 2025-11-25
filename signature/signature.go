@@ -14,19 +14,19 @@ func (s *Signature) Validate() error {
 	if s == nil {
 		return oops.Errorf("signature is nil")
 	}
-	
+
 	// Validate the signature type is supported
 	expectedSize, err := getSignatureLength(s.sigType)
 	if err != nil {
 		return oops.Errorf("invalid signature type %d: %w", s.sigType, err)
 	}
-	
+
 	// Validate the signature data size matches the expected size for the type
 	if len(s.data) != expectedSize {
-		return oops.Errorf("signature data size mismatch for type %d: got %d bytes, expected %d bytes", 
+		return oops.Errorf("signature data size mismatch for type %d: got %d bytes, expected %d bytes",
 			s.sigType, len(s.data), expectedSize)
 	}
-	
+
 	return nil
 }
 

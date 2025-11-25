@@ -452,7 +452,11 @@ func (els *EncryptedLeaseSet) Bytes() ([]byte, error) {
 	result := make([]byte, 0)
 
 	// Add blinded destination
-	result = append(result, els.blindedDestination.KeysAndCert.Bytes()...)
+	destBytes, err := els.blindedDestination.KeysAndCert.Bytes()
+	if err != nil {
+		return nil, oops.Errorf("failed to serialize blinded destination: %w", err)
+	}
+	result = append(result, destBytes...)
 
 	// Add published timestamp (4 bytes)
 	publishedBytes := make([]byte, 4)
@@ -497,12 +501,68 @@ func (els *EncryptedLeaseSet) Bytes() ([]byte, error) {
 	result = append(result, els.signature.Bytes()...)
 
 	log.WithFields(logger.Fields{
-		"total_size":       len(result),
-		"destination_size": len(els.blindedDestination.KeysAndCert.Bytes()),
-		"inner_length":     els.innerLength,
-		"has_offline_sig":  els.offlineSignature != nil,
-		"options_count":    len(els.options.Values()),
+		"total_size":      len(result),
+		"inner_length":    els.innerLength,
+		"has_offline_sig": els.offlineSignature != nil,
+		"options_count":   len(els.options.Values()),
 	}).Debug("Serialized EncryptedLeaseSet to bytes")
 
 	return result, nil
+}
+
+// Validate checks if the EncryptedLeaseSet is properly initialized and valid.
+// Returns an error if the encrypted lease set is nil or has invalid field values.
+func (els *EncryptedLeaseSet) Validate() error {
+	if els == nil {
+		return oops.Errorf("encrypted lease set is nil")
+	}
+
+	// Validate blinded destination
+	destBytes, err := els.blindedDestination.KeysAndCert.Bytes()
+	if err != nil {
+		return oops.Errorf("invalid blinded destination: %w", err)
+	}
+	if len(destBytes) < ENCRYPTED_LEASESET_MIN_DESTINATION_SIZE {
+		return oops.Errorf("blinded destination size %d is less than minimum %d",
+			len(destBytes), ENCRYPTED_LEASESET_MIN_DESTINATION_SIZE)
+	}
+
+	// Validate expires offset
+	if els.expires == 0 {
+		return oops.Errorf("expires offset cannot be zero")
+	}
+	if els.expires > ENCRYPTED_LEASESET_MAX_EXPIRES_OFFSET {
+		return oops.Errorf("expires offset %d exceeds maximum %d",
+			els.expires, ENCRYPTED_LEASESET_MAX_EXPIRES_OFFSET)
+	}
+
+	// Validate offline signature flag consistency
+	if els.HasOfflineKeys() && els.offlineSignature == nil {
+		return oops.Errorf("offline keys flag set but no offline signature present")
+	}
+	if !els.HasOfflineKeys() && els.offlineSignature != nil {
+		return oops.Errorf("offline signature present but offline keys flag not set")
+	}
+
+	// Validate encrypted inner data
+	if len(els.encryptedInnerData) == 0 {
+		return oops.Errorf("encrypted inner data cannot be empty")
+	}
+	if els.innerLength != uint16(len(els.encryptedInnerData)) {
+		return oops.Errorf("inner length mismatch: field is %d but data length is %d",
+			els.innerLength, len(els.encryptedInnerData))
+	}
+
+	// Validate signature
+	if err := els.signature.Validate(); err != nil {
+		return oops.Errorf("invalid signature: %w", err)
+	}
+
+	return nil
+}
+
+// IsValid returns true if the EncryptedLeaseSet is properly initialized and valid.
+// This is a convenience method that calls Validate() and returns false if there's an error.
+func (els *EncryptedLeaseSet) IsValid() bool {
+	return els.Validate() == nil
 }
