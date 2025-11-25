@@ -112,3 +112,43 @@ func NewIntegerFromInt(value int, size int) (integer *Integer, err error) {
 
 	return createIntegerFromBytes(value, size)
 }
+
+// NewIntegerFromBytes creates a validated Integer from a byte slice.
+// Returns error if bytes is empty or exceeds maximum integer size.
+// This is the recommended safe constructor for creating Integers from raw bytes.
+func NewIntegerFromBytes(bytes []byte) (Integer, error) {
+	if len(bytes) == 0 {
+		return nil, oops.Errorf("integer cannot be empty")
+	}
+	if len(bytes) > MAX_INTEGER_SIZE {
+		return nil, oops.Errorf("integer too large: %d bytes (max %d)",
+			len(bytes), MAX_INTEGER_SIZE)
+	}
+	i := make(Integer, len(bytes))
+	copy(i, bytes)
+	return i, nil
+}
+
+// IntSafe returns the Integer as a Go int with error handling.
+// Unlike Int(), this method returns an error instead of defaulting to 0.
+// Use this method when you need to distinguish between actual zero values and errors.
+func (i Integer) IntSafe() (int, error) {
+	if len(i) == 0 {
+		return 0, oops.Errorf("cannot convert empty integer")
+	}
+	if len(i) > MAX_INTEGER_SIZE {
+		return 0, oops.Errorf("integer too large: %d bytes", len(i))
+	}
+	return intFromBytes(i.Bytes())
+}
+
+// IsZero returns true if the integer represents zero.
+// All bytes in the integer must be 0x00 for this to return true.
+func (i Integer) IsZero() bool {
+	for _, b := range i {
+		if b != 0 {
+			return false
+		}
+	}
+	return true
+}

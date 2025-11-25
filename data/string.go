@@ -23,6 +23,40 @@ Length limit is 255 bytes (not characters). Length may be 0.
 // https://geti2p.net/spec/common-structures#string
 type I2PString []byte
 
+// IsValid checks if the I2PString has a valid structure.
+// Returns true if the length byte matches the actual data length.
+func (str I2PString) IsValid() bool {
+	if len(str) == 0 {
+		return false
+	}
+	declaredLen := int(str[0])
+	return len(str) == declaredLen+1 && declaredLen <= STRING_MAX_SIZE
+}
+
+// DataSafe returns the I2PString content with strict validation.
+// Unlike Data(), this fails fast on any inconsistency.
+// Returns error if the I2PString structure is invalid.
+func (str I2PString) DataSafe() (string, error) {
+	if !str.IsValid() {
+		log.WithFields(logger.Fields{
+			"at":     "(I2PString) DataSafe",
+			"reason": "invalid I2PString structure",
+		}).Error("invalid I2PString structure")
+		return "", oops.Errorf("invalid I2PString structure")
+	}
+	// At this point we know the structure is valid
+	length := int(str[0])
+	if length == 0 {
+		log.Debug("I2PString is empty (valid zero-length string)")
+		return "", nil
+	}
+	data := string(str[1 : length+1])
+	log.WithFields(logger.Fields{
+		"data_length": len(data),
+	}).Debug("Retrieved I2PString data safely")
+	return data, nil
+}
+
 // Length returns the length specified in the first byte.
 // Returns error if the specified does not match the actual length or the string is otherwise invalid.
 func (str I2PString) Length() (length int, err error) {
@@ -104,8 +138,75 @@ func (str I2PString) Data() (data string, err error) {
 	return data, nil
 }
 
+// NewI2PString creates a validated I2PString from a Go string.
+// Returns error if the string exceeds STRING_MAX_SIZE (255 bytes).
+// This is the preferred constructor for creating I2PStrings from Go strings.
+func NewI2PString(content string) (I2PString, error) {
+	log.WithFields(logger.Fields{
+		"input_length": len(content),
+	}).Debug("Creating new I2PString from string")
+	if len(content) > STRING_MAX_SIZE {
+		log.WithFields(logger.Fields{
+			"at":         "NewI2PString",
+			"string_len": len(content),
+			"max_len":    STRING_MAX_SIZE,
+			"reason":     "string too long",
+		}).Error("cannot create I2P string")
+		return nil, oops.Errorf("string too long: %d bytes (max %d)",
+			len(content), STRING_MAX_SIZE)
+	}
+	result := make(I2PString, 1+len(content))
+	result[0] = byte(len(content))
+	copy(result[1:], content)
+	log.WithFields(logger.Fields{
+		"i2pstring_length": len(result),
+	}).Debug("Successfully created I2PString")
+	return result, nil
+}
+
+// NewI2PStringFromBytes creates an I2PString from raw bytes with validation.
+// Validates that the length prefix matches the actual data length.
+// This is the preferred constructor for creating I2PStrings from byte slices.
+func NewI2PStringFromBytes(data []byte) (I2PString, error) {
+	log.WithFields(logger.Fields{
+		"input_length": len(data),
+	}).Debug("Creating I2PString from bytes")
+	if len(data) == 0 {
+		log.Error("I2PString data cannot be empty")
+		return nil, oops.Errorf("I2PString data cannot be empty")
+	}
+	declaredLen := int(data[0])
+	if len(data) != declaredLen+1 {
+		log.WithFields(logger.Fields{
+			"at":           "NewI2PStringFromBytes",
+			"declared_len": declaredLen,
+			"actual_len":   len(data) - 1,
+			"reason":       "length mismatch",
+		}).Error("I2PString length mismatch")
+		return nil, oops.Errorf("I2PString length mismatch: declared %d, actual %d",
+			declaredLen, len(data)-1)
+	}
+	if declaredLen > STRING_MAX_SIZE {
+		log.WithFields(logger.Fields{
+			"at":           "NewI2PStringFromBytes",
+			"declared_len": declaredLen,
+			"max_len":      STRING_MAX_SIZE,
+			"reason":       "string too long",
+		}).Error("I2PString too long")
+		return nil, oops.Errorf("I2PString too long: %d bytes (max %d)",
+			declaredLen, STRING_MAX_SIZE)
+	}
+	result := make(I2PString, len(data))
+	copy(result, data)
+	log.WithFields(logger.Fields{
+		"i2pstring_length": len(result),
+	}).Debug("Successfully created I2PString from bytes")
+	return result, nil
+}
+
 // ToI2PString converts a Go string to an I2PString.
 // Returns error if the string exceeds STRING_MAX_SIZE.
+// Deprecated: Use NewI2PString instead for better clarity and consistency.
 func ToI2PString(data string) (str I2PString, err error) {
 	log.WithFields(logger.Fields{
 		"input_length": len(data),
