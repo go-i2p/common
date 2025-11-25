@@ -3,7 +3,7 @@ module github.com/go-i2p/common
 go 1.24.4
 
 require (
-	github.com/go-i2p/crypto v0.0.2
+	github.com/go-i2p/crypto v0.0.5
 	github.com/go-i2p/logger v0.0.1
 	github.com/samber/oops v1.19.0
 	github.com/stretchr/testify v1.10.0
@@ -20,8 +20,10 @@ require (
 	go.opentelemetry.io/otel v1.37.0 // indirect
 	go.opentelemetry.io/otel/trace v1.37.0 // indirect
 	go.step.sm/crypto v0.67.0 // indirect
-	golang.org/x/crypto v0.40.0 // indirect
-	golang.org/x/sys v0.37.0 // indirect
-	golang.org/x/text v0.27.0 // indirect
+	golang.org/x/crypto v0.45.0 // indirect
+	golang.org/x/sys v0.38.0 // indirect
+	golang.org/x/text v0.31.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
+
+replace github.com/go-i2p/crypto => ../crypto
