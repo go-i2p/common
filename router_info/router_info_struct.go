@@ -757,8 +757,8 @@ func getCertificateTypeFromIdentity(router_identity *router_identity.RouterIdent
 
 // getSignatureTypeFromCert extracts the signature type from a certificate.
 // Returns the signature type and any error encountered.
-func getSignatureTypeFromCert(cert certificate.Certificate) (int, error) {
-	sigType, err := certificate.GetSignatureTypeFromCertificate(cert)
+func getSignatureTypeFromCert(cert *certificate.Certificate) (int, error) {
+	sigType, err := certificate.GetSignatureTypeFromCertificate(*cert)
 	if err != nil {
 		log.WithError(err).Error("Failed to get signature type from certificate")
 		return 0, oops.Errorf("certificate signature type error: %v", err)
@@ -768,7 +768,7 @@ func getSignatureTypeFromCert(cert certificate.Certificate) (int, error) {
 
 // validateSignatureType validates that the signature type is within acceptable range.
 // Returns error if signature type is invalid.
-func validateSignatureType(sigType int, cert certificate.Certificate) error {
+func validateSignatureType(sigType int, cert *certificate.Certificate) error {
 	if sigType <= signature.SIGNATURE_TYPE_RSA_SHA256_2048 || sigType > signature.SIGNATURE_TYPE_REDDSA_SHA512_ED25519 {
 		log.WithFields(logger.Fields{
 			"sigType": sigType,

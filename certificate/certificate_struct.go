@@ -163,6 +163,9 @@ func (c *Certificate) length() (certLen int) {
 // Type returns the Certificate type specified in the first byte of the Certificate,
 // Type returns the certificate type as int, with validation and error context.
 func (c *Certificate) Type() (certType int, err error) {
+	if !c.IsValid() {
+		return 0, oops.Errorf("certificate is not initialized")
+	}
 	certType = c.kind.Int()
 	if certType < CERT_NULL || certType > CERT_MAX_TYPE_VALUE {
 		log.WithFields(logger.Fields{
@@ -182,6 +185,9 @@ func (c *Certificate) Type() (certType int, err error) {
 // Length returns the payload length of a Certificate.
 // Length returns the payload length of a Certificate, with validation and error context.
 func (c *Certificate) Length() (length int, err error) {
+	if !c.IsValid() {
+		return 0, oops.Errorf("certificate is not initialized")
+	}
 	length = c.len.Int()
 	if length < CERT_EMPTY_PAYLOAD_SIZE || length > CERT_MAX_PAYLOAD_SIZE {
 		log.WithFields(logger.Fields{
@@ -216,4 +222,21 @@ func (c *Certificate) Data() (data []byte, err error) {
 		"data_length": len(data),
 	}).Debug("Retrieved certificate data")
 	return data, nil
+}
+
+// IsValid returns true if the certificate is fully initialized and valid.
+// This method checks that all required fields (kind, len) are present and non-empty.
+// Note: payload can be empty for NULL certificates.
+func (c *Certificate) IsValid() bool {
+	if c == nil {
+		return false
+	}
+	if len(c.kind) == 0 {
+		return false
+	}
+	if len(c.len) == 0 {
+		return false
+	}
+	// payload can be empty for NULL certificates
+	return true
 }

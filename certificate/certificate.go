@@ -19,23 +19,27 @@ func readCertificate(data []byte) (certificate Certificate, err error) {
 		"reason": "deprecated function called",
 	}).Debug("readCertificate is deprecated, use ReadCertificate instead")
 
-	certificate, _, err = ReadCertificate(data)
-	return
+	certPtr, _, err := ReadCertificate(data)
+	if err != nil {
+		return Certificate{}, err
+	}
+	return *certPtr, nil
 }
 
 // ReadCertificate creates a Certificate from []byte and returns any ExcessBytes at the end of the input.
-// returns err if the certificate could not be read.
-func ReadCertificate(data []byte) (certificate Certificate, remainder []byte, err error) {
-	certificate, err = parseCertificateFromData(data)
+// Returns nil certificate on error (not partial certificate).
+func ReadCertificate(data []byte) (certificate *Certificate, remainder []byte, err error) {
+	cert, err := parseCertificateFromData(data)
 	if err != nil {
-		return
+		// Return nil certificate on error, not partial certificate
+		return nil, data, err
 	}
 
 	err = normalizeErrorConditions(err)
-	remainder = calculateRemainder(data, certificate)
+	remainder = calculateRemainder(data, cert)
 
-	logCertificateReadCompletion(certificate, data, remainder)
-	return
+	logCertificateReadCompletion(cert, data, remainder)
+	return &cert, remainder, err
 }
 
 // parseCertificateFromData constructs a Certificate based on the input data length and content.

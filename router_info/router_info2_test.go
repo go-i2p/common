@@ -95,7 +95,7 @@ func TestCreateRouterInfo(t *testing.T) {
 	certBytes := cert.Bytes()
 	t.Logf("Serialized Certificate Size: %d bytes", len(certBytes))
 
-	keyCert, err := key_certificate.KeyCertificateFromCertificate(*cert)
+	keyCert, err := key_certificate.KeyCertificateFromCertificate(cert)
 	if err != nil {
 		log.Fatalf("KeyCertificateFromCertificate failed: %v\n", err)
 	}
@@ -108,7 +108,7 @@ func TestCreateRouterInfo(t *testing.T) {
 		t.Fatalf("Failed to generate random padding: %v\n", err)
 	}
 	// Create RouterIdentity
-	routerIdentity, err := router_identity.NewRouterIdentity(elg_pubkey, ed25519_pubkey, *cert, padding)
+	routerIdentity, err := router_identity.NewRouterIdentity(elg_pubkey, ed25519_pubkey, cert, padding)
 	if err != nil {
 		t.Fatalf("Failed to create router identity: %v\n", err)
 	}

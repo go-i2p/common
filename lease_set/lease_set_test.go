@@ -117,7 +117,7 @@ func generateTestRouterInfo(t *testing.T) (*router_info.RouterInfo, types.Receiv
 	certBytes := cert.Bytes()
 	t.Logf("Serialized Certificate Size: %d bytes", len(certBytes))
 
-	keyCert, err := key_certificate.KeyCertificateFromCertificate(*cert)
+	keyCert, err := key_certificate.KeyCertificateFromCertificate(cert)
 	if err != nil {
 		log.Fatalf("KeyCertificateFromCertificate failed: %v\n", err)
 	}
@@ -258,7 +258,7 @@ func generateTestDestination(t *testing.T) (*destination.Destination, types.Rece
 	}
 
 	// Convert Certificate to KeyCertificate
-	keyCert, err := key_certificate.KeyCertificateFromCertificate(*cert)
+	keyCert, err := key_certificate.KeyCertificateFromCertificate(cert)
 	if err != nil {
 		t.Fatalf("Failed to create KeyCertificate from Certificate: %v", err)
 	}

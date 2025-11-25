@@ -90,7 +90,7 @@ func createValidKeyAndCert(t *testing.T) *KeysAndCert {
 		t.Fatalf("Failed to create new certificate: %v\n", err)
 	}
 
-	keyCert, err := key_certificate.KeyCertificateFromCertificate(*cert)
+	keyCert, err := key_certificate.KeyCertificateFromCertificate(cert)
 	if err != nil {
 		t.Fatalf("KeyCertificateFromCertificate failed: %v\n", err)
 	}

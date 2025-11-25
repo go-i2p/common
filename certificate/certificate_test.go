@@ -104,8 +104,9 @@ func TestReadCertificateWithDataTooShort(t *testing.T) {
 	bytes := []byte{0x00, 0x00, 0x02, 0xff}
 	cert, remainder, err := ReadCertificate(bytes)
 
-	assert.Equal(cert.length(), 4, "ReadCertificate() did not return correct amount of data for certificate with missing data")
-	assert.Equal(len(remainder), 0, "ReadCertificate() did not return a zero length remainder on certificate with missing data")
+	// With the new API, ReadCertificate returns nil on error
+	assert.Nil(cert, "ReadCertificate() should return nil certificate on error")
+	assert.Equal(bytes, remainder, "ReadCertificate() should return original data as remainder on error")
 	if assert.NotNil(err) {
 		assert.Equal("certificate parsing warning: certificate data is shorter than specified by length", err.Error(), "correct error message should be returned")
 	}
@@ -129,8 +130,9 @@ func TestReadCertificateWithInvalidLength(t *testing.T) {
 	bytes := []byte{0x00, 0x00}
 	cert, remainder, err := ReadCertificate(bytes)
 
-	assert.Equal(cert.length(), 2, "ReadCertificate() should populate the certificate with the provided data even when invalid")
-	assert.Equal(len(remainder), 0, "ReadCertificate() returned non-zero length remainder on invalid certificate")
+	// With the new API, ReadCertificate returns nil on error
+	assert.Nil(cert, "ReadCertificate() should return nil certificate on error")
+	assert.Equal(bytes, remainder, "ReadCertificate() should return original data as remainder on error")
 	if assert.NotNil(err) {
 		assert.Equal("error parsing certificate: certificate is too short", err.Error(), "correct error message should be returned")
 	}
@@ -443,19 +445,15 @@ func TestCertificateHandlesOneByte(t *testing.T) {
 
 	// Test the audit case: 1-byte input should not panic and handle edge case properly
 	bytes := []byte{0x03}
-	certificate, _, err := ReadCertificate(bytes)
+	certificate, remainder, err := ReadCertificate(bytes)
 
 	// Should return error and not panic
 	assert.NotNil(err, "ReadCertificate should return error for 1-byte input")
 	assert.Equal("error parsing certificate: certificate is too short", err.Error())
 
-	// Certificate kind should be safely extracted from the available data
-	kind_int := certificate.kind.Int()
-	assert.Equal(3, kind_int, "Certificate kind should be extracted from available byte")
-
-	// Length should be zero for short certificate
-	length_int := certificate.len.Int()
-	assert.Equal(0, length_int, "Certificate length should be zero for short certificate")
+	// With the new API, ReadCertificate returns nil on error
+	assert.Nil(certificate, "ReadCertificate should return nil certificate on error")
+	assert.Equal(bytes, remainder, "ReadCertificate should return original data as remainder on error")
 }
 
 func TestCertificateHandlesZeroBytes(t *testing.T) {
@@ -468,4 +466,129 @@ func TestCertificateHandlesZeroBytes(t *testing.T) {
 	// Should return error for empty input
 	assert.NotNil(err, "ReadCertificate should return error for empty input")
 	assert.Equal("error parsing certificate: certificate is empty", err.Error())
+}
+
+// TestCertificateIsValid tests the IsValid() method for various certificate states
+func TestCertificateIsValid(t *testing.T) {
+	assert := assert.New(t)
+
+	t.Run("nil certificate", func(t *testing.T) {
+		var cert *Certificate
+		assert.False(cert.IsValid(), "nil certificate should not be valid")
+	})
+
+	t.Run("zero value certificate", func(t *testing.T) {
+		var cert Certificate
+		assert.False(cert.IsValid(), "zero-value certificate should not be valid")
+	})
+
+	t.Run("valid NULL certificate", func(t *testing.T) {
+		cert, err := NewCertificateWithType(CERT_NULL, []byte{})
+		assert.Nil(err, "Expected no error creating NULL certificate")
+		assert.True(cert.IsValid(), "valid NULL certificate should be valid")
+	})
+
+	t.Run("valid certificate with payload", func(t *testing.T) {
+		cert, err := NewCertificateWithType(CERT_KEY, []byte{0x01, 0x02, 0x03})
+		assert.Nil(err, "Expected no error creating KEY certificate")
+		assert.True(cert.IsValid(), "valid certificate with payload should be valid")
+	})
+}
+
+// TestReadCertificateErrorHandling tests that ReadCertificate returns nil on error
+func TestReadCertificateErrorHandling(t *testing.T) {
+	assert := assert.New(t)
+
+	t.Run("too short returns nil certificate", func(t *testing.T) {
+		cert, remainder, err := ReadCertificate([]byte{0x00})
+		assert.NotNil(err, "ReadCertificate should return error for too-short input")
+		assert.Nil(cert, "ReadCertificate should return nil certificate on error")
+		assert.Equal([]byte{0x00}, remainder, "remainder should be the original data on error")
+	})
+
+	t.Run("empty input returns nil certificate", func(t *testing.T) {
+		cert, remainder, err := ReadCertificate([]byte{})
+		assert.NotNil(err, "ReadCertificate should return error for empty input")
+		assert.Nil(cert, "ReadCertificate should return nil certificate on error")
+		assert.Equal([]byte{}, remainder, "remainder should be empty on error")
+	})
+
+	t.Run("valid certificate returns non-nil", func(t *testing.T) {
+		cert, remainder, err := ReadCertificate([]byte{CERT_NULL, 0x00, 0x00})
+		assert.Nil(err, "ReadCertificate should not error for valid certificate")
+		assert.NotNil(cert, "ReadCertificate should return non-nil certificate for valid input")
+		assert.True(cert.IsValid(), "certificate should be valid")
+		assert.Equal(0, len(remainder), "no remainder expected for exact-length certificate")
+	})
+}
+
+// TestZeroValueCertificateUnsafe tests that zero-value certificates are detected as invalid
+func TestZeroValueCertificateUnsafe(t *testing.T) {
+	assert := assert.New(t)
+
+	var cert Certificate
+	assert.False(cert.IsValid(), "zero-value certificate should not be valid")
+
+	// Calling methods on zero-value certificate should return errors
+	_, err := cert.Type()
+	assert.NotNil(err, "Type() should return error for uninitialized certificate")
+	assert.Equal("certificate is not initialized", err.Error())
+
+	_, err = cert.Length()
+	assert.NotNil(err, "Length() should return error for uninitialized certificate")
+	assert.Equal("certificate is not initialized", err.Error())
+
+	_, err = cert.Data()
+	assert.NotNil(err, "Data() should return error for uninitialized certificate")
+	assert.Equal("certificate is not initialized", err.Error())
+}
+
+// TestNilCertificateSafety tests that nil certificates are handled safely
+func TestNilCertificateSafety(t *testing.T) {
+	assert := assert.New(t)
+
+	var cert *Certificate
+	assert.False(cert.IsValid(), "nil certificate should not be valid")
+
+	// Calling methods on nil certificate should not panic
+	assert.NotPanics(func() {
+		_, _ = cert.Type()
+		_, _ = cert.Length()
+		_, _ = cert.Data()
+	}, "methods should not panic on nil certificate")
+}
+
+// TestCertificateAccessorsWithInvalidCertificate verifies that accessor methods check validity
+func TestCertificateAccessorsWithInvalidCertificate(t *testing.T) {
+	assert := assert.New(t)
+
+	// Create an uninitialized certificate by parsing invalid data
+	cert, _, err := ReadCertificate([]byte{0x00})
+	// This should return nil on error
+	assert.NotNil(err, "ReadCertificate should error for invalid data")
+	assert.Nil(cert, "ReadCertificate should return nil for invalid data")
+}
+
+// TestCertificateRoundTripWithIsValid tests that certificates maintain validity through serialization
+func TestCertificateRoundTripWithIsValid(t *testing.T) {
+	assert := assert.New(t)
+
+	original, err := NewCertificateWithType(CERT_SIGNED, []byte{0xAA, 0xBB, 0xCC, 0xDD})
+	assert.Nil(err, "Expected no error creating original certificate")
+	assert.True(original.IsValid(), "original certificate should be valid")
+
+	serialized := original.Bytes()
+	parsed, _, err := ReadCertificate(serialized)
+	assert.Nil(err, "Expected no error parsing certificate")
+	assert.NotNil(parsed, "parsed certificate should not be nil")
+	assert.True(parsed.IsValid(), "parsed certificate should be valid")
+
+	// Verify all fields match
+	origType, _ := original.Type()
+	parsedType, _ := parsed.Type()
+	assert.Equal(origType, parsedType, "certificate types should match")
+
+	origData, _ := original.Data()
+	parsedData, _ := parsed.Data()
+	assert.Equal(origData, parsedData, "certificate data should match")
 }

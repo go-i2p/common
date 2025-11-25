@@ -35,7 +35,7 @@ type testKeyPair struct {
 	ed25519PrivKey ed25519.Ed25519PrivateKey
 	ed25519PubKey  types.SigningPublicKey
 	elgPubKey      elgamal.ElgPublicKey
-	certificate    certificate.Certificate
+	certificate    *certificate.Certificate
 }
 
 // generateTestKeyPair creates all necessary cryptographic components for testing.
@@ -110,7 +110,7 @@ func generateElGamalKeyPair(t *testing.T) elgamal.ElgPublicKey {
 }
 
 // createTestCertificate builds a key certificate with the required payload for testing.
-func createTestCertificate(t *testing.T) certificate.Certificate {
+func createTestCertificate(t *testing.T) *certificate.Certificate {
 	var payload bytes.Buffer
 
 	signingPublicKeyType, err := data.NewIntegerFromInt(7, 2)
@@ -134,11 +134,11 @@ func createTestCertificate(t *testing.T) certificate.Certificate {
 	certBytes := cert.Bytes()
 	t.Logf("Serialized Certificate Size: %d bytes", len(certBytes))
 
-	return *cert
+	return cert
 }
 
 // createTestRouterIdentity assembles a router identity from keys and certificate with proper padding.
-func createTestRouterIdentity(t *testing.T, elg_pubkey elgamal.ElgPublicKey, ed25519_pubkey types.SigningPublicKey, cert certificate.Certificate) *router_identity.RouterIdentity {
+func createTestRouterIdentity(t *testing.T, elg_pubkey elgamal.ElgPublicKey, ed25519_pubkey types.SigningPublicKey, cert *certificate.Certificate) *router_identity.RouterIdentity {
 	keyCert, err := key_certificate.KeyCertificateFromCertificate(cert)
 	if err != nil {
 		log.Fatalf("KeyCertificateFromCertificate failed: %v\n", err)

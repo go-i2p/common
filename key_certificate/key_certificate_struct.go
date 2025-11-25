@@ -86,7 +86,7 @@ func NewKeyCertificate(bytes []byte) (key_certificate *KeyCertificate, remainder
 
 // parseBaseCertificate reads and validates the base certificate structure.
 // Returns the parsed certificate, remaining bytes, and any error encountered.
-func parseBaseCertificate(bytes []byte) (certificate.Certificate, []byte, error) {
+func parseBaseCertificate(bytes []byte) (*certificate.Certificate, []byte, error) {
 	cert, remainder, err := certificate.ReadCertificate(bytes)
 	if err != nil {
 		log.WithError(err).Error("Failed to read Certificate")
@@ -97,7 +97,7 @@ func parseBaseCertificate(bytes []byte) (certificate.Certificate, []byte, error)
 
 // validateKeyCertificateType validates that the certificate is specifically a Key Certificate type.
 // Only CERT_KEY type certificates can be converted to KeyCertificate structures.
-func validateKeyCertificateType(cert certificate.Certificate) error {
+func validateKeyCertificateType(cert *certificate.Certificate) error {
 	kind, err := cert.Type()
 	if err != nil {
 		log.WithFields(logger.Fields{"at": "validateKeyCertificateType", "reason": "invalid certificate type"}).Error(err.Error())
@@ -130,9 +130,9 @@ func extractKeyTypes(certData []byte) (data.Integer, data.Integer) {
 
 // buildKeyCertificate constructs a KeyCertificate from the parsed components.
 // Returns a fully initialized KeyCertificate with logging of the created key types.
-func buildKeyCertificate(cert certificate.Certificate, spkType, cpkType data.Integer) *KeyCertificate {
+func buildKeyCertificate(cert *certificate.Certificate, spkType, cpkType data.Integer) *KeyCertificate {
 	key_certificate := &KeyCertificate{
-		Certificate: cert,
+		Certificate: *cert,
 		CpkType:     cpkType,
 		SpkType:     spkType,
 	}
@@ -144,7 +144,7 @@ func buildKeyCertificate(cert certificate.Certificate, spkType, cpkType data.Int
 }
 
 // KeyCertificateFromCertificate creates a KeyCertificate from an existing Certificate
-func KeyCertificateFromCertificate(cert certificate.Certificate) (*KeyCertificate, error) {
+func KeyCertificateFromCertificate(cert *certificate.Certificate) (*KeyCertificate, error) {
 	if err := validateKeyCertificateType(cert); err != nil {
 		return nil, err
 	}

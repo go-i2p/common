@@ -218,8 +218,8 @@ func (keys_and_cert *KeysAndCert) SigningPublicKey() (signing_public_key types.S
 }
 
 // Certificate returns the certificate.
-func (keys_and_cert *KeysAndCert) Certificate() (cert certificate.Certificate) {
-	return keys_and_cert.KeyCertificate.Certificate
+func (keys_and_cert *KeysAndCert) Certificate() *certificate.Certificate {
+	return &keys_and_cert.KeyCertificate.Certificate
 }
 
 // ReadKeysAndCert creates a new *KeysAndCert from []byte using ReadKeysAndCert.

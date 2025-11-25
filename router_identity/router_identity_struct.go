@@ -33,7 +33,7 @@ type RouterIdentity struct {
 
 // NewRouterIdentity creates a new RouterIdentity with the specified parameters.
 // Moved from: router_identity.go
-func NewRouterIdentity(publicKey types.ReceivingPublicKey, signingPublicKey types.SigningPublicKey, cert certificate.Certificate, padding []byte) (*RouterIdentity, error) {
+func NewRouterIdentity(publicKey types.ReceivingPublicKey, signingPublicKey types.SigningPublicKey, cert *certificate.Certificate, padding []byte) (*RouterIdentity, error) {
 	log.Debug("Creating new RouterIdentity")
 
 	// Step 1: Create keyCertificate from the provided certificate.

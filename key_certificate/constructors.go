@@ -54,7 +54,7 @@ func NewKeyCertificateWithTypes(signingType, cryptoType int) (*KeyCertificate, e
 	}
 
 	// Convert to KeyCertificate
-	keyCert, err := KeyCertificateFromCertificate(*cert)
+	keyCert, err := KeyCertificateFromCertificate(cert)
 	if err != nil {
 		return nil, oops.Errorf("failed to create KeyCertificate: %w", err)
 	}
