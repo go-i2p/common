@@ -6,6 +6,7 @@ import (
 
 	"github.com/samber/oops"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestValuesExclusesPairWithBadData(t *testing.T) {
@@ -103,7 +104,9 @@ func TestHasDuplicateKeysTrueWhenDuplicates(t *testing.T) {
 
 	dups, _, _ := NewMapping([]byte{0x00, 0x0c, 0x01, 0x61, 0x3d, 0x01, 0x62, 0x3b, 0x01, 0x61, 0x3d, 0x01, 0x62, 0x3b})
 
-	assert.Equal(true, dups.HasDuplicateKeys(), "HasDuplicateKeys() did not report true when duplicate keys present")
+	hasDups, err := dups.HasDuplicateKeys()
+	assert.NoError(err, "HasDuplicateKeys() returned error with valid data")
+	assert.Equal(true, hasDups, "HasDuplicateKeys() did not report true when duplicate keys present")
 }
 
 func TestHasDuplicateKeysFalseWithoutDuplicates(t *testing.T) {
@@ -111,7 +114,9 @@ func TestHasDuplicateKeysFalseWithoutDuplicates(t *testing.T) {
 
 	mapping, _, _ := NewMapping([]byte{0x00, 0x06, 0x01, 0x61, 0x3d, 0x01, 0x62, 0x3b})
 
-	assert.Equal(false, mapping.HasDuplicateKeys(), "HasDuplicateKeys() did not report false when no duplicate keys present")
+	hasDups, err := mapping.HasDuplicateKeys()
+	assert.NoError(err, "HasDuplicateKeys() returned error with valid data")
+	assert.Equal(false, hasDups, "HasDuplicateKeys() did not report false when no duplicate keys present")
 }
 
 func TestReadMappingHasDuplicateKeys(t *testing.T) {
@@ -189,4 +194,207 @@ func TestBeginsWithCorrectWhenNil(t *testing.T) {
 	slice := make([]byte, 0)
 
 	assert.Equal(false, beginsWith(slice, 0x41), "beginsWith() did not return false on empty slice")
+}
+
+// TestMappingValidate tests the Validate method.
+func TestMappingValidate(t *testing.T) {
+	t.Run("valid mapping", func(t *testing.T) {
+		mapping, _, errs := NewMapping([]byte{0x00, 0x06, 0x01, 0x61, 0x3d, 0x01, 0x62, 0x3b})
+		require.Empty(t, errs)
+		require.NoError(t, mapping.Validate())
+		require.True(t, mapping.IsValid())
+	})
+
+	t.Run("valid mapping with multiple keys", func(t *testing.T) {
+		mapping, _, _ := NewMapping([]byte{0x00, 0x0c, 0x01, 0x61, 0x3d, 0x01, 0x62, 0x3b, 0x01, 0x63, 0x3d, 0x01, 0x64, 0x3b})
+		require.NoError(t, mapping.Validate())
+		require.True(t, mapping.IsValid())
+	})
+
+	t.Run("nil mapping", func(t *testing.T) {
+		var mapping *Mapping
+		err := mapping.Validate()
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "mapping is nil")
+		require.False(t, mapping.IsValid())
+	})
+
+	t.Run("mapping with nil size", func(t *testing.T) {
+		mapping := &Mapping{vals: &MappingValues{}}
+		err := mapping.Validate()
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "mapping size is nil")
+		require.False(t, mapping.IsValid())
+	})
+}
+
+// TestMappingIsValid tests the IsValid method.
+func TestMappingIsValid(t *testing.T) {
+	t.Run("valid mapping returns true", func(t *testing.T) {
+		mapping, _, errs := NewMapping([]byte{0x00, 0x06, 0x01, 0x61, 0x3d, 0x01, 0x62, 0x3b})
+		require.Empty(t, errs)
+		assert.True(t, mapping.IsValid())
+	})
+
+	t.Run("nil mapping returns false", func(t *testing.T) {
+		var mapping *Mapping
+		assert.False(t, mapping.IsValid())
+	})
+
+	t.Run("mapping with nil size returns false", func(t *testing.T) {
+		mapping := &Mapping{vals: &MappingValues{}}
+		assert.False(t, mapping.IsValid())
+	})
+}
+
+// TestHasDuplicateKeysErrorHandling tests error handling in HasDuplicateKeys.
+func TestHasDuplicateKeysErrorHandling(t *testing.T) {
+	t.Run("valid mapping with no duplicates", func(t *testing.T) {
+		mapping, _, errs := NewMapping([]byte{0x00, 0x06, 0x01, 0x61, 0x3d, 0x01, 0x62, 0x3b})
+		require.Empty(t, errs)
+
+		hasDups, err := mapping.HasDuplicateKeys()
+		require.NoError(t, err)
+		assert.False(t, hasDups)
+	})
+
+	t.Run("valid mapping with duplicates", func(t *testing.T) {
+		mapping, _, _ := NewMapping([]byte{0x00, 0x0c, 0x01, 0x61, 0x3d, 0x01, 0x62, 0x3b, 0x01, 0x61, 0x3d, 0x01, 0x63, 0x3b})
+
+		hasDups, err := mapping.HasDuplicateKeys()
+		require.NoError(t, err)
+		assert.True(t, hasDups)
+	})
+
+	t.Run("empty mapping", func(t *testing.T) {
+		mapping, _, errs := NewMapping([]byte{0x00, 0x00})
+		// Empty mapping has a "zero length" error which is expected
+		if len(errs) > 0 {
+			require.Contains(t, errs[0].Error(), "zero length")
+		}
+
+		// Empty mapping should still be able to check for duplicates
+		if mapping != nil && mapping.size != nil {
+			hasDups, err := mapping.HasDuplicateKeys()
+			require.NoError(t, err)
+			assert.False(t, hasDups)
+		}
+	})
+}
+
+// TestMappingValidateIntegration tests Validate with various mapping states.
+func TestMappingValidateIntegration(t *testing.T) {
+	t.Run("validate after GoMapToMapping", func(t *testing.T) {
+		gomap := map[string]string{"key1": "value1", "key2": "value2"}
+		mapping, err := GoMapToMapping(gomap)
+		require.NoError(t, err)
+		require.NoError(t, mapping.Validate())
+		require.True(t, mapping.IsValid())
+	})
+
+	t.Run("validate checks all key-value pairs", func(t *testing.T) {
+		// Create a valid mapping
+		mapping, _, errs := NewMapping([]byte{0x00, 0x0c, 0x01, 0x61, 0x3d, 0x01, 0x62, 0x3b, 0x01, 0x63, 0x3d, 0x01, 0x64, 0x3b})
+		require.Empty(t, errs)
+
+		// Validate should succeed
+		err := mapping.Validate()
+		require.NoError(t, err)
+
+		// Verify we can access all values
+		values := mapping.Values()
+		require.Len(t, values, 2)
+
+		for i, pair := range values {
+			_, keyErr := pair[0].Data()
+			_, valErr := pair[1].Data()
+			require.NoError(t, keyErr, "key at position %d should be valid", i)
+			require.NoError(t, valErr, "value at position %d should be valid", i)
+		}
+	})
+
+	t.Run("validate with single key-value pair", func(t *testing.T) {
+		mapping, _, errs := NewMapping([]byte{0x00, 0x06, 0x01, 0x61, 0x3d, 0x01, 0x62, 0x3b})
+		require.Empty(t, errs)
+		require.NoError(t, mapping.Validate())
+
+		values := mapping.Values()
+		require.Len(t, values, 1)
+
+		key, err := values[0][0].Data()
+		require.NoError(t, err)
+		assert.Equal(t, "a", key)
+
+		val, err := values[0][1].Data()
+		require.NoError(t, err)
+		assert.Equal(t, "b", val)
+	})
+}
+
+// TestMappingEdgeCases tests edge cases for Mapping validation.
+func TestMappingEdgeCases(t *testing.T) {
+	t.Run("mapping with max length strings", func(t *testing.T) {
+		// Create a mapping with maximum length strings (255 bytes each)
+		key := make([]byte, 255)
+		val := make([]byte, 255)
+		for i := range key {
+			key[i] = 'k'
+			val[i] = 'v'
+		}
+
+		keyStr, err := ToI2PString(string(key))
+		require.NoError(t, err)
+		valStr, err := ToI2PString(string(val))
+		require.NoError(t, err)
+
+		mapping := ValuesToMapping(MappingValues{{keyStr, valStr}})
+		require.NoError(t, mapping.Validate())
+		require.True(t, mapping.IsValid())
+
+		hasDups, err := mapping.HasDuplicateKeys()
+		require.NoError(t, err)
+		assert.False(t, hasDups)
+	})
+
+	t.Run("mapping with empty strings", func(t *testing.T) {
+		// Empty strings are valid in I2P mappings
+		keyStr, err := ToI2PString("")
+		require.NoError(t, err)
+		valStr, err := ToI2PString("")
+		require.NoError(t, err)
+
+		mapping := ValuesToMapping(MappingValues{{keyStr, valStr}})
+		require.NoError(t, mapping.Validate())
+		require.True(t, mapping.IsValid())
+	})
+
+	t.Run("mapping with special characters", func(t *testing.T) {
+		// Test with special characters that are not delimiters
+		gomap := map[string]string{
+			"key!@#":  "value$%^",
+			"unicode": "日本語",
+		}
+		mapping, err := GoMapToMapping(gomap)
+		require.NoError(t, err)
+		require.NoError(t, mapping.Validate())
+		require.True(t, mapping.IsValid())
+	})
+}
+
+// BenchmarkMappingValidate benchmarks the Validate method.
+func BenchmarkMappingValidate(b *testing.B) {
+	mapping, _, _ := NewMapping([]byte{0x00, 0x0c, 0x01, 0x61, 0x3d, 0x01, 0x62, 0x3b, 0x01, 0x63, 0x3d, 0x01, 0x64, 0x3b})
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = mapping.Validate()
+	}
+}
+
+// BenchmarkHasDuplicateKeys benchmarks the HasDuplicateKeys method.
+func BenchmarkHasDuplicateKeys(b *testing.B) {
+	mapping, _, _ := NewMapping([]byte{0x00, 0x0c, 0x01, 0x61, 0x3d, 0x01, 0x62, 0x3b, 0x01, 0x63, 0x3d, 0x01, 0x64, 0x3b})
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, _ = mapping.HasDuplicateKeys()
+	}
 }

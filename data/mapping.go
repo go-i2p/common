@@ -75,23 +75,60 @@ func (mapping *Mapping) Data() []byte {
 }
 
 // HasDuplicateKeys returns true if two keys in a mapping are identical.
-func (mapping *Mapping) HasDuplicateKeys() bool {
+// Returns error if any key in the mapping is invalid.
+func (mapping *Mapping) HasDuplicateKeys() (bool, error) {
 	log.Debug("Checking for duplicate keys in Mapping")
 	seen_values := make(map[string]bool)
 	values := mapping.Values()
 	for _, pair := range values {
-		key, _ := pair[0].Data()
+		key, err := pair[0].Data()
+		if err != nil {
+			log.WithError(err).Error("Invalid key in mapping")
+			return false, oops.Errorf("invalid key in mapping: %w", err)
+		}
 		if _, present := seen_values[key]; present {
 			log.WithFields(logger.Fields{
 				"duplicate_key": key,
 			}).Warn("Found duplicate key in Mapping")
-			return true
+			return true, nil
 		} else {
 			seen_values[key] = true
 		}
 	}
 	log.Debug("No duplicate keys found in Mapping")
-	return false
+	return false, nil
+}
+
+// Validate checks if the Mapping is properly initialized and all key-value pairs are valid.
+func (mapping *Mapping) Validate() error {
+	if mapping == nil {
+		return oops.Errorf("mapping is nil")
+	}
+	if mapping.size == nil {
+		return oops.Errorf("mapping size is nil")
+	}
+
+	// Validate all key-value pairs
+	values := mapping.Values()
+	for i, pair := range values {
+		if _, err := pair[0].Data(); err != nil {
+			return oops.Errorf("invalid key at position %d: %w", i, err)
+		}
+		if _, err := pair[1].Data(); err != nil {
+			return oops.Errorf("invalid value at position %d: %w", i, err)
+		}
+	}
+
+	log.WithFields(logger.Fields{
+		"size":         mapping.size.Int(),
+		"values_count": len(values),
+	}).Debug("Mapping validation successful")
+	return nil
+}
+
+// IsValid returns true if the Mapping is properly initialized and valid.
+func (mapping *Mapping) IsValid() bool {
+	return mapping.Validate() == nil
 }
 
 // GoMapToMapping converts a Go map of unformatted strings to *Mapping.
