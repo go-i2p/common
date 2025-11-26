@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/go-i2p/common/data"
-	"github.com/go-i2p/logger"
 )
 
 /*
@@ -55,45 +54,7 @@ Notes:
 // https://geti2p.net/spec/common-structures#lease2
 type Lease2 [LEASE2_SIZE]byte
 
-// NewLease2 creates a new Lease2 with the provided tunnel gateway, tunnel ID, and expiration time.
-// It constructs a properly formatted I2P Lease2 structure according to the specification, encoding
-// the tunnel gateway hash, tunnel ID as big-endian uint32, and expiration time as seconds since epoch.
-// Returns a pointer to the created Lease2 and any error encountered during construction.
-//
-// Note: Lease2 uses 4-byte timestamps representing seconds since Unix epoch, providing sufficient
-// range until year 2106 while saving 4 bytes compared to the legacy Lease structure.
-//
-// Example: lease2, err := NewLease2(gatewayHash, 12345, time.Now().Add(10*time.Minute))
-func NewLease2(tunnelGateway data.Hash, tunnelID uint32, expirationTime time.Time) (*Lease2, error) {
-	log.Debug("Creating new Lease2")
-
-	var lease2 Lease2
-
-	// Copy the 32-byte tunnel gateway hash to the beginning of the lease structure
-	// This hash identifies the router that will serve as the gateway for this tunnel
-	copy(lease2[:LEASE_TUNNEL_GW_SIZE], tunnelGateway[:])
-
-	// Convert tunnel ID to big-endian format for network byte order consistency
-	// The tunnel ID must be stored as 4 bytes in network byte order for I2P compatibility
-	tunnelIDBytes := make([]byte, LEASE_TUNNEL_ID_SIZE)
-	binary.BigEndian.PutUint32(tunnelIDBytes, tunnelID)
-	copy(lease2[LEASE_TUNNEL_GW_SIZE:LEASE_TUNNEL_GW_SIZE+LEASE_TUNNEL_ID_SIZE], tunnelIDBytes)
-
-	// Convert expiration time to 4-byte timestamp (seconds since Unix epoch)
-	// This is the key difference from legacy Lease which uses 8-byte millisecond timestamps
-	seconds := uint32(expirationTime.Unix())
-	endDateBytes := make([]byte, LEASE2_END_DATE_SIZE)
-	binary.BigEndian.PutUint32(endDateBytes, seconds)
-	copy(lease2[LEASE_TUNNEL_GW_SIZE+LEASE_TUNNEL_ID_SIZE:], endDateBytes)
-
-	log.WithFields(logger.Fields{
-		"tunnel_id":  tunnelID,
-		"expiration": expirationTime,
-		"seconds":    seconds,
-	}).Debug("Successfully created new Lease2")
-
-	return &lease2, nil
-}
+// NewLease2 is defined in lease.go for better package visibility.
 
 // TunnelGateway returns the tunnel gateway hash from the lease2 structure.
 // Extracts the first 32 bytes of the lease2 which contain the SHA256 hash of the RouterIdentity

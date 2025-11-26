@@ -3,6 +3,7 @@ package router_address
 import (
 	"bytes"
 	"testing"
+	"time"
 
 	"github.com/go-i2p/common/data"
 	"github.com/stretchr/testify/assert"
@@ -102,4 +103,216 @@ func TestCorrectsFuzzCrasher1(t *testing.T) {
 
 	router_address_bytes := []byte{0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x00, 0x30, 0x30}
 	ReadRouterAddress(router_address_bytes)
+}
+
+//
+// Constructor Tests
+//
+
+// TestNewRouterAddressValid tests creating a valid RouterAddress
+func TestNewRouterAddressValid(t *testing.T) {
+	assert := assert.New(t)
+
+	options := map[string]string{
+		"host": "192.168.1.1",
+		"port": "9150",
+	}
+	expiration := time.Now().Add(24 * time.Hour)
+
+	ra, err := NewRouterAddress(5, expiration, "NTCP2", options)
+
+	assert.NoError(err, "NewRouterAddress should not return error with valid inputs")
+	assert.NotNil(ra, "RouterAddress should not be nil")
+	assert.Equal(5, ra.Cost(), "Cost should match input")
+	assert.NoError(ra.Validate(), "Valid RouterAddress should pass validation")
+	assert.True(ra.IsValid(), "IsValid should return true for valid RouterAddress")
+}
+
+// TestNewRouterAddressEmptyTransportType tests that empty transport type is rejected
+func TestNewRouterAddressEmptyTransportType(t *testing.T) {
+	assert := assert.New(t)
+
+	options := map[string]string{"host": "192.168.1.1"}
+	expiration := time.Now().Add(24 * time.Hour)
+
+	ra, err := NewRouterAddress(5, expiration, "", options)
+
+	assert.Error(err, "NewRouterAddress should return error with empty transport type")
+	assert.Nil(ra, "RouterAddress should be nil on error")
+	assert.Contains(err.Error(), "transport type cannot be empty")
+}
+
+// TestNewRouterAddressNilOptions tests that nil options are handled
+func TestNewRouterAddressNilOptions(t *testing.T) {
+	assert := assert.New(t)
+
+	expiration := time.Now().Add(24 * time.Hour)
+
+	ra, err := NewRouterAddress(5, expiration, "NTCP2", nil)
+
+	// nil options should be converted to empty mapping
+	assert.NoError(err, "NewRouterAddress should handle nil options")
+	assert.NotNil(ra, "RouterAddress should not be nil")
+}
+
+// TestNewRouterAddressEmptyOptions tests that empty options map works
+func TestNewRouterAddressEmptyOptions(t *testing.T) {
+	assert := assert.New(t)
+
+	options := map[string]string{}
+	expiration := time.Now().Add(24 * time.Hour)
+
+	ra, err := NewRouterAddress(5, expiration, "NTCP2", options)
+
+	assert.NoError(err, "NewRouterAddress should work with empty options")
+	assert.NotNil(ra, "RouterAddress should not be nil")
+}
+
+//
+// Validation Tests
+//
+
+// TestRouterAddressValidate tests the Validate method
+func TestRouterAddressValidate(t *testing.T) {
+	t.Run("valid router address passes validation", func(t *testing.T) {
+		assert := assert.New(t)
+
+		options := map[string]string{"host": "127.0.0.1", "port": "4567"}
+		ra, err := NewRouterAddress(3, time.Now().Add(1*time.Hour), "SSU", options)
+		assert.NoError(err)
+
+		err = ra.Validate()
+		assert.NoError(err, "Valid RouterAddress should pass validation")
+	})
+
+	t.Run("nil router address fails validation", func(t *testing.T) {
+		assert := assert.New(t)
+
+		var ra *RouterAddress
+		err := ra.Validate()
+		assert.Error(err, "Nil RouterAddress should fail validation")
+		assert.Contains(err.Error(), "router address is nil")
+	})
+
+	t.Run("router address with nil transport cost fails validation", func(t *testing.T) {
+		assert := assert.New(t)
+
+		options, _ := data.GoMapToMapping(map[string]string{"host": "127.0.0.1"})
+		transportType, _ := data.ToI2PString("SSU")
+		expirationDate, _, _ := data.NewDate(make([]byte, data.DATE_SIZE))
+
+		ra := &RouterAddress{
+			TransportCost:    nil,
+			ExpirationDate:   expirationDate,
+			TransportType:    transportType,
+			TransportOptions: options,
+		}
+
+		err := ra.Validate()
+		assert.Error(err, "RouterAddress with nil cost should fail validation")
+		assert.Contains(err.Error(), "transport cost is required")
+	})
+
+	t.Run("router address with nil expiration date fails validation", func(t *testing.T) {
+		assert := assert.New(t)
+
+		options, _ := data.GoMapToMapping(map[string]string{"host": "127.0.0.1"})
+		transportType, _ := data.ToI2PString("SSU")
+		cost, _ := data.NewIntegerFromInt(5, 1)
+
+		ra := &RouterAddress{
+			TransportCost:    cost,
+			ExpirationDate:   nil,
+			TransportType:    transportType,
+			TransportOptions: options,
+		}
+
+		err := ra.Validate()
+		assert.Error(err, "RouterAddress with nil expiration should fail validation")
+		assert.Contains(err.Error(), "expiration date is required")
+	})
+
+	t.Run("router address with nil transport type fails validation", func(t *testing.T) {
+		assert := assert.New(t)
+
+		options, _ := data.GoMapToMapping(map[string]string{"host": "127.0.0.1"})
+		cost, _ := data.NewIntegerFromInt(5, 1)
+		expirationDate, _, _ := data.NewDate(make([]byte, data.DATE_SIZE))
+
+		ra := &RouterAddress{
+			TransportCost:    cost,
+			ExpirationDate:   expirationDate,
+			TransportType:    nil,
+			TransportOptions: options,
+		}
+
+		err := ra.Validate()
+		assert.Error(err, "RouterAddress with nil transport type should fail validation")
+		assert.Contains(err.Error(), "transport type is required")
+	})
+
+	t.Run("router address with empty transport type fails validation", func(t *testing.T) {
+		assert := assert.New(t)
+
+		options, _ := data.GoMapToMapping(map[string]string{"host": "127.0.0.1"})
+		cost, _ := data.NewIntegerFromInt(5, 1)
+		expirationDate, _, _ := data.NewDate(make([]byte, data.DATE_SIZE))
+
+		ra := &RouterAddress{
+			TransportCost:    cost,
+			ExpirationDate:   expirationDate,
+			TransportType:    data.I2PString{},
+			TransportOptions: options,
+		}
+
+		err := ra.Validate()
+		assert.Error(err, "RouterAddress with empty transport type should fail validation")
+		assert.Contains(err.Error(), "transport type is required")
+	})
+
+	t.Run("router address with nil transport options fails validation", func(t *testing.T) {
+		assert := assert.New(t)
+
+		transportType, _ := data.ToI2PString("SSU")
+		cost, _ := data.NewIntegerFromInt(5, 1)
+		expirationDate, _, _ := data.NewDate(make([]byte, data.DATE_SIZE))
+
+		ra := &RouterAddress{
+			TransportCost:    cost,
+			ExpirationDate:   expirationDate,
+			TransportType:    transportType,
+			TransportOptions: nil,
+		}
+
+		err := ra.Validate()
+		assert.Error(err, "RouterAddress with nil options should fail validation")
+		assert.Contains(err.Error(), "transport options are required")
+	})
+}
+
+// TestRouterAddressIsValid tests the IsValid convenience method
+func TestRouterAddressIsValid(t *testing.T) {
+	t.Run("valid router address returns true", func(t *testing.T) {
+		assert := assert.New(t)
+
+		options := map[string]string{"host": "127.0.0.1", "port": "4567"}
+		ra, err := NewRouterAddress(3, time.Now().Add(1*time.Hour), "SSU", options)
+		assert.NoError(err)
+
+		assert.True(ra.IsValid(), "Valid RouterAddress should return true for IsValid")
+	})
+
+	t.Run("nil router address returns false", func(t *testing.T) {
+		assert := assert.New(t)
+
+		var ra *RouterAddress
+		assert.False(ra.IsValid(), "Nil RouterAddress should return false for IsValid")
+	})
+
+	t.Run("router address with missing fields returns false", func(t *testing.T) {
+		assert := assert.New(t)
+
+		ra := &RouterAddress{}
+		assert.False(ra.IsValid(), "RouterAddress with missing fields should return false for IsValid")
+	})
 }

@@ -54,6 +54,8 @@ options :: Mapping
 // RouterAddress is the represenation of an I2P RouterAddress.
 //
 // https://geti2p.net/spec/common-structures#routeraddress
+//
+// Use NewRouterAddress() in router_address.go to create instances.
 type RouterAddress struct {
 	TransportCost    *data.Integer
 	ExpirationDate   *data.Date

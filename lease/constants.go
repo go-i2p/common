@@ -1,6 +1,15 @@
 // Package lease implements the I2P lease common data structure
 package lease
 
+import "errors"
+
+// Errors
+var (
+	// ErrExpiredLease is returned when attempting to create a lease with an expiration time in the past.
+	// Leases must have expiration times in the future to be valid for tunnel message delivery.
+	ErrExpiredLease = errors.New("lease expiration time must be in the future")
+)
+
 // Sizes in bytes of various components of a Lease according to I2P specification version 0.9.67
 const (
 	// LEASE_SIZE defines the total size of a complete I2P Lease structure in bytes.

@@ -260,7 +260,7 @@ func TestLease2TimestampRange(t *testing.T) {
 	copy(gatewayHash[:], []byte("timestamp_range_test_gateway_hash"))
 
 	// Test near-future timestamp
-	nearFuture := time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)
+	nearFuture := time.Now().Add(24 * time.Hour) // Tomorrow
 	lease2Future, err := NewLease2(gatewayHash, 1, nearFuture)
 	assert.NoError(err)
 	assert.Equal(uint32(nearFuture.Unix()), lease2Future.EndDate())
@@ -285,7 +285,7 @@ func TestLease2RoundTrip(t *testing.T) {
 	var gatewayHash data.Hash
 	copy(gatewayHash[:], []byte("roundtrip_test_gateway_hash_32by"))
 	tunnelID := uint32(42424)
-	expirationTime := time.Date(2025, 11, 22, 13, 37, 42, 0, time.UTC)
+	expirationTime := time.Now().Add(1 * time.Hour) // 1 hour from now
 
 	originalLease2, err := NewLease2(gatewayHash, tunnelID, expirationTime)
 	assert.NoError(err)
