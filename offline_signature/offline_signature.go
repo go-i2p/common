@@ -333,3 +333,80 @@ func (o *OfflineSignature) ExpiresDate() (*data.Date, error) {
 	expiresTime := time.Unix(int64(o.expires), 0).UTC()
 	return data.DateFromTime(expiresTime)
 }
+
+// Validate checks if the OfflineSignature is properly initialized and not expired.
+// This method ensures the signature is valid for use in cryptographic operations.
+//
+// Validation checks:
+//   - Signature is not nil
+//   - Expiration timestamp is not zero (undefined)
+//   - Signature has not expired (current time < expiration time)
+//   - Transient signature type is known and supported
+//   - Transient public key size matches expected size for its type
+//   - Destination signature type is known and supported
+//   - Signature size matches expected size for destination type
+//
+// Returns nil if validation passes, or a descriptive error if validation fails.
+//
+// Example usage:
+//
+//	if err := offlineSig.Validate(); err != nil {
+//	    return fmt.Errorf("invalid offline signature: %w", err)
+//	}
+func (o *OfflineSignature) Validate() error {
+	if o == nil {
+		return errors.New("offline signature is nil")
+	}
+
+	// Check for zero/undefined expiration
+	if o.expires == 0 {
+		return errors.New("offline signature has zero expiration timestamp")
+	}
+
+	// Check if signature has expired
+	if o.IsExpired() {
+		return fmt.Errorf("%w: expired at %s",
+			ErrExpiredOfflineSignature,
+			o.ExpiresTime().Format(time.RFC3339))
+	}
+
+	// Validate transient signature type
+	expectedKeySize := SigningPublicKeySize(o.sigtype)
+	if expectedKeySize == 0 {
+		return fmt.Errorf("%w: transient key type %d",
+			ErrUnknownSignatureType, o.sigtype)
+	}
+
+	// Validate transient public key size
+	if len(o.transientPublicKey) != expectedKeySize {
+		return fmt.Errorf("transient public key size mismatch: expected %d bytes, got %d bytes",
+			expectedKeySize, len(o.transientPublicKey))
+	}
+
+	// Validate destination signature type
+	expectedSigSize := SignatureSize(o.destinationSigType)
+	if expectedSigSize == 0 {
+		return fmt.Errorf("%w: destination signature type %d",
+			ErrUnknownSignatureType, o.destinationSigType)
+	}
+
+	// Validate signature size
+	if len(o.signature) != expectedSigSize {
+		return fmt.Errorf("signature size mismatch: expected %d bytes, got %d bytes",
+			expectedSigSize, len(o.signature))
+	}
+
+	return nil
+}
+
+// IsValid returns true if the OfflineSignature is properly initialized and not expired.
+// This is a convenience method that wraps Validate() for boolean checks.
+//
+// Example usage:
+//
+//	if !offlineSig.IsValid() {
+//	    return errors.New("offline signature is invalid or expired")
+//	}
+func (o *OfflineSignature) IsValid() bool {
+	return o.Validate() == nil
+}

@@ -508,3 +508,353 @@ func TestOfflineSignatureBytesIdentical(t *testing.T) {
 	assert.True(t, bytes.Equal(bytes1, bytes2), "first and second serialization should be identical")
 	assert.True(t, bytes.Equal(bytes2, bytes3), "second and third serialization should be identical")
 }
+
+// TestOfflineSignatureValidate tests the Validate() method with valid signatures.
+func TestOfflineSignatureValidate(t *testing.T) {
+	// Create a valid offline signature with future expiration
+	futureExpires := uint32(time.Now().UTC().Add(24 * time.Hour).Unix())
+	transientKey := make([]byte, key_certificate.KEYCERT_SIGN_ED25519_SIZE)
+	sig := make([]byte, signature.EdDSA_SHA512_Ed25519_SIZE)
+
+	offlineSig, err := NewOfflineSignature(
+		futureExpires,
+		key_certificate.KEYCERT_SIGN_ED25519,
+		transientKey,
+		sig,
+		signature.SIGNATURE_TYPE_EDDSA_SHA512_ED25519,
+	)
+	assert.NoError(t, err)
+
+	// Validate should pass
+	err = offlineSig.Validate()
+	assert.NoError(t, err, "valid offline signature should pass validation")
+}
+
+// TestOfflineSignatureValidateExpired tests Validate() with expired signatures.
+func TestOfflineSignatureValidateExpired(t *testing.T) {
+	// Create an expired offline signature
+	pastExpires := uint32(time.Now().UTC().Add(-1 * time.Hour).Unix())
+	transientKey := make([]byte, key_certificate.KEYCERT_SIGN_ED25519_SIZE)
+	sig := make([]byte, signature.EdDSA_SHA512_Ed25519_SIZE)
+
+	offlineSig, err := NewOfflineSignature(
+		pastExpires,
+		key_certificate.KEYCERT_SIGN_ED25519,
+		transientKey,
+		sig,
+		signature.SIGNATURE_TYPE_EDDSA_SHA512_ED25519,
+	)
+	assert.NoError(t, err)
+
+	// Validate should fail due to expiration
+	err = offlineSig.Validate()
+	assert.Error(t, err, "expired offline signature should fail validation")
+	assert.ErrorIs(t, err, ErrExpiredOfflineSignature, "error should be ErrExpiredOfflineSignature")
+	assert.Contains(t, err.Error(), "expired at", "error message should contain expiration time")
+}
+
+// TestOfflineSignatureValidateZeroExpiration tests Validate() with zero expiration.
+func TestOfflineSignatureValidateZeroExpiration(t *testing.T) {
+	transientKey := make([]byte, key_certificate.KEYCERT_SIGN_ED25519_SIZE)
+	sig := make([]byte, signature.EdDSA_SHA512_Ed25519_SIZE)
+
+	offlineSig, err := NewOfflineSignature(
+		0, // Zero expiration
+		key_certificate.KEYCERT_SIGN_ED25519,
+		transientKey,
+		sig,
+		signature.SIGNATURE_TYPE_EDDSA_SHA512_ED25519,
+	)
+	assert.NoError(t, err)
+
+	// Validate should fail due to zero expiration
+	err = offlineSig.Validate()
+	assert.Error(t, err, "offline signature with zero expiration should fail validation")
+	assert.Contains(t, err.Error(), "zero expiration", "error message should mention zero expiration")
+}
+
+// TestOfflineSignatureValidateNil tests Validate() with nil signature.
+func TestOfflineSignatureValidateNil(t *testing.T) {
+	var offlineSig *OfflineSignature = nil
+
+	err := offlineSig.Validate()
+	assert.Error(t, err, "nil offline signature should fail validation")
+	assert.Contains(t, err.Error(), "nil", "error message should mention nil")
+}
+
+// TestOfflineSignatureValidateInvalidTransientKeyType tests Validate() with unknown transient key type.
+func TestOfflineSignatureValidateInvalidTransientKeyType(t *testing.T) {
+	futureExpires := uint32(time.Now().UTC().Add(24 * time.Hour).Unix())
+	transientKey := make([]byte, 32) // Valid size
+	sig := make([]byte, signature.EdDSA_SHA512_Ed25519_SIZE)
+
+	// Create signature with invalid transient key type (999 is unknown)
+	offlineSig := OfflineSignature{
+		expires:            futureExpires,
+		sigtype:            999, // Invalid type
+		transientPublicKey: transientKey,
+		signature:          sig,
+		destinationSigType: signature.SIGNATURE_TYPE_EDDSA_SHA512_ED25519,
+	}
+
+	// Validate should fail due to unknown signature type
+	err := offlineSig.Validate()
+	assert.Error(t, err, "offline signature with unknown transient key type should fail validation")
+	assert.ErrorIs(t, err, ErrUnknownSignatureType, "error should be ErrUnknownSignatureType")
+	assert.Contains(t, err.Error(), "transient key type", "error message should mention transient key type")
+}
+
+// TestOfflineSignatureValidateInvalidDestinationSigType tests Validate() with unknown destination type.
+func TestOfflineSignatureValidateInvalidDestinationSigType(t *testing.T) {
+	futureExpires := uint32(time.Now().UTC().Add(24 * time.Hour).Unix())
+	transientKey := make([]byte, key_certificate.KEYCERT_SIGN_ED25519_SIZE)
+	sig := make([]byte, 64) // Valid size
+
+	// Create signature with invalid destination signature type (888 is unknown)
+	offlineSig := OfflineSignature{
+		expires:            futureExpires,
+		sigtype:            key_certificate.KEYCERT_SIGN_ED25519,
+		transientPublicKey: transientKey,
+		signature:          sig,
+		destinationSigType: 888, // Invalid type
+	}
+
+	// Validate should fail due to unknown destination signature type
+	err := offlineSig.Validate()
+	assert.Error(t, err, "offline signature with unknown destination type should fail validation")
+	assert.ErrorIs(t, err, ErrUnknownSignatureType, "error should be ErrUnknownSignatureType")
+	assert.Contains(t, err.Error(), "destination signature type", "error message should mention destination signature type")
+}
+
+// TestOfflineSignatureValidateWrongTransientKeySize tests Validate() with mismatched key size.
+func TestOfflineSignatureValidateWrongTransientKeySize(t *testing.T) {
+	futureExpires := uint32(time.Now().UTC().Add(24 * time.Hour).Unix())
+	transientKey := make([]byte, 16) // Wrong size, should be 32 for Ed25519
+	sig := make([]byte, signature.EdDSA_SHA512_Ed25519_SIZE)
+
+	// Create signature with mismatched transient key size
+	offlineSig := OfflineSignature{
+		expires:            futureExpires,
+		sigtype:            key_certificate.KEYCERT_SIGN_ED25519,
+		transientPublicKey: transientKey,
+		signature:          sig,
+		destinationSigType: signature.SIGNATURE_TYPE_EDDSA_SHA512_ED25519,
+	}
+
+	// Validate should fail due to size mismatch
+	err := offlineSig.Validate()
+	assert.Error(t, err, "offline signature with wrong transient key size should fail validation")
+	assert.Contains(t, err.Error(), "transient public key size mismatch", "error message should mention size mismatch")
+	assert.Contains(t, err.Error(), "expected 32", "error message should mention expected size")
+	assert.Contains(t, err.Error(), "got 16", "error message should mention actual size")
+}
+
+// TestOfflineSignatureValidateWrongSignatureSize tests Validate() with mismatched signature size.
+func TestOfflineSignatureValidateWrongSignatureSize(t *testing.T) {
+	futureExpires := uint32(time.Now().UTC().Add(24 * time.Hour).Unix())
+	transientKey := make([]byte, key_certificate.KEYCERT_SIGN_ED25519_SIZE)
+	sig := make([]byte, 32) // Wrong size, should be 64 for Ed25519
+
+	// Create signature with mismatched signature size
+	offlineSig := OfflineSignature{
+		expires:            futureExpires,
+		sigtype:            key_certificate.KEYCERT_SIGN_ED25519,
+		transientPublicKey: transientKey,
+		signature:          sig,
+		destinationSigType: signature.SIGNATURE_TYPE_EDDSA_SHA512_ED25519,
+	}
+
+	// Validate should fail due to signature size mismatch
+	err := offlineSig.Validate()
+	assert.Error(t, err, "offline signature with wrong signature size should fail validation")
+	assert.Contains(t, err.Error(), "signature size mismatch", "error message should mention size mismatch")
+	assert.Contains(t, err.Error(), "expected 64", "error message should mention expected size")
+	assert.Contains(t, err.Error(), "got 32", "error message should mention actual size")
+}
+
+// TestOfflineSignatureIsValid tests the IsValid() convenience method.
+func TestOfflineSignatureIsValid(t *testing.T) {
+	testCases := []struct {
+		name     string
+		setup    func() OfflineSignature
+		expected bool
+	}{
+		{
+			name: "valid_signature",
+			setup: func() OfflineSignature {
+				futureExpires := uint32(time.Now().UTC().Add(24 * time.Hour).Unix())
+				transientKey := make([]byte, key_certificate.KEYCERT_SIGN_ED25519_SIZE)
+				sig := make([]byte, signature.EdDSA_SHA512_Ed25519_SIZE)
+				offlineSig, _ := NewOfflineSignature(
+					futureExpires,
+					key_certificate.KEYCERT_SIGN_ED25519,
+					transientKey,
+					sig,
+					signature.SIGNATURE_TYPE_EDDSA_SHA512_ED25519,
+				)
+				return offlineSig
+			},
+			expected: true,
+		},
+		{
+			name: "expired_signature",
+			setup: func() OfflineSignature {
+				pastExpires := uint32(time.Now().UTC().Add(-1 * time.Hour).Unix())
+				transientKey := make([]byte, key_certificate.KEYCERT_SIGN_ED25519_SIZE)
+				sig := make([]byte, signature.EdDSA_SHA512_Ed25519_SIZE)
+				offlineSig, _ := NewOfflineSignature(
+					pastExpires,
+					key_certificate.KEYCERT_SIGN_ED25519,
+					transientKey,
+					sig,
+					signature.SIGNATURE_TYPE_EDDSA_SHA512_ED25519,
+				)
+				return offlineSig
+			},
+			expected: false,
+		},
+		{
+			name: "zero_expiration",
+			setup: func() OfflineSignature {
+				transientKey := make([]byte, key_certificate.KEYCERT_SIGN_ED25519_SIZE)
+				sig := make([]byte, signature.EdDSA_SHA512_Ed25519_SIZE)
+				offlineSig, _ := NewOfflineSignature(
+					0,
+					key_certificate.KEYCERT_SIGN_ED25519,
+					transientKey,
+					sig,
+					signature.SIGNATURE_TYPE_EDDSA_SHA512_ED25519,
+				)
+				return offlineSig
+			},
+			expected: false,
+		},
+		{
+			name: "invalid_transient_key_size",
+			setup: func() OfflineSignature {
+				futureExpires := uint32(time.Now().UTC().Add(24 * time.Hour).Unix())
+				transientKey := make([]byte, 16) // Wrong size
+				sig := make([]byte, signature.EdDSA_SHA512_Ed25519_SIZE)
+				return OfflineSignature{
+					expires:            futureExpires,
+					sigtype:            key_certificate.KEYCERT_SIGN_ED25519,
+					transientPublicKey: transientKey,
+					signature:          sig,
+					destinationSigType: signature.SIGNATURE_TYPE_EDDSA_SHA512_ED25519,
+				}
+			},
+			expected: false,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			offlineSig := tc.setup()
+			isValid := offlineSig.IsValid()
+			assert.Equal(t, tc.expected, isValid, "IsValid() result should match expected")
+		})
+	}
+}
+
+// TestOfflineSignatureIsValidNil tests IsValid() with nil signature.
+func TestOfflineSignatureIsValidNil(t *testing.T) {
+	var offlineSig *OfflineSignature = nil
+	assert.False(t, offlineSig.IsValid(), "nil offline signature should not be valid")
+}
+
+// TestOfflineSignatureValidateRoundTrip tests validation after round-trip serialization.
+func TestOfflineSignatureValidateRoundTrip(t *testing.T) {
+	// Create a valid offline signature
+	futureExpires := uint32(time.Now().UTC().Add(24 * time.Hour).Unix())
+	transientKey := make([]byte, key_certificate.KEYCERT_SIGN_ED25519_SIZE)
+	sig := make([]byte, signature.EdDSA_SHA512_Ed25519_SIZE)
+
+	for i := range transientKey {
+		transientKey[i] = byte(i)
+	}
+	for i := range sig {
+		sig[i] = byte(0xFF - i)
+	}
+
+	original, err := NewOfflineSignature(
+		futureExpires,
+		key_certificate.KEYCERT_SIGN_ED25519,
+		transientKey,
+		sig,
+		signature.SIGNATURE_TYPE_EDDSA_SHA512_ED25519,
+	)
+	assert.NoError(t, err)
+	assert.NoError(t, original.Validate(), "original should be valid")
+	assert.True(t, original.IsValid(), "original should pass IsValid()")
+
+	// Serialize and parse back
+	serialized := original.Bytes()
+	parsed, remainder, err := ReadOfflineSignature(serialized, signature.SIGNATURE_TYPE_EDDSA_SHA512_ED25519)
+	assert.NoError(t, err)
+	assert.Empty(t, remainder)
+
+	// Parsed signature should also be valid
+	assert.NoError(t, parsed.Validate(), "parsed signature should be valid")
+	assert.True(t, parsed.IsValid(), "parsed signature should pass IsValid()")
+}
+
+// TestOfflineSignatureValidateVariousSignatureTypes tests validation with different crypto algorithms.
+func TestOfflineSignatureValidateVariousSignatureTypes(t *testing.T) {
+	testCases := []struct {
+		name               string
+		transientSigType   uint16
+		destinationSigType uint16
+		transientKeySize   int
+		signatureSize      int
+	}{
+		{
+			name:               "DSA_SHA1",
+			transientSigType:   key_certificate.KEYCERT_SIGN_DSA_SHA1,
+			destinationSigType: signature.SIGNATURE_TYPE_DSA_SHA1,
+			transientKeySize:   key_certificate.KEYCERT_SIGN_DSA_SHA1_SIZE,
+			signatureSize:      signature.DSA_SHA1_SIZE,
+		},
+		{
+			name:               "P256",
+			transientSigType:   key_certificate.KEYCERT_SIGN_P256,
+			destinationSigType: signature.SIGNATURE_TYPE_ECDSA_SHA256_P256,
+			transientKeySize:   key_certificate.KEYCERT_SIGN_P256_SIZE,
+			signatureSize:      signature.ECDSA_SHA256_P256_SIZE,
+		},
+		{
+			name:               "RSA4096",
+			transientSigType:   key_certificate.KEYCERT_SIGN_RSA4096,
+			destinationSigType: signature.SIGNATURE_TYPE_RSA_SHA512_4096,
+			transientKeySize:   key_certificate.KEYCERT_SIGN_RSA4096_SIZE,
+			signatureSize:      signature.RSA_SHA512_4096_SIZE,
+		},
+		{
+			name:               "RedDSA",
+			transientSigType:   key_certificate.KEYCERT_SIGN_REDDSA_ED25519,
+			destinationSigType: signature.SIGNATURE_TYPE_REDDSA_SHA512_ED25519,
+			transientKeySize:   key_certificate.KEYCERT_SIGN_ED25519_SIZE,
+			signatureSize:      signature.RedDSA_SHA512_Ed25519_SIZE,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			futureExpires := uint32(time.Now().UTC().Add(24 * time.Hour).Unix())
+			transientKey := make([]byte, tc.transientKeySize)
+			sig := make([]byte, tc.signatureSize)
+
+			offlineSig, err := NewOfflineSignature(
+				futureExpires,
+				tc.transientSigType,
+				transientKey,
+				sig,
+				tc.destinationSigType,
+			)
+			assert.NoError(t, err)
+
+			// Validate should pass for all valid signature types
+			assert.NoError(t, offlineSig.Validate(), "validation should pass for valid signature type")
+			assert.True(t, offlineSig.IsValid(), "IsValid() should return true for valid signature type")
+		})
+	}
+}
