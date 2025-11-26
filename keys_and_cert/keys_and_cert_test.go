@@ -594,3 +594,55 @@ func createDummySigningKey() types.SigningPublicKey {
 	key, _ := ed25519.NewEd25519PublicKey(keyData)
 	return key
 }
+
+// TestNewPrivateKeysAndCert verifies that the incomplete constructor properly returns an error.
+// This test documents the current state: the function is not implemented and should return an error
+// to prevent users from getting nil/empty structs that could cause panics downstream.
+func TestNewPrivateKeysAndCert(t *testing.T) {
+	assert := assert.New(t)
+
+	t.Run("returns_error_not_implemented", func(t *testing.T) {
+		// The function is not implemented, so it should return an error
+		pkc, err := NewPrivateKeysAndCert()
+
+		// Should return an error
+		assert.NotNil(err, "NewPrivateKeysAndCert should return an error since it's not implemented")
+		assert.Contains(err.Error(), "not implemented", "error message should indicate function is not implemented")
+
+		// Should return nil struct
+		assert.Nil(pkc, "NewPrivateKeysAndCert should return nil on error")
+	})
+
+	t.Run("documentation_shows_proper_usage", func(t *testing.T) {
+		// This test documents the correct way to create a PrivateKeysAndCert.
+		// Users should generate keys manually and construct the struct directly.
+
+		// For demonstration, we'll use the existing createValidKeyAndCert helper
+		// which properly creates Ed25519/ElGamal keys with appropriate certificate
+		keysAndCert := createValidKeyAndCert(t)
+		assert.NotNil(keysAndCert, "should be able to create KeysAndCert")
+		assert.True(keysAndCert.IsValid(), "KeysAndCert should be valid")
+
+		// Generate corresponding private keys (for demonstration purposes)
+		// In practice, the private keys would be generated alongside the public keys
+		ed25519Privkey, err := ed25519.GenerateEd25519Key()
+		assert.Nil(err, "should be able to generate Ed25519 key")
+
+		var elgamalPrivkey elgamal.PrivateKey
+		err = elgamal.ElgamalGenerate(&elgamalPrivkey.PrivateKey, rand.Reader)
+		assert.Nil(err, "should be able to generate ElGamal key")
+
+		// Construct PrivateKeysAndCert manually (the correct way)
+		pkc := &PrivateKeysAndCert{
+			KeysAndCert: *keysAndCert,
+			PK_KEY:      &elgamalPrivkey.PrivateKey,
+			SPK_KEY:     ed25519Privkey,
+		}
+
+		// Verify the constructed struct
+		assert.NotNil(pkc.KeysAndCert, "KeysAndCert should be set")
+		assert.NotNil(pkc.PK_KEY, "private encryption key should be set")
+		assert.NotNil(pkc.SPK_KEY, "private signing key should be set")
+		assert.True(pkc.KeysAndCert.IsValid(), "KeysAndCert should be valid")
+	})
+}

@@ -105,6 +105,40 @@ func TestNewDSAElGamalKeyCertificate(t *testing.T) {
 	assert.Equal(t, KEYCERT_CRYPTO_ELG, keyCert.PublicKeyType())
 }
 
+// TestNewDSAElGamalKeyCertificate_DeprecationWarning verifies that the deprecated
+// DSA/ElGamal constructor still works but is properly marked as deprecated.
+// The function should log a warning (not tested here) and return a valid certificate.
+func TestNewDSAElGamalKeyCertificate_DeprecationWarning(t *testing.T) {
+	t.Run("still_works_despite_deprecation", func(t *testing.T) {
+		// Despite being deprecated, the function must still work for backward compatibility
+		keyCert, err := NewDSAElGamalKeyCertificate()
+
+		require.NoError(t, err, "deprecated function should still work for backward compatibility")
+		require.NotNil(t, keyCert)
+
+		// Verify correct key types are set
+		assert.Equal(t, KEYCERT_SIGN_DSA_SHA1, keyCert.SigningPublicKeyType())
+		assert.Equal(t, KEYCERT_CRYPTO_ELG, keyCert.PublicKeyType())
+	})
+
+	t.Run("prefer_modern_alternative", func(t *testing.T) {
+		// Show that Ed25519/X25519 is the preferred alternative
+		modernKeyCert, err := NewEd25519X25519KeyCertificate()
+
+		require.NoError(t, err)
+		require.NotNil(t, modernKeyCert)
+
+		// Modern keys use Ed25519 and X25519
+		assert.Equal(t, KEYCERT_SIGN_ED25519, modernKeyCert.SigningPublicKeyType())
+		assert.Equal(t, KEYCERT_CRYPTO_X25519, modernKeyCert.PublicKeyType())
+
+		// Modern keys should be different from legacy keys
+		legacyKeyCert, _ := NewDSAElGamalKeyCertificate()
+		assert.NotEqual(t, legacyKeyCert.SigningPublicKeyType(), modernKeyCert.SigningPublicKeyType())
+		assert.NotEqual(t, legacyKeyCert.PublicKeyType(), modernKeyCert.PublicKeyType())
+	})
+}
+
 func TestNewRedDSAX25519KeyCertificate(t *testing.T) {
 	keyCert, err := NewRedDSAX25519KeyCertificate()
 

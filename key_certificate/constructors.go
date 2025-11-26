@@ -184,6 +184,10 @@ func NewECDSAP384KeyCertificate() (*KeyCertificate, error) {
 // SHA-1 is cryptographically weak and DSA keys provide insufficient security.
 // Maintained only for backward compatibility with legacy destinations.
 func NewDSAElGamalKeyCertificate() (*KeyCertificate, error) {
+	log.WithFields(logger.Fields{
+		"algorithm": "DSA/ElGamal",
+		"status":    "deprecated",
+	}).Warn("DSA/ElGamal is deprecated as of I2P 0.9.58. Use Ed25519/X25519 instead for new implementations.")
 	return NewKeyCertificateWithTypes(KEYCERT_SIGN_DSA_SHA1, KEYCERT_CRYPTO_ELG)
 }
 
