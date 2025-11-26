@@ -10,6 +10,166 @@ import (
 // MappingValues represents the parsed key value pairs inside of an I2P Mapping.
 type MappingValues [][2]I2PString
 
+// NewMappingValues creates a new empty MappingValues with optional initial capacity.
+// This is the safe way to construct MappingValues for building mappings programmatically.
+//
+// Parameters:
+//   - capacity: Optional initial capacity hint (0 for default)
+//
+// Returns:
+//   - MappingValues: Empty mapping values ready for use
+//
+// Example:
+//
+//	mv := data.NewMappingValues(10) // Pre-allocate space for 10 pairs
+//	mv, err := mv.Add("key1", "value1")
+//	if err != nil {
+//	    return err
+//	}
+func NewMappingValues(capacity int) MappingValues {
+	if capacity < 0 {
+		capacity = 0
+	}
+	log.WithFields(logger.Fields{
+		"capacity": capacity,
+	}).Debug("Creating new MappingValues")
+	return make(MappingValues, 0, capacity)
+}
+
+// Add appends a new key-value pair to the MappingValues.
+// Both key and value are validated as I2P strings before adding.
+//
+// Parameters:
+//   - key: The key string (max 255 bytes)
+//   - value: The value string (max 255 bytes)
+//
+// Returns:
+//   - MappingValues: Updated mapping values with the new pair
+//   - error: Error if key or value validation fails
+//
+// Example:
+//
+//	mv := data.NewMappingValues(0)
+//	mv, err := mv.Add("host", "127.0.0.1")
+//	if err != nil {
+//	    return err
+//	}
+//	mv, err = mv.Add("port", "7654")
+func (mv MappingValues) Add(key, value string) (MappingValues, error) {
+	log.WithFields(logger.Fields{
+		"key":   key,
+		"value": value,
+	}).Debug("Adding key-value pair to MappingValues")
+
+	// Reject empty keys and values
+	if key == "" {
+		log.Error("Empty key not allowed in MappingValues")
+		return mv, oops.Errorf("empty key not allowed")
+	}
+	if value == "" {
+		log.Error("Empty value not allowed in MappingValues")
+		return mv, oops.Errorf("empty value not allowed")
+	}
+
+	// Validate and convert key
+	keyStr, err := NewI2PString(key)
+	if err != nil {
+		log.WithFields(logger.Fields{
+			"key":   key,
+			"error": err,
+		}).Error("Failed to create I2PString for key")
+		return mv, oops.Wrapf(err, "invalid key: %s", key)
+	}
+
+	// Validate and convert value
+	valStr, err := NewI2PString(value)
+	if err != nil {
+		log.WithFields(logger.Fields{
+			"value": value,
+			"error": err,
+		}).Error("Failed to create I2PString for value")
+		return mv, oops.Wrapf(err, "invalid value: %s", value)
+	}
+
+	log.WithFields(logger.Fields{
+		"key":         key,
+		"value":       value,
+		"pairs_count": len(mv) + 1,
+	}).Debug("Successfully added key-value pair")
+
+	return append(mv, [2]I2PString{keyStr, valStr}), nil
+}
+
+// Validate checks if all key-value pairs in MappingValues are valid.
+// This ensures all I2PStrings are properly formatted.
+//
+// Returns:
+//   - error: Error if any key or value is invalid, nil otherwise
+//
+// Example:
+//
+//	if err := mv.Validate(); err != nil {
+//	    return fmt.Errorf("invalid mapping values: %w", err)
+//	}
+func (mv MappingValues) Validate() error {
+	log.WithFields(logger.Fields{
+		"pairs_count": len(mv),
+	}).Debug("Validating MappingValues")
+
+	for i, pair := range mv {
+		// Validate key
+		if !pair[0].IsValid() {
+			log.WithFields(logger.Fields{
+				"index": i,
+				"pair":  pair,
+			}).Error("Invalid key in MappingValues")
+			return oops.Errorf("invalid key at index %d", i)
+		}
+
+		// Validate value
+		if !pair[1].IsValid() {
+			log.WithFields(logger.Fields{
+				"index": i,
+				"pair":  pair,
+			}).Error("Invalid value in MappingValues")
+			return oops.Errorf("invalid value at index %d", i)
+		}
+
+		// Validate key can be extracted
+		if _, err := pair[0].DataSafe(); err != nil {
+			log.WithFields(logger.Fields{
+				"index": i,
+				"error": err,
+			}).Error("Cannot extract key data")
+			return oops.Wrapf(err, "cannot extract key at index %d", i)
+		}
+
+		// Validate value can be extracted
+		if _, err := pair[1].DataSafe(); err != nil {
+			log.WithFields(logger.Fields{
+				"index": i,
+				"error": err,
+			}).Error("Cannot extract value data")
+			return oops.Wrapf(err, "cannot extract value at index %d", i)
+		}
+	}
+
+	log.Debug("MappingValues validation passed")
+	return nil
+}
+
+// IsValid returns true if all key-value pairs in MappingValues are valid.
+// This is a convenience wrapper around Validate().
+//
+// Example:
+//
+//	if !mv.IsValid() {
+//	    return errors.New("invalid mapping values")
+//	}
+func (mv MappingValues) IsValid() bool {
+	return mv.Validate() == nil
+}
+
 // Get retrieves the value for a given key from MappingValues.
 func (m MappingValues) Get(key I2PString) I2PString {
 	keyBytes, _ := key.Data()
