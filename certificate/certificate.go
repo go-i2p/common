@@ -11,21 +11,6 @@ import (
 	"github.com/go-i2p/common/data"
 )
 
-// readCertificate creates a new Certificate from []byte
-// Deprecated: Use ReadCertificate instead. This function will be removed in v2.0.
-func readCertificate(data []byte) (certificate Certificate, err error) {
-	log.WithFields(logger.Fields{
-		"at":     "readCertificate",
-		"reason": "deprecated function called",
-	}).Debug("readCertificate is deprecated, use ReadCertificate instead")
-
-	certPtr, _, err := ReadCertificate(data)
-	if err != nil {
-		return Certificate{}, err
-	}
-	return *certPtr, nil
-}
-
 // ReadCertificate creates a Certificate from []byte and returns any ExcessBytes at the end of the input.
 // Returns nil certificate on error (not partial certificate).
 func ReadCertificate(data []byte) (certificate *Certificate, remainder []byte, err error) {

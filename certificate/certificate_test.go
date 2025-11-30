@@ -261,8 +261,8 @@ func TestNewCertificateDeuxFunction(t *testing.T) {
 
 	payload := []byte{0x11, 0x22}
 	certType := CERT_HIDDEN
-	cert, err := NewCertificateDeux(certType, payload)
-	assert.Nil(err, "Expected no error when creating certificate with NewCertificateDeux")
+	cert, err := NewCertificateWithType(uint8(certType), payload)
+	assert.Nil(err, "Expected no error when creating certificate with NewCertificateWithType")
 
 	typ, typErr := cert.Type()
 	assert.Nil(typErr, "Certificate type should not error for valid type")
@@ -279,7 +279,7 @@ func TestNewCertificateWithInvalidPayloadLength(t *testing.T) {
 	assert := assert.New(t)
 
 	payload := make([]byte, 70000) // Exceeds 65535 bytes
-	_, err := NewCertificateDeux(CERT_KEY, payload)
+	_, err := NewCertificateWithType(CERT_KEY, payload)
 	assert.NotNil(err, "Expected error when creating certificate with payload exceeding maximum length")
 	assert.Equal("payload too long: 70000 bytes", err.Error(), "Correct error message should be returned")
 }
@@ -294,7 +294,7 @@ func TestCertificateExcessBytes(t *testing.T) {
 	certBytes := append([]byte{byte(CERT_SIGNED)}, []byte{0x00, byte(len(payload))}...)
 	certBytes = append(certBytes, certData...)
 
-	cert, err := readCertificate(certBytes)
+	cert, _, err := ReadCertificate(certBytes)
 	assert.Nil(err, "Expected no error when reading certificate with excess bytes")
 
 	excess := cert.ExcessBytes()
@@ -317,7 +317,7 @@ func TestCertificateSerializationDeserialization(t *testing.T) {
 	serializedBytes := originalCert.Bytes()
 	assert.NotNil(serializedBytes, "Serialized bytes should not be nil")
 
-	deserializedCert, err := readCertificate(serializedBytes)
+	deserializedCert, _, err := ReadCertificate(serializedBytes)
 	assert.Nil(err, "Expected no error when deserializing certificate")
 
 	origType, origTypeErr := originalCert.Type()
@@ -351,7 +351,7 @@ func TestCertificateSerializationDeserializationWithExcessBytes(t *testing.T) {
 	excessBytes := []byte{0x03, 0x04}
 	serializedBytesWithExcess := append(serializedBytes, excessBytes...)
 
-	deserializedCert, err := readCertificate(serializedBytesWithExcess)
+	deserializedCert, _, err := ReadCertificate(serializedBytesWithExcess)
 	assert.Nil(err, "Expected no error when deserializing certificate with excess bytes")
 
 	origType, origTypeErr := originalCert.Type()
@@ -385,7 +385,7 @@ func TestCertificateSerializationDeserializationEmptyPayload(t *testing.T) {
 
 	serializedBytes := originalCert.Bytes()
 
-	deserializedCert, err := readCertificate(serializedBytes)
+	deserializedCert, _, err := ReadCertificate(serializedBytes)
 	assert.Nil(err, "Expected no error when deserializing NULL certificate")
 
 	origType, origTypeErr := originalCert.Type()
@@ -420,7 +420,7 @@ func TestCertificateSerializationDeserializationMaxPayload(t *testing.T) {
 	serializedBytes := originalCert.Bytes()
 	assert.Equal(1+2+65535, len(serializedBytes), "Serialized bytes length should be correct for maximum payload")
 
-	deserializedCert, err := readCertificate(serializedBytes)
+	deserializedCert, _, err := ReadCertificate(serializedBytes)
 	assert.Nil(err, "Expected no error when deserializing certificate with maximum payload")
 
 	origType, origTypeErr := originalCert.Type()
