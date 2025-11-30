@@ -2,6 +2,7 @@ package router_info
 
 import (
 	"encoding/binary"
+	"fmt"
 	"strconv"
 	"strings"
 	"time"
@@ -322,6 +323,13 @@ func (router_info *RouterInfo) RouterIdentity() *router_identity.RouterIdentity 
 // IdentHash returns the identity hash (sha256 sum) for this RouterInfo.
 func (router_info *RouterInfo) IdentHash() (data.Hash, error) {
 	log.Debug("Calculating IdentHash for RouterInfo")
+
+	// Check if router_identity is nil (e.g., uninitialized RouterInfo in tests)
+	if router_info.router_identity == nil {
+		log.Debug("RouterInfo has nil router_identity, cannot calculate IdentHash")
+		return data.Hash{}, fmt.Errorf("router_identity is nil")
+	}
+
 	// Hash the complete RouterIdentity bytes as per I2P specification
 	identityData, err := router_info.router_identity.Bytes()
 	if err != nil {
