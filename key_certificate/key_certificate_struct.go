@@ -390,7 +390,7 @@ func logSigningKeyDebug(signing_key_type int, data_len int) {
 		"signing_key_type": signing_key_type,
 		"data_len":         data_len,
 		"required_len":     KEYCERT_SPK_SIZE,
-	}).Error("DEBUG: About to construct signing public key")
+	}).Debug("DEBUG: About to construct signing public key")
 }
 
 // selectSigningKeyConstructor selects and invokes the appropriate key constructor based on signing key type.
