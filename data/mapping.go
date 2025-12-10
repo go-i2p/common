@@ -253,10 +253,6 @@ func processNormalMappingData(mapping Mapping, remainder []byte, size *Integer, 
 		err = logAndAppendMappingValueErrors(err)
 	}
 
-	if len(remainder) > 0 {
-		err = handleExtraDataBeyondMapping(remainder, size, err)
-	}
-
 	logMappingCompletionDetails(mapping, remainder, err)
 	return mapping, remainder, err
 }
@@ -269,17 +265,6 @@ func logAndAppendMappingValueErrors(err []error) []error {
 	}).Warn("mapping format violation")
 
 	e := oops.Errorf("error parsing mapping values")
-	return append(err, e)
-}
-
-// handleExtraDataBeyondMapping processes cases where extra bytes exist beyond the mapping length.
-func handleExtraDataBeyondMapping(remainder []byte, size *Integer, err []error) []error {
-	log.WithFields(logger.Fields{
-		"expected_size": size.Int(),
-		"actual_size":   len(remainder),
-	}).Error("mapping format violation: data exists beyond length of mapping")
-
-	e := oops.Errorf("warning parsing mapping: data exists beyond length of mapping")
 	return append(err, e)
 }
 
