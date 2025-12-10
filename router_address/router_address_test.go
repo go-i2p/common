@@ -316,3 +316,369 @@ func TestRouterAddressIsValid(t *testing.T) {
 		assert.False(ra.IsValid(), "RouterAddress with missing fields should return false for IsValid")
 	})
 }
+
+//
+// Host() Method Tests
+//
+
+// TestHost_MissingKey tests that Host() returns clear error when host key is missing
+func TestHost_MissingKey(t *testing.T) {
+	assert := assert.New(t)
+
+	options := map[string]string{
+		"port": "12345",
+		// "host" intentionally missing
+	}
+	ra, err := NewRouterAddress(3, time.Now().Add(1*time.Hour), "SSU", options)
+	assert.NoError(err, "NewRouterAddress should not fail with missing host")
+
+	_, err = ra.Host()
+	assert.Error(err, "Host() should return error when host key is missing")
+	assert.Contains(err.Error(), "missing required 'host' key", "Error should indicate missing host key")
+}
+
+// TestHost_EmptyValue tests that Host() returns clear error when host value is empty
+func TestHost_EmptyValue(t *testing.T) {
+	assert := assert.New(t)
+
+	options := map[string]string{
+		"host": "",
+		"port": "12345",
+	}
+	ra, err := NewRouterAddress(3, time.Now().Add(1*time.Hour), "SSU", options)
+	assert.NoError(err)
+
+	_, err = ra.Host()
+	assert.Error(err, "Host() should return error when host is empty")
+	assert.Contains(err.Error(), "is empty", "Error should indicate empty value")
+}
+
+// TestHost_InvalidIP tests that Host() returns clear error when IP is invalid
+func TestHost_InvalidIP(t *testing.T) {
+	assert := assert.New(t)
+
+	testCases := []struct {
+		name     string
+		hostVal  string
+		errMatch string
+	}{
+		{"not an ip", "not-an-ip", "invalid IP address"},
+		{"invalid format", "999.999.999.999", "invalid IP address"},
+		{"hostname", "example.com", "invalid IP address"},
+		{"partial ip", "192.168.1", "invalid IP address"},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			options := map[string]string{
+				"host": tc.hostVal,
+				"port": "12345",
+			}
+			ra, err := NewRouterAddress(3, time.Now().Add(1*time.Hour), "SSU", options)
+			assert.NoError(err)
+
+			_, err = ra.Host()
+			assert.Error(err, "Host() should return error for invalid IP")
+			assert.Contains(err.Error(), tc.errMatch, "Error should indicate invalid IP")
+			assert.Contains(err.Error(), tc.hostVal, "Error should include the invalid value")
+		})
+	}
+}
+
+// TestHost_ValidIPv4 tests that Host() works correctly with valid IPv4 addresses
+func TestHost_ValidIPv4(t *testing.T) {
+	assert := assert.New(t)
+
+	testCases := []string{
+		"192.168.1.1",
+		"127.0.0.1",
+		"10.0.0.1",
+		"8.8.8.8",
+	}
+
+	for _, ip := range testCases {
+		t.Run(ip, func(t *testing.T) {
+			options := map[string]string{
+				"host": ip,
+				"port": "12345",
+			}
+			ra, err := NewRouterAddress(3, time.Now().Add(1*time.Hour), "SSU", options)
+			assert.NoError(err)
+
+			host, err := ra.Host()
+			assert.NoError(err, "Host() should not return error for valid IPv4")
+			assert.NotNil(host, "Host should not be nil")
+			assert.Equal(ip, host.String(), "Host string should match input IP")
+		})
+	}
+}
+
+// TestHost_ValidIPv6 tests that Host() works correctly with valid IPv6 addresses
+func TestHost_ValidIPv6(t *testing.T) {
+	assert := assert.New(t)
+
+	testCases := []struct {
+		input    string
+		expected string
+	}{
+		{"::1", "::1"},
+		{"2001:0db8:85a3:0000:0000:8a2e:0370:7334", "2001:db8:85a3::8a2e:370:7334"},
+		{"fe80::1", "fe80::1"},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.input, func(t *testing.T) {
+			options := map[string]string{
+				"host": tc.input,
+				"port": "12345",
+			}
+			ra, err := NewRouterAddress(3, time.Now().Add(1*time.Hour), "SSU", options)
+			assert.NoError(err)
+
+			host, err := ra.Host()
+			assert.NoError(err, "Host() should not return error for valid IPv6")
+			assert.NotNil(host, "Host should not be nil")
+			assert.Equal(tc.expected, host.String(), "Host string should match expected normalized IPv6")
+		})
+	}
+}
+
+//
+// Port() Method Tests
+//
+
+// TestPort_MissingKey tests that Port() returns clear error when port key is missing
+func TestPort_MissingKey(t *testing.T) {
+	assert := assert.New(t)
+
+	options := map[string]string{
+		"host": "192.168.1.1",
+		// "port" intentionally missing
+	}
+	ra, err := NewRouterAddress(3, time.Now().Add(1*time.Hour), "SSU", options)
+	assert.NoError(err, "NewRouterAddress should not fail with missing port")
+
+	_, err = ra.Port()
+	assert.Error(err, "Port() should return error when port key is missing")
+	assert.Contains(err.Error(), "missing required 'port' key", "Error should indicate missing port key")
+}
+
+// TestPort_EmptyValue tests that Port() returns clear error when port value is empty
+func TestPort_EmptyValue(t *testing.T) {
+	assert := assert.New(t)
+
+	options := map[string]string{
+		"host": "192.168.1.1",
+		"port": "",
+	}
+	ra, err := NewRouterAddress(3, time.Now().Add(1*time.Hour), "SSU", options)
+	assert.NoError(err)
+
+	_, err = ra.Port()
+	assert.Error(err, "Port() should return error when port is empty")
+	assert.Contains(err.Error(), "is empty", "Error should indicate empty value")
+}
+
+// TestPort_InvalidNumber tests that Port() returns clear error when port is not a valid number
+func TestPort_InvalidNumber(t *testing.T) {
+	assert := assert.New(t)
+
+	testCases := []struct {
+		name     string
+		portVal  string
+		errMatch string
+	}{
+		{"not a number", "abc", "not a valid number"},
+		{"float", "123.45", "not a valid number"},
+		{"with spaces", "123 456", "not a valid number"},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			options := map[string]string{
+				"host": "192.168.1.1",
+				"port": tc.portVal,
+			}
+			ra, err := NewRouterAddress(3, time.Now().Add(1*time.Hour), "SSU", options)
+			assert.NoError(err)
+
+			_, err = ra.Port()
+			assert.Error(err, "Port() should return error for invalid number")
+			assert.Contains(err.Error(), tc.errMatch, "Error should indicate invalid number")
+		})
+	}
+}
+
+// TestPort_OutOfRange tests that Port() returns clear error when port is out of valid range
+func TestPort_OutOfRange(t *testing.T) {
+	assert := assert.New(t)
+
+	testCases := []struct {
+		name    string
+		portVal string
+	}{
+		{"zero", "0"},
+		{"negative", "-1"},
+		{"too high", "65536"},
+		{"way too high", "99999"},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			options := map[string]string{
+				"host": "192.168.1.1",
+				"port": tc.portVal,
+			}
+			ra, err := NewRouterAddress(3, time.Now().Add(1*time.Hour), "SSU", options)
+			assert.NoError(err)
+
+			_, err = ra.Port()
+			assert.Error(err, "Port() should return error for out-of-range port")
+			assert.Contains(err.Error(), "out of valid range", "Error should indicate out of range")
+		})
+	}
+}
+
+// TestPort_ValidPort tests that Port() works correctly with valid port numbers
+func TestPort_ValidPort(t *testing.T) {
+	assert := assert.New(t)
+
+	testCases := []string{
+		"1",     // minimum valid port
+		"80",    // common port
+		"443",   // common port
+		"8080",  // common port
+		"12345", // arbitrary valid port
+		"65535", // maximum valid port
+	}
+
+	for _, port := range testCases {
+		t.Run(port, func(t *testing.T) {
+			options := map[string]string{
+				"host": "192.168.1.1",
+				"port": port,
+			}
+			ra, err := NewRouterAddress(3, time.Now().Add(1*time.Hour), "SSU", options)
+			assert.NoError(err)
+
+			portStr, err := ra.Port()
+			assert.NoError(err, "Port() should not return error for valid port")
+			assert.Equal(port, portStr, "Port string should match input")
+		})
+	}
+}
+
+//
+// HasValidHost() Helper Tests
+//
+
+// TestHasValidHost tests the HasValidHost() helper method
+func TestHasValidHost(t *testing.T) {
+	tests := []struct {
+		name     string
+		options  map[string]string
+		expected bool
+	}{
+		{"missing host key", map[string]string{"port": "12345"}, false},
+		{"empty host", map[string]string{"host": "", "port": "12345"}, false},
+		{"invalid IP - text", map[string]string{"host": "not-an-ip", "port": "12345"}, false},
+		{"invalid IP - malformed", map[string]string{"host": "999.999.999.999", "port": "12345"}, false},
+		{"valid IPv4", map[string]string{"host": "192.168.1.1", "port": "12345"}, true},
+		{"valid IPv4 - localhost", map[string]string{"host": "127.0.0.1", "port": "12345"}, true},
+		{"valid IPv6", map[string]string{"host": "::1", "port": "12345"}, true},
+		{"valid IPv6 - full", map[string]string{"host": "2001:0db8:85a3:0000:0000:8a2e:0370:7334", "port": "12345"}, true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert := assert.New(t)
+
+			ra, err := NewRouterAddress(3, time.Now().Add(1*time.Hour), "SSU", tt.options)
+			assert.NoError(err, "NewRouterAddress should not fail")
+
+			result := ra.HasValidHost()
+			assert.Equal(tt.expected, result, "HasValidHost() returned unexpected result")
+		})
+	}
+}
+
+//
+// HasValidPort() Helper Tests
+//
+
+// TestHasValidPort tests the HasValidPort() helper method
+func TestHasValidPort(t *testing.T) {
+	tests := []struct {
+		name     string
+		options  map[string]string
+		expected bool
+	}{
+		{"missing port key", map[string]string{"host": "192.168.1.1"}, false},
+		{"empty port", map[string]string{"host": "192.168.1.1", "port": ""}, false},
+		{"invalid - not a number", map[string]string{"host": "192.168.1.1", "port": "abc"}, false},
+		{"invalid - zero", map[string]string{"host": "192.168.1.1", "port": "0"}, false},
+		{"invalid - negative", map[string]string{"host": "192.168.1.1", "port": "-1"}, false},
+		{"invalid - too high", map[string]string{"host": "192.168.1.1", "port": "65536"}, false},
+		{"valid - minimum", map[string]string{"host": "192.168.1.1", "port": "1"}, true},
+		{"valid - common", map[string]string{"host": "192.168.1.1", "port": "8080"}, true},
+		{"valid - maximum", map[string]string{"host": "192.168.1.1", "port": "65535"}, true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert := assert.New(t)
+
+			ra, err := NewRouterAddress(3, time.Now().Add(1*time.Hour), "SSU", tt.options)
+			assert.NoError(err, "NewRouterAddress should not fail")
+
+			result := ra.HasValidPort()
+			assert.Equal(tt.expected, result, "HasValidPort() returned unexpected result")
+		})
+	}
+}
+
+//
+// Combined Validation Tests
+//
+
+// TestDefensiveProgrammingPattern demonstrates the intended usage pattern
+func TestDefensiveProgrammingPattern(t *testing.T) {
+	assert := assert.New(t)
+
+	// Create a slice of RouterAddresses with various states
+	addresses := []map[string]string{
+		{"host": "192.168.1.1", "port": "9150"}, // valid
+		{"host": "bad-host", "port": "9150"},    // invalid host
+		{"host": "192.168.1.2", "port": "abc"},  // invalid port
+		{"port": "9150"},                        // missing host
+		{"host": "192.168.1.3"},                 // missing port
+		{"host": "10.0.0.1", "port": "8080"},    // valid
+	}
+
+	var validAddresses []*RouterAddress
+	for _, opts := range addresses {
+		ra, err := NewRouterAddress(3, time.Now().Add(1*time.Hour), "SSU", opts)
+		assert.NoError(err)
+
+		// Defensive programming: skip invalid addresses gracefully
+		if !ra.HasValidHost() || !ra.HasValidPort() {
+			continue
+		}
+
+		validAddresses = append(validAddresses, ra)
+	}
+
+	// Should have found exactly 2 valid addresses
+	assert.Len(validAddresses, 2, "Should have filtered to only valid addresses")
+
+	// Verify we can call Host() and Port() without errors on filtered addresses
+	for _, ra := range validAddresses {
+		host, err := ra.Host()
+		assert.NoError(err, "Host() should not error on pre-validated address")
+		assert.NotNil(host)
+
+		port, err := ra.Port()
+		assert.NoError(err, "Port() should not error on pre-validated address")
+		assert.NotEmpty(port)
+	}
+}

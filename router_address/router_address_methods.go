@@ -194,43 +194,135 @@ func (router_address RouterAddress) IntroducerTagString(num int) data.I2PString 
 // Host returns the host address as a net.Addr
 func (router_address RouterAddress) Host() (net.Addr, error) {
 	log.Debug("Getting host from RouterAddress")
+
+	// Check if host key exists
+	if !router_address.CheckOption(HOST_OPTION_KEY) {
+		log.Error("RouterAddress missing required host key")
+		return nil, oops.Errorf("RouterAddress missing required '%s' key in options mapping", HOST_OPTION_KEY)
+	}
+
 	host := router_address.HostString()
+	if host == nil {
+		log.Error("RouterAddress host option is nil")
+		return nil, oops.Errorf("RouterAddress '%s' option is nil", HOST_OPTION_KEY)
+	}
+
 	hostBytes, err := host.Data()
 	if err != nil {
 		log.WithError(err).Error("Failed to get host data")
-		return nil, err
+		return nil, oops.Wrapf(err, "RouterAddress '%s' option data invalid", HOST_OPTION_KEY)
 	}
+
+	if len(hostBytes) == 0 {
+		log.Error("RouterAddress host option is empty")
+		return nil, oops.Errorf("RouterAddress '%s' option is empty", HOST_OPTION_KEY)
+	}
+
 	ip := net.ParseIP(hostBytes)
 	if ip == nil {
-		log.Error("Failed to parse IP address")
-		return nil, oops.Errorf("null host error")
+		log.WithField("hostBytes", string(hostBytes)).Error("Failed to parse IP address")
+		return nil, oops.Errorf("RouterAddress '%s' option contains invalid IP address: %q", HOST_OPTION_KEY, string(hostBytes))
 	}
+
 	addr, err := net.ResolveIPAddr("", ip.String())
 	if err != nil {
-		log.WithError(err).Error("Failed to resolve IP address")
-	} else {
-		log.WithField("addr", addr).Debug("Retrieved host from RouterAddress")
+		log.WithError(err).WithField("ip", ip.String()).Error("Failed to resolve IP address")
+		return nil, oops.Wrapf(err, "failed to resolve IP address %s", ip.String())
 	}
-	return addr, err
+
+	log.WithField("addr", addr).Debug("Retrieved host from RouterAddress")
+	return addr, nil
 }
 
 // Port returns the port number as a string
 func (router_address RouterAddress) Port() (string, error) {
 	log.Debug("Getting port from RouterAddress")
+
+	// Check if port key exists
+	if !router_address.CheckOption(PORT_OPTION_KEY) {
+		log.Error("RouterAddress missing required port key")
+		return "", oops.Errorf("RouterAddress missing required '%s' key in options mapping", PORT_OPTION_KEY)
+	}
+
 	port := router_address.PortString()
+	if port == nil {
+		log.Error("RouterAddress port option is nil")
+		return "", oops.Errorf("RouterAddress '%s' option is nil", PORT_OPTION_KEY)
+	}
+
 	portBytes, err := port.Data()
 	if err != nil {
 		log.WithError(err).Error("Failed to get port data")
-		return "", err
+		return "", oops.Wrapf(err, "RouterAddress '%s' option data invalid", PORT_OPTION_KEY)
 	}
+
+	if len(portBytes) == 0 {
+		log.Error("RouterAddress port option is empty")
+		return "", oops.Errorf("RouterAddress '%s' option is empty", PORT_OPTION_KEY)
+	}
+
 	val, err := strconv.Atoi(portBytes)
 	if err != nil {
-		log.WithError(err).Error("Failed to convert port to integer")
-		return "", err
+		log.WithError(err).WithField("portBytes", string(portBytes)).Error("Failed to convert port to integer")
+		return "", oops.Wrapf(err, "RouterAddress '%s' option is not a valid number: %q", PORT_OPTION_KEY, string(portBytes))
 	}
+
+	if val < 1 || val > 65535 {
+		log.WithField("port", val).Error("Port number out of valid range")
+		return "", oops.Errorf("RouterAddress '%s' option out of valid range (1-65535): %d", PORT_OPTION_KEY, val)
+	}
+
 	portStr := strconv.Itoa(val)
 	log.WithField("port", portStr).Debug("Retrieved port from RouterAddress")
 	return portStr, nil
+}
+
+// HasValidHost checks if the RouterAddress has a valid and usable host option.
+// This is useful for defensive programming to skip invalid addresses gracefully.
+// Returns true if the host option exists, is non-empty, and contains a valid IP address.
+func (router_address RouterAddress) HasValidHost() bool {
+	if !router_address.CheckOption(HOST_OPTION_KEY) {
+		return false
+	}
+
+	host := router_address.HostString()
+	if host == nil {
+		return false
+	}
+
+	hostBytes, err := host.Data()
+	if err != nil || len(hostBytes) == 0 {
+		return false
+	}
+
+	ip := net.ParseIP(hostBytes)
+	return ip != nil
+}
+
+// HasValidPort checks if the RouterAddress has a valid and usable port option.
+// This is useful for defensive programming to skip invalid addresses gracefully.
+// Returns true if the port option exists, is non-empty, is a valid number, and is in range 1-65535.
+func (router_address RouterAddress) HasValidPort() bool {
+	if !router_address.CheckOption(PORT_OPTION_KEY) {
+		return false
+	}
+
+	port := router_address.PortString()
+	if port == nil {
+		return false
+	}
+
+	portBytes, err := port.Data()
+	if err != nil || len(portBytes) == 0 {
+		return false
+	}
+
+	val, err := strconv.Atoi(portBytes)
+	if err != nil {
+		return false
+	}
+
+	return val >= 1 && val <= 65535
 }
 
 // StaticKey returns the static key as a 32-byte array
