@@ -7,6 +7,7 @@ require (
 	github.com/go-i2p/logger v0.0.1
 	github.com/samber/oops v1.19.0
 	github.com/stretchr/testify v1.10.0
+	go.step.sm/crypto v0.67.0
 )
 
 require (
@@ -19,7 +20,6 @@ require (
 	github.com/sirupsen/logrus v1.9.3 // indirect
 	go.opentelemetry.io/otel v1.37.0 // indirect
 	go.opentelemetry.io/otel/trace v1.37.0 // indirect
-	go.step.sm/crypto v0.67.0 // indirect
 	golang.org/x/crypto v0.45.0 // indirect
 	golang.org/x/sys v0.38.0 // indirect
 	golang.org/x/text v0.31.0 // indirect
@@ -27,3 +27,5 @@ require (
 )
 
 replace github.com/go-i2p/crypto => ../crypto
+
+replace github.com/go-i2p/logger => ../logger
