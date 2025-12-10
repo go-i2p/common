@@ -34,6 +34,11 @@ const MAPPING_MIN_SIZE = 3
 // Cross-Ref: mapping.go
 const MAPPING_SIZE_FIELD_LENGTH = 2
 
+// MAX_MAPPING_PAIRS is the maximum number of key-value pairs allowed in a single mapping.
+// This prevents infinite loops when parsing malformed mappings.
+// Cross-Ref: mapping_values.go
+const MAX_MAPPING_PAIRS = 1000
+
 // BITS_PER_BYTE is the number of bits in a byte, used for bit shift calculations
 // Cross-Ref: integer.go
 const BITS_PER_BYTE = 8

@@ -310,11 +310,40 @@ func validateMappingLength(remainder []byte, map_length Integer) []error {
 // parseKeyValuePairs iterates through the remainder data parsing key-value pairs.
 func parseKeyValuePairs(remainder []byte, map_values MappingValues, errs []error) ([]byte, MappingValues, []error) {
 	encounteredKeysMap := map[string]bool{}
+	pairCount := 0
+	previousLength := len(remainder)
 
 	for {
+		// Safety limit: prevent infinite loops with malformed data
+		if pairCount >= MAX_MAPPING_PAIRS {
+			log.WithFields(logger.Fields{
+				"at":         "(Mapping) Values",
+				"pair_count": pairCount,
+				"max_pairs":  MAX_MAPPING_PAIRS,
+				"reason":     "exceeded maximum mapping pairs",
+			}).Error("mapping format violation")
+			errs = append(errs, oops.Errorf("exceeded maximum mapping pairs (%d)", MAX_MAPPING_PAIRS))
+			break
+		}
+
 		if !hasMinimumBytesForKeyValuePair(remainder) {
 			break
 		}
+
+		// Forward progress check: ensure we're consuming bytes
+		currentLength := len(remainder)
+		if currentLength >= previousLength && pairCount > 0 {
+			log.WithFields(logger.Fields{
+				"at":              "(Mapping) Values",
+				"pair_count":      pairCount,
+				"current_length":  currentLength,
+				"previous_length": previousLength,
+				"reason":          "no forward progress in parsing",
+			}).Error("mapping format violation - infinite loop detected")
+			errs = append(errs, oops.Errorf("no forward progress in parsing mapping (infinite loop detected)"))
+			break
+		}
+		previousLength = currentLength
 
 		var keyValuePair [2]I2PString
 		var err error
@@ -329,12 +358,20 @@ func parseKeyValuePairs(remainder []byte, map_values MappingValues, errs []error
 
 		// Always add the key-value pair even if there were errors (preserves original behavior)
 		map_values = append(map_values, keyValuePair)
+		pairCount++
 		if len(remainder) == 0 {
 			break
 		}
 
 		storeEncounteredKey(keyValuePair[0], encounteredKeysMap)
 	}
+
+	log.WithFields(logger.Fields{
+		"at":              "(Mapping) Values",
+		"pairs_parsed":    pairCount,
+		"errors":          len(errs),
+		"remainder_bytes": len(remainder),
+	}).Debug("Completed parsing key-value pairs")
 
 	return remainder, map_values, errs
 }
