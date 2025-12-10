@@ -2,8 +2,6 @@
 package key_certificate
 
 import (
-	"fmt"
-
 	"github.com/go-i2p/common/signature"
 	"github.com/go-i2p/crypto/curve25519"
 	"github.com/go-i2p/crypto/dsa"
@@ -167,12 +165,24 @@ func KeyCertificateFromCertificate(cert *certificate.Certificate) (*KeyCertifica
 
 // logExtractedKeyTypes logs detailed debug information about extracted key types.
 func logExtractedKeyTypes(certData []byte, spkType, cpkType data.Integer) {
-	fmt.Printf("Certificate Data Length in KeyCertificateFromCertificate: %d\n", len(certData))
-	fmt.Printf("Certificate Data Bytes in KeyCertificateFromCertificate: %v\n", certData)
-	fmt.Printf("cpkTypeBytes in KeyCertificateFromCertificate: %v\n", certData[2:4])
-	fmt.Printf("spkTypeBytes in KeyCertificateFromCertificate: %v\n", certData[0:2])
-	fmt.Printf("cpkType (Int) in KeyCertificateFromCertificate: %d\n", cpkType.Int())
-	fmt.Printf("spkType (Int) in KeyCertificateFromCertificate: %d\n", spkType.Int())
+	/*log.WithFields(logger.Fields{
+		"data_length": len(certData),
+	}).Debug("Certificate Data Length in KeyCertificateFromCertificate")
+	log.WithFields(logger.Fields{
+		"cert_data": certData,
+	}).Debug("Certificate Data Bytes in KeyCertificateFromCertificate")
+	log.WithFields(logger.Fields{
+		"cpk_type_bytes": certData[2:4],
+	}).Debug("cpkTypeBytes in KeyCertificateFromCertificate")
+	log.WithFields(logger.Fields{
+		"spk_type_bytes": certData[0:2],
+	}).Debug("spkTypeBytes in KeyCertificateFromCertificate")
+	log.WithFields(logger.Fields{
+		"cpk_type_int": cpkType.Int(),
+	}).Debug("cpkType (Int) in KeyCertificateFromCertificate")
+	log.WithFields(logger.Fields{
+		"spk_type_int": spkType.Int(),
+	}).Debug("spkType (Int) in KeyCertificateFromCertificate")*/
 }
 
 // Data returns the raw []byte contained in the Certificate.
