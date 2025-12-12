@@ -4,7 +4,7 @@ go 1.24.4
 
 require (
 	github.com/go-i2p/crypto v0.0.5
-	github.com/go-i2p/logger v0.0.1
+	github.com/go-i2p/logger v0.1.0
 	github.com/samber/oops v1.19.4
 	github.com/stretchr/testify v1.11.1
 	go.step.sm/crypto v0.75.0
