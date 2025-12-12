@@ -197,24 +197,24 @@ func (router_address RouterAddress) Host() (net.Addr, error) {
 
 	// Check if host key exists
 	if !router_address.CheckOption(HOST_OPTION_KEY) {
-		log.Error("RouterAddress missing required host key")
+		log.Warn("RouterAddress missing required host key")
 		return nil, oops.Errorf("RouterAddress missing required '%s' key in options mapping", HOST_OPTION_KEY)
 	}
 
 	host := router_address.HostString()
 	if host == nil {
-		log.Error("RouterAddress host option is nil")
+		log.Warn("RouterAddress host option is nil")
 		return nil, oops.Errorf("RouterAddress '%s' option is nil", HOST_OPTION_KEY)
 	}
 
 	hostBytes, err := host.Data()
 	if err != nil {
-		log.WithError(err).Error("Failed to get host data")
+		log.WithError(err).Warn("Failed to get host data")
 		return nil, oops.Wrapf(err, "RouterAddress '%s' option data invalid", HOST_OPTION_KEY)
 	}
 
 	if len(hostBytes) == 0 {
-		log.Error("RouterAddress host option is empty")
+		log.Warn("RouterAddress host option is empty")
 		return nil, oops.Errorf("RouterAddress '%s' option is empty", HOST_OPTION_KEY)
 	}
 
@@ -240,24 +240,24 @@ func (router_address RouterAddress) Port() (string, error) {
 
 	// Check if port key exists
 	if !router_address.CheckOption(PORT_OPTION_KEY) {
-		log.Error("RouterAddress missing required port key")
+		log.Warn("RouterAddress missing required port key")
 		return "", oops.Errorf("RouterAddress missing required '%s' key in options mapping", PORT_OPTION_KEY)
 	}
 
 	port := router_address.PortString()
 	if port == nil {
-		log.Error("RouterAddress port option is nil")
+		log.Warn("RouterAddress port option is nil")
 		return "", oops.Errorf("RouterAddress '%s' option is nil", PORT_OPTION_KEY)
 	}
 
 	portBytes, err := port.Data()
 	if err != nil {
-		log.WithError(err).Error("Failed to get port data")
+		log.WithError(err).Warn("Failed to get port data")
 		return "", oops.Wrapf(err, "RouterAddress '%s' option data invalid", PORT_OPTION_KEY)
 	}
 
 	if len(portBytes) == 0 {
-		log.Error("RouterAddress port option is empty")
+		log.Warn("RouterAddress port option is empty")
 		return "", oops.Errorf("RouterAddress '%s' option is empty", PORT_OPTION_KEY)
 	}
 
