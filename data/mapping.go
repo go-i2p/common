@@ -50,9 +50,6 @@ func (mapping Mapping) Values() MappingValues {
 		log.Debug("Mapping values are nil, returning empty MappingValues")
 		return MappingValues{}
 	}
-	log.WithFields(logger.Fields{
-		"values_count": len(*mapping.vals),
-	}).Debug("Retrieved Mapping values")
 	return *mapping.vals
 }
 

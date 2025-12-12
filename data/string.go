@@ -51,9 +51,6 @@ func (str I2PString) DataSafe() (string, error) {
 		return "", nil
 	}
 	data := string(str[1 : length+1])
-	log.WithFields(logger.Fields{
-		"data_length": len(data),
-	}).Debug("Retrieved I2PString data safely")
 	return data, nil
 }
 
@@ -132,9 +129,6 @@ func (str I2PString) Data() (data string, err error) {
 		return "", nil
 	}
 	data = string(str[1 : length+1])
-	log.WithFields(logger.Fields{
-		"data_length": len(data),
-	}).Debug("Retrieved I2PString data")
 	return data, nil
 }
 
@@ -158,9 +152,6 @@ func NewI2PString(content string) (I2PString, error) {
 	result := make(I2PString, 1+len(content))
 	result[0] = byte(len(content))
 	copy(result[1:], content)
-	log.WithFields(logger.Fields{
-		"i2pstring_length": len(result),
-	}).Debug("Successfully created I2PString")
 	return result, nil
 }
 
@@ -198,9 +189,6 @@ func NewI2PStringFromBytes(data []byte) (I2PString, error) {
 	}
 	result := make(I2PString, len(data))
 	copy(result, data)
-	log.WithFields(logger.Fields{
-		"i2pstring_length": len(result),
-	}).Debug("Successfully created I2PString from bytes")
 	return result, nil
 }
 
@@ -225,9 +213,6 @@ func ToI2PString(data string) (str I2PString, err error) {
 	i2p_string := []byte{byte(data_len)}
 	i2p_string = append(i2p_string, []byte(data)...)
 	str = I2PString(i2p_string)
-	log.WithFields(logger.Fields{
-		"i2pstring_length": len(str),
-	}).Debug("Successfully converted string to I2PString")
 	return
 }
 
@@ -259,11 +244,6 @@ func ReadI2PString(data []byte) (str I2PString, remainder []byte, err error) {
 	if err = verifyI2PStringLength(str, length); err != nil {
 		return
 	}
-
-	log.WithFields(logger.Fields{
-		"string_length":    length,
-		"remainder_length": len(remainder),
-	}).Debug("Successfully read I2PString from bytes")
 	return
 }
 
