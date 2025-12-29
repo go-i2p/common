@@ -1,3 +1,10 @@
+package router_info
+
+import (
+	"strings"
+
+	"github.com/go-i2p/common/data"
+)
 
 // Check if any router addresses are reachable on IPv4
 func (router_info *RouterInfo) HasIPV4() bool {
