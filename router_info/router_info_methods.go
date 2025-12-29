@@ -7,7 +7,7 @@ import (
 )
 
 // Check if any router addresses are reachable on IPv4
-func (router_info *RouterInfo) HasIPV4() bool {
+func (router_info *RouterInfo) HasIPv4() bool {
 	for _, raddr := range router_info.RouterAddresses() {
 		if raddr.IPVersion() == "4" {
 			return true
