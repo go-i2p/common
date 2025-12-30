@@ -2,8 +2,6 @@ package router_info
 
 import (
 	"strings"
-
-	"github.com/go-i2p/common/data"
 )
 
 // Check if any router addresses are reachable on IPv4
@@ -29,12 +27,8 @@ func (router_info *RouterInfo) HasIPv6() bool {
 // Check if a router is a FloodFill
 func (router_info *RouterInfo) IsFloodfill() bool {
 	// check for an `f` in the RI options
-	f, err := data.NewI2PString("f")
-	if err != nil {
-		return false
-	}
-	opt := router_info.Options().Values().Get(f)
-	if opt == nil {
+	caps := router_info.RouterCapabilities()
+	if !strings.Contains(caps, "f") {
 		return false
 	}
 	return true
