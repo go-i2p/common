@@ -117,7 +117,7 @@ func (router_info *RouterInfo) SupportsSSU2() bool {
 			return false
 		}
 		txt = strings.ToLower(txt)
-		if strings.Contains(txt, "ntcp2") {
+		if strings.Contains(txt, "ssu2") {
 			return true
 		}
 	}
