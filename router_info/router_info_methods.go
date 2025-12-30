@@ -58,15 +58,6 @@ func (router_info *RouterInfo) IsRejectingTunnels() bool {
 	return false
 }
 
-/*
-K: Under 12 KBps shared bandwidth
-L: 12 - 48 KBps shared bandwidth (default)
-M: 48 - 64 KBps shared bandwidth
-N: 64 - 128 KBps shared bandwidth
-O: 128 - 256 KBps shared bandwidth
-P: 256 - 2000 KBps shared bandwidth (as of release 0.9.20, see note below)
-X: Over 2000 KBps shared bandwidth
-*/
 func (router_info *RouterInfo) SharedBandwidthCategory() string {
 	caps := router_info.RouterCapabilities()
 	for _, c := range caps {
