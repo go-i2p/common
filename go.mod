@@ -5,8 +5,8 @@ go 1.24.5
 toolchain go1.24.12
 
 require (
-	github.com/go-i2p/crypto v0.1.1-rc2
-	github.com/go-i2p/logger v0.1.0
+	github.com/go-i2p/crypto v0.1.1
+	github.com/go-i2p/logger v0.1.1
 	github.com/samber/oops v1.21.0
 	github.com/stretchr/testify v1.11.1
 	go.step.sm/crypto v0.76.0
