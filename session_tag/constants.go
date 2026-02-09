@@ -6,3 +6,9 @@ package session_tag
 //
 // https://geti2p.net/spec/common-structures#session-tag
 const SessionTagSize = 32
+
+// ECIESSessionTagSize is the size of an ECIES-X25519-AEAD-Ratchet session tag.
+// When the ECIES flag is set in I2NP messages, session tags are 8 bytes.
+//
+// https://geti2p.net/spec/i2np#databaselookup
+const ECIESSessionTagSize = 8
