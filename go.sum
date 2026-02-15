@@ -7,6 +7,8 @@ github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc h1:U9qPSI2PIWSS1
 github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/go-i2p/crypto v0.1.2 h1:VvPXxrPHWeFID6/BvV2kBfzvBxGEU4FLu7Nm6MBqE5Q=
 github.com/go-i2p/crypto v0.1.2/go.mod h1:3rewwMcN1yVyO3twFu/2c9eKMa4llahP+GZuHA4fVsU=
+github.com/go-i2p/crypto v0.1.3 h1:FITp4zSgFwA0Bg8HUMU0H5UFdqzil2JUQk85WLVXru0=
+github.com/go-i2p/crypto v0.1.3/go.mod h1:3rewwMcN1yVyO3twFu/2c9eKMa4llahP+GZuHA4fVsU=
 github.com/go-i2p/elgamal v0.0.2 h1:3x2MwXWH5KjFZ06YThjLjB2/7eM3f6BsmhudKXn+dnk=
 github.com/go-i2p/elgamal v0.0.2/go.mod h1:5L85gta1c07w3f4ZCy4z//Caq1zaiHbEB8jocfQKWxM=
 github.com/go-i2p/logger v0.1.2 h1:fU6+3Ys3pCDmXUQbzwrAYXOvc8APnKVBupSNHPgiiVY=
