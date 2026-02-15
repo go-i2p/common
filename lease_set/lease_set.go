@@ -360,24 +360,59 @@ func (lease_set LeaseSet) Signature() (signature sig.Signature, err error) {
 	return
 }
 
-// Verify returns nil
+// Verify verifies the cryptographic signature of the LeaseSet.
+// The signature is computed over all serialised bytes excluding the trailing Signature,
+// and is verified against the signing public key from the Destination.
+// Returns nil if the signature is valid, or an error describing the verification failure.
 func (lease_set LeaseSet) Verify() error {
-	log.Debug("Verifying LeaseSet")
-	//data_end := len(destination) +
-	//	LEASE_SET_PUBKEY_SIZE +
-	//	LEASE_SET_SPK_SIZE +
-	//	1 +
-	//	(44 * lease_set.LeaseCount())
-	//data := lease_set[:data_end]
-	//spk, _ := lease_set.
-	//	Destination().
-	//	signingPublicKey()
-	//verifier, err := spk.NewVerifier()
-	//if err != nil {
-	//	return err
-	//}
-	log.Warn("LeaseSet verification not implemented")
-	return nil // verifier.Verify(data, lease_set.Signature())
+	log.Debug("Verifying LeaseSet signature")
+
+	// Get the full serialized bytes (includes signature at the end)
+	fullBytes, err := lease_set.Bytes()
+	if err != nil {
+		return oops.Errorf("failed to serialize LeaseSet for verification: %w", err)
+	}
+
+	// Get the signature
+	signature, err := lease_set.Signature()
+	if err != nil {
+		return oops.Errorf("failed to get LeaseSet signature: %w", err)
+	}
+	sigBytes := signature.Bytes()
+	sigLen := len(sigBytes)
+
+	if len(fullBytes) < sigLen {
+		return oops.Errorf("LeaseSet data too short for signature verification")
+	}
+
+	// Data to verify is everything except the trailing signature
+	dataToVerify := fullBytes[:len(fullBytes)-sigLen]
+
+	// Get the signing public key from the Destination
+	dest, err := lease_set.Destination()
+	if err != nil {
+		return oops.Errorf("failed to get Destination for verification: %w", err)
+	}
+
+	signingPubKey, err := dest.SigningPublicKey()
+	if err != nil {
+		return oops.Errorf("failed to get signing public key from Destination: %w", err)
+	}
+
+	// Create a verifier from the signing public key
+	verifier, err := signingPubKey.NewVerifier()
+	if err != nil {
+		return oops.Errorf("failed to create verifier: %w", err)
+	}
+
+	// Verify the signature
+	if err := verifier.Verify(dataToVerify, sigBytes); err != nil {
+		log.WithError(err).Warn("LeaseSet signature verification failed")
+		return oops.Errorf("LeaseSet signature verification failed: %w", err)
+	}
+
+	log.Debug("LeaseSet signature verification succeeded")
+	return nil
 }
 
 // NewestExpiration returns the newest lease expiration as an I2P Date.

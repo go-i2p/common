@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"encoding/binary"
 
+	"github.com/go-i2p/crypto/types"
 	"github.com/go-i2p/logger"
 	"github.com/samber/oops"
 
@@ -198,4 +199,17 @@ func NewDSAElGamalKeyCertificate() (*KeyCertificate, error) {
 // Added in I2P specification 0.9.39.
 func NewRedDSAX25519KeyCertificate() (*KeyCertificate, error) {
 	return NewKeyCertificateWithTypes(KEYCERT_SIGN_REDDSA_ED25519, KEYCERT_CRYPTO_X25519)
+}
+
+// ConstructSigningPublicKeyByType constructs a SigningPublicKey from raw bytes and a
+// signature type identifier. This is useful when creating a verifier for an offline
+// transient signing key whose type may differ from the destination's key certificate.
+//
+// Parameters:
+//   - data: Raw public key bytes (length must match expected size for sigType)
+//   - sigType: Signature type identifier (e.g., KEYCERT_SIGN_ED25519)
+//
+// Returns the constructed SigningPublicKey or an error if the type is unsupported.
+func ConstructSigningPublicKeyByType(data []byte, sigType int) (types.SigningPublicKey, error) {
+	return selectSigningKeyConstructor(sigType, data)
 }
