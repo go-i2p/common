@@ -2,6 +2,9 @@
 package session_key
 
 import (
+	"crypto/subtle"
+	"fmt"
+
 	"github.com/go-i2p/logger"
 	"github.com/samber/oops"
 )
@@ -24,6 +27,38 @@ type SessionKey [SESSION_KEY_SIZE]byte
 
 var log = logger.GetGoI2PLogger()
 
+// Bytes returns the SessionKey as a byte slice.
+func (sk SessionKey) Bytes() []byte {
+	return sk[:]
+}
+
+// Equal checks if two SessionKeys are equal using constant-time comparison
+// to prevent timing side-channel attacks.
+func (sk SessionKey) Equal(other SessionKey) bool {
+	return subtle.ConstantTimeCompare(sk[:], other[:]) == 1
+}
+
+// String returns a hex representation of the SessionKey for debugging.
+func (sk SessionKey) String() string {
+	return fmt.Sprintf("%x", sk[:])
+}
+
+// SetBytes sets the SessionKey value from a byte slice.
+// The input must be exactly SESSION_KEY_SIZE bytes long.
+func (sk *SessionKey) SetBytes(data []byte) error {
+	if len(data) != SESSION_KEY_SIZE {
+		return oops.Errorf("SetBytes: invalid data length, expected %d bytes, got %d", SESSION_KEY_SIZE, len(data))
+	}
+	copy(sk[:], data)
+	return nil
+}
+
+// IsZero returns true if the SessionKey is all zeros (uninitialized).
+func (sk SessionKey) IsZero() bool {
+	var zero SessionKey
+	return subtle.ConstantTimeCompare(sk[:], zero[:]) == 1
+}
+
 // NewSessionKey creates a new *SessionKey from []byte using ReadSessionKey.
 // Returns a pointer to SessionKey unlike ReadSessionKey.
 func NewSessionKey(data []byte) (sessionKey *SessionKey, remainder []byte, err error) {
@@ -36,6 +71,12 @@ func NewSessionKey(data []byte) (sessionKey *SessionKey, remainder []byte, err e
 	sessionKey = &sk
 	log.Debug("Successfully created new SessionKey")
 	return
+}
+
+// NewSessionKeyFromArray creates a SessionKey from a fixed-size byte array.
+// This provides zero-copy construction when a [SESSION_KEY_SIZE]byte is already available.
+func NewSessionKeyFromArray(data [SESSION_KEY_SIZE]byte) SessionKey {
+	return SessionKey(data)
 }
 
 // ReadSessionKey returns SessionKey from a []byte.
