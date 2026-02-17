@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/go-i2p/common/data"
 )
@@ -13,32 +14,30 @@ import (
 // TestNewLease2 verifies that NewLease2 correctly constructs a Lease2 structure
 // with the provided tunnel gateway hash, tunnel ID, and expiration time.
 func TestNewLease2(t *testing.T) {
-	assert := assert.New(t)
-
 	// Create test data
 	var gatewayHash data.Hash
 	copy(gatewayHash[:], []byte("test_gateway_hash_32_bytes_long!"))
 	tunnelID := uint32(12345)
-	expirationTime := time.Date(2025, 12, 31, 23, 59, 59, 0, time.UTC)
+	expirationTime := time.Now().Add(10 * time.Minute)
 
 	// Create Lease2
 	lease2, err := NewLease2(gatewayHash, tunnelID, expirationTime)
-	assert.NoError(err)
-	assert.NotNil(lease2)
+	require.NoError(t, err)
+	require.NotNil(t, lease2)
 
 	// Verify gateway hash
-	assert.Equal(gatewayHash, lease2.TunnelGateway())
+	assert.Equal(t, gatewayHash, lease2.TunnelGateway())
 
 	// Verify tunnel ID
-	assert.Equal(tunnelID, lease2.TunnelID())
+	assert.Equal(t, tunnelID, lease2.TunnelID())
 
 	// Verify expiration time (should be truncated to seconds)
 	expectedSeconds := uint32(expirationTime.Unix())
-	assert.Equal(expectedSeconds, lease2.EndDate())
+	assert.Equal(t, expectedSeconds, lease2.EndDate())
 
 	// Verify time conversion
 	retrievedTime := lease2.Time()
-	assert.Equal(expirationTime.Unix(), retrievedTime.Unix())
+	assert.Equal(t, expirationTime.Unix(), retrievedTime.Unix())
 }
 
 // TestLease2TunnelGateway verifies that TunnelGateway correctly extracts

@@ -17,7 +17,7 @@ func ReadLease(data []byte) (lease Lease, remainder []byte, err error) {
 	// ADDED: Validate input data length before attempting to parse lease structure
 	// Ensures that buffer underflows cannot occur during lease field extraction
 	if len(data) < LEASE_SIZE {
-		err = oops.Errorf("error parsing lease: not enough data")
+		err = oops.Errorf("error parsing lease: not enough data (expected %d bytes, got %d bytes)", LEASE_SIZE, len(data))
 		log.WithFields(logger.Fields{
 			"data_length":     len(data),
 			"required_length": LEASE_SIZE,

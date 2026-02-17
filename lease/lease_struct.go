@@ -2,6 +2,9 @@
 package lease
 
 import (
+	"encoding/binary"
+	"time"
+
 	"github.com/go-i2p/common/data"
 )
 
@@ -55,22 +58,34 @@ func (lease Lease) TunnelGateway() (hash data.Hash) {
 	return
 }
 
-// ADDED: TunnelID returns the tunnel identifier as a 32-bit unsigned integer.
+// TunnelID returns the tunnel identifier as a 32-bit unsigned integer.
 // Extracts bytes 32-35 of the lease structure and converts them from big-endian format
 // to a native uint32 value. This ID uniquely identifies the specific tunnel within
 // the context of the gateway router and is used for message routing and delivery.
 func (lease Lease) TunnelID() uint32 {
-	i := data.Integer(lease[LEASE_TUNNEL_GW_SIZE : LEASE_TUNNEL_GW_SIZE+LEASE_TUNNEL_ID_SIZE])
-	return uint32(
-		i.Int(),
-	)
+	tunnelIDBytes := lease[LEASE_TUNNEL_GW_SIZE : LEASE_TUNNEL_GW_SIZE+LEASE_TUNNEL_ID_SIZE]
+	return binary.BigEndian.Uint32(tunnelIDBytes)
 }
 
-// ADDED: Date returns the expiration date of the lease as an I2P Date structure.
+// Date returns the expiration date of the lease as an I2P Date structure.
 // Extracts the last 8 bytes of the lease structure which contain the expiration timestamp
 // in milliseconds since Unix epoch. This date determines when the lease becomes invalid
 // and can no longer be used for tunnel message delivery within the I2P network.
 func (lease Lease) Date() (date data.Date) {
 	copy(date[:], lease[LEASE_TUNNEL_GW_SIZE+LEASE_TUNNEL_ID_SIZE:])
 	return
+}
+
+// Time returns the expiration time as a Go time.Time value for convenient time operations.
+// Converts the 8-byte millisecond timestamp to a time.Time in the UTC timezone.
+// This method provides API parity with Lease2.Time() for interchangeable usage.
+func (lease Lease) Time() time.Time {
+	return lease.Date().Time()
+}
+
+// Bytes returns the complete Lease structure as a byte slice.
+// This method enables serialization for network transmission or storage,
+// providing API parity with Lease2.Bytes().
+func (lease Lease) Bytes() []byte {
+	return lease[:]
 }

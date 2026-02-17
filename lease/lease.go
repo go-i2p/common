@@ -61,6 +61,11 @@ var log = logger.GetGoI2PLogger()
 func NewLease(tunnelGateway data.Hash, tunnelID uint32, expirationTime time.Time) (*Lease, error) {
 	log.Debug("Creating new Lease")
 
+	// Warn if tunnel ID is 0 per spec recommendation
+	if tunnelID == 0 {
+		log.Warn("Tunnel ID is 0; the I2P spec recommends values greater than zero except in special cases")
+	}
+
 	// Validate that the lease expiration is in the future
 	if !expirationTime.After(time.Now()) {
 		return nil, oops.Wrapf(ErrExpiredLease, "expiration time %v is not in the future", expirationTime)
@@ -127,6 +132,11 @@ func NewLease(tunnelGateway data.Hash, tunnelID uint32, expirationTime time.Time
 //	}
 func NewLease2(tunnelGateway data.Hash, tunnelID uint32, expirationTime time.Time) (*Lease2, error) {
 	log.Debug("Creating new Lease2")
+
+	// Warn if tunnel ID is 0 per spec recommendation
+	if tunnelID == 0 {
+		log.Warn("Tunnel ID is 0; the I2P spec recommends values greater than zero except in special cases")
+	}
 
 	// Validate that the lease expiration is in the future
 	if !expirationTime.After(time.Now()) {
