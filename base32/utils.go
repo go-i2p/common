@@ -50,3 +50,31 @@ func EncodeToStringSafe(data []byte) (string, error) {
 	}
 	return I2PEncoding.EncodeToString(data), nil
 }
+
+// DecodeStringSafe decodes a base32 string back to binary data with input validation.
+// Unlike DecodeString, this function validates the input string length to prevent
+// excessive memory allocation when processing untrusted data (e.g., user-supplied
+// .b32.i2p addresses from the network).
+// Returns an error if the input is empty or exceeds MAX_DECODE_SIZE.
+func DecodeStringSafe(data string) ([]byte, error) {
+	if len(data) == 0 {
+		return nil, ErrEmptyData
+	}
+	if len(data) > MAX_DECODE_SIZE {
+		return nil, ErrInputTooLarge
+	}
+	return I2PEncoding.DecodeString(data)
+}
+
+// DecodeStringSafeNoPadding decodes an unpadded base32 string with input validation.
+// This combines the unpadded decoding of DecodeStringNoPadding with the size
+// validation of DecodeStringSafe. Use for decoding untrusted .b32.i2p addresses.
+func DecodeStringSafeNoPadding(data string) ([]byte, error) {
+	if len(data) == 0 {
+		return nil, ErrEmptyData
+	}
+	if len(data) > MAX_DECODE_SIZE {
+		return nil, ErrInputTooLarge
+	}
+	return I2PEncodingNoPadding.DecodeString(data)
+}

@@ -11,4 +11,8 @@ var (
 	// ErrDataTooLarge is returned when data exceeds MAX_ENCODE_SIZE.
 	// This prevents excessive memory allocation and potential DoS attacks.
 	ErrDataTooLarge = errors.New("data exceeds maximum encodable size")
+
+	// ErrInputTooLarge is returned when a base32 string to decode exceeds MAX_DECODE_SIZE.
+	// This prevents excessive memory allocation when decoding untrusted input.
+	ErrInputTooLarge = errors.New("base32 input string exceeds maximum decodable size")
 )
