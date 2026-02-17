@@ -1,17 +1,5 @@
-// Package base64 utilities and encoding instances
+// Package base64 utilities for encoding and decoding
 package base64
-
-import (
-	b64 "encoding/base64"
-)
-
-// I2PEncoding provides the standard base64 encoder/decoder instance for all I2P components.
-// This encoding instance is pre-configured with the I2P-specific alphabet and optimizes performance
-// by reusing the same encoder across multiple operations. It handles the complex character mapping
-// required for I2P network compatibility while maintaining standard base64 semantics.
-// The instance is thread-safe and can be used concurrently across goroutines.
-// Example: Used internally by EncodeToString and DecodeString for consistent encoding behavior.
-var I2PEncoding *b64.Encoding = b64.NewEncoding(I2PEncodeAlphabet)
 
 // EncodeToString converts arbitrary binary data to I2P-compatible base64 string representation.
 // This function takes raw byte data and produces a human-readable string using I2P's modified
@@ -51,4 +39,20 @@ func EncodeToStringSafe(data []byte) (string, error) {
 		return "", ErrDataTooLarge
 	}
 	return I2PEncoding.EncodeToString(data), nil
+}
+
+// DecodeStringSafe converts I2P-compatible base64 strings back to binary with input validation.
+// Unlike DecodeString, this function validates the input string length to prevent
+// excessive memory allocation and potential DoS attacks. Use this function when
+// decoding untrusted or network-provided data.
+// Returns an error if the string is empty or exceeds MAX_DECODE_SIZE.
+// Example: DecodeStringSafe("SGVsbG8=") returns []byte{72, 101, 108, 108, 111}, nil
+func DecodeStringSafe(str string) ([]byte, error) {
+	if len(str) == 0 {
+		return nil, ErrEmptyString
+	}
+	if len(str) > MAX_DECODE_SIZE {
+		return nil, ErrStringTooLarge
+	}
+	return I2PEncoding.DecodeString(str)
 }
