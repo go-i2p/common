@@ -62,6 +62,13 @@ func (st SessionTag) String() string {
 	return fmt.Sprintf("%x", st.value[:])
 }
 
+// IsZero returns true if the SessionTag is the zero value (all bytes are 0x00).
+// This is useful for detecting uninitialized tags when stored in maps or used as sentinels.
+func (st SessionTag) IsZero() bool {
+	var zero [SessionTagSize]byte
+	return subtle.ConstantTimeCompare(st.value[:], zero[:]) == 1
+}
+
 // NewSessionTagFromBytes creates a new SessionTag from a byte slice.
 // The input must be exactly SessionTagSize bytes long.
 func NewSessionTagFromBytes(data []byte) (SessionTag, error) {
