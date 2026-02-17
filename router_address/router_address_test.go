@@ -40,7 +40,8 @@ func TestCheckRouterAddressValidReportsDataMissing(t *testing.T) {
 func TestCheckRouterAddressValidNoErrWithValidData(t *testing.T) {
 	assert := assert.New(t)
 
-	router_address, _, _ := ReadRouterAddress([]byte{0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00})
+	// 1 (cost=0x06) + 8 (expiration=zeros) + 1 (string len=0x01) + 1 (string data=0x00) + 2 (mapping size=0x0000) = 13 bytes
+	router_address, _, _ := ReadRouterAddress([]byte{0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00})
 	mapping, err := data.GoMapToMapping(map[string]string{"host": "127.0.0.1", "port": "4567"})
 	assert.Nil(err, "GoMapToMapping() returned error with valid data")
 	router_address.TransportOptions = mapping
@@ -54,7 +55,8 @@ func TestCheckRouterAddressValidNoErrWithValidData(t *testing.T) {
 func TestRouterAddressCostReturnsFirstByte(t *testing.T) {
 	assert := assert.New(t)
 
-	router_address, _, err := ReadRouterAddress([]byte{0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00})
+	// 1 (cost=0x06) + 8 (expiration=zeros) + 1 (string len=0x00) + 2 (mapping size=0x0000) = 12 bytes
+	router_address, _, err := ReadRouterAddress([]byte{0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00})
 	cost := router_address.Cost()
 
 	assert.Nil(err, "Cost() returned error with valid data")
@@ -64,11 +66,13 @@ func TestRouterAddressCostReturnsFirstByte(t *testing.T) {
 func TestRouterAddressExpirationReturnsCorrectData(t *testing.T) {
 	assert := assert.New(t)
 
-	router_address, _, err := ReadRouterAddress([]byte{0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x00})
+	// Per I2P spec, expiration must be all zeros
+	// 1 (cost=0x00) + 8 (expiration=zeros) + 1 (string len=0x00) + 2 (mapping size=0x0000) = 12 bytes
+	router_address, _, err := ReadRouterAddress([]byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00})
 	expiration := router_address.Expiration()
 
 	assert.Nil(err, "Expiration() returned error with valid data")
-	if bytes.Compare(expiration[:], []byte{0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08}) != 0 {
+	if bytes.Compare(expiration[:], []byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}) != 0 {
 		t.Fatal("Expiration did not return correct data:", expiration)
 	}
 }

@@ -1,9 +1,10 @@
 // Package router_address implements the I2P RouterAddress common data structure
 package router_address
 
-// ROUTER_ADDRESS_MIN_SIZE defines the minimum number of bytes in a valid RouterAddress
+// ROUTER_ADDRESS_MIN_SIZE defines the minimum number of bytes in a valid RouterAddress.
+// 1 (cost) + 8 (expiration) + 1 (transport_style length byte) + 2 (mapping size field) = 12.
 const (
-	ROUTER_ADDRESS_MIN_SIZE = 9
+	ROUTER_ADDRESS_MIN_SIZE = 12
 )
 
 // ============ IP Version Constants ============

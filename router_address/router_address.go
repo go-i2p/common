@@ -2,7 +2,6 @@
 package router_address
 
 import (
-	"encoding/binary"
 	"net"
 	"time"
 
@@ -99,11 +98,10 @@ func createTransportCost(cost uint8) (*data.Integer, error) {
 }
 
 // createExpirationDate creates the ExpirationDate field as a Date.
-// Returns error if the expiration time cannot be converted to a Date.
+// Per I2P spec, the expiration MUST always be all zeros.
+// The expiration parameter is accepted for API compatibility but ignored.
 func createExpirationDate(expiration time.Time) (*data.Date, error) {
-	millis := expiration.UnixNano() / int64(time.Millisecond)
-	dateBytes := make([]byte, data.DATE_SIZE)
-	binary.BigEndian.PutUint64(dateBytes, uint64(millis))
+	dateBytes := make([]byte, data.DATE_SIZE) // all zeros per spec
 	expirationDate, _, err := data.NewDate(dateBytes)
 	if err != nil {
 		log.WithError(err).Error("Failed to create ExpirationDate")
