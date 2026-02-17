@@ -91,7 +91,7 @@ func NewKeysAndCert(
 
 	// Get actual key sizes from certificate
 	pubKeySize := keyCertificate.CryptoSize()
-	sigKeySize := keyCertificate.SignatureSize()
+	sigKeySize := keyCertificate.SigningPublicKeySize()
 
 	// Validate public key size
 	if err := validatePublicKeySize(publicKey, pubKeySize); err != nil {
@@ -344,7 +344,7 @@ func ReadKeysAndCert(data []byte) (*KeysAndCert, []byte, error) {
 	}
 
 	pubKeySize := keyCert.CryptoSize()
-	sigKeySize := keyCert.SignatureSize()
+	sigKeySize := keyCert.SigningPublicKeySize()
 	padding := extractPaddingFromData(data, pubKeySize, sigKeySize)
 
 	sigKey, err := constructSigningKeyFromCert(keyCert, data, sigKeySize)

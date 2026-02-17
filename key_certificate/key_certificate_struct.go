@@ -250,11 +250,12 @@ func (keyCertificate KeyCertificate) ConstructPublicKey(data []byte) (public_key
 		public_key = curve25519_key
 		log.Debug("Constructed Curve25519PublicKey")
 	default:
-		// Log warning for unsupported key types to aid in debugging
+		// Return an explicit error for unsupported key types
 		// Unknown key types may indicate version incompatibility or corrupted data
 		log.WithFields(logger.Fields{
 			"key_type": key_type,
 		}).Warn("Unknown public key type")
+		err = oops.Errorf("unsupported crypto key type: %d", key_type)
 	}
 
 	return
@@ -291,6 +292,10 @@ func (keyCertificate *KeyCertificate) SigningPublicKeySize() int {
 		return 512
 	case SIGNATURE_TYPE_ED25519_SHA512:
 		return 32
+	case KEYCERT_SIGN_ED25519PH:
+		return 32
+	case KEYCERT_SIGN_REDDSA_ED25519:
+		return 32
 	default:
 		return 128
 	}
@@ -313,29 +318,62 @@ func validateSigningKeyData(dataLen, requiredSize int) error {
 
 // constructDSAKey constructs a DSA-SHA1 signing public key from certificate data.
 // Legacy DSA-SHA1 signing key construction for backwards compatibility.
-func constructDSAKey(data []byte) types.SigningPublicKey {
+// Accepts either padded data (128 bytes, key at end) or raw key data (128 bytes exact).
+func constructDSAKey(data []byte) (types.SigningPublicKey, error) {
+	if len(data) < KEYCERT_SIGN_DSA_SHA1_SIZE {
+		return nil, oops.Errorf("insufficient data for DSA key: expected at least %d bytes, got %d",
+			KEYCERT_SIGN_DSA_SHA1_SIZE, len(data))
+	}
 	var dsa_key dsa.DSAPublicKey
-	copy(dsa_key[:], data[KEYCERT_SPK_SIZE-KEYCERT_SIGN_DSA_SHA1_SIZE:KEYCERT_SPK_SIZE])
+	if len(data) >= KEYCERT_SPK_SIZE {
+		// Padded format: extract key from the end of the 128-byte field
+		copy(dsa_key[:], data[KEYCERT_SPK_SIZE-KEYCERT_SIGN_DSA_SHA1_SIZE:KEYCERT_SPK_SIZE])
+	} else {
+		// Raw key data
+		copy(dsa_key[:], data[:KEYCERT_SIGN_DSA_SHA1_SIZE])
+	}
 	log.Debug("Constructed DSAPublicKey")
-	return dsa_key
+	return dsa_key, nil
 }
 
 // constructECDSAP256Key constructs an ECDSA P-256 signing public key from certificate data.
 // Provides 128-bit security level with compact 64-byte keys.
-func constructECDSAP256Key(data []byte) types.SigningPublicKey {
+// Accepts either padded data (128 bytes, key at end) or raw key data (64 bytes).
+func constructECDSAP256Key(data []byte) (types.SigningPublicKey, error) {
+	if len(data) < KEYCERT_SIGN_P256_SIZE {
+		return nil, oops.Errorf("insufficient data for P256 key: expected at least %d bytes, got %d",
+			KEYCERT_SIGN_P256_SIZE, len(data))
+	}
 	var ec_p256_key ecdsa.ECP256PublicKey
-	copy(ec_p256_key[:], data[KEYCERT_SPK_SIZE-KEYCERT_SIGN_P256_SIZE:KEYCERT_SPK_SIZE])
+	if len(data) >= KEYCERT_SPK_SIZE {
+		// Padded format: extract key from the end of the 128-byte field
+		copy(ec_p256_key[:], data[KEYCERT_SPK_SIZE-KEYCERT_SIGN_P256_SIZE:KEYCERT_SPK_SIZE])
+	} else {
+		// Raw key data
+		copy(ec_p256_key[:], data[:KEYCERT_SIGN_P256_SIZE])
+	}
 	log.Debug("Constructed P256PublicKey")
-	return ec_p256_key
+	return ec_p256_key, nil
 }
 
 // constructECDSAP384Key constructs an ECDSA P-384 signing public key from certificate data.
 // Provides 192-bit security level with 96-byte keys.
-func constructECDSAP384Key(data []byte) types.SigningPublicKey {
+// Accepts either padded data (128 bytes, key at end) or raw key data (96 bytes).
+func constructECDSAP384Key(data []byte) (types.SigningPublicKey, error) {
+	if len(data) < KEYCERT_SIGN_P384_SIZE {
+		return nil, oops.Errorf("insufficient data for P384 key: expected at least %d bytes, got %d",
+			KEYCERT_SIGN_P384_SIZE, len(data))
+	}
 	var ec_p384_key ecdsa.ECP384PublicKey
-	copy(ec_p384_key[:], data[KEYCERT_SPK_SIZE-KEYCERT_SIGN_P384_SIZE:KEYCERT_SPK_SIZE])
+	if len(data) >= KEYCERT_SPK_SIZE {
+		// Padded format: extract key from the end of the 128-byte field
+		copy(ec_p384_key[:], data[KEYCERT_SPK_SIZE-KEYCERT_SIGN_P384_SIZE:KEYCERT_SPK_SIZE])
+	} else {
+		// Raw key data
+		copy(ec_p384_key[:], data[:KEYCERT_SIGN_P384_SIZE])
+	}
 	log.Debug("Constructed P384PublicKey")
-	return ec_p384_key
+	return ec_p384_key, nil
 }
 
 // constructEd25519Key constructs an Ed25519 signing public key from certificate data.
@@ -386,7 +424,7 @@ func (keyCertificate KeyCertificate) ConstructSigningPublicKey(data []byte) (sig
 	signing_key_type := keyCertificate.SigningPublicKeyType()
 	logSigningKeyDebug(signing_key_type, len(data))
 
-	if err = validateSigningKeyData(len(data), keyCertificate.SignatureSize()); err != nil {
+	if err = validateSigningKeyData(len(data), keyCertificate.SigningPublicKeySize()); err != nil {
 		return
 	}
 
@@ -408,81 +446,68 @@ func logSigningKeyDebug(signing_key_type int, data_len int) {
 func selectSigningKeyConstructor(signing_key_type int, data []byte) (types.SigningPublicKey, error) {
 	switch signing_key_type {
 	case KEYCERT_SIGN_DSA_SHA1:
-		return constructDSAKey(data), nil
+		return constructDSAKey(data)
 	case KEYCERT_SIGN_P256:
-		return constructECDSAP256Key(data), nil
+		return constructECDSAP256Key(data)
 	case KEYCERT_SIGN_P384:
-		return constructECDSAP384Key(data), nil
+		return constructECDSAP384Key(data)
 	case KEYCERT_SIGN_P521:
-		panic("unimplemented P521SigningPublicKey")
+		return nil, oops.Errorf("unimplemented signing key type: P521 (type %d)", KEYCERT_SIGN_P521)
 	case KEYCERT_SIGN_RSA2048:
-		panic("unimplemented RSA2048SigningPublicKey")
+		return nil, oops.Errorf("unimplemented signing key type: RSA2048 (type %d)", KEYCERT_SIGN_RSA2048)
 	case KEYCERT_SIGN_RSA3072:
-		panic("unimplemented RSA3072SigningPublicKey")
+		return nil, oops.Errorf("unimplemented signing key type: RSA3072 (type %d)", KEYCERT_SIGN_RSA3072)
 	case KEYCERT_SIGN_RSA4096:
-		panic("unimplemented RSA4096SigningPublicKey")
+		return nil, oops.Errorf("unimplemented signing key type: RSA4096 (type %d)", KEYCERT_SIGN_RSA4096)
 	case KEYCERT_SIGN_ED25519:
 		return constructEd25519Key(data)
 	case KEYCERT_SIGN_ED25519PH:
 		return constructEd25519PHKey(data)
+	case KEYCERT_SIGN_REDDSA_ED25519:
+		// RedDSA uses the same key format as Ed25519
+		return constructEd25519Key(data)
 	default:
 		log.WithFields(logger.Fields{
 			"signing_key_type": signing_key_type,
 		}).Warn("Unknown signing key type")
-		return nil, oops.Errorf("unknown signing key type")
+		return nil, oops.Errorf("unknown signing key type: %d", signing_key_type)
 	}
 }
 
 // SignatureSize return the size of a Signature corresponding to the Key Certificate's signingPublicKey type.
+// This returns the actual signature size (not the signing public key size).
+// For signing public key sizes, use SigningPublicKeySize().
 func (keyCertificate KeyCertificate) SignatureSize() (size int) {
-	// Create a lookup map for signature sizes based on algorithm type
-	// This provides O(1) lookup time and centralizes size information for maintainability
-	sizes := map[int]int{
-		KEYCERT_SIGN_DSA_SHA1:  KEYCERT_SIGN_DSA_SHA1_SIZE,
-		KEYCERT_SIGN_P256:      KEYCERT_SIGN_P256_SIZE,
-		KEYCERT_SIGN_P384:      KEYCERT_SIGN_P384_SIZE,
-		KEYCERT_SIGN_P521:      KEYCERT_SIGN_P521_SIZE,
-		KEYCERT_SIGN_RSA2048:   KEYCERT_SIGN_RSA2048_SIZE,
-		KEYCERT_SIGN_RSA3072:   KEYCERT_SIGN_RSA3072_SIZE,
-		KEYCERT_SIGN_RSA4096:   KEYCERT_SIGN_RSA4096_SIZE,
-		KEYCERT_SIGN_ED25519:   KEYCERT_SIGN_ED25519_SIZE,
-		KEYCERT_SIGN_ED25519PH: KEYCERT_SIGN_ED25519PH_SIZE,
-	}
 	key_type := keyCertificate.SigningPublicKeyType()
-	// Look up the signature size with existence check to handle unknown types
-	// This prevents returning invalid sizes for unsupported or corrupted key types
-	size, exists := sizes[key_type]
+	// Use the authoritative SigningKeySizes map which has correct signature sizes
+	info, exists := SigningKeySizes[key_type]
 	if !exists {
 		log.WithFields(logger.Fields{
 			"key_type": key_type,
-		}).Warn("Unknown signing key type")
-		return 0 // Or handle error appropriately
+		}).Warn("Unknown signing key type for signature size lookup")
+		return 0
 	}
 	log.WithFields(logger.Fields{
 		"key_type":       key_type,
-		"signature_size": size,
+		"signature_size": info.SignatureSize,
 	}).Debug("Retrieved signature size")
-	return size
+	return info.SignatureSize
 }
 
 // CryptoSize return the size of a Public Key corresponding to the Key Certificate's publicKey type.
 func (keyCertificate KeyCertificate) CryptoSize() (size int) {
-	// Create a lookup map for crypto key sizes based on algorithm type
-	// This mapping ensures correct buffer allocation for different encryption algorithms
-	sizes := map[int]int{
-		KEYCERT_CRYPTO_ELG:    KEYCERT_CRYPTO_ELG_SIZE,
-		KEYCERT_CRYPTO_P256:   KEYCERT_CRYPTO_P256_SIZE,
-		KEYCERT_CRYPTO_P384:   KEYCERT_CRYPTO_P384_SIZE,
-		KEYCERT_CRYPTO_P521:   KEYCERT_CRYPTO_P521_SIZE,
-		KEYCERT_CRYPTO_X25519: KEYCERT_CRYPTO_X25519_SIZE,
-	}
 	key_type := keyCertificate.PublicKeyType()
-	// Direct map lookup for crypto size (note: no existence check in original)
-	// The original implementation assumes all key types are valid, but this could be enhanced
-	size = sizes[int(key_type)]
+	// Use the authoritative CryptoKeySizes map which includes all spec-defined types
+	info, exists := CryptoKeySizes[key_type]
+	if !exists {
+		log.WithFields(logger.Fields{
+			"key_type": key_type,
+		}).Warn("Unknown crypto key type for size lookup")
+		return 0
+	}
 	log.WithFields(logger.Fields{
 		"key_type":    key_type,
-		"crypto_size": size,
+		"crypto_size": info.CryptoPublicKeySize,
 	}).Debug("Retrieved crypto size")
-	return size
+	return info.CryptoPublicKeySize
 }

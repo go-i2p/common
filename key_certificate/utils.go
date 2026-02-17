@@ -31,6 +31,14 @@ var CryptoPublicKeySizes = map[uint16]int{
 // and ensuring that the correct amount of data is read for each signature algorithm.
 // The sizes correspond to the public key portion used in signature verification.
 var SignaturePublicKeySizes = map[uint16]int{
-	SIGNATURE_TYPE_DSA_SHA1:       128,
-	SIGNATURE_TYPE_ED25519_SHA512: 32,
+	KEYCERT_SIGN_DSA_SHA1:       KEYCERT_SIGN_DSA_SHA1_SIZE,
+	KEYCERT_SIGN_P256:           KEYCERT_SIGN_P256_SIZE,
+	KEYCERT_SIGN_P384:           KEYCERT_SIGN_P384_SIZE,
+	KEYCERT_SIGN_P521:           KEYCERT_SIGN_P521_SIZE,
+	KEYCERT_SIGN_RSA2048:        KEYCERT_SIGN_RSA2048_SIZE,
+	KEYCERT_SIGN_RSA3072:        KEYCERT_SIGN_RSA3072_SIZE,
+	KEYCERT_SIGN_RSA4096:        KEYCERT_SIGN_RSA4096_SIZE,
+	KEYCERT_SIGN_ED25519:        KEYCERT_SIGN_ED25519_SIZE,
+	KEYCERT_SIGN_ED25519PH:      KEYCERT_SIGN_ED25519PH_SIZE,
+	KEYCERT_SIGN_REDDSA_ED25519: KEYCERT_SIGN_ED25519_SIZE, // RedDSA uses same key format as Ed25519
 }

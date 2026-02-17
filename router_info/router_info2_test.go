@@ -100,7 +100,7 @@ func TestCreateRouterInfo(t *testing.T) {
 		log.Fatalf("KeyCertificateFromCertificate failed: %v\n", err)
 	}
 	pubKeySize := keyCert.CryptoSize()
-	sigKeySize := keyCert.SignatureSize()
+	sigKeySize := keyCert.SigningPublicKeySize()
 	paddingSize := keys_and_cert.KEYS_AND_CERT_DATA_SIZE - pubKeySize - sigKeySize
 	padding := make([]byte, paddingSize)
 	_, err = rand.Read(padding)
