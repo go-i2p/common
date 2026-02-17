@@ -237,7 +237,8 @@ func TestMappingValuesRoundTrip(t *testing.T) {
 	assert.True(t, mv.IsValid(), "IsValid should return true")
 
 	// Convert to Mapping
-	mapping := ValuesToMapping(mv)
+	mapping, merr := ValuesToMapping(mv)
+	assert.NoError(t, merr, "should not error on valid mapping")
 	assert.NotNil(t, mapping, "should create mapping")
 
 	// Validate mapping

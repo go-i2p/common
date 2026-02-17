@@ -54,16 +54,37 @@ func (mapping Mapping) Values() MappingValues {
 }
 
 // Data returns a Mapping in its []byte form.
+// Returns nil if the mapping is not properly initialized.
 func (mapping *Mapping) Data() []byte {
+	if mapping == nil || mapping.size == nil {
+		log.Error("Mapping.Data() called on nil or uninitialized mapping")
+		return nil
+	}
 	bytes := mapping.size.Bytes()
 	for _, pair := range mapping.Values() {
-		klen, _ := pair[0].Length()
-		keylen, _ := NewIntegerFromInt(klen, KEY_VAL_INTEGER_LENGTH)
+		klen, err := pair[0].Length()
+		if err != nil {
+			log.WithError(err).Error("Failed to get key length in Mapping.Data()")
+			continue
+		}
+		keylen, err := NewIntegerFromInt(klen, KEY_VAL_INTEGER_LENGTH)
+		if err != nil {
+			log.WithError(err).Error("Failed to encode key length in Mapping.Data()")
+			continue
+		}
 		bytes = append(bytes, keylen.Bytes()...)
 		bytes = append(bytes, pair[0][1:]...)
 		bytes = append(bytes, MAPPING_EQUALS_DELIMITER)
-		vlen, _ := pair[1].Length()
-		vallen, _ := NewIntegerFromInt(vlen, KEY_VAL_INTEGER_LENGTH)
+		vlen, err := pair[1].Length()
+		if err != nil {
+			log.WithError(err).Error("Failed to get value length in Mapping.Data()")
+			continue
+		}
+		vallen, err := NewIntegerFromInt(vlen, KEY_VAL_INTEGER_LENGTH)
+		if err != nil {
+			log.WithError(err).Error("Failed to encode value length in Mapping.Data()")
+			continue
+		}
 		bytes = append(bytes, vallen.Bytes()...)
 		bytes = append(bytes, pair[1][1:]...)
 		bytes = append(bytes, MAPPING_SEMICOLON_DELIMITER)
@@ -152,7 +173,11 @@ func GoMapToMapping(gomap map[string]string) (mapping *Mapping, err error) {
 			[2]I2PString{key_str, val_str},
 		)
 	}
-	mapping = ValuesToMapping(map_vals)
+	mapping, err = ValuesToMapping(map_vals)
+	if err != nil {
+		log.WithError(err).Error("Failed to convert MappingValues to Mapping")
+		return
+	}
 	log.WithFields(logger.Fields{
 		"mapping_size": len(map_vals),
 	}).Debug("Successfully converted Go map to Mapping")
@@ -238,7 +263,17 @@ func handleInsufficientData(mapping Mapping, remainder []byte, size *Integer, er
 
 // processNormalMappingData handles the standard case where sufficient data is available.
 func processNormalMappingData(mapping Mapping, remainder []byte, size *Integer, err []error) (Mapping, []byte, []error) {
-	// Proceed normally if enough data is present
+	// Warn if there is extra data beyond the declared mapping size
+	if len(remainder) > size.Int() {
+		log.WithFields(logger.Fields{
+			"declared_size": size.Int(),
+			"actual_size":   len(remainder),
+		}).Warn("mapping contains data beyond declared length")
+		e := oops.Errorf("warning parsing mapping: data exists beyond length of mapping")
+		err = append(err, e)
+	}
+
+	// Proceed normally with the declared size
 	map_bytes := remainder[:size.Int()]
 	remainder = remainder[size.Int():]
 

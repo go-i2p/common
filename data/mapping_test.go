@@ -159,9 +159,9 @@ func TestFullGoMapToMappingProducesCorrectMapping(t *testing.T) {
 func TestStopValueReadTrueWhenCorrectErr(t *testing.T) {
 	assert := assert.New(t)
 
-	status := stopValueRead(oops.Errorf("error parsing string: zero length"))
+	status := stopValueRead(ErrZeroLength)
 
-	assert.Equal(true, status, "stopValueRead() did not return true when String error found")
+	assert.Equal(true, status, "stopValueRead() did not return true when ErrZeroLength found")
 }
 
 func TestStopValueReadFalseWhenWrongErr(t *testing.T) {
@@ -347,7 +347,8 @@ func TestMappingEdgeCases(t *testing.T) {
 		valStr, err := ToI2PString(string(val))
 		require.NoError(t, err)
 
-		mapping := ValuesToMapping(MappingValues{{keyStr, valStr}})
+		mapping, merr := ValuesToMapping(MappingValues{{keyStr, valStr}})
+		require.NoError(t, merr)
 		require.NoError(t, mapping.Validate())
 		require.True(t, mapping.IsValid())
 
@@ -363,7 +364,8 @@ func TestMappingEdgeCases(t *testing.T) {
 		valStr, err := ToI2PString("")
 		require.NoError(t, err)
 
-		mapping := ValuesToMapping(MappingValues{{keyStr, valStr}})
+		mapping, merr := ValuesToMapping(MappingValues{{keyStr, valStr}})
+		require.NoError(t, merr)
 		require.NoError(t, mapping.Validate())
 		require.True(t, mapping.IsValid())
 	})

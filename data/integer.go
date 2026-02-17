@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"math"
 
+	"github.com/go-i2p/logger"
 	"github.com/samber/oops"
 )
 
@@ -41,7 +42,15 @@ func (i Integer) Int() int {
 
 // ReadInteger returns an Integer from a []byte of specified length.
 // The remaining bytes after the specified length are also returned.
+// Size must be between 1 and MAX_INTEGER_SIZE (8) inclusive.
 func ReadInteger(bytes []byte, size int) (Integer, []byte) {
+	if size <= 0 || size > MAX_INTEGER_SIZE {
+		log.WithFields(logger.Fields{
+			"size": size,
+			"max":  MAX_INTEGER_SIZE,
+		}).Error("ReadInteger: invalid size parameter")
+		return nil, bytes
+	}
 	if len(bytes) < size {
 		return bytes, nil
 	}
@@ -140,6 +149,28 @@ func (i Integer) IntSafe() (int, error) {
 		return 0, oops.Errorf("integer too large: %d bytes", len(i))
 	}
 	return intFromBytes(i.Bytes())
+}
+
+// UintSafe returns the Integer as a Go uint64 with error handling.
+// This method correctly handles unsigned integers per the I2P spec,
+// which defines Integer as "an unsigned integer." Values with the high bit set
+// are returned correctly as large positive values, unlike Int()/IntSafe()
+// which may wrap negative for 8-byte values >= 2^63.
+func (i Integer) UintSafe() (uint64, error) {
+	if len(i) == 0 {
+		return 0, oops.Errorf("cannot convert empty integer")
+	}
+	if len(i) > MAX_INTEGER_SIZE {
+		return 0, oops.Errorf("integer too large: %d bytes", len(i))
+	}
+	numLen := len(i)
+	number := i.Bytes()
+	if numLen < MAX_INTEGER_SIZE {
+		paddedNumber := make([]byte, MAX_INTEGER_SIZE)
+		copy(paddedNumber[MAX_INTEGER_SIZE-numLen:], number)
+		number = paddedNumber
+	}
+	return binary.BigEndian.Uint64(number), nil
 }
 
 // IsZero returns true if the integer represents zero.

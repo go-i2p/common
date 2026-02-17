@@ -34,6 +34,11 @@ const MAPPING_MIN_SIZE = 3
 // Cross-Ref: mapping.go
 const MAPPING_SIZE_FIELD_LENGTH = 2
 
+// MAX_MAPPING_DATA_SIZE is the maximum number of bytes in a mapping's data payload.
+// Per the I2P spec: "Total length limit is 65535 bytes, plus the 2 byte size field, or 65537 total."
+// Cross-Ref: mapping_values.go
+const MAX_MAPPING_DATA_SIZE = 65535
+
 // MAX_MAPPING_PAIRS is the maximum number of key-value pairs allowed in a single mapping.
 // This prevents infinite loops when parsing malformed mappings.
 // Cross-Ref: mapping_values.go

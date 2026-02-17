@@ -172,12 +172,19 @@ func (mv MappingValues) IsValid() bool {
 
 // Get retrieves the value for a given key from MappingValues.
 func (m MappingValues) Get(key I2PString) I2PString {
-	keyBytes, _ := key.Data()
+	keyBytes, err := key.Data()
+	if err != nil {
+		log.WithError(err).Error("Failed to extract key data in MappingValues.Get()")
+		return nil
+	}
 	log.WithFields(logger.Fields{
 		"key": string(keyBytes),
 	}).Debug("Searching for key in MappingValues")
 	for _, pair := range m {
-		kb, _ := pair[0][0:].Data()
+		kb, err := pair[0].Data()
+		if err != nil {
+			continue
+		}
 		if kb == keyBytes {
 			log.WithFields(logger.Fields{
 				"key":   string(keyBytes),
@@ -194,7 +201,8 @@ func (m MappingValues) Get(key I2PString) I2PString {
 
 // ValuesToMapping creates a *Mapping using MappingValues.
 // The values are sorted in the order defined in mappingOrder.
-func ValuesToMapping(values MappingValues) *Mapping {
+// Returns error if the total mapping data exceeds the maximum size (65535 bytes).
+func ValuesToMapping(values MappingValues) (*Mapping, error) {
 	mappingOrder(values)
 
 	// Default length to 2 * len
@@ -210,15 +218,27 @@ func ValuesToMapping(values MappingValues) *Mapping {
 		}
 	}
 
+	if baseLength > MAX_MAPPING_DATA_SIZE {
+		log.WithFields(logger.Fields{
+			"mapping_size": baseLength,
+			"max_size":     MAX_MAPPING_DATA_SIZE,
+		}).Error("Mapping data exceeds maximum size")
+		return nil, oops.Errorf("mapping data size %d exceeds maximum %d bytes", baseLength, MAX_MAPPING_DATA_SIZE)
+	}
+
 	log.WithFields(logger.Fields{
 		"mapping_size": baseLength,
 	}).Debug("Created Mapping from MappingValues")
 
-	mappingSize, _ := NewIntegerFromInt(baseLength, 2)
+	mappingSize, err := NewIntegerFromInt(baseLength, 2)
+	if err != nil {
+		log.WithError(err).Error("Failed to create mapping size integer")
+		return nil, oops.Errorf("failed to encode mapping size: %w", err)
+	}
 	return &Mapping{
 		size: mappingSize,
 		vals: &values,
-	}
+	}, nil
 }
 
 // I2P Mappings require consistent order in some cases for cryptographic signing, and sorting

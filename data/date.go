@@ -46,8 +46,8 @@ func (i Date) Int() int {
 // number of milliseconds since the beginning of unix time and converts it to a Go time.Time
 // struct.
 func (date Date) Time() (date_time time.Time) {
-	seconds := Integer(date[:])
-	date_time = time.Unix(0, int64(seconds.Int()*1000000))
+	millis := Integer(date[:])
+	date_time = time.UnixMilli(int64(millis.Int()))
 	return
 }
 

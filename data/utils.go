@@ -2,6 +2,7 @@ package data
 
 import (
 	"encoding/binary"
+	"errors"
 	"fmt"
 
 	"github.com/go-i2p/logger"
@@ -53,7 +54,7 @@ func PrintErrors(errs []error) {
 // should no longer be parsed.
 // Used in: mapping.go
 func stopValueRead(err error) bool {
-	result := err.Error() == "error parsing string: zero length"
+	result := errors.Is(err, ErrZeroLength)
 	if result {
 		log.WithError(err).Debug("Stopping value read due to zero length error")
 	}
