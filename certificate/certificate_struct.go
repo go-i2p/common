@@ -50,11 +50,13 @@ type Certificate struct {
 	payload []byte
 }
 
-// NewCertificate creates a new Certificate with default NULL type
+// NewCertificate creates a new Certificate with default NULL type.
+// The returned certificate serializes to exactly CERT_MIN_SIZE (3) bytes:
+// 1 byte type (0x00 = NULL) + 2 byte length (0x0000) + 0 byte payload.
 func NewCertificate() *Certificate {
 	return &Certificate{
 		kind:    data.Integer([]byte{CERT_NULL}),
-		len:     data.Integer([]byte{CERT_EMPTY_PAYLOAD_SIZE}),
+		len:     data.Integer([]byte{0x00, 0x00}),
 		payload: make([]byte, CERT_EMPTY_PAYLOAD_SIZE),
 	}
 }
@@ -99,7 +101,11 @@ func NewCertificateWithType(certType uint8, payload []byte) (*Certificate, error
 }
 
 // RawBytes returns the entire certificate in []byte form, includes excess payload data.
+// Returns nil if the certificate is nil or not initialized.
 func (c *Certificate) RawBytes() []byte {
+	if !c.IsValid() {
+		return nil
+	}
 	bytes := c.kind.Bytes()
 	bytes = append(bytes, c.len.Bytes()...)
 	bytes = append(bytes, c.payload...)
@@ -110,7 +116,11 @@ func (c *Certificate) RawBytes() []byte {
 }
 
 // ExcessBytes returns the excess bytes in a certificate found after the specified payload length.
+// Returns nil if the certificate is nil or not initialized.
 func (c *Certificate) ExcessBytes() []byte {
+	if !c.IsValid() {
+		return nil
+	}
 	if len(c.payload) >= c.len.Int() {
 		excess := c.payload[c.len.Int():]
 		log.WithFields(logger.Fields{
@@ -123,7 +133,11 @@ func (c *Certificate) ExcessBytes() []byte {
 }
 
 // Bytes returns the entire certificate in []byte form, trims payload to specified length.
+// Returns nil if the certificate is nil or not initialized.
 func (c *Certificate) Bytes() []byte {
+	if !c.IsValid() {
+		return nil
+	}
 	bytes := c.kind.Bytes()
 	bytes = append(bytes, c.len.Bytes()...)
 	payload, err := c.Data()
@@ -140,7 +154,11 @@ func (c *Certificate) Bytes() []byte {
 }
 
 // length returns the total certificate length in bytes.
+// Returns 0 if the certificate is nil or not initialized.
 func (c *Certificate) length() (certLen int) {
+	if !c.IsValid() {
+		return 0
+	}
 	certLen = len(c.Bytes())
 	return
 }

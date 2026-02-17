@@ -238,14 +238,27 @@ func (cb *CertificateBuilder) buildKeyTypePayload() []byte {
 // This is useful when you just need to generate the payload bytes.
 //
 // Parameters:
-//   - signingType: The signing key type
-//   - cryptoType: The crypto key type
+//   - signingType: The signing key type (must be non-negative and <= 65535)
+//   - cryptoType: The crypto key type (must be non-negative and <= 65535)
 //
 // Returns:
 //   - []byte: The 4-byte payload [signing_type][crypto_type]
-func BuildKeyTypePayload(signingType, cryptoType int) []byte {
+//   - error: Non-nil if either type is negative or exceeds uint16 range
+func BuildKeyTypePayload(signingType, cryptoType int) ([]byte, error) {
+	if signingType < 0 {
+		return nil, oops.Errorf("signing type cannot be negative: %d", signingType)
+	}
+	if cryptoType < 0 {
+		return nil, oops.Errorf("crypto type cannot be negative: %d", cryptoType)
+	}
+	if signingType > 65535 {
+		return nil, oops.Errorf("signing type exceeds uint16 range: %d", signingType)
+	}
+	if cryptoType > 65535 {
+		return nil, oops.Errorf("crypto type exceeds uint16 range: %d", cryptoType)
+	}
 	payload := make([]byte, 4)
 	binary.BigEndian.PutUint16(payload[0:2], uint16(signingType))
 	binary.BigEndian.PutUint16(payload[2:4], uint16(cryptoType))
-	return payload
+	return payload, nil
 }

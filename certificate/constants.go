@@ -49,6 +49,12 @@ const CERT_MIN_KEY_PAYLOAD_SIZE = 4
 // CERT_KEY_SIG_TYPE_OFFSET is the byte offset where signature type begins in KEY certificate payload
 const CERT_KEY_SIG_TYPE_OFFSET = 0
 
+// CERT_KEY_CRYPTO_TYPE_OFFSET is the byte offset where crypto key type begins in KEY certificate payload
+const CERT_KEY_CRYPTO_TYPE_OFFSET = 2
+
+// CERT_CRYPTO_KEY_TYPE_SIZE is the size in bytes of the crypto key type field in key certificates
+const CERT_CRYPTO_KEY_TYPE_SIZE = 2
+
 // ============ Certificate Creation Defaults ============
 
 // CERT_DEFAULT_TYPE_SIZE is the size in bytes for the certificate type field

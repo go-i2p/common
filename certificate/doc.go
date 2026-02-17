@@ -63,14 +63,14 @@
 //
 // All certificates support validation to ensure proper initialization:
 //
-//	// Check if certificate is properly initialized
-//	if err := cert.Validate(); err != nil {
-//	    return err
-//	}
-//
-//	// Boolean validation
+//	// Boolean validation check
 //	if !cert.IsValid() {
 //	    return errors.New("invalid certificate")
+//	}
+//
+//	// Builder-level validation (before Build)
+//	if err := builder.Validate(); err != nil {
+//	    // Fix configuration before building
 //	}
 //
 // # Accessing Certificate Data

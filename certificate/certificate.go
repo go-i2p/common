@@ -20,7 +20,14 @@ func ReadCertificate(data []byte) (certificate *Certificate, remainder []byte, e
 		return nil, data, err
 	}
 
-	err = normalizeErrorConditions(err)
+	// Validate type-specific payload constraints per spec
+	if warning := validateTypeSpecificPayload(cert); warning != nil {
+		log.WithFields(logger.Fields{
+			"at":     "ReadCertificate",
+			"reason": warning.Error(),
+		}).Warn("certificate type-specific validation warning")
+	}
+
 	remainder = calculateRemainder(data, cert)
 
 	logCertificateReadCompletion(cert, data, remainder)
@@ -43,8 +50,8 @@ func parseCertificateFromData(bytes []byte) (Certificate, error) {
 
 // handleEmptyCertificateData processes the case where no data is provided.
 func handleEmptyCertificateData(certificate Certificate) (Certificate, error) {
-	certificate.kind = data.Integer([]byte{CERT_EMPTY_PAYLOAD_SIZE})
-	certificate.len = data.Integer([]byte{CERT_EMPTY_PAYLOAD_SIZE})
+	certificate.kind = data.Integer([]byte{0}) // type: 0 (NULL)
+	certificate.len = data.Integer([]byte{0})  // length: 0
 	log.WithFields(logger.Fields{
 		"at":                       "(Certificate) ReadCertificate",
 		"certificate_bytes_length": CERT_EMPTY_PAYLOAD_SIZE,
@@ -120,13 +127,24 @@ func validateCertificatePayloadLength(certificate Certificate, bytes []byte, pay
 	return nil
 }
 
-// normalizeErrorConditions handles specific error conditions that should not be treated as errors.
-func normalizeErrorConditions(err error) error {
-	if err != nil && err.Error() == "certificate parsing warning: certificate data is longer than specified by length" {
-		log.Warn("Certificate data longer than specified length")
-		return nil
+// validateTypeSpecificPayload checks that the certificate payload length is appropriate
+// for its declared type, per the I2P spec Certificate Types table.
+// Returns a warning error for mismatches; callers should log but not reject.
+func validateTypeSpecificPayload(cert Certificate) error {
+	certType := cert.kind.Int()
+	payloadLen := cert.len.Int()
+
+	switch certType {
+	case CERT_NULL, CERT_HIDDEN:
+		if payloadLen != 0 {
+			return oops.Errorf("certificate type %d should have empty payload, got %d bytes", certType, payloadLen)
+		}
+	case CERT_KEY:
+		if payloadLen < CERT_MIN_KEY_PAYLOAD_SIZE {
+			return oops.Errorf("KEY certificate payload too short: %d bytes (minimum %d)", payloadLen, CERT_MIN_KEY_PAYLOAD_SIZE)
+		}
 	}
-	return err
+	return nil
 }
 
 // calculateRemainder determines the remaining bytes after the complete certificate.
@@ -161,6 +179,24 @@ func GetSignatureTypeFromCertificate(cert Certificate) (int, error) {
 	if len(cert.payload) < CERT_MIN_KEY_PAYLOAD_SIZE {
 		return CERT_EMPTY_PAYLOAD_SIZE, oops.Errorf("certificate payload too short to contain signature type")
 	}
-	sigType := int(binary.BigEndian.Uint16(cert.payload[CERT_KEY_SIG_TYPE_OFFSET:CERT_SIGNING_KEY_TYPE_SIZE])) // Read signing public key type from correct offset
+	sigType := int(binary.BigEndian.Uint16(cert.payload[CERT_KEY_SIG_TYPE_OFFSET : CERT_KEY_SIG_TYPE_OFFSET+CERT_SIGNING_KEY_TYPE_SIZE])) // Read signing public key type from correct offset
 	return sigType, nil
+}
+
+// GetCryptoTypeFromCertificate extracts the crypto public key type from a KEY certificate.
+// Returns an error if the certificate is not a KEY type or if the payload is too short.
+func GetCryptoTypeFromCertificate(cert Certificate) (int, error) {
+	kind, err := cert.Type()
+	if err != nil {
+		log.WithFields(logger.Fields{"at": "GetCryptoTypeFromCertificate", "reason": "invalid certificate type"}).Error(err.Error())
+		return 0, err
+	}
+	if kind != CERT_KEY {
+		return 0, oops.Errorf("unexpected certificate type: %d", kind)
+	}
+	if len(cert.payload) < CERT_MIN_KEY_PAYLOAD_SIZE {
+		return 0, oops.Errorf("certificate payload too short to contain crypto type")
+	}
+	cryptoType := int(binary.BigEndian.Uint16(cert.payload[CERT_KEY_CRYPTO_TYPE_OFFSET : CERT_KEY_CRYPTO_TYPE_OFFSET+CERT_CRYPTO_KEY_TYPE_SIZE]))
+	return cryptoType, nil
 }

@@ -156,7 +156,8 @@ func TestBuildKeyTypePayload(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			payload := BuildKeyTypePayload(tt.signingType, tt.cryptoType)
+			payload, err := BuildKeyTypePayload(tt.signingType, tt.cryptoType)
+			require.NoError(t, err)
 			assert.Equal(t, tt.want, payload)
 			assert.Equal(t, 4, len(payload))
 		})
@@ -222,7 +223,7 @@ func BenchmarkCertificateBuilder_WithKeyTypes(b *testing.B) {
 
 func BenchmarkBuildKeyTypePayload(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		_ = BuildKeyTypePayload(7, 4)
+		_, _ = BuildKeyTypePayload(7, 4)
 	}
 }
 
