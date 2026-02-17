@@ -17,6 +17,12 @@ const I2PEncodeAlphabet = "abcdefghijklmnopqrstuvwxyz234567"
 // within the I2P ecosystem. It ensures consistent encoding/decoding behavior.
 var I2PEncoding *b32.Encoding = b32.NewEncoding(I2PEncodeAlphabet)
 
+// I2PEncodingNoPadding provides a base32 encoder/decoder without padding characters.
+// I2P base32 addresses (.b32.i2p) use unpadded base32 encoding: a 32-byte SHA-256 hash
+// encodes to exactly 52 characters with no trailing '=' padding.
+// Use this encoding for I2P address compatibility.
+var I2PEncodingNoPadding *b32.Encoding = b32.NewEncoding(I2PEncodeAlphabet).WithPadding(b32.NoPadding)
+
 // MAX_ENCODE_SIZE defines the maximum number of bytes that can be base32 encoded in a single operation.
 // This limit prevents excessive memory allocation and ensures reasonable processing times.
 // The limit of 10MB is sufficient for all I2P protocol needs including router infos,

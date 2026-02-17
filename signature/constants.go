@@ -15,9 +15,13 @@ const (
 	// Uses NIST P-384 curve with SHA-384 hash function for higher security elliptic curve signatures.
 	ECDSA_SHA384_P384_SIZE = 96
 
-	// ECDSA_SHA512_P512_SIZE defines the byte length of ECDSA-SHA512-P521 signatures (132 bytes).
+	// ECDSA_SHA512_P521_SIZE defines the byte length of ECDSA-SHA512-P521 signatures (132 bytes).
 	// Uses NIST P-521 curve with SHA-512 hash function for maximum security elliptic curve signatures.
-	ECDSA_SHA512_P512_SIZE = 132
+	ECDSA_SHA512_P521_SIZE = 132
+
+	// ECDSA_SHA512_P512_SIZE is a deprecated alias for ECDSA_SHA512_P521_SIZE.
+	// Deprecated: Use ECDSA_SHA512_P521_SIZE instead. The NIST curve is P-521, not P-512.
+	ECDSA_SHA512_P512_SIZE = ECDSA_SHA512_P521_SIZE
 
 	// RSA_SHA256_2048_SIZE defines the byte length of RSA-SHA256-2048 signatures (256 bytes).
 	// Uses 2048-bit RSA keys with SHA-256 hash function for digital signatures.

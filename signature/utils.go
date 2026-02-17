@@ -41,7 +41,7 @@ func getSignatureLength(sigType int) (int, error) {
 	case SIGNATURE_TYPE_ECDSA_SHA384_P384:
 		return ECDSA_SHA384_P384_SIZE, nil
 	case SIGNATURE_TYPE_ECDSA_SHA512_P521:
-		return ECDSA_SHA512_P512_SIZE, nil
+		return ECDSA_SHA512_P521_SIZE, nil
 	case SIGNATURE_TYPE_RSA_SHA256_2048:
 		return RSA_SHA256_2048_SIZE, nil
 	case SIGNATURE_TYPE_RSA_SHA384_3072:
@@ -72,10 +72,13 @@ func validateSignatureData(data []byte, sigLength int) error {
 
 // extractSignatureData extracts signature bytes and prepares remainder for further processing.
 // Creates a new Signature struct with validated data and type information.
+// Data is defensively copied to prevent aliasing of the caller's buffer.
 func extractSignatureData(data []byte, sigType int, sigLength int) (Signature, []byte) {
+	sigData := make([]byte, sigLength)
+	copy(sigData, data[:sigLength])
 	sig := Signature{
 		sigType: sigType,
-		data:    data[:sigLength],
+		data:    sigData,
 	}
 	remainder := data[sigLength:]
 	return sig, remainder

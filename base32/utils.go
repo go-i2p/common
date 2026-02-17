@@ -21,6 +21,20 @@ func DecodeString(data string) ([]byte, error) {
 	return I2PEncoding.DecodeString(data)
 }
 
+// EncodeToStringNoPadding encodes binary data to an unpadded base32 string using I2P's encoding alphabet.
+// This is the standard format for I2P .b32.i2p addresses: a 32-byte SHA-256 hash
+// encodes to exactly 52 characters with no trailing '=' padding.
+func EncodeToStringNoPadding(data []byte) string {
+	return I2PEncodingNoPadding.EncodeToString(data)
+}
+
+// DecodeStringNoPadding decodes an unpadded base32 string back to binary data.
+// This accepts the standard I2P .b32.i2p address format (52 unpadded characters
+// for a 32-byte hash).
+func DecodeStringNoPadding(data string) ([]byte, error) {
+	return I2PEncodingNoPadding.DecodeString(data)
+}
+
 // EncodeToStringSafe encodes binary data to a base32 string with input validation.
 // Unlike EncodeToString, this function validates the input data size to prevent
 // excessive memory allocation and potential DoS attacks. Use this function when

@@ -2,6 +2,7 @@
 package session_tag
 
 import (
+	"crypto/subtle"
 	"fmt"
 
 	"github.com/samber/oops"
@@ -50,9 +51,10 @@ func (st *SessionTag) SetBytes(data []byte) error {
 	return nil
 }
 
-// Equal checks if two SessionTags are equal.
+// Equal checks if two SessionTags are equal using constant-time comparison
+// to prevent timing side-channel attacks on session tag lookups.
 func (st SessionTag) Equal(other SessionTag) bool {
-	return st.value == other.value
+	return subtle.ConstantTimeCompare(st.value[:], other.value[:]) == 1
 }
 
 // String returns a hex representation of the SessionTag for debugging.

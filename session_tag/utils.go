@@ -34,14 +34,14 @@ func ReadSessionTag(bytes []byte) (info SessionTag, remainder []byte, err error)
 
 // NewSessionTag creates a new *SessionTag from []byte using ReadSessionTag.
 // Returns a pointer to SessionTag unlike ReadSessionTag.
-func NewSessionTag(data []byte) (session_tag *SessionTag, remainder []byte, err error) {
+func NewSessionTag(data []byte) (sessionTag *SessionTag, remainder []byte, err error) {
 	log.WithField("input_length", len(data)).Debug("Creating new SessionTag")
-	sessionTag, remainder, err := ReadSessionTag(data)
+	st, remainder, err := ReadSessionTag(data)
 	if err != nil {
 		log.WithError(err).Error("Failed to read SessionTag")
 		return nil, remainder, err
 	}
-	session_tag = &sessionTag
+	sessionTag = &st
 	log.WithFields(logger.Fields{
 		"remainder_length": len(remainder),
 	}).Debug("Successfully created new SessionTag")

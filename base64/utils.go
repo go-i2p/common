@@ -18,7 +18,7 @@ var I2PEncoding *b64.Encoding = b64.NewEncoding(I2PEncodeAlphabet)
 // base64 alphabet. The output is compatible with I2P destination addresses, router identifiers,
 // and other network protocol elements that require base64 encoding.
 // The encoding process applies standard base64 padding rules with '=' characters as needed.
-// Example: EncodeToString([]byte{72, 101, 108, 108, 111}) returns "SGVsbG8-" (Hello in I2P base64)
+// Example: EncodeToString([]byte{72, 101, 108, 108, 111}) returns "SGVsbG8=" (Hello in I2P base64)
 func EncodeToString(data []byte) string {
 	// Use I2P-specific encoding instance for consistent network compatibility
 	// Applies character substitutions (- for +, ~ for /) required by I2P protocols
@@ -30,7 +30,7 @@ func EncodeToString(data []byte) string {
 // and converting them back to the original byte data. It validates input characters against
 // the I2P alphabet and handles standard base64 padding requirements.
 // Returns an error if the input contains invalid characters or malformed padding.
-// Example: DecodeString("SGVsbG8-") returns []byte{72, 101, 108, 108, 111}, nil (Hello decoded)
+// Example: DecodeString("SGVsbG8=") returns []byte{72, 101, 108, 108, 111}, nil (Hello decoded)
 func DecodeString(str string) ([]byte, error) {
 	// Parse I2P base64 string with comprehensive error handling
 	// Validates character set conformity and padding structure before decoding
@@ -42,7 +42,7 @@ func DecodeString(str string) ([]byte, error) {
 // excessive memory allocation and potential DoS attacks. Use this function when
 // encoding untrusted or user-provided data.
 // Returns an error if data is empty or exceeds MAX_ENCODE_SIZE.
-// Example: EncodeToStringSafe([]byte{72, 101, 108, 108, 111}) returns "SGVsbG8-", nil
+// Example: EncodeToStringSafe([]byte{72, 101, 108, 108, 111}) returns "SGVsbG8=", nil
 func EncodeToStringSafe(data []byte) (string, error) {
 	if len(data) == 0 {
 		return "", ErrEmptyData

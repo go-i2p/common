@@ -219,11 +219,18 @@ func NewOfflineSignature(expires uint32, transientSigType uint16, transientPubli
 			expectedSigSize, len(signature))
 	}
 
+	// Make defensive copies of input slices to prevent caller mutation
+	// from corrupting the struct's internal state, matching ReadOfflineSignature behavior.
+	keyData := make([]byte, len(transientPublicKey))
+	copy(keyData, transientPublicKey)
+	sigData := make([]byte, len(signature))
+	copy(sigData, signature)
+
 	return OfflineSignature{
 		expires:            expires,
 		sigtype:            transientSigType,
-		transientPublicKey: transientPublicKey,
-		signature:          signature,
+		transientPublicKey: keyData,
+		signature:          sigData,
 		destinationSigType: destinationSigType,
 	}, nil
 }

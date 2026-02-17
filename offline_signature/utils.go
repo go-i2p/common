@@ -54,7 +54,7 @@ func SignatureSize(sigtype uint16) int {
 	case signature.SIGNATURE_TYPE_ECDSA_SHA384_P384:
 		return signature.ECDSA_SHA384_P384_SIZE
 	case signature.SIGNATURE_TYPE_ECDSA_SHA512_P521:
-		return signature.ECDSA_SHA512_P512_SIZE
+		return signature.ECDSA_SHA512_P521_SIZE
 	case signature.SIGNATURE_TYPE_RSA_SHA256_2048:
 		return signature.RSA_SHA256_2048_SIZE
 	case signature.SIGNATURE_TYPE_RSA_SHA384_3072:

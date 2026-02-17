@@ -17,7 +17,7 @@ Contents
 32 bytes
 */
 
-// SessionKey is the represenation of an I2P SessionKey.
+// SessionKey is the representation of an I2P SessionKey.
 //
 // https://geti2p.net/spec/common-structures#sessionkey
 type SessionKey [SESSION_KEY_SIZE]byte
@@ -26,22 +26,22 @@ var log = logger.GetGoI2PLogger()
 
 // NewSessionKey creates a new *SessionKey from []byte using ReadSessionKey.
 // Returns a pointer to SessionKey unlike ReadSessionKey.
-func NewSessionKey(data []byte) (session_key *SessionKey, remainder []byte, err error) {
+func NewSessionKey(data []byte) (sessionKey *SessionKey, remainder []byte, err error) {
 	log.WithField("input_length", len(data)).Debug("Creating new SessionKey")
-	sessionKey, remainder, err := ReadSessionKey(data)
+	sk, remainder, err := ReadSessionKey(data)
 	if err != nil {
 		log.WithError(err).Error("Failed to create new SessionKey")
 		return nil, remainder, err
 	}
-	session_key = &sessionKey
+	sessionKey = &sk
 	log.Debug("Successfully created new SessionKey")
 	return
 }
 
 // ReadSessionKey returns SessionKey from a []byte.
 // The remaining bytes after the specified length are also returned.
-// Returns a list of errors that occurred during parsing.
-func ReadSessionKey(bytes []byte) (info SessionKey, remainder []byte, err error) {
+// Returns an error if the data is too short to contain a valid SessionKey.
+func ReadSessionKey(bytes []byte) (sessionKey SessionKey, remainder []byte, err error) {
 	if len(bytes) < SESSION_KEY_SIZE {
 		log.WithFields(logger.Fields{
 			"at":          "(SessionKey) ReadSessionKey",
@@ -52,7 +52,7 @@ func ReadSessionKey(bytes []byte) (info SessionKey, remainder []byte, err error)
 		return
 	}
 
-	copy(info[:], bytes[:SESSION_KEY_SIZE])
+	copy(sessionKey[:], bytes[:SESSION_KEY_SIZE])
 	remainder = bytes[SESSION_KEY_SIZE:]
 
 	log.WithFields(logger.Fields{
