@@ -2,6 +2,7 @@
 package signature
 
 import (
+	"crypto/subtle"
 	"fmt"
 
 	"github.com/go-i2p/logger"
@@ -55,9 +56,14 @@ func NewSignature(data []byte, sigType int) (signature *Signature, remainder []b
 }
 
 // NewSignatureFromBytes creates a Signature struct from raw bytes without type validation.
-// This function is used when the signature type is known but validation is not needed.
-// It directly constructs a Signature with the provided data and sigType without parsing or validation.
-// Example usage: sig := NewSignatureFromBytes(rawData, SIGNATURE_TYPE_EDDSA_SHA512_ED25519)
+// WARNING: This constructor does NOT verify that len(data) matches the expected size for sigType.
+// Callers MUST either ensure data correctness before calling, or call Validate() on the
+// returned Signature to check for type/size mismatches. Invalid signatures will propagate
+// silently through the system if not validated.
+// Example usage:
+//
+//	sig := NewSignatureFromBytes(rawData, SIGNATURE_TYPE_EDDSA_SHA512_ED25519)
+//	if err := sig.Validate(); err != nil { /* handle error */ }
 func NewSignatureFromBytes(data []byte, sigType int) Signature {
 	// Direct construction without validation for performance-critical scenarios
 	// Caller is responsible for ensuring data integrity and proper type matching
@@ -89,6 +95,22 @@ func (s Signature) Bytes() []byte {
 func (s Signature) Len() int {
 	// Calculate signature length for validation and buffer management
 	return len(s.data)
+}
+
+// Equal returns true if the other Signature has the same type and data.
+// Both the signature algorithm type and raw bytes must match for equality.
+// Uses constant-time comparison via crypto/subtle to prevent timing side-channels.
+func (s Signature) Equal(other *Signature) bool {
+	if other == nil {
+		return false
+	}
+	if s.sigType != other.sigType {
+		return false
+	}
+	if len(s.data) != len(other.data) {
+		return false
+	}
+	return subtle.ConstantTimeCompare(s.data, other.data) == 1
 }
 
 // String returns a string representation of the signature type and length.
