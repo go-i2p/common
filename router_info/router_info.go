@@ -2,11 +2,55 @@
 package router_info
 
 import (
+	"crypto/ed25519"
+
+	"github.com/go-i2p/common/signature"
 	"github.com/go-i2p/logger"
 	"github.com/samber/oops"
 )
 
 var log = logger.GetGoI2PLogger()
+
+// VerifySignature verifies the RouterInfo signature against the serialized data
+// using the signing public key from the router identity.
+// Currently supports Ed25519 (type 7) signature verification.
+func (ri *RouterInfo) VerifySignature() (bool, error) {
+	if ri == nil {
+		return false, oops.Errorf("router info is nil")
+	}
+	if ri.router_identity == nil {
+		return false, oops.Errorf("router identity is nil")
+	}
+	if ri.signature == nil {
+		return false, oops.Errorf("signature is nil")
+	}
+
+	dataBytes, err := ri.serializeWithoutSignature()
+	if err != nil {
+		return false, oops.Errorf("failed to serialize data for verification: %w", err)
+	}
+
+	sigBytes := ri.signature.Bytes()
+	signingKey, err := ri.router_identity.SigningPublicKey()
+	if err != nil {
+		return false, oops.Errorf("failed to get signing public key: %w", err)
+	}
+	if signingKey == nil {
+		return false, oops.Errorf("signing public key is nil")
+	}
+
+	sigType := ri.signature.Type()
+	switch sigType {
+	case signature.SIGNATURE_TYPE_EDDSA_SHA512_ED25519:
+		keyBytes := signingKey.Bytes()
+		if len(keyBytes) != ed25519.PublicKeySize {
+			return false, oops.Errorf("invalid Ed25519 public key size: %d", len(keyBytes))
+		}
+		return ed25519.Verify(keyBytes, dataBytes, sigBytes), nil
+	default:
+		return false, oops.Errorf("unsupported signature type for verification: %d", sigType)
+	}
+}
 
 // Validate checks if the RouterInfo is properly initialized.
 // Returns an error if the router info or its required components are invalid.

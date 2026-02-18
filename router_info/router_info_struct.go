@@ -97,7 +97,7 @@ peer_size :: Integer
 options :: data.Mapping
 
 signature :: Signature
-             length -> 40 bytes
+             length -> 40 bytes or as specified in router_ident's key certificate
 */
 
 // RouterInfo is the represenation of an I2P RouterInfo.
@@ -279,34 +279,63 @@ func signRouterInfoData(routerInfo *RouterInfo, signer types.Signer, sigType int
 }
 
 // Bytes returns the RouterInfo as a []byte suitable for writing to a stream.
-func (router_info RouterInfo) Bytes() (bytes []byte, err error) {
+// Returns an error if any required field is nil.
+func (router_info RouterInfo) Bytes() ([]byte, error) {
 	log.Debug("Converting RouterInfo to bytes")
+	if router_info.router_identity == nil {
+		return nil, oops.Errorf("cannot serialize RouterInfo: router_identity is nil")
+	}
+	if router_info.published == nil {
+		return nil, oops.Errorf("cannot serialize RouterInfo: published is nil")
+	}
+	if router_info.size == nil {
+		return nil, oops.Errorf("cannot serialize RouterInfo: size is nil")
+	}
+	if router_info.peer_size == nil {
+		return nil, oops.Errorf("cannot serialize RouterInfo: peer_size is nil")
+	}
+	if router_info.options == nil {
+		return nil, oops.Errorf("cannot serialize RouterInfo: options is nil")
+	}
+	if router_info.signature == nil {
+		return nil, oops.Errorf("cannot serialize RouterInfo: signature is nil")
+	}
 	identityBytes, err := router_info.router_identity.Bytes()
 	if err != nil {
 		return nil, err
 	}
+	var bytes []byte
 	bytes = append(bytes, identityBytes...)
 	bytes = append(bytes, router_info.published.Bytes()...)
 	bytes = append(bytes, router_info.size.Bytes()...)
-	for _, router_address := range router_info.addresses {
-		bytes = append(bytes, router_address.Bytes()...)
+	for _, addr := range router_info.addresses {
+		bytes = append(bytes, addr.Bytes()...)
 	}
 	bytes = append(bytes, router_info.peer_size.Bytes()...)
 	bytes = append(bytes, router_info.options.Data()...)
 	bytes = append(bytes, router_info.signature.Bytes()...)
 	log.WithField("bytes_length", len(bytes)).Debug("Converted RouterInfo to bytes")
-	return bytes, err
+	return bytes, nil
 }
 
 // String returns a string representation of the RouterInfo.
+// Returns a placeholder string if any required field is nil.
 func (router_info RouterInfo) String() string {
 	log.Debug("Converting RouterInfo to string")
-	identityBytes, _ := router_info.router_identity.Bytes()
+	if router_info.router_identity == nil || router_info.published == nil ||
+		router_info.size == nil || router_info.peer_size == nil ||
+		router_info.options == nil || router_info.signature == nil {
+		return "RouterInfo{<uninitialized>}"
+	}
+	identityBytes, err := router_info.router_identity.Bytes()
+	if err != nil {
+		return "RouterInfo{<error serializing identity>}"
+	}
 	str := "Certificate: " + bytesToString(identityBytes) + "\n"
 	str += "Published: " + bytesToString(router_info.published.Bytes()) + "\n"
 	str += "Addresses:" + bytesToString(router_info.size.Bytes()) + "\n"
-	for index, router_address := range router_info.addresses {
-		str += "Address " + strconv.Itoa(index) + ": " + router_address.String() + "\n"
+	for index, addr := range router_info.addresses {
+		str += "Address " + strconv.Itoa(index) + ": " + addr.String() + "\n"
 	}
 	str += "Peer Size: " + bytesToString(router_info.peer_size.Bytes()) + "\n"
 	str += "Options: " + bytesToString(router_info.options.Data()) + "\n"
@@ -381,9 +410,13 @@ func (router_info RouterInfo) Network() string {
 	return I2P_NETWORK_NAME
 }
 
-// AddAddress adds a RouterAddress to this RouterInfo.
+// AddAddress adds a RouterAddress to this RouterInfo and updates the size field.
 func (router_info *RouterInfo) AddAddress(address *router_address.RouterAddress) {
 	router_info.addresses = append(router_info.addresses, address)
+	newSize, err := data.NewIntegerFromInt(len(router_info.addresses), 1)
+	if err == nil {
+		router_info.size = newSize
+	}
 }
 
 // RouterCapabilities returns the capabilities string for this RouterInfo.
@@ -516,19 +549,25 @@ func validatePatchVersionRange(patchStr string, minorVersion int, version string
 }
 
 // UnCongested checks if the RouterInfo indicates the router is not congested.
+// Per the I2P spec, congestion indicators are:
+//   - D: medium congestion
+//   - E: high congestion
+//   - G: rejecting tunnels
+//
+// Note: K is a bandwidth class ("Under 12 KBps"), NOT a congestion indicator.
 func (router_info *RouterInfo) UnCongested() bool {
 	log.Debug("Checking if RouterInfo is uncongested")
 	caps := router_info.RouterCapabilities()
-	if strings.Contains(caps, "K") {
-		log.WithField("reason", "K capability").Warn("RouterInfo is congested")
-		return false
-	}
-	if strings.Contains(caps, "G") {
-		log.WithField("reason", "G capability").Warn("RouterInfo is congested")
+	if strings.Contains(caps, "D") {
+		log.WithField("reason", "D capability (medium congestion)").Warn("RouterInfo is congested")
 		return false
 	}
 	if strings.Contains(caps, "E") {
-		log.WithField("reason", "E capability").Warn("RouterInfo is congested")
+		log.WithField("reason", "E capability (high congestion)").Warn("RouterInfo is congested")
+		return false
+	}
+	if strings.Contains(caps, "G") {
+		log.WithField("reason", "G capability (rejecting tunnels)").Warn("RouterInfo is congested")
 		return false
 	}
 	log.Debug("RouterInfo is uncongested")
@@ -651,7 +690,7 @@ func parseRouterInfoCore(bytes []byte) (info RouterInfo, remainder []byte, err e
 		log.WithFields(logger.Fields{
 			"at":           "(RouterInfo) parseRouterInfoCore",
 			"data_len":     len(remainder),
-			"required_len": info.size.Int(),
+			"required_len": 1,
 			"reason":       "read error",
 		}).Error("error parsing router info size")
 		return
@@ -702,6 +741,11 @@ func parsePeerSizeFromBytes(remainder []byte) (*data.Integer, []byte, error) {
 	if err != nil {
 		log.WithError(err).Error("Failed to read PeerSize")
 		return nil, remainder, err
+	}
+	if peer_size.Int() != 0 {
+		log.WithFields(logger.Fields{
+			"peer_size": peer_size.Int(),
+		}).Warn("Spec violation: peer_size should always be zero")
 	}
 	return peer_size, remainder, nil
 }
@@ -773,7 +817,7 @@ func getCertificateTypeFromIdentity(router_identity *router_identity.RouterIdent
 	log.WithFields(logger.Fields{
 		"at":          "getCertificateTypeFromIdentity",
 		"cert_type":   kind,
-		"cert_length": certData,
+		"cert_length": len(certData),
 	}).Debug("Processing certificate")
 
 	return kind, certData, nil
@@ -790,15 +834,20 @@ func getSignatureTypeFromCert(cert *certificate.Certificate) (int, error) {
 	return sigType, nil
 }
 
-// validateSignatureType validates that the signature type is within acceptable range.
-// Returns error if signature type is invalid.
+// validateSignatureType validates that the signature type is within the range of
+// known I2P signature types (0 through 11). Types 0-4 are deprecated but still
+// valid on the network. Returns error if signature type is outside this range.
 func validateSignatureType(sigType int, cert *certificate.Certificate) error {
-	if sigType <= signature.SIGNATURE_TYPE_RSA_SHA256_2048 || sigType > signature.SIGNATURE_TYPE_REDDSA_SHA512_ED25519 {
+	if sigType < signature.SIGNATURE_TYPE_DSA_SHA1 || sigType > signature.SIGNATURE_TYPE_REDDSA_SHA512_ED25519 {
 		log.WithFields(logger.Fields{
 			"sigType": sigType,
-			"cert":    cert,
 		}).Error("Invalid signature type detected")
 		return oops.Errorf("invalid signature type: %d", sigType)
+	}
+	if sigType <= signature.SIGNATURE_TYPE_RSA_SHA256_2048 {
+		log.WithFields(logger.Fields{
+			"sigType": sigType,
+		}).Warn("Deprecated signature type (types 0-4 are deprecated as of 0.9.58)")
 	}
 	log.WithFields(logger.Fields{
 		"sigType": sigType,
@@ -821,19 +870,29 @@ func parseSignatureData(data []byte, sigType int) (*signature.Signature, []byte,
 	return sig, remainder, nil
 }
 
-func parseRouterInfoSignature(router_identity *router_identity.RouterIdentity, remainder []byte) (*signature.Signature, []byte, error) {
-	_, _, err := getCertificateTypeFromIdentity(router_identity)
+func parseRouterInfoSignature(ri *router_identity.RouterIdentity, remainder []byte) (*signature.Signature, []byte, error) {
+	certType, _, err := getCertificateTypeFromIdentity(ri)
 	if err != nil {
 		return nil, remainder, err
 	}
 
-	cert := router_identity.Certificate()
-	sigType, err := getSignatureTypeFromCert(cert)
-	if err != nil {
-		return nil, remainder, err
+	var sigType int
+	if certType == certificate.CERT_KEY {
+		cert := ri.Certificate()
+		sigType, err = getSignatureTypeFromCert(cert)
+		if err != nil {
+			return nil, remainder, err
+		}
+	} else {
+		// NULL certificate (type 0) and other non-KEY types default to DSA_SHA1
+		sigType = signature.SIGNATURE_TYPE_DSA_SHA1
+		log.WithFields(logger.Fields{
+			"cert_type": certType,
+			"sig_type":  sigType,
+		}).Debug("Non-KEY certificate, defaulting to DSA_SHA1 signature type")
 	}
 
-	if err := validateSignatureType(sigType, cert); err != nil {
+	if err := validateSignatureType(sigType, ri.Certificate()); err != nil {
 		return nil, remainder, err
 	}
 
