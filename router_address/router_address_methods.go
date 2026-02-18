@@ -11,7 +11,8 @@ import (
 	"github.com/go-i2p/common/data"
 )
 
-// Network implements net.Addr. It returns the transport type plus 4 or 6
+// Network implements net.Addr. It returns the transport type plus 4 or 6.
+// If the IP version cannot be determined, only the transport type is returned.
 func (ra *RouterAddress) Network() string {
 	log.Debug("Getting network for RouterAddress")
 	if ra.TransportType == nil {
@@ -23,24 +24,67 @@ func (ra *RouterAddress) Network() string {
 		log.WithError(err).Error("Failed to get TransportType data")
 		return ""
 	}
-	network := string(str) + ra.IPVersion()
+	ipVer := ra.IPVersion()
+	if ipVer == "" {
+		return string(str)
+	}
+	network := string(str) + ipVer
 	log.WithField("network", network).Debug("Retrieved network for RouterAddress")
 	return network
 }
 
-// IPVersion returns a string "4" for IPv4 or 6 for IPv6
+// IPVersion returns "4" for IPv4 or "6" for IPv6.
+// It first tries to infer the version from the host option's IP address.
+// If no valid host IP is present, it falls back to checking the caps option suffix.
+// Returns "" if the version cannot be determined.
 func (ra *RouterAddress) IPVersion() string {
 	log.Debug("Getting IP version for RouterAddress")
-	str, err := ra.CapsString().Data()
+	// Primary: infer from host address
+	if ver := ra.ipVersionFromHost(); ver != "" {
+		return ver
+	}
+	// Fallback: infer from caps suffix (Java router convention)
+	return ra.ipVersionFromCaps()
+}
+
+// ipVersionFromHost determines IP version by parsing the host option value.
+func (ra *RouterAddress) ipVersionFromHost() string {
+	host := ra.HostString()
+	if host == nil {
+		return ""
+	}
+	hostData, err := host.Data()
+	if err != nil || len(hostData) == 0 {
+		return ""
+	}
+	ip := net.ParseIP(hostData)
+	if ip == nil {
+		return ""
+	}
+	if ip.To4() != nil {
+		log.Debug("IP version is IPv4 (from host)")
+		return IPV4_VERSION_STRING
+	}
+	log.Debug("IP version is IPv6 (from host)")
+	return IPV6_VERSION_STRING
+}
+
+// ipVersionFromCaps determines IP version from the caps option suffix.
+// This is a Java router convention, not mandated by the I2P spec.
+func (ra *RouterAddress) ipVersionFromCaps() string {
+	caps := ra.CapsString()
+	if caps == nil {
+		return ""
+	}
+	str, err := caps.Data()
 	if err != nil {
-		log.WithError(err).Error("Failed to get CapsString data")
 		return ""
 	}
 	if strings.HasSuffix(str, IPV6_SUFFIX) {
-		log.Debug("IP version is IPv6")
+		log.Debug("IP version is IPv6 (from caps)")
 		return IPV6_VERSION_STRING
 	}
-	log.Debug("IP version is IPv4")
+	log.Debug("IP version is IPv4 (from caps)")
 	return IPV4_VERSION_STRING
 }
 
@@ -52,26 +96,33 @@ func (ra *RouterAddress) UDP() bool {
 	return isUDP
 }
 
-// String implements net.Addr. It returns the IP address, followed by the options
+// String implements net.Addr. It returns the transport style, host, port, and options.
+// Safe to call on a zero-value or partially initialized RouterAddress.
 func (ra *RouterAddress) String() string {
 	log.Debug("Converting RouterAddress to string")
+	if ra == nil {
+		return ""
+	}
 	var rv []string
-	rv = append(rv, string(ra.TransportStyle()))
-	rv = append(rv, string(ra.HostString()))
-	rv = append(rv, string(ra.PortString()))
-	rv = append(rv, string(ra.StaticKeyString()))
-	rv = append(rv, string(ra.InitializationVectorString()))
-	rv = append(rv, string(ra.ProtocolVersionString()))
+	appendOption := func(s data.I2PString) {
+		if s != nil {
+			if d, err := s.Data(); err == nil && len(d) > 0 {
+				rv = append(rv, d)
+			}
+		}
+	}
+	appendOption(ra.TransportStyle())
+	appendOption(ra.HostString())
+	appendOption(ra.PortString())
+	appendOption(ra.StaticKeyString())
+	appendOption(ra.InitializationVectorString())
+	appendOption(ra.ProtocolVersionString())
 	if ra.UDP() {
-		rv = append(rv, string(ra.IntroducerHashString(0)))
-		rv = append(rv, string(ra.IntroducerExpirationString(0)))
-		rv = append(rv, string(ra.IntroducerTagString(0)))
-		rv = append(rv, string(ra.IntroducerHashString(1)))
-		rv = append(rv, string(ra.IntroducerExpirationString(1)))
-		rv = append(rv, string(ra.IntroducerTagString(1)))
-		rv = append(rv, string(ra.IntroducerHashString(2)))
-		rv = append(rv, string(ra.IntroducerExpirationString(2)))
-		rv = append(rv, string(ra.IntroducerTagString(2)))
+		for i := 0; i <= MAX_INTRODUCER_NUMBER; i++ {
+			appendOption(ra.IntroducerHashString(i))
+			appendOption(ra.IntroducerExpirationString(i))
+			appendOption(ra.IntroducerTagString(i))
+		}
 	}
 	str := strings.TrimSpace(strings.Join(rv, " "))
 	log.WithField("router_address_string", str).Debug("Converted RouterAddress to string")
@@ -204,7 +255,10 @@ func (ra RouterAddress) IntroducerTagString(num int) data.I2PString {
 	return ra.GetOption(v)
 }
 
-// Host returns the host address as a net.Addr
+// Host returns the host address as a net.Addr.
+// Only IP addresses are accepted; hostnames are rejected as a security measure.
+// Note: the I2P spec allows hostnames in the host option, but this implementation
+// intentionally rejects them to prevent DNS-based deanonymization attacks.
 func (ra RouterAddress) Host() (net.Addr, error) {
 	log.Debug("Getting host from RouterAddress")
 
@@ -401,4 +455,31 @@ func (ra RouterAddress) checkValid() (err error, exit bool) {
 		return oops.Errorf("invalid router address: nil transport options"), true
 	}
 	return nil, false
+}
+
+// Equals compares two RouterAddress instances for equality.
+// Two addresses are equal if they have the same cost, expiration, transport style, and options.
+func (ra RouterAddress) Equals(other RouterAddress) bool {
+	if ra.Cost() != other.Cost() {
+		return false
+	}
+	raExp := ra.Expiration()
+	otherExp := other.Expiration()
+	if raExp != otherExp {
+		return false
+	}
+	raBytes := ra.Bytes()
+	otherBytes := other.Bytes()
+	if raBytes == nil || otherBytes == nil {
+		return raBytes == nil && otherBytes == nil
+	}
+	if len(raBytes) != len(otherBytes) {
+		return false
+	}
+	for i := range raBytes {
+		if raBytes[i] != otherBytes[i] {
+			return false
+		}
+	}
+	return true
 }

@@ -99,7 +99,8 @@ func createTransportCost(cost uint8) (*data.Integer, error) {
 
 // createExpirationDate creates the ExpirationDate field as a Date.
 // Per I2P spec, the expiration MUST always be all zeros.
-// The expiration parameter is accepted for API compatibility but ignored.
+// The expiration parameter is accepted for API compatibility but is always ignored.
+// Deprecated: The expiration parameter has no effect. Consider using a parameterless variant.
 func createExpirationDate(expiration time.Time) (*data.Date, error) {
 	dateBytes := make([]byte, data.DATE_SIZE) // all zeros per spec
 	expirationDate, _, err := data.NewDate(dateBytes)

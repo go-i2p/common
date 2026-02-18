@@ -352,13 +352,13 @@ func TestIPVersionMethod(t *testing.T) {
 		assert.Equal(t, IPV4_VERSION_STRING, ra.IPVersion())
 	})
 
-	t.Run("no caps returns empty", func(t *testing.T) {
+	t.Run("no caps returns version from host", func(t *testing.T) {
 		ra, err := NewRouterAddress(5, time.Time{}, "NTCP2", map[string]string{
 			"host": "127.0.0.1",
 		})
 		require.NoError(t, err)
-		// Without caps option, CapsString() returns nil → Data() returns error → ""
-		assert.Equal(t, "", ra.IPVersion())
+		// Without caps option but with a valid IPv4 host, IPVersion now infers from host
+		assert.Equal(t, IPV4_VERSION_STRING, ra.IPVersion())
 	})
 
 	t.Run("IPv6 with caps suffix", func(t *testing.T) {

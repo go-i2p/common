@@ -65,7 +65,9 @@ const INITIALIZATION_VECTOR_SIZE = 16
 // MIN_INTRODUCER_NUMBER is the minimum valid introducer number
 const MIN_INTRODUCER_NUMBER = 0
 
-// MAX_INTRODUCER_NUMBER is the maximum valid introducer number
+// MAX_INTRODUCER_NUMBER is the maximum valid introducer number.
+// SSU2 supports introducers 0-2 (3 total). This value matches the current
+// SSU2 specification. If future SSU versions support more, this should be updated.
 const MAX_INTRODUCER_NUMBER = 2
 
 // DEFAULT_INTRODUCER_NUMBER is the default introducer number when out of range
