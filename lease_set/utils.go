@@ -126,6 +126,9 @@ func ReadDestinationFromLeaseSet(data []byte) (dest destination.Destination, rem
 }
 
 // ReadLeaseSet reads a lease set from byte data.
+// The cryptographic signature is NOT verified during parsing; call Verify()
+// on the returned LeaseSet to validate the signature against the Destination's
+// signing public key.
 func ReadLeaseSet(data []byte) (LeaseSet, error) {
 	log.Debug("Reading LeaseSet")
 
@@ -170,6 +173,8 @@ func validateLeaseSetDataLength(data []byte) error {
 }
 
 // parseEncryptionKey extracts and validates the encryption key from lease set data.
+// Per the LeaseSet v1 spec, the encryption key is always a 256-byte ElGamal public key.
+// Non-ElGamal crypto types are only supported in LeaseSet2.
 func parseEncryptionKey(data []byte) (elgamal.ElgPublicKey, []byte, error) {
 	if len(data) < LEASE_SET_PUBKEY_SIZE {
 		return elgamal.ElgPublicKey{}, nil, oops.Errorf("LeaseSet data too short for encryption key")

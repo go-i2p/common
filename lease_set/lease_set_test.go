@@ -119,7 +119,7 @@ func generateTestRouterInfo(t *testing.T) (*router_info.RouterInfo, types.Receiv
 
 	keyCert, err := key_certificate.KeyCertificateFromCertificate(cert)
 	if err != nil {
-		log.Fatalf("KeyCertificateFromCertificate failed: %v\n", err)
+		t.Fatalf("KeyCertificateFromCertificate failed: %v\n", err)
 	}
 	pubKeySize := keyCert.CryptoSize()
 	sigKeySize := keyCert.SigningPublicKeySize()
@@ -359,8 +359,7 @@ func TestLeaseSetCreation(t *testing.T) {
 	assert.NotNil(leaseSet)
 
 	// Check the size of the LeaseSet's Destination KeysAndCert
-	dest, err := leaseSet.Destination()
-	assert.Nil(err)
+	dest := leaseSet.Destination()
 	assert.NotNil(dest)
 
 	// Verify individual key sizes
@@ -455,16 +454,13 @@ func TestLeaseSetComponents(t *testing.T) {
 	leaseSet, err := createTestLeaseSet(t, routerInfo, 3)
 	assert.Nil(err)
 
-	dest, err := leaseSet.Destination()
-	assert.Nil(err)
+	dest := leaseSet.Destination()
 	assert.NotNil(dest)
 
-	count, err := leaseSet.LeaseCount()
-	assert.Nil(err)
+	count := leaseSet.LeaseCount()
 	assert.Equal(3, count)
 
-	leases, err := leaseSet.Leases()
-	assert.Nil(err)
+	leases := leaseSet.Leases()
 	assert.Equal(3, len(leases))
 
 	pubKey, err := leaseSet.PublicKey()
@@ -509,7 +505,6 @@ func TestSignatureVerification(t *testing.T) {
 	leaseSet, err := createTestLeaseSet(t, routerInfo, 1)
 	assert.Nil(err)
 
-	sig, err := leaseSet.Signature()
-	assert.Nil(err)
+	sig := leaseSet.Signature()
 	assert.NotNil(sig)
 }

@@ -23,8 +23,7 @@ func TestAudit_DetermineSignatureSizeCorrect(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, leaseSet)
 
-	sig, err := leaseSet.Signature()
-	require.NoError(t, err)
+	sig := leaseSet.Signature()
 	// Ed25519 signature should be 64 bytes
 	assert.Equal(t, 64, len(sig.Bytes()), "Ed25519 signature should be 64 bytes")
 }
@@ -46,8 +45,7 @@ func TestAudit_NewestExpiration(t *testing.T) {
 		"newest expiration should be in the future, got %v", newest.Time())
 
 	// Verify it's actually the newest among leases
-	leases, err := leaseSet.Leases()
-	require.NoError(t, err)
+	leases := leaseSet.Leases()
 	for _, l := range leases {
 		assert.True(t, newest.Time().Equal(l.Date().Time()) || newest.Time().After(l.Date().Time()),
 			"newest should be >= all lease dates")
@@ -124,8 +122,8 @@ func TestAudit_ParseSignatureErrorHandling(t *testing.T) {
 	require.NoError(t, err)
 
 	// Verify signature was parsed correctly
-	origSig, _ := leaseSet.Signature()
-	parsedSig, _ := parsed.Signature()
+	origSig := leaseSet.Signature()
+	parsedSig := parsed.Signature()
 	assert.Equal(t, origSig.Bytes(), parsedSig.Bytes(),
 		"parsed signature should match original")
 }
@@ -175,8 +173,8 @@ func TestAudit_ParseSignatureTrailingData(t *testing.T) {
 	require.NoError(t, err)
 
 	// Verify the parsed LeaseSet is valid
-	origSig, _ := leaseSet.Signature()
-	parsedSig, _ := parsed.Signature()
+	origSig := leaseSet.Signature()
+	parsedSig := parsed.Signature()
 	assert.Equal(t, origSig.Bytes(), parsedSig.Bytes())
 }
 
@@ -200,8 +198,7 @@ func TestAudit_DestinationDeuxRemoved(t *testing.T) {
 	leaseSet, err := createTestLeaseSet(t, routerInfo, 1)
 	require.NoError(t, err)
 
-	dest, err := leaseSet.Destination()
-	require.NoError(t, err)
+	dest := leaseSet.Destination()
 	assert.NotNil(t, dest.KeysAndCert)
 }
 
@@ -224,18 +221,18 @@ func TestAudit_RoundTripSerialization(t *testing.T) {
 		require.NoError(t, err)
 
 		// Compare all fields
-		origDest, _ := leaseSet.Destination()
-		parsedDest, _ := parsed.Destination()
+		origDest := leaseSet.Destination()
+		parsedDest := parsed.Destination()
 		origDestBytes, _ := origDest.KeysAndCert.Bytes()
 		parsedDestBytes, _ := parsedDest.KeysAndCert.Bytes()
 		assert.Equal(t, origDestBytes, parsedDestBytes, "destination should match")
 
-		origCount, _ := leaseSet.LeaseCount()
-		parsedCount, _ := parsed.LeaseCount()
+		origCount := leaseSet.LeaseCount()
+		parsedCount := parsed.LeaseCount()
 		assert.Equal(t, origCount, parsedCount, "lease count should match")
 
-		origSig, _ := leaseSet.Signature()
-		parsedSig, _ := parsed.Signature()
+		origSig := leaseSet.Signature()
+		parsedSig := parsed.Signature()
 		assert.Equal(t, origSig.Bytes(), parsedSig.Bytes(), "signature should match")
 	})
 
@@ -304,8 +301,7 @@ func TestAudit_ZeroLeaseLeaseSet(t *testing.T) {
 	assert.True(t, zeroLS.IsValid())
 
 	// LeaseCount should return 0
-	count, err := zeroLS.LeaseCount()
-	assert.NoError(t, err)
+	count := zeroLS.LeaseCount()
 	assert.Equal(t, 0, count)
 }
 
@@ -375,8 +371,7 @@ func TestAudit_OldestExpiration(t *testing.T) {
 		"oldest expiration should be in the future, got %v", oldest.Time())
 
 	// Verify it's actually the oldest among leases
-	leases, err := leaseSet.Leases()
-	require.NoError(t, err)
+	leases := leaseSet.Leases()
 	for _, l := range leases {
 		assert.True(t, oldest.Time().Equal(l.Date().Time()) || oldest.Time().Before(l.Date().Time()),
 			"oldest should be <= all lease dates")
@@ -411,7 +406,7 @@ func TestAudit_ExpirationEmptyLeases(t *testing.T) {
 	}
 
 	newest, err := ls.NewestExpiration()
-	assert.NoError(t, err)
-	// With no leases, should return epoch zero (the sentinel)
+	assert.ErrorIs(t, err, ErrNoLeases)
+	// With no leases, should return epoch zero
 	assert.Equal(t, data.Date{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}, newest)
 }

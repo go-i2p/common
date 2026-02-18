@@ -1,6 +1,8 @@
 // Package lease_set constants
 package lease_set
 
+import "github.com/samber/oops"
+
 // Sizes of various structures in an I2P LeaseSet
 const (
 	// LEASE_SET_PUBKEY_SIZE is the size of the ElGamal encryption public key (256 bytes).
@@ -21,4 +23,14 @@ const (
 	// LEASE_SET_SIG_SIZE is the legacy name for LEASE_SET_DEFAULT_SIG_SIZE.
 	// Deprecated: Use LEASE_SET_DEFAULT_SIG_SIZE instead.
 	LEASE_SET_SIG_SIZE = LEASE_SET_DEFAULT_SIG_SIZE
+
+	// LEASE_SET_MAX_LEASES is the maximum number of leases in a LeaseSet per spec.
+	LEASE_SET_MAX_LEASES = 16
+)
+
+// Errors
+var (
+	// ErrNoLeases is returned when a LeaseSet has no leases and an
+	// expiration-related operation is called.
+	ErrNoLeases = oops.Errorf("lease set has no leases")
 )

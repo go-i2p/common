@@ -23,7 +23,7 @@ func (ls *LeaseSet) Validate() error {
 	if ls == nil {
 		return oops.Errorf("lease set is nil")
 	}
-	if ls.leaseCount > 16 {
+	if ls.leaseCount > LEASE_SET_MAX_LEASES {
 		return oops.Errorf("lease set cannot have more than 16 leases")
 	}
 	if len(ls.leases) != ls.leaseCount {
@@ -40,8 +40,11 @@ func (ls *LeaseSet) Validate() error {
 	if ls.signingKey == nil {
 		return oops.Errorf("signing key is required")
 	}
-	if err := ls.signature.Validate(); err != nil {
-		return oops.Errorf("invalid signature: %w", err)
+	// Only validate signature if it has been set (non-zero)
+	if len(ls.signature.Bytes()) > 0 {
+		if err := ls.signature.Validate(); err != nil {
+			return oops.Errorf("invalid signature: %w", err)
+		}
 	}
 	return nil
 }
@@ -103,42 +106,54 @@ func validateLeaseSetInputs(dest destination.Destination, encryptionKey types.Re
 	}
 
 	// Validate lease count
-	if len(leases) > 16 {
+	if len(leases) > LEASE_SET_MAX_LEASES {
 		return oops.Errorf("invalid lease set: more than 16 leases")
 	}
 
-	// Validate signing key size matches certificate
-	return validateSigningKeySize(dest, signingKey)
+	// Validate signing key type and size match certificate
+	return validateSigningKey(dest, signingKey)
 }
 
-// validateSigningKeySize ensures the signing key size matches the certificate requirements.
-func validateSigningKeySize(dest destination.Destination, signingKey types.SigningPublicKey) error {
+// validateSigningKey ensures the signing key type and size match the
+// Destination certificate's requirements. The I2P spec states:
+// "The signing key type is always the same as the destination's signing key type."
+func validateSigningKey(dest destination.Destination, signingKey types.SigningPublicKey) error {
 	cert := dest.Certificate()
 	kind, err := cert.Type()
 	if err != nil {
-		log.WithFields(logger.Fields{
-			"at":     "validateSigningKeySize",
-			"reason": "invalid certificate type",
-		}).Error("error parsing certificate type")
 		return oops.Errorf("invalid certificate type: %v", err)
 	}
 
 	if kind == certificate.CERT_KEY {
-		// Get expected size from key certificate
 		keyCert, err := key_certificate.KeyCertificateFromCertificate(cert)
 		if err != nil {
-			log.WithError(err).Error("Failed to create keyCert")
 			return oops.Errorf("failed to create key certificate: %w", err)
 		}
+
+		// Validate signing key size
 		expectedSize := keyCert.SigningPublicKeySize()
 		if len(signingKey.Bytes()) != expectedSize {
-			return oops.Errorf("invalid signing key size: got %d, expected %d",
-				len(signingKey.Bytes()), expectedSize)
+			return oops.Errorf(
+				"signing key size mismatch: got %d, expected %d for signing type %d",
+				len(signingKey.Bytes()), expectedSize, keyCert.SigningPublicKeyType(),
+			)
+		}
+
+		// Validate signing key type matches by checking the key
+		// reports the same type as the destination certificate
+		if typedKey, ok := signingKey.(interface{ SigningPublicKeyType() int }); ok {
+			if typedKey.SigningPublicKeyType() != keyCert.SigningPublicKeyType() {
+				return oops.Errorf(
+					"signing key type mismatch: key reports type %d, destination requires type %d",
+					typedKey.SigningPublicKeyType(), keyCert.SigningPublicKeyType(),
+				)
+			}
 		}
 	} else {
-		// Default DSA size
+		// Default DSA size for NULL certificate
 		if len(signingKey.Bytes()) != LEASE_SET_SPK_SIZE {
-			return oops.Errorf("invalid signing key size")
+			return oops.Errorf("invalid signing key size for NULL certificate: got %d, expected %d",
+				len(signingKey.Bytes()), LEASE_SET_SPK_SIZE)
 		}
 	}
 	return nil
@@ -281,10 +296,8 @@ func (lease_set LeaseSet) Bytes() ([]byte, error) {
 }
 
 // Destination returns the Destination from the LeaseSet.
-func (lease_set LeaseSet) Destination() (dest destination.Destination, err error) {
-	dest = lease_set.dest
-	log.Debug("Successfully retrieved Destination from LeaseSet")
-	return
+func (lease_set LeaseSet) Destination() destination.Destination {
+	return lease_set.dest
 }
 
 // PublicKey returns the public key as crypto.ElgPublicKey.
@@ -316,40 +329,19 @@ func (lease_set LeaseSet) SigningKey() (signing_public_key types.SigningPublicKe
 	return
 }
 
-// LeaseCount returns the numbert of leases specified by the LeaseCount value as int.
-// returns errors encountered during parsing.
-func (lease_set LeaseSet) LeaseCount() (count int, err error) {
-	log.Debug("Retrieving LeaseCount from LeaseSet")
-	count = lease_set.leaseCount
-	if count > 16 {
-		log.WithFields(logger.Fields{
-			"at":          "(LeaseSet) LeaseCount",
-			"lease_count": count,
-			"reason":      "more than 16 leases",
-		}).Warn("invalid lease set")
-		err = oops.Errorf("invalid lease set: more than 16 leases")
-	} else {
-		log.WithField("lease_count", count).Debug("Retrieved LeaseCount from LeaseSet")
-	}
-	return
+// LeaseCount returns the number of leases specified by the LeaseCount value as int.
+func (lease_set LeaseSet) LeaseCount() int {
+	return lease_set.leaseCount
 }
 
 // Leases returns the leases as []Lease.
-// returns errors encountered during parsing.
-func (lease_set LeaseSet) Leases() (leases []lease.Lease, err error) {
-	log.Debug("Retrieving Leases from LeaseSet")
-	leases = lease_set.leases
-	log.WithField("lease_count", len(leases)).Debug("Retrieved Leases from LeaseSet")
-	return
+func (lease_set LeaseSet) Leases() []lease.Lease {
+	return lease_set.leases
 }
 
 // Signature returns the signature as Signature.
-// returns errors encountered during parsing.
-func (lease_set LeaseSet) Signature() (signature sig.Signature, err error) {
-	log.Debug("Retrieving Signature from LeaseSet")
-	signature = lease_set.signature
-	log.WithField("signature_length", len(signature.Bytes())).Debug("Retrieved Signature from LeaseSet")
-	return
+func (lease_set LeaseSet) Signature() sig.Signature {
+	return lease_set.signature
 }
 
 // Verify verifies the cryptographic signature of the LeaseSet.
@@ -366,14 +358,11 @@ func (lease_set LeaseSet) Verify() error {
 	}
 
 	// Get the signature
-	signature, err := lease_set.Signature()
-	if err != nil {
-		return oops.Errorf("failed to get LeaseSet signature: %w", err)
-	}
+	signature := lease_set.Signature()
 	sigBytes := signature.Bytes()
 	sigLen := len(sigBytes)
 
-	if len(fullBytes) < sigLen {
+	if sigLen == 0 || len(fullBytes) < sigLen {
 		return oops.Errorf("LeaseSet data too short for signature verification")
 	}
 
@@ -381,10 +370,7 @@ func (lease_set LeaseSet) Verify() error {
 	dataToVerify := fullBytes[:len(fullBytes)-sigLen]
 
 	// Get the signing public key from the Destination
-	dest, err := lease_set.Destination()
-	if err != nil {
-		return oops.Errorf("failed to get Destination for verification: %w", err)
-	}
+	dest := lease_set.Destination()
 
 	signingPubKey, err := dest.SigningPublicKey()
 	if err != nil {
@@ -408,17 +394,16 @@ func (lease_set LeaseSet) Verify() error {
 }
 
 // NewestExpiration returns the newest lease expiration as an I2P Date.
-// Returns errors encountered during parsing.
+// If there are no leases, returns epoch zero and ErrNoLeases.
 func (lease_set LeaseSet) NewestExpiration() (newest data.Date, err error) {
 	log.Debug("Finding newest expiration in LeaseSet")
-	leases, err := lease_set.Leases()
-	if err != nil {
-		log.WithError(err).Error("Failed to retrieve Leases for NewestExpiration")
-		return
+	leases := lease_set.leases
+	if len(leases) == 0 {
+		return data.Date{}, ErrNoLeases
 	}
-	newest = data.Date{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}
-	for _, lease := range leases {
-		date := lease.Date()
+	newest = leases[0].Date()
+	for _, l := range leases[1:] {
+		date := l.Date()
 		if date.Time().After(newest.Time()) {
 			newest = date
 		}
@@ -428,17 +413,16 @@ func (lease_set LeaseSet) NewestExpiration() (newest data.Date, err error) {
 }
 
 // OldestExpiration returns the oldest lease expiration as an I2P Date.
-// Returns errors encountered during parsing.
+// If there are no leases, returns epoch zero and ErrNoLeases.
 func (lease_set LeaseSet) OldestExpiration() (earliest data.Date, err error) {
 	log.Debug("Finding oldest expiration in LeaseSet")
-	leases, err := lease_set.Leases()
-	if err != nil {
-		log.WithError(err).Error("Failed to retrieve Leases for OldestExpiration")
-		return
+	leases := lease_set.leases
+	if len(leases) == 0 {
+		return data.Date{}, ErrNoLeases
 	}
-	earliest = data.Date{0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff}
-	for _, lease := range leases {
-		date := lease.Date()
+	earliest = leases[0].Date()
+	for _, l := range leases[1:] {
+		date := l.Date()
 		if date.Time().Before(earliest.Time()) {
 			earliest = date
 		}
