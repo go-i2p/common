@@ -2,7 +2,6 @@ package encrypted_leaseset
 
 import (
 	"crypto/ed25519"
-	"crypto/sha512"
 
 	"github.com/go-i2p/common/destination"
 	"github.com/go-i2p/common/key_certificate"
@@ -204,30 +203,32 @@ func validateEncryptedPayload(encryptedInnerData []byte) error {
 	return nil
 }
 
-// createSignature signs data using Ed25519 with SHA-512 pre-hashing, matching
-// the go-i2p/crypto library's convention (Ed25519Signer.Sign pre-hashes with
-// SHA-512 before calling ed25519.Sign; Ed25519Verifier.Verify does the same).
+// createSignature signs data using Ed25519, producing a signature that is
+// compatible with the go-i2p/crypto library's Ed25519Verifier.Verify method.
+//
+// IMPORTANT: Do NOT pre-hash here. The Ed25519Verifier.Verify() method in the
+// crypto library already applies SHA-512 internally before calling VerifyHash.
+// Pre-hashing here would cause a double-hash mismatch (sign over SHA512(data)
+// but verify over SHA512(SHA512(data))).
+//
 // Supports ed25519.PrivateKey, [64]byte, *Ed25519PrivateKey, and 64-byte []byte key types.
 func createSignature(signingKey interface{}, data []byte, sigType uint16) (sig.Signature, error) {
-	// Pre-hash with SHA-512 to match go-i2p/crypto Ed25519 convention
-	h := sha512.Sum512(data)
-
 	switch key := signingKey.(type) {
 	case ed25519.PrivateKey:
-		signatureBytes := ed25519.Sign(key, h[:])
+		signatureBytes := ed25519.Sign(key, data)
 		return sig.NewSignatureFromBytes(signatureBytes, int(sigType))
 
 	case [64]byte:
-		signatureBytes := ed25519.Sign(key[:], h[:])
+		signatureBytes := ed25519.Sign(key[:], data)
 		return sig.NewSignatureFromBytes(signatureBytes, int(sigType))
 
 	case *goi2ped25519.Ed25519PrivateKey:
-		signatureBytes := ed25519.Sign(key.Bytes(), h[:])
+		signatureBytes := ed25519.Sign(key.Bytes(), data)
 		return sig.NewSignatureFromBytes(signatureBytes, int(sigType))
 
 	case []byte:
 		if len(key) == ed25519.PrivateKeySize {
-			signatureBytes := ed25519.Sign(key, h[:])
+			signatureBytes := ed25519.Sign(key, data)
 			return sig.NewSignatureFromBytes(signatureBytes, int(sigType))
 		}
 		return sig.Signature{}, oops.Code("invalid_key_length").

@@ -2,7 +2,6 @@ package encrypted_leaseset
 
 import (
 	"crypto/ed25519"
-	"crypto/sha512"
 	"encoding/binary"
 	"testing"
 	"time"
@@ -430,9 +429,12 @@ func TestNoBlindedflag(t *testing.T) {
 	assert.Equal(t, uint16(0x0002), ENCRYPTED_LEASESET_FLAG_UNPUBLISHED)
 }
 
-// TestEd25519SigningMatchesCryptoLibrary verifies finding #4: signing uses
-// SHA-512 pre-hashing to match the go-i2p/crypto library's convention.
-// We verify by constructing and verifying with the same SHA-512 convention.
+// TestEd25519SigningMatchesCryptoLibrary verifies that createSignature produces
+// signatures compatible with the go-i2p/crypto Ed25519Verifier.Verify() method.
+//
+// createSignature calls ed25519.Sign(key, data) on the raw data. The crypto
+// library's Ed25519Verifier.Verify() internally applies SHA-512 before calling
+// ed25519.Verify, so for manual verification we check raw ed25519 compatibility.
 func TestEd25519SigningMatchesCryptoLibrary(t *testing.T) {
 	pub, priv, err := ed25519.GenerateKey(nil)
 	require.NoError(t, err)
@@ -450,11 +452,17 @@ func TestEd25519SigningMatchesCryptoLibrary(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	// Manually verify with go-i2p's SHA-512 pre-hash convention
+	// createSignature signs raw data with ed25519.Sign (no pre-hash).
+	// Ed25519Verifier.Verify applies SHA-512 internally, so round-trip
+	// via Verify() is the canonical check (covered by TestVerifyEncryptedLeaseSet).
+	// Here we confirm the raw signature matches standard ed25519.
 	dataToVerify, err := els.dataForSigning()
 	require.NoError(t, err)
 
-	h := sha512.Sum512(dataToVerify)
-	assert.True(t, ed25519.Verify(pub, h[:], els.Signature().Bytes()),
-		"signature must be valid under SHA-512 pre-hash convention (go-i2p/crypto)")
+	assert.True(t, ed25519.Verify(pub, dataToVerify, els.Signature().Bytes()),
+		"signature must be valid under standard Ed25519 (createSignature signs raw data)")
+
+	// Also verify via the library's Verify() round-trip
+	err = els.Verify()
+	assert.NoError(t, err, "Verify() round-trip must succeed")
 }
