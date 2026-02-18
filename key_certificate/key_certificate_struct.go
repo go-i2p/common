@@ -245,8 +245,8 @@ func (keyCertificate KeyCertificate) ConstructPublicKey(data []byte) (public_key
 	case KEYCERT_CRYPTO_X25519:
 		// Extract X25519 public key for modern Curve25519 encryption
 		// X25519 provides high-performance elliptic curve Diffie-Hellman key exchange
-		var curve25519_key curve25519.Curve25519PublicKey
-		copy(curve25519_key[:], data[KEYCERT_PUBKEY_SIZE-KEYCERT_CRYPTO_X25519_SIZE:KEYCERT_PUBKEY_SIZE])
+		curve25519_key := make(curve25519.Curve25519PublicKey, KEYCERT_CRYPTO_X25519_SIZE)
+		copy(curve25519_key, data[KEYCERT_PUBKEY_SIZE-KEYCERT_CRYPTO_X25519_SIZE:KEYCERT_PUBKEY_SIZE])
 		public_key = curve25519_key
 		log.Debug("Constructed Curve25519PublicKey")
 	default:
