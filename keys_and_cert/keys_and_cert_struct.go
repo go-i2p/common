@@ -128,8 +128,9 @@ func NewKeysAndCert(
 	return keysAndCert, nil
 }
 
-// Validate checks if the KeysAndCert is fully initialized.
-// Returns an error if any required field is nil or invalid.
+// Validate checks if the KeysAndCert is fully initialized and consistent.
+// Returns an error if any required field is nil, or if key sizes don't match
+// the KeyCertificate key types.
 func (kac *KeysAndCert) Validate() error {
 	if kac == nil {
 		return oops.Errorf("KeysAndCert is nil")
@@ -142,6 +143,21 @@ func (kac *KeysAndCert) Validate() error {
 	}
 	if kac.SigningPublic == nil {
 		return oops.Errorf("SigningPublic key is required")
+	}
+	// Verify key sizes match the certificate's declared types
+	expectedCryptoSize := kac.KeyCertificate.CryptoSize()
+	if expectedCryptoSize > 0 && kac.ReceivingPublic.Len() != expectedCryptoSize {
+		return oops.Errorf(
+			"ReceivingPublic key size mismatch: certificate declares %d bytes, key has %d bytes",
+			expectedCryptoSize, kac.ReceivingPublic.Len(),
+		)
+	}
+	expectedSigSize := kac.KeyCertificate.SigningPublicKeySize()
+	if expectedSigSize > 0 && kac.SigningPublic.Len() != expectedSigSize {
+		return oops.Errorf(
+			"SigningPublic key size mismatch: certificate declares %d bytes, key has %d bytes",
+			expectedSigSize, kac.SigningPublic.Len(),
+		)
 	}
 	return nil
 }
@@ -197,14 +213,14 @@ func validatePaddingSize(padding []byte, pubKeySize, sigKeySize int) error {
 }
 
 // Bytes returns the entire keyCertificate in []byte form as wire-format bytes.
-// Keys are right-justified in their respective fields per the I2P specification.
+// Crypto keys are start-aligned and signing keys are right-justified per the I2P specification.
 // Returns an error if the KeysAndCert is not fully initialized.
-func (keys_and_cert KeysAndCert) Bytes() ([]byte, error) {
+func (keys_and_cert *KeysAndCert) Bytes() ([]byte, error) {
 	if err := keys_and_cert.Validate(); err != nil {
 		return nil, err
 	}
 
-	block := buildKeysAndCertBlock(&keys_and_cert)
+	block := buildKeysAndCertBlock(keys_and_cert)
 
 	certBytes := keys_and_cert.KeyCertificate.Bytes()
 	result := append(block, certBytes...)
@@ -220,7 +236,7 @@ func (keys_and_cert KeysAndCert) Bytes() ([]byte, error) {
 }
 
 // buildKeysAndCertBlock constructs the 384-byte wire format block with
-// right-justified keys and padding in the correct positions.
+// start-aligned crypto key and right-justified signing key, with padding in between.
 func buildKeysAndCertBlock(kac *KeysAndCert) []byte {
 	block := make([]byte, KEYS_AND_CERT_DATA_SIZE)
 
@@ -229,14 +245,14 @@ func buildKeysAndCertBlock(kac *KeysAndCert) []byte {
 	pubPaddingSize := KEYS_AND_CERT_PUBKEY_SIZE - pubKeySize
 	sigPaddingSize := KEYS_AND_CERT_SPK_SIZE - sigKeySize
 
-	// Public key field padding (before right-justified key)
-	if pubPaddingSize > 0 && kac.Padding != nil && len(kac.Padding) >= pubPaddingSize {
-		copy(block[:pubPaddingSize], kac.Padding[:pubPaddingSize])
-	}
-	// Right-justify public key in 256-byte field
+	// Start-align public key in 256-byte field (per spec)
 	if kac.ReceivingPublic != nil {
 		pubBytes := kac.ReceivingPublic.Bytes()
-		copy(block[KEYS_AND_CERT_PUBKEY_SIZE-len(pubBytes):KEYS_AND_CERT_PUBKEY_SIZE], pubBytes)
+		copy(block[0:len(pubBytes)], pubBytes)
+	}
+	// Public key field padding (after start-aligned key)
+	if pubPaddingSize > 0 && kac.Padding != nil && len(kac.Padding) >= pubPaddingSize {
+		copy(block[pubKeySize:KEYS_AND_CERT_PUBKEY_SIZE], kac.Padding[:pubPaddingSize])
 	}
 	// Signing key field padding (before right-justified key)
 	if sigPaddingSize > 0 && kac.Padding != nil && len(kac.Padding) >= pubPaddingSize+sigPaddingSize {
@@ -306,7 +322,7 @@ func parseKeyCertificateFromData(data []byte, offset int) (*key_certificate.KeyC
 // constructPublicKeyFromCert constructs a public key using data and the key certificate.
 // Returns the constructed public key or error if construction fails.
 // The full 256-byte public key region is passed to ConstructPublicKey, which extracts
-// the actual key from its right-justified position within the field.
+// the actual key from its start-aligned position within the field.
 func constructPublicKeyFromCert(keyCert *key_certificate.KeyCertificate, data []byte) (types.ReceivingPublicKey, error) {
 	pubKeySize := keyCert.CryptoSize()
 	if pubKeySize == 0 {
@@ -325,7 +341,7 @@ func constructPublicKeyFromCert(keyCert *key_certificate.KeyCertificate, data []
 
 // extractPaddingFromData extracts padding bytes based on key sizes.
 // The padding consists of two regions in the 384-byte block:
-//   - Public key field padding: bytes before the right-justified crypto key in the 256-byte field
+//   - Public key field padding: bytes after the start-aligned crypto key in the 256-byte field
 //   - Signing key field padding: bytes before the right-justified signing key in the 128-byte field
 //
 // Returns concatenated padding [pubKeyPadding || sigKeyPadding] or nil if no padding.
@@ -337,8 +353,9 @@ func extractPaddingFromData(data []byte, pubKeySize, sigKeySize int) []byte {
 	padding := make([]byte, paddingSize)
 	pubPaddingSize := KEYS_AND_CERT_PUBKEY_SIZE - pubKeySize
 	sigPaddingSize := KEYS_AND_CERT_SPK_SIZE - sigKeySize
+	// Crypto key is start-aligned; padding follows at offset pubKeySize
 	if pubPaddingSize > 0 {
-		copy(padding[:pubPaddingSize], data[:pubPaddingSize])
+		copy(padding[:pubPaddingSize], data[pubKeySize:KEYS_AND_CERT_PUBKEY_SIZE])
 	}
 	if sigPaddingSize > 0 {
 		copy(padding[pubPaddingSize:], data[KEYS_AND_CERT_PUBKEY_SIZE:KEYS_AND_CERT_PUBKEY_SIZE+sigPaddingSize])
@@ -602,14 +619,14 @@ func buildNullCertKeyCertificate(cert *certificate.Certificate) *key_certificate
 }
 
 // extractX25519PublicKey extracts an X25519 public key from the 256-byte public key field.
-// The key is right-justified in the field per the I2P specification.
+// The key is start-aligned in the field per the I2P specification.
 func extractX25519PublicKey(data []byte) (types.ReceivingPublicKey, error) {
 	if len(data) < KEYS_AND_CERT_PUBKEY_SIZE {
 		return nil, oops.Errorf("insufficient data for X25519 key extraction: need %d bytes, got %d",
 			KEYS_AND_CERT_PUBKEY_SIZE, len(data))
 	}
 	x25519Key := make(curve25519.Curve25519PublicKey, 32)
-	copy(x25519Key, data[KEYS_AND_CERT_PUBKEY_SIZE-32:KEYS_AND_CERT_PUBKEY_SIZE])
+	copy(x25519Key, data[0:32])
 	return x25519Key, nil
 }
 

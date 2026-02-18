@@ -44,11 +44,11 @@ func buildX25519Ed25519Data(t *testing.T) []byte {
 	t.Helper()
 	block := make([]byte, KEYS_AND_CERT_DATA_SIZE) // 384 bytes, zeros
 
-	// Right-justify X25519 key (32 bytes) in 256-byte field
+	// Start-align X25519 key (32 bytes) in 256-byte field (per spec)
 	x25519Key := make([]byte, 32)
 	_, err := rand.Read(x25519Key)
 	require.NoError(t, err)
-	copy(block[KEYS_AND_CERT_PUBKEY_SIZE-32:KEYS_AND_CERT_PUBKEY_SIZE], x25519Key)
+	copy(block[0:32], x25519Key)
 
 	// Right-justify Ed25519 key (32 bytes) in 128-byte field
 	ed25519Key := make([]byte, 32)
@@ -129,7 +129,8 @@ func TestReadKeysAndCert_X25519Ed25519(t *testing.T) {
 	t.Run("extracts correct key bytes", func(t *testing.T) {
 		wireData := buildX25519Ed25519Data(t)
 		// Read the expected key bytes from the wire data
-		expectedCryptoKey := wireData[KEYS_AND_CERT_PUBKEY_SIZE-32 : KEYS_AND_CERT_PUBKEY_SIZE]
+		// X25519 key is start-aligned in the 256-byte field (bytes 0..31)
+		expectedCryptoKey := wireData[0:32]
 		expectedSigningKey := wireData[KEYS_AND_CERT_DATA_SIZE-32 : KEYS_AND_CERT_DATA_SIZE]
 
 		kac, _, err := ReadKeysAndCert(wireData)
@@ -494,7 +495,7 @@ func TestReadKeysAndCertX25519AndEd25519(t *testing.T) {
 
 	t.Run("extracts correct key bytes", func(t *testing.T) {
 		wireData := buildX25519Ed25519Data(t)
-		expectedCrypto := wireData[KEYS_AND_CERT_PUBKEY_SIZE-32 : KEYS_AND_CERT_PUBKEY_SIZE]
+		expectedCrypto := wireData[0:32] // X25519 is start-aligned in the 256-byte field
 		expectedSigning := wireData[KEYS_AND_CERT_DATA_SIZE-32 : KEYS_AND_CERT_DATA_SIZE]
 
 		kac, _, err := ReadKeysAndCertX25519AndEd25519(wireData)
@@ -767,9 +768,10 @@ func TestExtractPaddingFromData(t *testing.T) {
 		require.NotNil(t, padding)
 		assert.Equal(t, 320, len(padding))
 		// pubPaddingSize=224, sigPaddingSize=96
-		// padding[:224] = data[0:224]
+		// Crypto key is start-aligned, so padding follows at data[32:256]
+		// padding[:224] = data[32:256]
 		// padding[224:320] = data[256:352]
-		assert.Equal(t, data[:224], padding[:224])
+		assert.Equal(t, data[32:256], padding[:224])
 		assert.Equal(t, data[256:352], padding[224:])
 	})
 }

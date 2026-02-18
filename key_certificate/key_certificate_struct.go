@@ -2,7 +2,6 @@
 package key_certificate
 
 import (
-	"github.com/go-i2p/common/signature"
 	"github.com/go-i2p/crypto/curve25519"
 	"github.com/go-i2p/crypto/dsa"
 	"github.com/go-i2p/crypto/ecdsa"
@@ -77,6 +76,11 @@ func NewKeyCertificate(bytes []byte) (key_certificate *KeyCertificate, remainder
 
 	spkType, cpkType := extractKeyTypes(certData)
 
+	if validationErr := validatePayloadLengthAgainstKeyTypes(certData, spkType, cpkType); validationErr != nil {
+		log.WithError(validationErr).Warn("Key certificate payload length mismatch")
+		// Log warning but do not fail - some implementations may produce slightly different payloads
+	}
+
 	key_certificate = buildKeyCertificate(cert, spkType, cpkType)
 
 	return
@@ -113,7 +117,40 @@ func validateKeyCertificateDataLength(certData []byte) error {
 	if len(certData) < 4 {
 		return oops.Errorf("key certificate data too short")
 	}
-	log.Println("Certificate Data in NewKeyCertificate: ", certData[0:2], certData[2:4])
+	log.WithFields(logger.Fields{
+		"spk_type_bytes": certData[0:2],
+		"cpk_type_bytes": certData[2:4],
+	}).Debug("Certificate data in NewKeyCertificate")
+	return nil
+}
+
+// validatePayloadLengthAgainstKeyTypes checks that the key certificate payload length
+// matches the expected excess key data for the declared signing and crypto key types.
+// Per spec: excess key data is appended when key sizes exceed the standard field sizes.
+func validatePayloadLengthAgainstKeyTypes(certData []byte, spkType, cpkType data.Integer) error {
+	sigType := spkType.Int()
+	crypType := cpkType.Int()
+
+	sigInfo, sigExists := SigningKeySizes[sigType]
+	crypInfo, crypExists := CryptoKeySizes[crypType]
+	if !sigExists || !crypExists {
+		return nil // Unknown types are validated elsewhere
+	}
+
+	excessSigning := 0
+	if sigInfo.SigningPublicKeySize > KEYCERT_SPK_SIZE {
+		excessSigning = sigInfo.SigningPublicKeySize - KEYCERT_SPK_SIZE
+	}
+	excessCrypto := 0
+	if crypInfo.CryptoPublicKeySize > KEYCERT_PUBKEY_SIZE {
+		excessCrypto = crypInfo.CryptoPublicKeySize - KEYCERT_PUBKEY_SIZE
+	}
+
+	expectedLen := 4 + excessSigning + excessCrypto
+	if len(certData) < expectedLen {
+		return oops.Errorf("key certificate payload too short: need %d bytes for types (sig=%d, crypto=%d), got %d",
+			expectedLen, sigType, crypType, len(certData))
+	}
 	return nil
 }
 
@@ -122,7 +159,10 @@ func validateKeyCertificateDataLength(certData []byte) error {
 func extractKeyTypes(certData []byte) (data.Integer, data.Integer) {
 	spkType, _ := data.ReadInteger(certData[0:2], 2)
 	cpkType, _ := data.ReadInteger(certData[2:4], 2)
-	log.Println("cpkType in NewKeyCertificate: ", cpkType.Int(), "spkType in NewKeyCertificate: ", spkType.Int())
+	log.WithFields(logger.Fields{
+		"cpk_type": cpkType.Int(),
+		"spk_type": spkType.Int(),
+	}).Debug("Extracted key types in NewKeyCertificate")
 	return spkType, cpkType
 }
 
@@ -165,24 +205,11 @@ func KeyCertificateFromCertificate(cert *certificate.Certificate) (*KeyCertifica
 
 // logExtractedKeyTypes logs detailed debug information about extracted key types.
 func logExtractedKeyTypes(certData []byte, spkType, cpkType data.Integer) {
-	/*log.WithFields(logger.Fields{
-		"data_length": len(certData),
-	}).Debug("Certificate Data Length in KeyCertificateFromCertificate")
 	log.WithFields(logger.Fields{
-		"cert_data": certData,
-	}).Debug("Certificate Data Bytes in KeyCertificateFromCertificate")
-	log.WithFields(logger.Fields{
-		"cpk_type_bytes": certData[2:4],
-	}).Debug("cpkTypeBytes in KeyCertificateFromCertificate")
-	log.WithFields(logger.Fields{
-		"spk_type_bytes": certData[0:2],
-	}).Debug("spkTypeBytes in KeyCertificateFromCertificate")
-	log.WithFields(logger.Fields{
-		"cpk_type_int": cpkType.Int(),
-	}).Debug("cpkType (Int) in KeyCertificateFromCertificate")
-	log.WithFields(logger.Fields{
+		"data_length":  len(certData),
 		"spk_type_int": spkType.Int(),
-	}).Debug("spkType (Int) in KeyCertificateFromCertificate")*/
+		"cpk_type_int": cpkType.Int(),
+	}).Debug("Extracted key types from certificate data")
 }
 
 // Data returns the raw []byte contained in the Certificate.
@@ -213,56 +240,52 @@ func (keyCertificate KeyCertificate) PublicKeyType() (pubkey_type int) {
 }
 
 // ConstructPublicKey returns a publicKey constructed using any excess data that may be stored in the KeyCertificate.
+// The data parameter must be the full 256-byte public key field from the KeysAndCert structure.
+// Per the I2P spec, the crypto public key is start-aligned (bytes 0..keySize-1) within the field.
 // Returns any errors encountered while parsing.
 func (keyCertificate KeyCertificate) ConstructPublicKey(data []byte) (public_key types.ReceivingPublicKey, err error) {
 	log.WithFields(logger.Fields{
 		"input_length": len(data),
 	}).Debug("Constructing publicKey from keyCertificate")
 	key_type := keyCertificate.PublicKeyType()
-	data_len := len(data)
-	// Validate that input data contains sufficient bytes for the expected key size
-	// This check prevents buffer underruns when extracting key material from certificate data
-	if data_len < keyCertificate.CryptoSize() {
+	// The input must be the full 256-byte public key field from KeysAndCert.
+	if len(data) < KEYCERT_PUBKEY_SIZE {
 		log.WithFields(logger.Fields{
 			"at":           "(keyCertificate) ConstructPublicKey",
-			"data_len":     data_len,
+			"data_len":     len(data),
 			"required_len": KEYCERT_PUBKEY_SIZE,
 			"reason":       "not enough data",
 		}).Error("error constructing public key")
 		err = oops.Errorf("error constructing public key: not enough data")
 		return
 	}
-	// Switch on key type to construct the appropriate public key structure
-	// Each case handles the specific key format and size requirements for that algorithm
+	// Per spec: "The Crypto Public Key is aligned at the start" of the 256-byte field.
+	// ElGamal fills the entire 256-byte field, so start-aligned and end-aligned are the same.
 	switch key_type {
 	case KEYCERT_CRYPTO_ELG:
-		// Extract ElGamal public key from the end of the data buffer
-		// ElGamal keys are positioned at the end to maintain backwards compatibility
 		var elg_key elgamal.ElgPublicKey
-		copy(elg_key[:], data[KEYCERT_PUBKEY_SIZE-KEYCERT_CRYPTO_ELG_SIZE:KEYCERT_PUBKEY_SIZE])
+		copy(elg_key[:], data[0:KEYCERT_CRYPTO_ELG_SIZE])
 		public_key = elg_key
 		log.Debug("Constructed ElgPublicKey")
-	case KEYCERT_CRYPTO_X25519:
-		// Extract X25519 public key for modern Curve25519 encryption
-		// X25519 provides high-performance elliptic curve Diffie-Hellman key exchange
+	case KEYCERT_CRYPTO_X25519,
+		KEYCERT_CRYPTO_MLKEM512_X25519,
+		KEYCERT_CRYPTO_MLKEM768_X25519,
+		KEYCERT_CRYPTO_MLKEM1024_X25519:
 		curve25519_key := make(curve25519.Curve25519PublicKey, KEYCERT_CRYPTO_X25519_SIZE)
-		copy(curve25519_key, data[KEYCERT_PUBKEY_SIZE-KEYCERT_CRYPTO_X25519_SIZE:KEYCERT_PUBKEY_SIZE])
+		copy(curve25519_key, data[0:KEYCERT_CRYPTO_X25519_SIZE])
 		public_key = curve25519_key
 		log.Debug("Constructed Curve25519PublicKey")
 	default:
-		// Return an explicit error for unsupported key types
-		// Unknown key types may indicate version incompatibility or corrupted data
 		log.WithFields(logger.Fields{
 			"key_type": key_type,
-		}).Warn("Unknown public key type")
+		}).Warn("Unsupported public key type")
 		err = oops.Errorf("unsupported crypto key type: %d", key_type)
 	}
-
 	return
 }
 
 // CryptoPublicKeySize returns the size of a public key for the certificate's crypto type
-func (keyCertificate *KeyCertificate) CryptoPublicKeySize() (int, error) {
+func (keyCertificate KeyCertificate) CryptoPublicKeySize() (int, error) {
 	size, exists := CryptoPublicKeySizes[uint16(keyCertificate.CpkType.Int())]
 	if !exists {
 		return 0, oops.Errorf("unknown crypto key type: %d", keyCertificate.CpkType.Int())
@@ -270,35 +293,18 @@ func (keyCertificate *KeyCertificate) CryptoPublicKeySize() (int, error) {
 	return size, nil
 }
 
-// SigningPublicKeySize returns the size of a signing public key for the certificate's signing type
-func (keyCertificate *KeyCertificate) SigningPublicKeySize() int {
-	spk_type := keyCertificate.SpkType
-	switch spk_type.Int() {
-	case SIGNATURE_TYPE_DSA_SHA1:
-		log.Debug("Returning DSA_SHA1")
-		return 128
-	case signature.SIGNATURE_TYPE_ECDSA_SHA256_P256:
-		log.Debug("Returning ECDSA_SHA256_P256")
-		return 64
-	case signature.SIGNATURE_TYPE_ECDSA_SHA384_P384:
-		return 96
-	case signature.SIGNATURE_TYPE_ECDSA_SHA512_P521:
-		return 132
-	case signature.SIGNATURE_TYPE_RSA_SHA256_2048:
-		return 256
-	case signature.SIGNATURE_TYPE_RSA_SHA384_3072:
-		return 384
-	case signature.SIGNATURE_TYPE_RSA_SHA512_4096:
-		return 512
-	case SIGNATURE_TYPE_ED25519_SHA512:
-		return 32
-	case KEYCERT_SIGN_ED25519PH:
-		return 32
-	case KEYCERT_SIGN_REDDSA_ED25519:
-		return 32
-	default:
-		return 128
+// SigningPublicKeySize returns the size of a signing public key for the certificate's signing type.
+// Returns 0 for unknown signing types (callers should treat 0 as an error).
+func (keyCertificate KeyCertificate) SigningPublicKeySize() int {
+	spkType := keyCertificate.SpkType.Int()
+	info, exists := SigningKeySizes[spkType]
+	if !exists {
+		log.WithFields(logger.Fields{
+			"signing_key_type": spkType,
+		}).Warn("Unknown signing key type for size lookup, returning 0")
+		return 0
 	}
+	return info.SigningPublicKeySize
 }
 
 // validateSigningKeyData validates that sufficient data is available for signing key construction.
