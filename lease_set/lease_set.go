@@ -2,8 +2,6 @@
 package lease_set
 
 import (
-	"fmt"
-
 	"github.com/go-i2p/common/certificate"
 	"github.com/go-i2p/common/data"
 	"github.com/go-i2p/common/destination"
@@ -24,9 +22,6 @@ var log = logger.GetGoI2PLogger()
 func (ls *LeaseSet) Validate() error {
 	if ls == nil {
 		return oops.Errorf("lease set is nil")
-	}
-	if ls.leaseCount == 0 {
-		return oops.Errorf("lease set must have at least one lease")
 	}
 	if ls.leaseCount > 16 {
 		return oops.Errorf("lease set cannot have more than 16 leases")
@@ -130,8 +125,9 @@ func validateSigningKeySize(dest destination.Destination, signingKey types.Signi
 		keyCert, err := key_certificate.KeyCertificateFromCertificate(cert)
 		if err != nil {
 			log.WithError(err).Error("Failed to create keyCert")
+			return oops.Errorf("failed to create key certificate: %w", err)
 		}
-		expectedSize := keyCert.SignatureSize()
+		expectedSize := keyCert.SigningPublicKeySize()
 		if len(signingKey.Bytes()) != expectedSize {
 			return oops.Errorf("invalid signing key size: got %d, expected %d",
 				len(signingKey.Bytes()), expectedSize)
@@ -277,21 +273,10 @@ func (lease_set LeaseSet) Bytes() ([]byte, error) {
 	return result, nil
 }
 
-// Destination returns the Destination as []byte.
+// Destination returns the Destination from the LeaseSet.
 func (lease_set LeaseSet) Destination() (dest destination.Destination, err error) {
 	dest = lease_set.dest
 	log.Debug("Successfully retrieved Destination from LeaseSet")
-	return
-}
-
-// DestinationDeux returns the destination from the lease set using alternative method.
-func (lease_set LeaseSet) DestinationDeux() (dest destination.Destination, err error) {
-	fmt.Printf("Starting DestinationDeux\n")
-
-	// Read the Destination from the struct
-	dest = lease_set.dest
-	fmt.Printf("Successfully retrieved Destination from LeaseSet\n")
-
 	return
 }
 
@@ -424,7 +409,7 @@ func (lease_set LeaseSet) NewestExpiration() (newest data.Date, err error) {
 		log.WithError(err).Error("Failed to retrieve Leases for NewestExpiration")
 		return
 	}
-	newest = data.Date{0xff, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}
+	newest = data.Date{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}
 	for _, lease := range leases {
 		date := lease.Date()
 		if date.Time().After(newest.Time()) {

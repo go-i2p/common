@@ -2,8 +2,6 @@
 package lease_set
 
 import (
-	"fmt"
-
 	"github.com/go-i2p/common/certificate"
 	"github.com/go-i2p/common/destination"
 	"github.com/go-i2p/common/key_certificate"
@@ -22,9 +20,11 @@ import (
 func validateDestinationMinSize(dataLen int) error {
 	const minDestinationSize = 387
 	if dataLen < minDestinationSize {
-		err := oops.Errorf("LeaseSet data too short to contain Destination")
-		fmt.Printf("Error: %v\n", err)
-		return err
+		log.WithFields(logger.Fields{
+			"data_len": dataLen,
+			"min_size": minDestinationSize,
+		}).Error("LeaseSet data too short to contain Destination")
+		return oops.Errorf("LeaseSet data too short to contain Destination")
 	}
 	return nil
 }
@@ -35,19 +35,19 @@ func parseCertificateFromLeaseSet(data []byte, certDataStart int) (int, int, err
 	certData := data[certDataStart:]
 	cert, _, err := certificate.ReadCertificate(certData)
 	if err != nil {
-		fmt.Printf("Failed to read Certificate from LeaseSet: %v\n", err)
+		log.WithError(err).Error("Failed to read Certificate from LeaseSet")
 		return 0, 0, err
 	}
 
 	kind, err := cert.Type()
 	if err != nil {
-		fmt.Printf("Error reading certificate type: %v\n", err)
+		log.WithError(err).Error("Error reading certificate type")
 		return 0, 0, err
 	}
 
 	certLength, err := cert.Length()
 	if err != nil {
-		fmt.Printf("Failed to read Certificate Length: %v\n", err)
+		log.WithError(err).Error("Failed to read Certificate Length")
 		return 0, 0, err
 	}
 
@@ -60,10 +60,11 @@ func calculateDestinationLength(certDataStart int, certLength int) int {
 	certTotalLength := 3 + certLength
 	destinationLength := certDataStart + certTotalLength
 
-	fmt.Printf("Certificate details:\n")
-	fmt.Printf("  certLength: %d\n", certLength)
-	fmt.Printf("  certTotalLength: %d\n", certTotalLength)
-	fmt.Printf("  destinationLength: %d\n", destinationLength)
+	log.WithFields(logger.Fields{
+		"cert_length":        certLength,
+		"cert_total_length":  certTotalLength,
+		"destination_length": destinationLength,
+	}).Debug("Certificate details")
 
 	return destinationLength
 }
@@ -72,9 +73,11 @@ func calculateDestinationLength(certDataStart int, certLength int) int {
 // Returns error if data is too short for the calculated destination length.
 func validateDestinationDataSize(dataLen, destinationLength int) error {
 	if dataLen < destinationLength {
-		err := oops.Errorf("LeaseSet data too short to contain full Destination")
-		fmt.Printf("Error: %v\n", err)
-		return err
+		log.WithFields(logger.Fields{
+			"data_len":           dataLen,
+			"destination_length": destinationLength,
+		}).Error("LeaseSet data too short to contain full Destination")
+		return oops.Errorf("LeaseSet data too short to contain full Destination")
 	}
 	return nil
 }
@@ -85,7 +88,7 @@ func extractDestinationFromData(data []byte, destinationLength int) (destination
 	destinationData := data[:destinationLength]
 	keysAndCert, _, err := keys_and_cert.ReadKeysAndCert(destinationData)
 	if err != nil {
-		fmt.Printf("Failed to read KeysAndCert: %v\n", err)
+		log.WithError(err).Error("Failed to read KeysAndCert")
 		return destination.Destination{}, nil, err
 	}
 
@@ -99,7 +102,7 @@ func extractDestinationFromData(data []byte, destinationLength int) (destination
 
 // ReadDestinationFromLeaseSet reads the destination from lease set data.
 func ReadDestinationFromLeaseSet(data []byte) (dest destination.Destination, remainder []byte, err error) {
-	fmt.Printf("Reading Destination from LeaseSet, input_length=%d\n", len(data))
+	log.WithField("input_length", len(data)).Debug("Reading Destination from LeaseSet")
 
 	if err = validateDestinationMinSize(len(data)); err != nil {
 		return
@@ -110,7 +113,7 @@ func ReadDestinationFromLeaseSet(data []byte) (dest destination.Destination, rem
 	if err != nil {
 		return
 	}
-	fmt.Printf("  certType: %d\n", kind)
+	log.WithField("cert_type", kind).Debug("Parsed certificate from LeaseSet")
 
 	destinationLength := calculateDestinationLength(certDataStart, certLength)
 
@@ -150,7 +153,7 @@ func ReadLeaseSet(data []byte) (LeaseSet, error) {
 		return LeaseSet{}, err
 	}
 
-	signature, err := parseSignature(remainder, dest)
+	signature, _, err := parseSignature(remainder, dest)
 	if err != nil {
 		return LeaseSet{}, err
 	}
@@ -213,7 +216,7 @@ func determineSigningKeySize(cert *certificate.Certificate, kind int) int {
 	if kind == certificate.CERT_KEY {
 		keyCert, err := key_certificate.KeyCertificateFromCertificate(cert)
 		if err == nil {
-			return keyCert.SignatureSize()
+			return keyCert.SigningPublicKeySize()
 		}
 	}
 	return LEASE_SET_SPK_SIZE
@@ -274,17 +277,29 @@ func extractLeases(data []byte, leaseCount int) []lease.Lease {
 }
 
 // parseSignature extracts and creates the signature from the remaining data.
-func parseSignature(data []byte, dest destination.Destination) (sig.Signature, error) {
+// Returns the parsed signature, any remaining bytes after the signature, and an error.
+func parseSignature(data []byte, dest destination.Destination) (sig.Signature, []byte, error) {
 	cert := dest.Certificate()
-	kind, _ := cert.Type()
+	kind, err := cert.Type()
+	if err != nil {
+		log.WithError(err).Error("failed to read certificate type in parseSignature")
+		return sig.Signature{}, data, oops.Errorf("failed to read certificate type: %w", err)
+	}
 
 	sigSize := determineSignatureSize(cert, kind)
 	if len(data) < sigSize {
-		return sig.Signature{}, oops.Errorf("LeaseSet data too short for signature")
+		return sig.Signature{}, data, oops.Errorf("LeaseSet data too short for signature: need %d, got %d", sigSize, len(data))
+	}
+
+	remainder := data[sigSize:]
+	if len(remainder) > 0 {
+		log.WithFields(logger.Fields{
+			"trailing_bytes": len(remainder),
+		}).Warn("LeaseSet has trailing data after signature")
 	}
 
 	sigType := determineSignatureType(cert, kind)
-	return sig.NewSignatureFromBytes(data[:sigSize], sigType), nil
+	return sig.NewSignatureFromBytes(data[:sigSize], sigType), remainder, nil
 }
 
 // determineSignatureSize calculates the signature size based on certificate type.

@@ -122,7 +122,7 @@ func generateTestRouterInfo(t *testing.T) (*router_info.RouterInfo, types.Receiv
 		log.Fatalf("KeyCertificateFromCertificate failed: %v\n", err)
 	}
 	pubKeySize := keyCert.CryptoSize()
-	sigKeySize := keyCert.SignatureSize()
+	sigKeySize := keyCert.SigningPublicKeySize()
 	paddingSize := keys_and_cert.KEYS_AND_CERT_DATA_SIZE - (pubKeySize + sigKeySize)
 	if paddingSize < 0 {
 		t.Fatalf("Padding size is negative: %d", paddingSize)
@@ -287,7 +287,7 @@ func generateTestDestination(t *testing.T) (*destination.Destination, types.Rece
 	)
 	t.Logf("Signing Public Key Type: %d", signingPublicKeyType.Int())
 	t.Logf("Crypto Public Key Type: %d", cryptoPublicKeyType.Int())
-	t.Logf("Expected Signing Public Key Size: %d", keyCert.SignatureSize())
+	t.Logf("Expected Signing Public Key Size: %d", keyCert.SigningPublicKeySize())
 	t.Logf("Expected Crypto Public Key Size: %d", keyCert.CryptoSize())
 	t.Logf("Actual Signing Public Key Size: %d", ed25519_pubkey.Len())
 	t.Logf("Actual Crypto Public Key Size: %d", elg_pubkey.Len())
@@ -359,7 +359,7 @@ func TestLeaseSetCreation(t *testing.T) {
 	assert.NotNil(leaseSet)
 
 	// Check the size of the LeaseSet's Destination KeysAndCert
-	dest, err := leaseSet.DestinationDeux()
+	dest, err := leaseSet.Destination()
 	assert.Nil(err)
 	assert.NotNil(dest)
 
@@ -368,8 +368,8 @@ func TestLeaseSetCreation(t *testing.T) {
 	pubKeySize := keysAndCert.KeyCertificate.CryptoSize()
 	assert.Equal(256, pubKeySize, "CryptoPublicKeySize should be 256 bytes for ElGamal")
 
-	sigKeySize := keysAndCert.KeyCertificate.SignatureSize()
-	assert.Equal(32, sigKeySize, "SignatureSize should be 32 bytes for Ed25519")
+	sigKeySize := keysAndCert.KeyCertificate.SigningPublicKeySize()
+	assert.Equal(32, sigKeySize, "SigningPublicKeySize should be 32 bytes for Ed25519")
 }
 
 func TestLeaseSetValidation(t *testing.T) {
@@ -444,7 +444,6 @@ func TestLeaseSetIsValid(t *testing.T) {
 	})
 }
 
-/*
 func TestLeaseSetComponents(t *testing.T) {
 	assert := assert.New(t)
 
@@ -514,5 +513,3 @@ func TestSignatureVerification(t *testing.T) {
 	assert.Nil(err)
 	assert.NotNil(sig)
 }
-
-*/
