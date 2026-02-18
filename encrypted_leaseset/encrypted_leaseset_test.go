@@ -137,7 +137,8 @@ func TestReadEncryptedLeaseSetZeroInnerLength(t *testing.T) {
 	data = append(data, 0x00, 0x00)
 	// inner_length = 0 (invalid)
 	data = append(data, 0x00, 0x00)
-	// dummy signature
+	// Add 1 dummy byte so total >= 109 minimum, then 64-byte signature
+	data = append(data, 0x00)
 	data = append(data, make([]byte, 64)...)
 
 	_, _, err := ReadEncryptedLeaseSet(data)
