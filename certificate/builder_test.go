@@ -50,7 +50,7 @@ func TestCertificateBuilder_WithCustomPayload(t *testing.T) {
 	customPayload := []byte{0x01, 0x02, 0x03, 0x04, 0x05}
 
 	builder := NewCertificateBuilder()
-	builder, err := builder.WithType(CERT_SIGNED)
+	builder, err := builder.WithType(CERT_HASHCASH)
 	require.NoError(t, err)
 	builder = builder.WithPayload(customPayload)
 
@@ -59,7 +59,7 @@ func TestCertificateBuilder_WithCustomPayload(t *testing.T) {
 	require.NotNil(t, cert)
 
 	certType, _ := cert.Type()
-	assert.Equal(t, CERT_SIGNED, certType)
+	assert.Equal(t, CERT_HASHCASH, certType)
 
 	payload, err := cert.Data()
 	require.NoError(t, err)
@@ -187,6 +187,11 @@ func TestCertificateBuilder_AllTypes(t *testing.T) {
 			} else if certType == CERT_NULL || certType == CERT_HIDDEN {
 				builder, err = builder.WithType(certType)
 				require.NoError(t, err)
+				cert, err = builder.Build()
+			} else if certType == CERT_SIGNED {
+				builder, err = builder.WithType(certType)
+				require.NoError(t, err)
+				builder = builder.WithPayload(make([]byte, CERT_SIGNED_PAYLOAD_SHORT))
 				cert, err = builder.Build()
 			} else {
 				builder, err = builder.WithType(certType)

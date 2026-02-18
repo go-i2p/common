@@ -50,8 +50,8 @@ func parseCertificateFromData(bytes []byte) (Certificate, error) {
 
 // handleEmptyCertificateData processes the case where no data is provided.
 func handleEmptyCertificateData(certificate Certificate) (Certificate, error) {
-	certificate.kind = data.Integer([]byte{0}) // type: 0 (NULL)
-	certificate.len = data.Integer([]byte{0})  // length: 0
+	certificate.kind = data.Integer([]byte{0})         // type: 0 (NULL)
+	certificate.len = data.Integer([]byte{0x00, 0x00}) // length: 0 (2 bytes per spec)
 	log.WithFields(logger.Fields{
 		"at":                       "(Certificate) ReadCertificate",
 		"certificate_bytes_length": CERT_EMPTY_PAYLOAD_SIZE,
@@ -75,8 +75,8 @@ func handleShortCertificateData(certificate Certificate, bytes []byte) (Certific
 		// We have some length data, use it (even if incomplete)
 		certificate.len = data.Integer(bytes[1:])
 	} else {
-		// Only type byte or less, set minimal length field
-		certificate.len = data.Integer([]byte{0})
+		// Only type byte or less, set 2-byte zero length field per spec
+		certificate.len = data.Integer([]byte{0x00, 0x00})
 	}
 
 	// No payload for short certificates

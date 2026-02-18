@@ -204,9 +204,9 @@ func TestCertificateBytesSerialization(t *testing.T) {
 	assert := assert.New(t)
 
 	payload := []byte{0xAA, 0xBB, 0xCC}
-	certType := CERT_SIGNED
+	certType := CERT_MULTIPLE
 	cert, err := NewCertificateWithType(uint8(certType), payload)
-	assert.Nil(err, "Expected no error when creating SIGNED certificate")
+	assert.Nil(err, "Expected no error when creating MULTIPLE certificate")
 
 	expectedBytes := []byte{
 		byte(certType),           // Certificate type
@@ -312,10 +312,10 @@ func TestCertificateSerializationDeserialization(t *testing.T) {
 	assert := assert.New(t)
 
 	payload := []byte{0xAA, 0xBB, 0xCC}
-	certType := CERT_SIGNED
+	certType := CERT_MULTIPLE
 
 	originalCert, err := NewCertificateWithType(uint8(certType), payload)
-	assert.Nil(err, "Expected no error when creating SIGNED certificate")
+	assert.Nil(err, "Expected no error when creating MULTIPLE certificate")
 
 	serializedBytes := originalCert.Bytes()
 	assert.NotNil(serializedBytes, "Serialized bytes should not be nil")
@@ -576,7 +576,7 @@ func TestCertificateAccessorsWithInvalidCertificate(t *testing.T) {
 func TestCertificateRoundTripWithIsValid(t *testing.T) {
 	assert := assert.New(t)
 
-	original, err := NewCertificateWithType(CERT_SIGNED, []byte{0xAA, 0xBB, 0xCC, 0xDD})
+	original, err := NewCertificateWithType(CERT_SIGNED, make([]byte, CERT_SIGNED_PAYLOAD_SHORT))
 	assert.Nil(err, "Expected no error creating original certificate")
 	assert.True(original.IsValid(), "original certificate should be valid")
 

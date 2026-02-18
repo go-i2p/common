@@ -84,6 +84,12 @@ func NewCertificateWithType(certType uint8, payload []byte) (*Certificate, error
 		return nil, oops.Errorf("HIDDEN certificates must have empty payload per spec (total length 3)")
 	}
 
+	// Per spec: SIGNED (type 3) payload must be exactly 40 or 72 bytes.
+	if certType == CERT_SIGNED && len(payload) != CERT_SIGNED_PAYLOAD_SHORT && len(payload) != CERT_SIGNED_PAYLOAD_LONG {
+		return nil, oops.Errorf("SIGNED certificates must have payload of %d or %d bytes, got %d",
+			CERT_SIGNED_PAYLOAD_SHORT, CERT_SIGNED_PAYLOAD_LONG, len(payload))
+	}
+
 	length, err := data.NewIntegerFromInt(len(payload), CERT_LENGTH_FIELD_SIZE)
 	if err != nil {
 		return nil, oops.Errorf("failed to create length integer: %w", err)
@@ -158,16 +164,22 @@ func (c *Certificate) Bytes() []byte {
 
 // length returns the total certificate length in bytes.
 // Returns 0 if the certificate is nil or not initialized.
-func (c *Certificate) length() (certLen int) {
+// Optimized: uses direct arithmetic instead of allocating via Bytes().
+func (c *Certificate) length() int {
 	if !c.IsValid() {
 		return 0
 	}
-	certLen = len(c.Bytes())
-	return
+	declaredLen := c.len.Int()
+	actualPayloadLen := len(c.payload)
+	payloadLen := declaredLen
+	if actualPayloadLen < declaredLen {
+		payloadLen = actualPayloadLen
+	}
+	return CERT_MIN_SIZE + payloadLen
 }
 
-// Type returns the Certificate type specified in the first byte of the Certificate,
 // Type returns the certificate type as int, with validation and error context.
+// The type is specified in the first byte of the Certificate.
 func (c *Certificate) Type() (certType int, err error) {
 	if !c.IsValid() {
 		return 0, oops.Errorf("certificate is not initialized")
@@ -188,7 +200,6 @@ func (c *Certificate) Type() (certType int, err error) {
 	return certType, nil
 }
 
-// Length returns the payload length of a Certificate.
 // Length returns the payload length of a Certificate, with validation and error context.
 func (c *Certificate) Length() (length int, err error) {
 	if !c.IsValid() {
@@ -210,8 +221,8 @@ func (c *Certificate) Length() (length int, err error) {
 	return length, nil
 }
 
-// Data returns the payload of a Certificate, payload is trimmed to the specified length.
-// Data returns the payload of a Certificate, trimmed to the specified length. Returns error if length is invalid.
+// Data returns the payload of a Certificate, trimmed to the declared length.
+// Returns error if length is invalid.
 func (c *Certificate) Data() (data []byte, err error) {
 	length, lenErr := c.Length()
 	if lenErr != nil {

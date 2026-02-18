@@ -378,7 +378,7 @@ func TestGetSignatureTypeFromCertificate(t *testing.T) {
 	})
 
 	t.Run("SIGNED cert returns error", func(t *testing.T) {
-		cert, err := NewCertificateWithType(CERT_SIGNED, []byte{0x01, 0x02, 0x03, 0x04})
+		cert, err := NewCertificateWithType(CERT_SIGNED, make([]byte, CERT_SIGNED_PAYLOAD_SHORT))
 		require.NoError(t, err)
 
 		_, err = GetSignatureTypeFromCertificate(*cert)
