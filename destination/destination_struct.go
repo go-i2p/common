@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/go-i2p/logger"
+	"github.com/samber/oops"
 
 	"github.com/go-i2p/common/keys_and_cert"
 	"github.com/go-i2p/crypto/types"
@@ -34,52 +35,64 @@ type Destination struct {
 // ReadDestination returns Destination from a []byte.
 // The remaining bytes after the specified length are also returned.
 // Returns a list of errors that occurred during parsing.
-func ReadDestination(data []byte) (destination Destination, remainder []byte, err error) {
+func ReadDestination(data []byte) (Destination, []byte, error) {
 	log.WithFields(logger.Fields{
 		"input_length": len(data),
 	}).Debug("Reading Destination from bytes")
 
-	keys_and_cert_obj, remainder, err := keys_and_cert.ReadKeysAndCert(data)
-	destination = Destination{
-		keys_and_cert_obj,
+	keysAndCertObj, remainder, err := keys_and_cert.ReadKeysAndCert(data)
+	if err != nil {
+		return Destination{}, remainder, err
+	}
+
+	d := Destination{keysAndCertObj}
+
+	if err := validateDestinationKeyTypes(d.KeysAndCert); err != nil {
+		return Destination{}, remainder, err
 	}
 
 	log.WithFields(logger.Fields{
 		"remainder_length": len(remainder),
 	}).Debug("Successfully read Destination from bytes")
 
-	return
+	return d, remainder, nil
 }
 
 // Bytes returns the binary representation of the Destination.
 // This serializes the destination back to []byte format for storage or transmission.
 // Returns an error if the destination is not properly initialized.
-func (destination Destination) Bytes() ([]byte, error) {
+func (d Destination) Bytes() ([]byte, error) {
+	if d.KeysAndCert == nil {
+		return nil, oops.Errorf("destination is not initialized: nil KeysAndCert")
+	}
 	log.Debug("Serializing Destination to bytes")
 
-	bytes, err := destination.KeysAndCert.Bytes()
+	b, err := d.KeysAndCert.Bytes()
 	if err != nil {
 		return nil, err
 	}
 
 	log.WithFields(logger.Fields{
-		"bytes_length": len(bytes),
+		"bytes_length": len(b),
 	}).Debug("Successfully serialized Destination to bytes")
 
-	return bytes, nil
+	return b, nil
 }
 
 // Base32Address returns the I2P base32 address for this Destination.
 // Returns an error if the destination is not properly initialized.
-func (destination Destination) Base32Address() (string, error) {
+func (d Destination) Base32Address() (string, error) {
+	if d.KeysAndCert == nil {
+		return "", oops.Errorf("destination is not initialized: nil KeysAndCert")
+	}
 	log.Debug("Generating Base32 address for Destination")
 
-	dest, err := destination.KeysAndCert.Bytes()
+	dest, err := d.KeysAndCert.Bytes()
 	if err != nil {
 		return "", err
 	}
 	hash := types.SHA256(dest)
-	str := strings.Trim(base32.EncodeToString(hash[:]), "=")
+	str := strings.TrimRight(base32.EncodeToString(hash[:]), "=")
 	str = str + I2P_BASE32_SUFFIX
 
 	log.WithFields(logger.Fields{
@@ -91,10 +104,13 @@ func (destination Destination) Base32Address() (string, error) {
 
 // Base64 returns the I2P base64 address for this Destination.
 // Returns an error if the destination is not properly initialized.
-func (destination Destination) Base64() (string, error) {
+func (d Destination) Base64() (string, error) {
+	if d.KeysAndCert == nil {
+		return "", oops.Errorf("destination is not initialized: nil KeysAndCert")
+	}
 	log.Debug("Generating Base64 address for Destination")
 
-	dest, err := destination.KeysAndCert.Bytes()
+	dest, err := d.KeysAndCert.Bytes()
 	if err != nil {
 		return "", err
 	}
