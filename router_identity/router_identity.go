@@ -8,13 +8,19 @@ import (
 
 // NewRouterIdentityFromKeysAndCert creates a new RouterIdentity from KeysAndCert.
 // This is a simpler alternative to NewRouterIdentity for cases where you already have a KeysAndCert.
-// Returns an error if the provided KeysAndCert is invalid.
+// Returns an error if the provided KeysAndCert is invalid or uses prohibited key types.
 func NewRouterIdentityFromKeysAndCert(keysAndCert *keys_and_cert.KeysAndCert) (*RouterIdentity, error) {
 	if keysAndCert == nil {
 		return nil, oops.Errorf("KeysAndCert cannot be nil")
 	}
 	if err := keysAndCert.Validate(); err != nil {
 		return nil, oops.Errorf("invalid KeysAndCert: %w", err)
+	}
+	if err := validateRouterIdentityKeyTypes(keysAndCert); err != nil {
+		return nil, err
+	}
+	if keysAndCert.KeyCertificate != nil {
+		logDeprecatedKeyTypes(keysAndCert.KeyCertificate)
 	}
 
 	return &RouterIdentity{

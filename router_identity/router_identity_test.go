@@ -159,17 +159,22 @@ func TestRouterIdentityRoundTrip(t *testing.T) {
 		require.NoError(t, err)
 
 		// Serialize to bytes (via KeysAndCert)
-		bytes, err := ri1.KeysAndCert.Bytes()
+		bytes1, err := ri1.KeysAndCert.Bytes()
 		require.NoError(t, err)
 
 		// Parse back from bytes
-		ri2, remainder, err := NewRouterIdentityFromBytes(bytes)
+		ri2, remainder, err := NewRouterIdentityFromBytes(bytes1)
 		require.NoError(t, err)
 		assert.Empty(t, remainder)
 
 		// Both should be valid
 		assert.True(t, ri1.IsValid())
 		assert.True(t, ri2.IsValid())
+
+		// Assert byte-level round-trip equality
+		bytes2, err := ri2.KeysAndCert.Bytes()
+		require.NoError(t, err)
+		assert.Equal(t, bytes1, bytes2, "round-trip bytes must be identical")
 	})
 
 	t.Run("validation after construction", func(t *testing.T) {

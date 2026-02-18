@@ -2,12 +2,18 @@
 package router_identity
 
 import (
+	"bytes"
+	"crypto/sha256"
+	"encoding/hex"
+	"fmt"
+
 	"github.com/go-i2p/common/certificate"
 	"github.com/go-i2p/common/destination"
 	"github.com/go-i2p/common/key_certificate"
 	"github.com/go-i2p/common/keys_and_cert"
 	"github.com/go-i2p/crypto/types"
 	"github.com/go-i2p/logger"
+	"github.com/samber/oops"
 )
 
 var log = logger.GetGoI2PLogger()
@@ -51,7 +57,15 @@ func NewRouterIdentity(publicKey types.ReceivingPublicKey, signingPublicKey type
 		return nil, err
 	}
 
-	// Step 3: Initialize RouterIdentity with KeysAndCert.
+	// Step 3: Validate key types are permitted for RouterIdentity.
+	if err := validateRouterIdentityKeyTypes(keysAndCert); err != nil {
+		return nil, err
+	}
+
+	// Step 4: Warn about deprecated key types.
+	logDeprecatedKeyTypes(keyCert)
+
+	// Step 5: Initialize RouterIdentity with KeysAndCert.
 	routerIdentity := RouterIdentity{
 		KeysAndCert: keysAndCert,
 	}
@@ -69,17 +83,23 @@ func NewRouterIdentity(publicKey types.ReceivingPublicKey, signingPublicKey type
 // The remaining bytes after the specified length are also returned.
 // Returns a list of errors that occurred during parsing.
 // Moved from: router_identity.go
-func ReadRouterIdentity(data []byte) (router_identity *RouterIdentity, remainder []byte, err error) {
+func ReadRouterIdentity(data []byte) (ri *RouterIdentity, remainder []byte, err error) {
 	log.WithFields(logger.Fields{
 		"input_length": len(data),
 	}).Debug("Reading RouterIdentity from data")
-	keys_and_cert, remainder, err := keys_and_cert.ReadKeysAndCert(data)
+	kac, remainder, err := keys_and_cert.ReadKeysAndCert(data)
 	if err != nil {
 		log.WithError(err).Error("Failed to read KeysAndCert for RouterIdentity")
 		return
 	}
-	router_identity = &RouterIdentity{
-		keys_and_cert,
+	if err = validateRouterIdentityKeyTypes(kac); err != nil {
+		return nil, remainder, err
+	}
+	if kac.KeyCertificate != nil {
+		logDeprecatedKeyTypes(kac.KeyCertificate)
+	}
+	ri = &RouterIdentity{
+		kac,
 	}
 	log.WithFields(logger.Fields{
 		"remainder_length": len(remainder),
@@ -88,9 +108,84 @@ func ReadRouterIdentity(data []byte) (router_identity *RouterIdentity, remainder
 }
 
 // AsDestination converts the RouterIdentity to a Destination.
-// Moved from: router_identity.go
-func (router_identity *RouterIdentity) AsDestination() destination.Destination {
+// Returns a zero-value Destination if the receiver or its KeysAndCert is nil.
+func (ri *RouterIdentity) AsDestination() destination.Destination {
+	if ri == nil || ri.KeysAndCert == nil {
+		return destination.Destination{}
+	}
 	return destination.Destination{
-		KeysAndCert: router_identity.KeysAndCert,
+		KeysAndCert: ri.KeysAndCert,
+	}
+}
+
+// Equal returns true if two RouterIdentities are byte-for-byte identical.
+// Returns false if either identity is nil or not properly initialized.
+func (ri *RouterIdentity) Equal(other *RouterIdentity) bool {
+	if ri == nil || other == nil {
+		return false
+	}
+	if ri.KeysAndCert == nil || other.KeysAndCert == nil {
+		return false
+	}
+	riBytes, err := ri.KeysAndCert.Bytes()
+	if err != nil {
+		return false
+	}
+	otherBytes, err := other.KeysAndCert.Bytes()
+	if err != nil {
+		return false
+	}
+	return bytes.Equal(riBytes, otherBytes)
+}
+
+// String returns a human-readable representation of the RouterIdentity,
+// showing a truncated SHA-256 hash of the serialized identity.
+// Implements fmt.Stringer.
+func (ri *RouterIdentity) String() string {
+	if ri == nil || ri.KeysAndCert == nil {
+		return "<nil RouterIdentity>"
+	}
+	b, err := ri.KeysAndCert.Bytes()
+	if err != nil {
+		return "<invalid RouterIdentity>"
+	}
+	hash := sha256.Sum256(b)
+	return fmt.Sprintf("RouterIdentity{%s}", hex.EncodeToString(hash[:8]))
+}
+
+// validateRouterIdentityKeyTypes checks that the KeysAndCert does not use
+// key types prohibited for Router Identities per the I2P specification.
+func validateRouterIdentityKeyTypes(kac *keys_and_cert.KeysAndCert) error {
+	if kac == nil || kac.KeyCertificate == nil {
+		return nil
+	}
+	sigType := kac.KeyCertificate.SigningPublicKeyType()
+	if desc, ok := disallowedSigningKeyTypes[sigType]; ok {
+		return oops.Errorf(
+			"signing key type %d (%s) is not permitted for Router Identities",
+			sigType, desc,
+		)
+	}
+	cryptoType := kac.KeyCertificate.PublicKeyType()
+	if desc, ok := disallowedCryptoKeyTypes[cryptoType]; ok {
+		return oops.Errorf(
+			"crypto key type %d (%s) is not permitted for Router Identities",
+			cryptoType, desc,
+		)
+	}
+	return nil
+}
+
+// logDeprecatedKeyTypes emits warnings for deprecated key types
+// used in Router Identities (ElGamal and DSA-SHA1).
+func logDeprecatedKeyTypes(keyCert *key_certificate.KeyCertificate) {
+	if keyCert == nil {
+		return
+	}
+	if keyCert.PublicKeyType() == DEPRECATED_CRYPTO_ELGAMAL {
+		log.Warn("RouterIdentity uses deprecated ElGamal crypto key type (0); use X25519 (4) for new identities")
+	}
+	if keyCert.SigningPublicKeyType() == DEPRECATED_SIGNING_DSA_SHA1 {
+		log.Warn("RouterIdentity uses deprecated DSA-SHA1 signing key type (0); use Ed25519 (7) for new identities")
 	}
 }
