@@ -3,7 +3,6 @@ package router_info
 
 import (
 	"crypto/ed25519"
-	"crypto/sha512"
 
 	"github.com/go-i2p/common/signature"
 	"github.com/go-i2p/logger"
@@ -16,13 +15,9 @@ var log = logger.GetGoI2PLogger()
 // using the signing public key from the router identity.
 // Currently supports Ed25519 (type 7) signature verification.
 //
-// Note: This implementation pre-hashes the data with SHA-512 before calling
-// ed25519.Verify, consistent with the go-i2p/crypto Ed25519 signer convention.
-// Standard I2P routers use pure Ed25519 (RFC 8032 PureEdDSA) where the Ed25519
-// algorithm itself performs the double-SHA-512 internally. Signatures created
-// by this library will verify correctly here, but signatures from standard I2P
-// routers (Java I2P, i2pd) will NOT verify due to this non-standard pre-hash.
-// This is a known limitation of the go-i2p/crypto library.
+// This implementation uses standard Ed25519 verification (RFC 8032 PureEdDSA),
+// passing data directly to ed25519.Verify which performs its own internal
+// SHA-512 hashing. This is consistent with Java I2P and i2pd.
 func (ri *RouterInfo) VerifySignature() (bool, error) {
 	if ri == nil {
 		return false, oops.Errorf("router info is nil")
@@ -55,10 +50,8 @@ func (ri *RouterInfo) VerifySignature() (bool, error) {
 		if len(keyBytes) != ed25519.PublicKeySize {
 			return false, oops.Errorf("invalid Ed25519 public key size: %d", len(keyBytes))
 		}
-		// The go-i2p Ed25519 signer pre-hashes data with SHA-512 before signing,
-		// matching the I2P EdDSA-SHA512-Ed25519 convention.
-		h := sha512.Sum512(dataBytes)
-		return ed25519.Verify(keyBytes, h[:], sigBytes), nil
+		// Standard Ed25519 (PureEdDSA per RFC 8032) — pass raw data directly
+		return ed25519.Verify(keyBytes, dataBytes, sigBytes), nil
 	default:
 		return false, oops.Errorf("unsupported signature type for verification: %d", sigType)
 	}
