@@ -1,6 +1,7 @@
 package router_identity
 
 import (
+	"crypto/rand"
 	"testing"
 
 	"github.com/go-i2p/common/keys_and_cert"
@@ -223,21 +224,20 @@ func createValidRouterIdentityBytes(t *testing.T) []byte {
 
 	// Create minimal valid keys data (384 bytes for default crypto)
 	keysData := make([]byte, 384)
-	for i := range keysData {
-		keysData[i] = byte(i % 256)
-	}
+	_, err := rand.Read(keysData)
+	require.NoError(t, err)
 
 	// Create KEY certificate (type=5) with minimal valid payload
 	// KeyCertificate structure:
 	//   type (1 byte) = 5
 	//   length (2 bytes) = 4
-	//   crypto_type (2 bytes) = 0 (ElGamal)
-	//   sig_type (2 bytes) = 0 (DSA-SHA1)
+	//   sig_type (2 bytes) = 0 (DSA-SHA1) — signing type is first per spec
+	//   crypto_type (2 bytes) = 0 (ElGamal) — crypto type is second per spec
 	certData := []byte{
 		0x05,       // type = KEY certificate (5)
 		0x00, 0x04, // length = 4 bytes
-		0x00, 0x00, // crypto_type = 0 (ElGamal)
 		0x00, 0x00, // sig_type = 0 (DSA-SHA1)
+		0x00, 0x00, // crypto_type = 0 (ElGamal)
 	}
 
 	// Combine keys and certificate

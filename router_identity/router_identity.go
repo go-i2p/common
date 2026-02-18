@@ -19,9 +19,7 @@ func NewRouterIdentityFromKeysAndCert(keysAndCert *keys_and_cert.KeysAndCert) (*
 	if err := validateRouterIdentityKeyTypes(keysAndCert); err != nil {
 		return nil, err
 	}
-	if keysAndCert.KeyCertificate != nil {
-		logDeprecatedKeyTypes(keysAndCert.KeyCertificate)
-	}
+	logDeprecatedKeyTypes(keysAndCert.KeyCertificate)
 
 	return &RouterIdentity{
 		KeysAndCert: keysAndCert,

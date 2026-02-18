@@ -14,6 +14,7 @@ var disallowedSigningKeyTypes = map[int]string{
 	key_certificate.KEYCERT_SIGN_RSA2048:        "RSA-2048 (offline only, not for Router Identities)",
 	key_certificate.KEYCERT_SIGN_RSA3072:        "RSA-3072 (offline only, not for Router Identities)",
 	key_certificate.KEYCERT_SIGN_RSA4096:        "RSA-4096 (offline only, not for Router Identities)",
+	key_certificate.KEYCERT_SIGN_ED25519PH:      "Ed25519ph (offline only, not for Router Identities)",
 	key_certificate.KEYCERT_SIGN_REDDSA_ED25519: "RedDSA (Destinations/encrypted leasesets only, not for Router Identities)",
 }
 

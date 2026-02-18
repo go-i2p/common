@@ -264,7 +264,7 @@ func TestAudit_String(t *testing.T) {
 		assert.True(t, strings.HasSuffix(s, "}"))
 		// Should contain hex chars between braces
 		inner := s[len("RouterIdentity{") : len(s)-1]
-		assert.Len(t, inner, 16, "truncated SHA-256 hash should be 8 bytes = 16 hex chars")
+		assert.Len(t, inner, 32, "truncated SHA-256 hash should be 16 bytes = 32 hex chars")
 	})
 
 	t.Run("nil receiver produces descriptive string", func(t *testing.T) {

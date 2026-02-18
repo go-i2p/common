@@ -2,8 +2,8 @@
 package router_identity
 
 import (
-	"bytes"
 	"crypto/sha256"
+	"crypto/subtle"
 	"encoding/hex"
 	"fmt"
 
@@ -38,6 +38,8 @@ type RouterIdentity struct {
 }
 
 // NewRouterIdentity creates a new RouterIdentity with the specified parameters.
+// The caller is responsible for providing padding; for Proposal 161-compliant
+// compressible padding, use NewRouterIdentityWithCompressiblePadding instead.
 // Moved from: router_identity.go
 func NewRouterIdentity(publicKey types.ReceivingPublicKey, signingPublicKey types.SigningPublicKey, cert *certificate.Certificate, padding []byte) (*RouterIdentity, error) {
 	log.Debug("Creating new RouterIdentity")
@@ -79,6 +81,31 @@ func NewRouterIdentity(publicKey types.ReceivingPublicKey, signingPublicKey type
 	return &routerIdentity, nil
 }
 
+// NewRouterIdentityWithCompressiblePadding creates a new RouterIdentity and
+// auto-generates Proposal 161-compliant compressible padding from the key
+// certificate and key sizes. This is the recommended constructor for new
+// Router Identities.
+func NewRouterIdentityWithCompressiblePadding(
+	publicKey types.ReceivingPublicKey,
+	signingPublicKey types.SigningPublicKey,
+	cert *certificate.Certificate,
+) (*RouterIdentity, error) {
+	keyCert, err := key_certificate.KeyCertificateFromCertificate(cert)
+	if err != nil {
+		return nil, err
+	}
+	paddingSize := keys_and_cert.KEYS_AND_CERT_DATA_SIZE -
+		keyCert.CryptoSize() - keyCert.SigningPublicKeySize()
+	if paddingSize < 0 {
+		paddingSize = 0
+	}
+	padding, err := keys_and_cert.GenerateCompressiblePadding(paddingSize)
+	if err != nil {
+		return nil, oops.Errorf("failed to generate compressible padding: %w", err)
+	}
+	return NewRouterIdentity(publicKey, signingPublicKey, cert, padding)
+}
+
 // ReadRouterIdentity returns RouterIdentity from a []byte.
 // The remaining bytes after the specified length are also returned.
 // Returns a list of errors that occurred during parsing.
@@ -95,9 +122,7 @@ func ReadRouterIdentity(data []byte) (ri *RouterIdentity, remainder []byte, err 
 	if err = validateRouterIdentityKeyTypes(kac); err != nil {
 		return nil, remainder, err
 	}
-	if kac.KeyCertificate != nil {
-		logDeprecatedKeyTypes(kac.KeyCertificate)
-	}
+	logDeprecatedKeyTypes(kac.KeyCertificate)
 	ri = &RouterIdentity{
 		kac,
 	}
@@ -108,17 +133,21 @@ func ReadRouterIdentity(data []byte) (ri *RouterIdentity, remainder []byte, err 
 }
 
 // AsDestination converts the RouterIdentity to a Destination.
+// Returns a deep copy; mutating the returned Destination does not affect
+// the original RouterIdentity.
 // Returns a zero-value Destination if the receiver or its KeysAndCert is nil.
 func (ri *RouterIdentity) AsDestination() destination.Destination {
 	if ri == nil || ri.KeysAndCert == nil {
 		return destination.Destination{}
 	}
+	copy := *ri.KeysAndCert
 	return destination.Destination{
-		KeysAndCert: ri.KeysAndCert,
+		KeysAndCert: &copy,
 	}
 }
 
 // Equal returns true if two RouterIdentities are byte-for-byte identical.
+// Uses constant-time comparison to prevent timing side-channels.
 // Returns false if either identity is nil or not properly initialized.
 func (ri *RouterIdentity) Equal(other *RouterIdentity) bool {
 	if ri == nil || other == nil {
@@ -135,11 +164,11 @@ func (ri *RouterIdentity) Equal(other *RouterIdentity) bool {
 	if err != nil {
 		return false
 	}
-	return bytes.Equal(riBytes, otherBytes)
+	return subtle.ConstantTimeCompare(riBytes, otherBytes) == 1
 }
 
 // String returns a human-readable representation of the RouterIdentity,
-// showing a truncated SHA-256 hash of the serialized identity.
+// showing a truncated SHA-256 hash (16 bytes / 128 bits) of the serialized identity.
 // Implements fmt.Stringer.
 func (ri *RouterIdentity) String() string {
 	if ri == nil || ri.KeysAndCert == nil {
@@ -150,14 +179,18 @@ func (ri *RouterIdentity) String() string {
 		return "<invalid RouterIdentity>"
 	}
 	hash := sha256.Sum256(b)
-	return fmt.Sprintf("RouterIdentity{%s}", hex.EncodeToString(hash[:8]))
+	return fmt.Sprintf("RouterIdentity{%s}", hex.EncodeToString(hash[:16]))
 }
 
 // validateRouterIdentityKeyTypes checks that the KeysAndCert does not use
 // key types prohibited for Router Identities per the I2P specification.
+// Returns an error if the KeyCertificate is nil (key types cannot be validated).
 func validateRouterIdentityKeyTypes(kac *keys_and_cert.KeysAndCert) error {
-	if kac == nil || kac.KeyCertificate == nil {
-		return nil
+	if kac == nil {
+		return oops.Errorf("KeysAndCert cannot be nil for key type validation")
+	}
+	if kac.KeyCertificate == nil {
+		return oops.Errorf("KeyCertificate is nil; cannot validate key types for Router Identity")
 	}
 	sigType := kac.KeyCertificate.SigningPublicKeyType()
 	if desc, ok := disallowedSigningKeyTypes[sigType]; ok {
