@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/go-i2p/logger"
+	"github.com/samber/oops"
 )
 
 /*
@@ -55,22 +56,32 @@ func NewSignature(data []byte, sigType int) (signature *Signature, remainder []b
 	return
 }
 
-// NewSignatureFromBytes creates a Signature struct from raw bytes without type validation.
-// WARNING: This constructor does NOT verify that len(data) matches the expected size for sigType.
-// Callers MUST either ensure data correctness before calling, or call Validate() on the
-// returned Signature to check for type/size mismatches. Invalid signatures will propagate
-// silently through the system if not validated.
+// NewSignatureFromBytes creates a Signature struct from raw bytes with type and length validation.
+// Returns an error if the sigType is out of the valid spec range (0-65535),
+// the type is unsupported/reserved, or the data length does not match the
+// expected signature size for the given type.
+//
 // Example usage:
 //
-//	sig := NewSignatureFromBytes(rawData, SIGNATURE_TYPE_EDDSA_SHA512_ED25519)
-//	if err := sig.Validate(); err != nil { /* handle error */ }
-func NewSignatureFromBytes(data []byte, sigType int) Signature {
-	// Direct construction without validation for performance-critical scenarios
-	// Caller is responsible for ensuring data integrity and proper type matching
+//	sig, err := NewSignatureFromBytes(rawData, SIGNATURE_TYPE_EDDSA_SHA512_ED25519)
+//	if err != nil { /* handle error */ }
+func NewSignatureFromBytes(data []byte, sigType int) (Signature, error) {
+	expectedLen, err := getSignatureLength(sigType)
+	if err != nil {
+		return Signature{}, err
+	}
+	if len(data) != expectedLen {
+		return Signature{}, oops.Errorf(
+			"signature data length %d does not match expected %d for type %d",
+			len(data), expectedLen, sigType,
+		)
+	}
+	sigData := make([]byte, len(data))
+	copy(sigData, data)
 	return Signature{
 		sigType: sigType,
-		data:    data,
-	}
+		data:    sigData,
+	}, nil
 }
 
 // Type returns the signature algorithm type identifier.

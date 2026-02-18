@@ -77,7 +77,10 @@ func NewLeaseSet(
 		return nil, err
 	}
 
-	leaseSet := assembleLeaseSet(dest, encryptionKey, signingKey, leases, signature)
+	leaseSet, err := assembleLeaseSet(dest, encryptionKey, signingKey, leases, signature)
+	if err != nil {
+		return nil, err
+	}
 
 	logLeaseSetCreationSuccess(leaseSet)
 	return &leaseSet, nil
@@ -192,16 +195,20 @@ func createLeaseSetSignature(signingPrivateKey types.SigningPrivateKey, dbytes [
 }
 
 // assembleLeaseSet creates the final LeaseSet structure from all components.
-func assembleLeaseSet(dest destination.Destination, encryptionKey types.ReceivingPublicKey, signingKey types.SigningPublicKey, leases []lease.Lease, signature []byte) LeaseSet {
+func assembleLeaseSet(dest destination.Destination, encryptionKey types.ReceivingPublicKey, signingKey types.SigningPublicKey, leases []lease.Lease, signatureBytes []byte) (LeaseSet, error) {
 	cert := dest.Certificate()
+	signatureVal, err := sig.NewSignatureFromBytes(signatureBytes, getSignatureType(cert))
+	if err != nil {
+		return LeaseSet{}, oops.Errorf("failed to create signature: %w", err)
+	}
 	return LeaseSet{
 		dest:          dest,
 		encryptionKey: encryptionKey,
 		signingKey:    signingKey,
 		leaseCount:    len(leases),
 		leases:        leases,
-		signature:     sig.NewSignatureFromBytes(signature, getSignatureType(cert)),
-	}
+		signature:     signatureVal,
+	}, nil
 }
 
 // logLeaseSetCreationSuccess logs detailed information about the successfully created LeaseSet.

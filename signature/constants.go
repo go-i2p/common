@@ -46,6 +46,14 @@ const (
 	// RedDSA_SHA512_Ed25519_SIZE defines the byte length of RedDSA-SHA512-Ed25519 signatures (64 bytes).
 	// Uses RedDSA variant of Ed25519 with SHA-512 for randomized EdDSA signatures.
 	RedDSA_SHA512_Ed25519_SIZE = 64
+
+	// GOST_R3410_2012_512_SIZE defines the byte length of GOST R 34.10-2012 signatures (64 bytes).
+	// Reserved per Proposal 134; not implemented.
+	GOST_R3410_2012_512_SIZE = 64
+
+	// GOST_R3410_2012_1024_SIZE defines the byte length of GOST R 34.10-2012 signatures (128 bytes).
+	// Reserved per Proposal 134; not implemented.
+	GOST_R3410_2012_1024_SIZE = 128
 )
 
 // Signature type constants for I2P signature algorithms
@@ -111,8 +119,13 @@ const (
 	// Uses Ed25519ph (pre-hashed) variant with SHA-512 for efficient large message signing.
 	SIGNATURE_TYPE_EDDSA_SHA512_ED25519PH = 8
 
-	// Types 9-10 are reserved for GOST signature algorithms.
-	// Not required for this Go implementation of I2P.
+	// SIGNATURE_TYPE_GOST_R3410_2012_512 identifies GOST R 34.10-2012 with 512-bit output (type 9).
+	// Reserved per Proposal 134. Not implemented but recognized for diagnostic purposes.
+	SIGNATURE_TYPE_GOST_R3410_2012_512 = 9
+
+	// SIGNATURE_TYPE_GOST_R3410_2012_1024 identifies GOST R 34.10-2012 with 1024-bit output (type 10).
+	// Reserved per Proposal 134. Not implemented but recognized for diagnostic purposes.
+	SIGNATURE_TYPE_GOST_R3410_2012_1024 = 10
 
 	// SIGNATURE_TYPE_REDDSA_SHA512_ED25519 identifies RedDSA-SHA512-Ed25519 signature algorithm (type 11).
 	// Uses RedDSA randomized variant of Ed25519 with SHA-512 for enhanced security properties.

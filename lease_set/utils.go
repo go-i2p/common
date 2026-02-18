@@ -299,7 +299,11 @@ func parseSignature(data []byte, dest destination.Destination) (sig.Signature, [
 	}
 
 	sigType := determineSignatureType(cert, kind)
-	return sig.NewSignatureFromBytes(data[:sigSize], sigType), remainder, nil
+	sigVal, err := sig.NewSignatureFromBytes(data[:sigSize], sigType)
+	if err != nil {
+		return sig.Signature{}, data, oops.Errorf("failed to create signature: %w", err)
+	}
+	return sigVal, remainder, nil
 }
 
 // determineSignatureSize calculates the signature size based on certificate type.

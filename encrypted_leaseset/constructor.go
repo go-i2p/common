@@ -203,20 +203,20 @@ func createSignature(signingKey interface{}, data []byte, sigType uint16) (sig.S
 	switch key := signingKey.(type) {
 	case ed25519.PrivateKey:
 		signatureBytes := ed25519.Sign(key, h[:])
-		return sig.NewSignatureFromBytes(signatureBytes, int(sigType)), nil
+		return sig.NewSignatureFromBytes(signatureBytes, int(sigType))
 
 	case [64]byte:
 		signatureBytes := ed25519.Sign(key[:], h[:])
-		return sig.NewSignatureFromBytes(signatureBytes, int(sigType)), nil
+		return sig.NewSignatureFromBytes(signatureBytes, int(sigType))
 
 	case *goi2ped25519.Ed25519PrivateKey:
 		signatureBytes := ed25519.Sign(key.Bytes(), h[:])
-		return sig.NewSignatureFromBytes(signatureBytes, int(sigType)), nil
+		return sig.NewSignatureFromBytes(signatureBytes, int(sigType))
 
 	case []byte:
 		if len(key) == ed25519.PrivateKeySize {
 			signatureBytes := ed25519.Sign(key, h[:])
-			return sig.NewSignatureFromBytes(signatureBytes, int(sigType)), nil
+			return sig.NewSignatureFromBytes(signatureBytes, int(sigType))
 		}
 		return sig.Signature{}, oops.Code("invalid_key_length").
 			With("length", len(key)).

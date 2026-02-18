@@ -29,10 +29,22 @@ func ReadSignature(data []byte, sigType int) (sig Signature, remainder []byte, e
 	return
 }
 
+// SignatureSize returns the expected byte length for the given signature algorithm type.
+// This is the exported single source of truth for signature type-to-size mapping.
+// Returns an error if the signature type is unsupported, reserved, or out of the
+// valid range (0-65535) defined by the I2P spec's 2-byte Integer.
+func SignatureSize(sigType int) (int, error) {
+	return getSignatureLength(sigType)
+}
+
 // getSignatureLength determines the signature length based on the algorithm type.
 // Each signature algorithm has a fixed-length output that must be validated.
-// Returns an error if the signature type is unsupported.
+// Validates that sigType is within the spec-defined 2-byte Integer range (0-65535).
+// Returns a distinct error for reserved-but-unimplemented types vs completely unknown types.
 func getSignatureLength(sigType int) (int, error) {
+	if sigType < 0 || sigType > 65535 {
+		return 0, oops.Errorf("signature type %d out of valid range (0-65535)", sigType)
+	}
 	switch sigType {
 	case SIGNATURE_TYPE_DSA_SHA1:
 		return DSA_SHA1_SIZE, nil
@@ -52,10 +64,20 @@ func getSignatureLength(sigType int) (int, error) {
 		return EdDSA_SHA512_Ed25519_SIZE, nil
 	case SIGNATURE_TYPE_EDDSA_SHA512_ED25519PH:
 		return EdDSA_SHA512_Ed25519ph_SIZE, nil
+	case SIGNATURE_TYPE_GOST_R3410_2012_512:
+		return 0, oops.Errorf("reserved signature type %d (GOST R 34.10-2012-512, Proposal 134): not implemented", sigType)
+	case SIGNATURE_TYPE_GOST_R3410_2012_1024:
+		return 0, oops.Errorf("reserved signature type %d (GOST R 34.10-2012-1024, Proposal 134): not implemented", sigType)
 	case SIGNATURE_TYPE_REDDSA_SHA512_ED25519:
 		return RedDSA_SHA512_Ed25519_SIZE, nil
 	default:
-		return 0, oops.Errorf("unsupported signature type: %d", sigType)
+		if sigType >= SIGNATURE_TYPE_MLDSA_RESERVED_START && sigType <= SIGNATURE_TYPE_MLDSA_RESERVED_END {
+			return 0, oops.Errorf("reserved signature type %d (MLDSA range 12-20, Proposal 169): not implemented", sigType)
+		}
+		if sigType >= SIGNATURE_TYPE_EXPERIMENTAL_START && sigType <= SIGNATURE_TYPE_EXPERIMENTAL_END {
+			return 0, oops.Errorf("experimental signature type %d (range 65280-65534): not supported", sigType)
+		}
+		return 0, oops.Errorf("unknown signature type: %d", sigType)
 	}
 }
 

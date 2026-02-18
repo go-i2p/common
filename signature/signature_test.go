@@ -93,8 +93,9 @@ func TestSignatureValidate(t *testing.T) {
 		for i := range data {
 			data[i] = byte(i % 256)
 		}
-		sig := NewSignatureFromBytes(data, SIGNATURE_TYPE_EDDSA_SHA512_ED25519)
-		err := sig.Validate()
+		sig, err := NewSignatureFromBytes(data, SIGNATURE_TYPE_EDDSA_SHA512_ED25519)
+		require.NoError(t, err)
+		err = sig.Validate()
 		require.NoError(t, err)
 	})
 
@@ -103,8 +104,9 @@ func TestSignatureValidate(t *testing.T) {
 		for i := range data {
 			data[i] = byte(i % 256)
 		}
-		sig := NewSignatureFromBytes(data, SIGNATURE_TYPE_DSA_SHA1)
-		err := sig.Validate()
+		sig, err := NewSignatureFromBytes(data, SIGNATURE_TYPE_DSA_SHA1)
+		require.NoError(t, err)
+		err = sig.Validate()
 		require.NoError(t, err)
 	})
 
@@ -113,35 +115,31 @@ func TestSignatureValidate(t *testing.T) {
 		for i := range data {
 			data[i] = byte(i % 256)
 		}
-		sig := NewSignatureFromBytes(data, SIGNATURE_TYPE_RSA_SHA256_2048)
-		err := sig.Validate()
+		sig, err := NewSignatureFromBytes(data, SIGNATURE_TYPE_RSA_SHA256_2048)
+		require.NoError(t, err)
+		err = sig.Validate()
 		require.NoError(t, err)
 	})
 
 	t.Run("invalid signature type", func(t *testing.T) {
 		data := make([]byte, 64)
-		sig := NewSignatureFromBytes(data, 9999)
-		err := sig.Validate()
+		_, err := NewSignatureFromBytes(data, 9999)
 		require.Error(t, err)
-		assert.Contains(t, err.Error(), "invalid signature type")
-		assert.Contains(t, err.Error(), "9999")
+		assert.Contains(t, err.Error(), "unknown signature type")
 	})
 
 	t.Run("incorrect data size for type", func(t *testing.T) {
 		// EdDSA should be 64 bytes, but provide 40
 		data := make([]byte, DSA_SHA1_SIZE)
-		sig := NewSignatureFromBytes(data, SIGNATURE_TYPE_EDDSA_SHA512_ED25519)
-		err := sig.Validate()
+		_, err := NewSignatureFromBytes(data, SIGNATURE_TYPE_EDDSA_SHA512_ED25519)
 		require.Error(t, err)
-		assert.Contains(t, err.Error(), "signature data size mismatch")
-		assert.Contains(t, err.Error(), "got 40 bytes, expected 64 bytes")
+		assert.Contains(t, err.Error(), "does not match expected")
 	})
 
 	t.Run("empty data", func(t *testing.T) {
-		sig := NewSignatureFromBytes([]byte{}, SIGNATURE_TYPE_EDDSA_SHA512_ED25519)
-		err := sig.Validate()
+		_, err := NewSignatureFromBytes([]byte{}, SIGNATURE_TYPE_EDDSA_SHA512_ED25519)
 		require.Error(t, err)
-		assert.Contains(t, err.Error(), "signature data size mismatch")
+		assert.Contains(t, err.Error(), "does not match expected")
 	})
 
 	t.Run("all supported signature types", func(t *testing.T) {
@@ -163,8 +161,9 @@ func TestSignatureValidate(t *testing.T) {
 
 		for _, tc := range testCases {
 			data := make([]byte, tc.size)
-			sig := NewSignatureFromBytes(data, tc.sigType)
-			err := sig.Validate()
+			sig, err := NewSignatureFromBytes(data, tc.sigType)
+			require.NoError(t, err, "NewSignatureFromBytes should succeed for type %d", tc.sigType)
+			err = sig.Validate()
 			require.NoError(t, err, "signature type %d should be valid", tc.sigType)
 		}
 	})
@@ -178,19 +177,20 @@ func TestSignatureIsValid(t *testing.T) {
 
 	t.Run("valid signature", func(t *testing.T) {
 		data := make([]byte, EdDSA_SHA512_Ed25519_SIZE)
-		sig := NewSignatureFromBytes(data, SIGNATURE_TYPE_EDDSA_SHA512_ED25519)
+		sig, err := NewSignatureFromBytes(data, SIGNATURE_TYPE_EDDSA_SHA512_ED25519)
+		require.NoError(t, err)
 		assert.True(t, sig.IsValid())
 	})
 
 	t.Run("invalid signature type", func(t *testing.T) {
 		data := make([]byte, 64)
-		sig := NewSignatureFromBytes(data, 9999)
-		assert.False(t, sig.IsValid())
+		_, err := NewSignatureFromBytes(data, 9999)
+		assert.Error(t, err)
 	})
 
 	t.Run("incorrect data size", func(t *testing.T) {
 		data := make([]byte, 40)
-		sig := NewSignatureFromBytes(data, SIGNATURE_TYPE_EDDSA_SHA512_ED25519)
-		assert.False(t, sig.IsValid())
+		_, err := NewSignatureFromBytes(data, SIGNATURE_TYPE_EDDSA_SHA512_ED25519)
+		assert.Error(t, err)
 	})
 }

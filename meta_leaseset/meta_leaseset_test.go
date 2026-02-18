@@ -143,7 +143,11 @@ func createTestSignature() signature.Signature {
 	for i := range sigBytes {
 		sigBytes[i] = byte(i % 256)
 	}
-	return signature.NewSignatureFromBytes(sigBytes, key_certificate.KEYCERT_SIGN_ED25519)
+	sig, err := signature.NewSignatureFromBytes(sigBytes, key_certificate.KEYCERT_SIGN_ED25519)
+	if err != nil {
+		panic("createTestSignature: " + err.Error())
+	}
+	return sig
 }
 
 // TestReadMetaLeaseSetMinimalValid tests parsing of a minimal valid MetaLeaseSet

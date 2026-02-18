@@ -984,7 +984,10 @@ func createLeaseSet2Signature(signingKey interface{}, data []byte, sigType uint1
 	// This would call into crypto/signature package to create real signatures
 	// For now, return an empty signature of the correct size
 	signatureData := make([]byte, sigSize)
-	signature := sig.NewSignatureFromBytes(signatureData, int(sigType))
+	signature, err := sig.NewSignatureFromBytes(signatureData, int(sigType))
+	if err != nil {
+		return sig.Signature{}, oops.Errorf("failed to create signature: %w", err)
+	}
 
 	log.WithFields(logger.Fields{
 		"signature_type": sigType,
