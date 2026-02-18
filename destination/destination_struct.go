@@ -61,6 +61,8 @@ func ReadDestination(data []byte) (Destination, []byte, error) {
 // Bytes returns the binary representation of the Destination.
 // This serializes the destination back to []byte format for storage or transmission.
 // Returns an error if the destination is not properly initialized.
+// Uses a value receiver because the Destination struct contains only a pointer
+// field, making copies cheap, and this preserves API compatibility.
 func (d Destination) Bytes() ([]byte, error) {
 	if d.KeysAndCert == nil {
 		return nil, oops.Errorf("destination is not initialized: nil KeysAndCert")
@@ -81,6 +83,8 @@ func (d Destination) Bytes() ([]byte, error) {
 
 // Base32Address returns the I2P base32 address for this Destination.
 // Returns an error if the destination is not properly initialized.
+// Uses a value receiver for API compatibility with callers that receive
+// Destination by value (e.g., from LeaseSet2.Destination()).
 func (d Destination) Base32Address() (string, error) {
 	if d.KeysAndCert == nil {
 		return "", oops.Errorf("destination is not initialized: nil KeysAndCert")
@@ -93,17 +97,17 @@ func (d Destination) Base32Address() (string, error) {
 	}
 	hash := types.SHA256(dest)
 	str := strings.TrimRight(base32.EncodeToString(hash[:]), "=")
-	str = str + I2P_BASE32_SUFFIX
+	str = str + I2PBase32Suffix
 
-	log.WithFields(logger.Fields{
-		"base32_address": str,
-	}).Debug("Generated Base32 address for Destination")
+	log.Debug("Generated Base32 address for Destination")
 
 	return str, nil
 }
 
 // Base64 returns the I2P base64 address for this Destination.
 // Returns an error if the destination is not properly initialized.
+// Uses a value receiver for API compatibility with callers that receive
+// Destination by value.
 func (d Destination) Base64() (string, error) {
 	if d.KeysAndCert == nil {
 		return "", oops.Errorf("destination is not initialized: nil KeysAndCert")
@@ -116,9 +120,7 @@ func (d Destination) Base64() (string, error) {
 	}
 	base64Address := base64.EncodeToString(dest)
 
-	log.WithFields(logger.Fields{
-		"base64_address_length": len(base64Address),
-	}).Debug("Generated Base64 address for Destination")
+	log.Debug("Generated Base64 address for Destination")
 
 	return base64Address, nil
 }

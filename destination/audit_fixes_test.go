@@ -162,9 +162,9 @@ func TestAudit_HashMethod(t *testing.T) {
 		dest, _, err := ReadDestination(destBytes)
 		require.NoError(t, err)
 
-		hash1, err := (&dest).Hash()
+		hash1, err := dest.Hash()
 		require.NoError(t, err)
-		hash2, err := (&dest).Hash()
+		hash2, err := dest.Hash()
 		require.NoError(t, err)
 
 		assert.Equal(t, hash1, hash2, "Same destination should produce same hash")
@@ -284,12 +284,12 @@ func createDestinationBytesWithCryptoType(t *testing.T, cryptoType int) []byte {
 	}
 
 	// Create KEY certificate (type=5) with specified crypto type
-	// KeyCertificate payload: sig_type (2 bytes) + crypto_type (2 bytes)
+	// I2P spec wire format: sig_type (2 bytes) first, then crypto_type (2 bytes)
 	certData := []byte{
 		0x05,       // type = KEY certificate (5)
 		0x00, 0x04, // length = 4 bytes
-		0x00, 0x00, // sig_type = 0 (DSA-SHA1)
-		byte(cryptoType >> 8), byte(cryptoType), // crypto_type
+		0x00, 0x00, // sig_type = 0 (DSA-SHA1) [signing type first per spec]
+		byte(cryptoType >> 8), byte(cryptoType), // crypto_type [second per spec]
 	}
 
 	return append(keysData, certData...)

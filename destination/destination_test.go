@@ -236,13 +236,13 @@ func createValidDestinationBytes(t *testing.T) []byte {
 	// KeyCertificate structure:
 	//   type (1 byte) = 5
 	//   length (2 bytes) = 4
-	//   crypto_type (2 bytes) = 0 (ElGamal)
-	//   sig_type (2 bytes) = 0 (DSA-SHA1)
+	//   sig_type (2 bytes) = 0 (DSA-SHA1)   [signing type first per I2P spec]
+	//   crypto_type (2 bytes) = 0 (ElGamal) [crypto type second per I2P spec]
 	certData := []byte{
 		0x05,       // type = KEY certificate (5)
 		0x00, 0x04, // length = 4 bytes
-		0x00, 0x00, // crypto_type = 0 (ElGamal)
 		0x00, 0x00, // sig_type = 0 (DSA-SHA1)
+		0x00, 0x00, // crypto_type = 0 (ElGamal)
 	}
 
 	// Combine keys and certificate
