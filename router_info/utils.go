@@ -19,10 +19,13 @@ func bytesToString(bytes []byte) string {
 	return str
 }
 
-// cleanString removes non-printable characters from a string.
+// cleanString removes non-printable characters and null bytes from a string.
 func cleanString(str string) string {
 	text := str
 	text = strings.Map(func(r rune) rune {
+		if r == 0 {
+			return -1 // strip null bytes explicitly
+		}
 		if unicode.IsPrint(r) {
 			return r
 		}

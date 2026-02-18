@@ -331,7 +331,7 @@ func (router_info RouterInfo) String() string {
 	if err != nil {
 		return "RouterInfo{<error serializing identity>}"
 	}
-	str := "Certificate: " + bytesToString(identityBytes) + "\n"
+	str := "RouterIdentity: " + bytesToString(identityBytes) + "\n"
 	str += "Published: " + bytesToString(router_info.published.Bytes()) + "\n"
 	str += "Addresses:" + bytesToString(router_info.size.Bytes()) + "\n"
 	for index, addr := range router_info.addresses {
@@ -375,7 +375,11 @@ func (router_info *RouterInfo) Published() *data.Date {
 }
 
 // RouterAddressCount returns the count of RouterAddress in this RouterInfo as a Go integer.
+// Returns 0 if the size field is nil (e.g., uninitialized or failed-parse RouterInfo).
 func (router_info *RouterInfo) RouterAddressCount() int {
+	if router_info.size == nil {
+		return 0
+	}
 	count := router_info.size.Int()
 	log.WithField("count", count).Debug("Retrieved RouterAddressCount from RouterInfo")
 	return count
@@ -388,20 +392,32 @@ func (router_info *RouterInfo) RouterAddresses() []*router_address.RouterAddress
 }
 
 // PeerSize returns the peer size as a Go integer.
+// Returns 0 if the peer_size field is nil (e.g., uninitialized or failed-parse RouterInfo).
 func (router_info *RouterInfo) PeerSize() int {
 	// Peer size is unused according to I2P spec (always 0):
-	// https://geti2p.net/spec/common-structures#routeraddress
+	// https://geti2p.net/spec/common-structures#routerinfo
 	// But we return the actual field value to maintain API contract
+	if router_info.peer_size == nil {
+		return 0
+	}
 	return router_info.peer_size.Int()
 }
 
 // Options returns the options for this RouterInfo as an I2P data.Mapping.
+// Returns an empty Mapping if the options field is nil.
 func (router_info RouterInfo) Options() (mapping data.Mapping) {
+	if router_info.options == nil {
+		return data.Mapping{}
+	}
 	return *router_info.options
 }
 
 // Signature returns the signature for this RouterInfo as an I2P Signature.
-func (router_info RouterInfo) Signature() (signature signature.Signature) {
+// Returns a zero-value Signature if the signature field is nil.
+func (router_info RouterInfo) Signature() (sig signature.Signature) {
+	if router_info.signature == nil {
+		return signature.Signature{}
+	}
 	return *router_info.signature
 }
 
@@ -411,12 +427,16 @@ func (router_info RouterInfo) Network() string {
 }
 
 // AddAddress adds a RouterAddress to this RouterInfo and updates the size field.
-func (router_info *RouterInfo) AddAddress(address *router_address.RouterAddress) {
-	router_info.addresses = append(router_info.addresses, address)
-	newSize, err := data.NewIntegerFromInt(len(router_info.addresses), 1)
-	if err == nil {
-		router_info.size = newSize
+// Returns an error if the address count would exceed 255 (max for 1-byte Integer).
+func (router_info *RouterInfo) AddAddress(address *router_address.RouterAddress) error {
+	newCount := len(router_info.addresses) + 1
+	newSize, err := data.NewIntegerFromInt(newCount, 1)
+	if err != nil {
+		return oops.Errorf("cannot add address: count %d exceeds 1-byte integer max: %v", newCount, err)
 	}
+	router_info.addresses = append(router_info.addresses, address)
+	router_info.size = newSize
+	return nil
 }
 
 // RouterCapabilities returns the capabilities string for this RouterInfo.
@@ -779,10 +799,15 @@ func hasCriticalMappingErrors(errs []error) bool {
 
 // logCriticalMappingErrors logs critical mapping parsing errors.
 func logCriticalMappingErrors(remainder []byte, errs []error) {
+	errMsgs := make([]string, len(errs))
+	for i, e := range errs {
+		errMsgs[i] = e.Error()
+	}
 	log.WithFields(logger.Fields{
 		"at":       "(RouterInfo) parsePeerSizeAndOptions",
 		"data_len": len(remainder),
-		"reason":   "not enough data",
+		"errors":   strings.Join(errMsgs, "; "),
+		"reason":   "mapping parse errors",
 	}).Error("error parsing router info")
 }
 
@@ -834,15 +859,19 @@ func getSignatureTypeFromCert(cert *certificate.Certificate) (int, error) {
 	return sigType, nil
 }
 
-// validateSignatureType validates that the signature type is within the range of
-// known I2P signature types (0 through 11). Types 0-4 are deprecated but still
-// valid on the network. Returns error if signature type is outside this range.
+// validateSignatureType validates that the signature type is a recognized I2P
+// signature type. Accepts types 0-11, reserved GOST types 9-10, reserved MLDSA
+// types 12-20, and experimental types 65280-65534. Returns error for completely
+// unknown types. This delegates to the signature package's SignatureSize for
+// authoritative type validation.
 func validateSignatureType(sigType int, cert *certificate.Certificate) error {
-	if sigType < signature.SIGNATURE_TYPE_DSA_SHA1 || sigType > signature.SIGNATURE_TYPE_REDDSA_SHA512_ED25519 {
+	// Use the signature package as single source of truth for type validation
+	_, err := signature.SignatureSize(sigType)
+	if err != nil {
 		log.WithFields(logger.Fields{
 			"sigType": sigType,
 		}).Error("Invalid signature type detected")
-		return oops.Errorf("invalid signature type: %d", sigType)
+		return oops.Errorf("invalid signature type: %d: %v", sigType, err)
 	}
 	if sigType <= signature.SIGNATURE_TYPE_RSA_SHA256_2048 {
 		log.WithFields(logger.Fields{

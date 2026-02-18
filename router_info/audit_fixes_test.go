@@ -191,7 +191,7 @@ func TestAudit_StringPanicsOnNilFields(t *testing.T) {
 		ri, err := generateTestRouterInfo(t, time.Now())
 		require.NoError(t, err)
 		str := ri.String()
-		assert.Contains(t, str, "Certificate:")
+		assert.Contains(t, str, "RouterIdentity:")
 		assert.Contains(t, str, "Published:")
 		assert.Contains(t, str, "Signature:")
 	})
@@ -218,10 +218,7 @@ func TestAudit_OwnedRouterInfoIsStub(t *testing.T) {
 	require.NoError(t, err)
 
 	ri := OwnedRouterInfo(*keyCert)
-	assert.NotNil(t, ri, "OwnedRouterInfo should return a non-nil RouterInfo")
-	// It's a stub, so all fields should be nil
-	assert.Nil(t, ri.router_identity)
-	assert.Nil(t, ri.published)
+	assert.Nil(t, ri, "OwnedRouterInfo should return nil (deprecated stub)")
 }
 
 // ============================================================
@@ -287,7 +284,8 @@ func TestAudit_AddAddressUpdatesSize(t *testing.T) {
 	newAddr, err := router_address.NewRouterAddress(3, <-time.After(1*time.Second), "SSU2", options)
 	require.NoError(t, err)
 
-	ri.AddAddress(newAddr)
+	err = ri.AddAddress(newAddr)
+	require.NoError(t, err)
 
 	newSize := ri.size.Int()
 	newCount := len(ri.addresses)
