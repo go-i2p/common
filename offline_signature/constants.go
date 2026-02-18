@@ -11,10 +11,16 @@
 package offline_signature
 
 const (
-	// OFFLINE_SIGNATURE_MIN_SIZE defines the minimum byte length of an OfflineSignature.
-	// This includes: 4 bytes (expires) + 2 bytes (sigtype) + minimum key size + minimum signature size.
-	// The actual minimum depends on signature types, but EdDSA (type 7) gives us 4+2+32+64 = 102 bytes.
-	OFFLINE_SIGNATURE_MIN_SIZE = 102
+	// OFFLINE_SIGNATURE_EDDSA_SIZE is the total byte length of an OfflineSignature when both
+	// the transient key and the destination use EdDSA-SHA512-Ed25519 (type 7):
+	// 4 (expires) + 2 (sigtype) + 32 (Ed25519 public key) + 64 (Ed25519 signature) = 102 bytes.
+	OFFLINE_SIGNATURE_EDDSA_SIZE = 102
+
+	// OFFLINE_SIGNATURE_MIN_SIZE is the byte length of an EdDSA-only OfflineSignature (102 bytes).
+	// Deprecated: This name is misleading because smaller valid OfflineSignatures exist when
+	// mixing signature types (e.g., Ed25519 transient + DSA_SHA1 destination = 78 bytes).
+	// Use OFFLINE_SIGNATURE_EDDSA_SIZE for clarity.
+	OFFLINE_SIGNATURE_MIN_SIZE = OFFLINE_SIGNATURE_EDDSA_SIZE
 
 	// EXPIRES_SIZE defines the byte length of the expires field (4-byte timestamp).
 	// Seconds since the epoch, rolls over in 2106.

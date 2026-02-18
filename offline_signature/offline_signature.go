@@ -16,12 +16,16 @@
 package offline_signature
 
 import (
+	"crypto"
+	"crypto/ed25519"
+	"crypto/rand"
 	"encoding/binary"
 	"errors"
 	"fmt"
 	"time"
 
 	"github.com/go-i2p/common/data"
+	"github.com/go-i2p/common/signature"
 )
 
 var (
@@ -341,68 +345,61 @@ func (o *OfflineSignature) ExpiresDate() (*data.Date, error) {
 	return data.DateFromTime(expiresTime)
 }
 
-// Validate checks if the OfflineSignature is properly initialized and not expired.
-// This method ensures the signature is valid for use in cryptographic operations.
+// ValidateStructure checks if the OfflineSignature has valid field sizes and types
+// without checking whether it has expired. Use this when you need to inspect or log
+// historical/expired offline signatures without treating expiration as an error.
 //
-// Validation checks:
+// Checks performed:
 //   - Signature is not nil
 //   - Expiration timestamp is not zero (undefined)
-//   - Signature has not expired (current time < expiration time)
 //   - Transient signature type is known and supported
 //   - Transient public key size matches expected size for its type
 //   - Destination signature type is known and supported
 //   - Signature size matches expected size for destination type
 //
 // Returns nil if validation passes, or a descriptive error if validation fails.
-//
-// Example usage:
-//
-//	if err := offlineSig.Validate(); err != nil {
-//	    return fmt.Errorf("invalid offline signature: %w", err)
-//	}
-func (o *OfflineSignature) Validate() error {
+func (o *OfflineSignature) ValidateStructure() error {
 	if o == nil {
 		return errors.New("offline signature is nil")
 	}
-
-	// Check for zero/undefined expiration
 	if o.expires == 0 {
 		return errors.New("offline signature has zero expiration timestamp")
 	}
-
-	// Check if signature has expired
-	if o.IsExpired() {
-		return fmt.Errorf("%w: expired at %s",
-			ErrExpiredOfflineSignature,
-			o.ExpiresTime().Format(time.RFC3339))
-	}
-
-	// Validate transient signature type
 	expectedKeySize := SigningPublicKeySize(o.sigtype)
 	if expectedKeySize == 0 {
 		return fmt.Errorf("%w: transient key type %d",
 			ErrUnknownSignatureType, o.sigtype)
 	}
-
-	// Validate transient public key size
 	if len(o.transientPublicKey) != expectedKeySize {
 		return fmt.Errorf("transient public key size mismatch: expected %d bytes, got %d bytes",
 			expectedKeySize, len(o.transientPublicKey))
 	}
-
-	// Validate destination signature type
 	expectedSigSize := SignatureSize(o.destinationSigType)
 	if expectedSigSize == 0 {
 		return fmt.Errorf("%w: destination signature type %d",
 			ErrUnknownSignatureType, o.destinationSigType)
 	}
-
-	// Validate signature size
 	if len(o.signature) != expectedSigSize {
 		return fmt.Errorf("signature size mismatch: expected %d bytes, got %d bytes",
 			expectedSigSize, len(o.signature))
 	}
+	return nil
+}
 
+// Validate checks if the OfflineSignature is properly initialized and not expired.
+// This method calls ValidateStructure() for field validation and additionally checks
+// that the signature has not passed its expiration time.
+//
+// Returns nil if validation passes, or a descriptive error if validation fails.
+func (o *OfflineSignature) Validate() error {
+	if err := o.ValidateStructure(); err != nil {
+		return err
+	}
+	if o.IsExpired() {
+		return fmt.Errorf("%w: expired at %s",
+			ErrExpiredOfflineSignature,
+			o.ExpiresTime().Format(time.RFC3339))
+	}
 	return nil
 }
 
@@ -416,4 +413,146 @@ func (o *OfflineSignature) Validate() error {
 //	}
 func (o *OfflineSignature) IsValid() bool {
 	return o.Validate() == nil
+}
+
+// SignedData returns the byte sequence that is covered by the destination's long-term
+// signing key signature. Per the I2P specification:
+//
+//	"Signature of expires timestamp, transient sig type, and public key,
+//	 by the destination public key."
+//
+// The returned byte layout is: expires(4) || sigtype(2) || transient_public_key(variable).
+// This is the exact message that must be signed or verified.
+func (o *OfflineSignature) SignedData() []byte {
+	dataLen := EXPIRES_SIZE + SIGTYPE_SIZE + len(o.transientPublicKey)
+	result := make([]byte, dataLen)
+	binary.BigEndian.PutUint32(result[0:4], o.expires)
+	binary.BigEndian.PutUint16(result[4:6], o.sigtype)
+	copy(result[EXPIRES_SIZE+SIGTYPE_SIZE:], o.transientPublicKey)
+	return result
+}
+
+// VerifySignature verifies the offline signature against the destination's long-term
+// signing public key. This confirms that the destination authorized the transient key.
+//
+// Currently supports:
+//   - Ed25519 (type 7): standard Ed25519 verification via crypto/ed25519
+//   - Ed25519ph (type 8): prehashed Ed25519 verification
+//   - RedDSA (type 11): same verification as Ed25519 (curve is identical)
+//
+// Returns (true, nil) if the signature is valid, (false, nil) if it is invalid,
+// or (false, error) if verification cannot be performed (unsupported type, wrong key size).
+func (o *OfflineSignature) VerifySignature(destinationPublicKey []byte) (bool, error) {
+	if err := o.ValidateStructure(); err != nil {
+		return false, fmt.Errorf("structural validation failed: %w", err)
+	}
+	signedData := o.SignedData()
+	return verifyWithDestinationType(o.destinationSigType, destinationPublicKey, signedData, o.signature)
+}
+
+// verifyWithDestinationType dispatches signature verification based on destination type.
+func verifyWithDestinationType(destSigType uint16, pubKey, message, sig []byte) (bool, error) {
+	switch destSigType {
+	case signature.SIGNATURE_TYPE_EDDSA_SHA512_ED25519,
+		signature.SIGNATURE_TYPE_REDDSA_SHA512_ED25519:
+		return verifyEd25519(pubKey, message, sig)
+	case signature.SIGNATURE_TYPE_EDDSA_SHA512_ED25519PH:
+		return verifyEd25519ph(pubKey, message, sig)
+	default:
+		return false, fmt.Errorf("signature verification not implemented for destination type %d", destSigType)
+	}
+}
+
+// verifyEd25519 performs standard Ed25519 signature verification.
+func verifyEd25519(pubKey, message, sig []byte) (bool, error) {
+	if len(pubKey) != ed25519.PublicKeySize {
+		return false, fmt.Errorf("invalid Ed25519 public key size: expected %d, got %d",
+			ed25519.PublicKeySize, len(pubKey))
+	}
+	return ed25519.Verify(ed25519.PublicKey(pubKey), message, sig), nil
+}
+
+// verifyEd25519ph performs prehashed Ed25519 (Ed25519ph) signature verification.
+func verifyEd25519ph(pubKey, message, sig []byte) (bool, error) {
+	if len(pubKey) != ed25519.PublicKeySize {
+		return false, fmt.Errorf("invalid Ed25519 public key size: expected %d, got %d",
+			ed25519.PublicKeySize, len(pubKey))
+	}
+	err := ed25519.VerifyWithOptions(
+		ed25519.PublicKey(pubKey), message, sig,
+		&ed25519.Options{Hash: crypto.SHA512},
+	)
+	return err == nil, nil
+}
+
+// CreateOfflineSignature generates a complete OfflineSignature by signing the appropriate
+// data with the destination's Ed25519 private key. This function implements the spec
+// recommendation that offline signatures "can, and should, be generated offline."
+//
+// Parameters:
+//   - expires: Unix timestamp (seconds since epoch) when the transient key expires
+//   - transientSigType: Signature type of the transient signing public key
+//   - transientPublicKey: Raw bytes of the transient signing public key
+//   - destinationPrivateKey: The destination's Ed25519 private key for signing
+//   - destinationSigType: Signature type of the destination (7=Ed25519, 8=Ed25519ph, 11=RedDSA)
+//
+// Returns the signed OfflineSignature, or an error if parameters are invalid.
+func CreateOfflineSignature(
+	expires uint32,
+	transientSigType uint16,
+	transientPublicKey []byte,
+	destinationPrivateKey ed25519.PrivateKey,
+	destinationSigType uint16,
+) (OfflineSignature, error) {
+	if err := validateCreateParams(expires, transientSigType, transientPublicKey, destinationSigType); err != nil {
+		return OfflineSignature{}, err
+	}
+	signedData := buildSignedData(expires, transientSigType, transientPublicKey)
+	sig, err := signWithDestinationType(destinationSigType, destinationPrivateKey, signedData)
+	if err != nil {
+		return OfflineSignature{}, fmt.Errorf("failed to sign: %w", err)
+	}
+	return NewOfflineSignature(expires, transientSigType, transientPublicKey, sig, destinationSigType)
+}
+
+// validateCreateParams validates the input parameters for CreateOfflineSignature.
+func validateCreateParams(expires uint32, transientSigType uint16, transientPublicKey []byte, destSigType uint16) error {
+	if expires == 0 {
+		return errors.New("expires must be non-zero")
+	}
+	expectedKeySize := SigningPublicKeySize(transientSigType)
+	if expectedKeySize == 0 {
+		return fmt.Errorf("%w: transient key type %d", ErrUnknownSignatureType, transientSigType)
+	}
+	if len(transientPublicKey) != expectedKeySize {
+		return fmt.Errorf("transient public key size mismatch: expected %d, got %d",
+			expectedKeySize, len(transientPublicKey))
+	}
+	if SignatureSize(destSigType) == 0 {
+		return fmt.Errorf("%w: destination signature type %d", ErrUnknownSignatureType, destSigType)
+	}
+	return nil
+}
+
+// buildSignedData constructs the byte sequence to be signed: expires || sigtype || transient_public_key.
+func buildSignedData(expires uint32, sigtype uint16, transientPublicKey []byte) []byte {
+	dataLen := EXPIRES_SIZE + SIGTYPE_SIZE + len(transientPublicKey)
+	result := make([]byte, dataLen)
+	binary.BigEndian.PutUint32(result[0:4], expires)
+	binary.BigEndian.PutUint16(result[4:6], sigtype)
+	copy(result[EXPIRES_SIZE+SIGTYPE_SIZE:], transientPublicKey)
+	return result
+}
+
+// signWithDestinationType signs the data using the appropriate algorithm for the destination type.
+func signWithDestinationType(destSigType uint16, privKey ed25519.PrivateKey, message []byte) ([]byte, error) {
+	switch destSigType {
+	case signature.SIGNATURE_TYPE_EDDSA_SHA512_ED25519,
+		signature.SIGNATURE_TYPE_REDDSA_SHA512_ED25519:
+		return ed25519.Sign(privKey, message), nil
+	case signature.SIGNATURE_TYPE_EDDSA_SHA512_ED25519PH:
+		return privKey.Sign(rand.Reader, message, &ed25519.Options{Hash: crypto.SHA512})
+	default:
+		return nil, fmt.Errorf("signing not implemented for destination type %d", destSigType)
+	}
 }
