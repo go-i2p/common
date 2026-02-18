@@ -1,13 +1,20 @@
-// Package lease implements the I2P lease common data structure
 package lease
 
 import "errors"
 
 // Errors
 var (
-	// ErrExpiredLease is returned when attempting to create a lease with an expiration time in the past.
-	// Leases must have expiration times in the future to be valid for tunnel message delivery.
-	ErrExpiredLease = errors.New("lease expiration time must be in the future")
+	// ErrExpiredLease indicates a lease with an expiration time in the past.
+	// Returned by Validate() when the lease has expired.
+	ErrExpiredLease = errors.New("lease has expired")
+
+	// ErrZeroGatewayHash indicates a lease with an all-zero tunnel gateway hash.
+	// Returned by Validate() when the gateway hash is all zeros.
+	ErrZeroGatewayHash = errors.New("tunnel gateway hash is zero")
+
+	// ErrTimestampOverflow indicates a Lease2 expiration time exceeds the uint32 second range.
+	// Lease2 uses 4-byte timestamps which overflow after 2106-02-07T06:28:15 UTC.
+	ErrTimestampOverflow = errors.New("timestamp exceeds Lease2 uint32 range")
 )
 
 // Sizes in bytes of various components of a Lease according to I2P specification version 0.9.67
@@ -37,4 +44,8 @@ const (
 	// Unlike legacy Lease which uses 8-byte millisecond timestamps, Lease2 uses 4-byte second timestamps
 	// for more efficient encoding in LeaseSet2 structures introduced in I2P specification 0.9.38.
 	LEASE2_END_DATE_SIZE = 4
+
+	// LEASE2_MAX_END_DATE is the maximum value for a Lease2 end_date field (uint32 max).
+	// Corresponds to 2106-02-07T06:28:15 UTC.
+	LEASE2_MAX_END_DATE = uint64(1<<32 - 1)
 )

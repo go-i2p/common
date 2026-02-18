@@ -53,15 +53,15 @@ func TestDate(t *testing.T) {
 	assert.ElementsMatch(date.Bytes(), expectedDateBytes)
 }
 
-// TestNewLeaseValidation tests the NewLease constructor validation
+// TestNewLeaseValidation tests the NewLease constructor behavior
 func TestNewLeaseValidation(t *testing.T) {
 	tests := []struct {
-		name          string
-		gateway       data.Hash
-		tunnelID      uint32
-		expiration    time.Time
-		expectError   bool
-		errorContains string
+		name        string
+		gateway     data.Hash
+		tunnelID    uint32
+		expiration  time.Time
+		expectError bool
+		expectValid bool // whether Validate() should pass
 	}{
 		{
 			name:        "valid lease",
@@ -69,29 +69,31 @@ func TestNewLeaseValidation(t *testing.T) {
 			tunnelID:    12345,
 			expiration:  time.Now().Add(10 * time.Minute),
 			expectError: false,
+			expectValid: true,
 		},
 		{
-			name:          "expired lease",
-			gateway:       createTestHash(t, "expired_gateway_hash_test_0000__"),
-			tunnelID:      12345,
-			expiration:    time.Now().Add(-10 * time.Minute), // Past
-			expectError:   true,
-			errorContains: "not in the future",
+			name:        "expired lease accepted by constructor",
+			gateway:     createTestHash(t, "expired_gateway_hash_test_0000__"),
+			tunnelID:    12345,
+			expiration:  time.Now().Add(-10 * time.Minute),
+			expectError: false,
+			expectValid: false,
 		},
 		{
-			name:          "zero gateway hash",
-			gateway:       data.Hash{},
-			tunnelID:      12345,
-			expiration:    time.Now().Add(10 * time.Minute),
-			expectError:   true,
-			errorContains: "cannot be zero",
+			name:        "zero gateway hash accepted by constructor",
+			gateway:     data.Hash{},
+			tunnelID:    12345,
+			expiration:  time.Now().Add(10 * time.Minute),
+			expectError: false,
+			expectValid: false,
 		},
 		{
 			name:        "far future lease",
 			gateway:     createTestHash(t, "far_future_gateway_hash_test_0__"),
 			tunnelID:    99999,
-			expiration:  time.Now().Add(365 * 24 * time.Hour), // 1 year
+			expiration:  time.Now().Add(365 * 24 * time.Hour),
 			expectError: false,
+			expectValid: true,
 		},
 	}
 
@@ -101,27 +103,31 @@ func TestNewLeaseValidation(t *testing.T) {
 
 			if tt.expectError {
 				require.Error(t, err)
-				assert.Contains(t, err.Error(), tt.errorContains)
 				assert.Nil(t, lease)
 			} else {
 				require.NoError(t, err)
 				require.NotNil(t, lease)
 				assert.Equal(t, tt.gateway, lease.TunnelGateway())
 				assert.Equal(t, tt.tunnelID, lease.TunnelID())
+				if tt.expectValid {
+					assert.NoError(t, lease.Validate())
+				} else {
+					assert.Error(t, lease.Validate())
+				}
 			}
 		})
 	}
 }
 
-// TestNewLease2Validation tests the NewLease2 constructor validation
+// TestNewLease2Validation tests the NewLease2 constructor behavior
 func TestNewLease2Validation(t *testing.T) {
 	tests := []struct {
-		name          string
-		gateway       data.Hash
-		tunnelID      uint32
-		expiration    time.Time
-		expectError   bool
-		errorContains string
+		name        string
+		gateway     data.Hash
+		tunnelID    uint32
+		expiration  time.Time
+		expectError bool
+		expectValid bool
 	}{
 		{
 			name:        "valid lease2",
@@ -129,22 +135,23 @@ func TestNewLease2Validation(t *testing.T) {
 			tunnelID:    12345,
 			expiration:  time.Now().Add(10 * time.Minute),
 			expectError: false,
+			expectValid: true,
 		},
 		{
-			name:          "expired lease2",
-			gateway:       createTestHash(t, "expired_gateway_hash_test_0000__"),
-			tunnelID:      12345,
-			expiration:    time.Now().Add(-10 * time.Minute), // Past
-			expectError:   true,
-			errorContains: "not in the future",
+			name:        "expired lease2 accepted by constructor",
+			gateway:     createTestHash(t, "expired_gateway_hash_test_0000__"),
+			tunnelID:    12345,
+			expiration:  time.Now().Add(-10 * time.Minute),
+			expectError: false,
+			expectValid: false,
 		},
 		{
-			name:          "zero gateway hash",
-			gateway:       data.Hash{},
-			tunnelID:      12345,
-			expiration:    time.Now().Add(10 * time.Minute),
-			expectError:   true,
-			errorContains: "cannot be zero",
+			name:        "zero gateway hash accepted by constructor",
+			gateway:     data.Hash{},
+			tunnelID:    12345,
+			expiration:  time.Now().Add(10 * time.Minute),
+			expectError: false,
+			expectValid: false,
 		},
 		{
 			name:        "far future lease2",
@@ -152,6 +159,7 @@ func TestNewLease2Validation(t *testing.T) {
 			tunnelID:    99999,
 			expiration:  time.Date(2106, 2, 7, 6, 28, 0, 0, time.UTC),
 			expectError: false,
+			expectValid: true,
 		},
 	}
 
@@ -161,13 +169,17 @@ func TestNewLease2Validation(t *testing.T) {
 
 			if tt.expectError {
 				require.Error(t, err)
-				assert.Contains(t, err.Error(), tt.errorContains)
 				assert.Nil(t, lease2)
 			} else {
 				require.NoError(t, err)
 				require.NotNil(t, lease2)
 				assert.Equal(t, tt.gateway, lease2.TunnelGateway())
 				assert.Equal(t, tt.tunnelID, lease2.TunnelID())
+				if tt.expectValid {
+					assert.NoError(t, lease2.Validate())
+				} else {
+					assert.Error(t, lease2.Validate())
+				}
 			}
 		})
 	}

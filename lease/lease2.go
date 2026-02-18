@@ -1,25 +1,3 @@
-// Package lease implements the I2P Lease2 common data structure according to specification version 0.9.67.
-//
-// Lease2 is a compact version of Lease introduced in I2P specification 0.9.38 for use in LeaseSet2 structures.
-// The primary difference is the use of 4-byte second timestamps instead of 8-byte millisecond timestamps,
-// reducing the total size from 44 bytes to 40 bytes while maintaining full functionality.
-//
-// Key features of Lease2:
-//   - 40-byte fixed-length structure (4 bytes smaller than legacy Lease)
-//   - SHA256 tunnel gateway identification for secure routing
-//   - 32-bit tunnel ID for precise tunnel selection within gateway routers
-//   - Second-precision expiration timestamps (sufficient until year 2106)
-//   - Complete I2P specification 0.9.67 compliance for network interoperability
-//   - Used exclusively in LeaseSet2, EncryptedLeaseSet, and MetaLeaseSet structures
-//
-// Common usage patterns:
-//
-//	lease2, err := NewLease2(gatewayHash, tunnelID, expirationTime)
-//	lease2Data, remainder, err := ReadLease2(networkBytes)
-//	gatewayHash := lease2.TunnelGateway()
-//	tunnelID := lease2.TunnelID()
-//	expirationSeconds := lease2.EndDate()
-//	expirationTime := lease2.Time()
 package lease
 
 import (

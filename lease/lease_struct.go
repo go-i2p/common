@@ -1,4 +1,3 @@
-// Package lease implements the I2P lease common data structure
 package lease
 
 import (
@@ -77,10 +76,36 @@ func (lease Lease) Date() (date data.Date) {
 }
 
 // Time returns the expiration time as a Go time.Time value for convenient time operations.
-// Converts the 8-byte millisecond timestamp to a time.Time in the UTC timezone.
-// This method provides API parity with Lease2.Time() for interchangeable usage.
+// Converts the 8-byte millisecond timestamp directly via binary.BigEndian.Uint64 to avoid
+// signed integer truncation issues in data.Integer.Int() for timestamps beyond year 2262.
 func (lease Lease) Time() time.Time {
-	return lease.Date().Time()
+	dateBytes := lease[LEASE_TUNNEL_GW_SIZE+LEASE_TUNNEL_ID_SIZE:]
+	millis := binary.BigEndian.Uint64(dateBytes)
+	return time.UnixMilli(int64(millis)).UTC()
+}
+
+// IsExpired returns true if the lease's expiration time is before the current time.
+func (lease Lease) IsExpired() bool {
+	return lease.Time().Before(time.Now())
+}
+
+// Equal returns true if two Lease structures are byte-for-byte identical.
+func (lease Lease) Equal(other Lease) bool {
+	return lease == other
+}
+
+// Validate performs semantic validation on the lease.
+// Returns an error if the lease has expired or has a zero gateway hash.
+// This is separate from construction to allow representing arbitrary wire-format data.
+func (lease Lease) Validate() error {
+	gw := lease.TunnelGateway()
+	if gw.IsZero() {
+		return ErrZeroGatewayHash
+	}
+	if lease.IsExpired() {
+		return ErrExpiredLease
+	}
+	return nil
 }
 
 // Bytes returns the complete Lease structure as a byte slice.

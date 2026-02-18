@@ -66,8 +66,8 @@ func TestLeaseTime(t *testing.T) {
 	lease, err := NewLease(gateway, tunnelID, expirationTime)
 	require.NoError(t, err)
 
-	// Time() should match Date().Time()
-	assert.Equal(t, lease.Date().Time(), lease.Time())
+	// Time() should represent the same instant as Date().Time()
+	assert.Equal(t, lease.Date().Time().UnixMilli(), lease.Time().UnixMilli())
 	// Millisecond precision: within 1 second of target
 	assert.InDelta(t, expirationTime.UnixMilli(), lease.Time().UnixMilli(), 1000)
 }
