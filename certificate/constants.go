@@ -65,3 +65,11 @@ const CERT_LENGTH_FIELD_SIZE = 2
 
 // CERT_EMPTY_PAYLOAD_SIZE represents the size of an empty payload
 const CERT_EMPTY_PAYLOAD_SIZE = 0
+
+// CERT_SIGNED_PAYLOAD_SHORT is the spec-defined SIGNED certificate payload length
+// containing a 40-byte DSA signature only.
+const CERT_SIGNED_PAYLOAD_SHORT = 40
+
+// CERT_SIGNED_PAYLOAD_LONG is the spec-defined SIGNED certificate payload length
+// containing a 40-byte DSA signature followed by a 32-byte Hash of the signing Destination.
+const CERT_SIGNED_PAYLOAD_LONG = 72

@@ -184,7 +184,7 @@ func TestCertificateBuilder_AllTypes(t *testing.T) {
 				builder, err = builder.WithKeyTypes(7, 4)
 				require.NoError(t, err)
 				cert, err = builder.Build()
-			} else if certType == CERT_NULL {
+			} else if certType == CERT_NULL || certType == CERT_HIDDEN {
 				builder, err = builder.WithType(certType)
 				require.NoError(t, err)
 				cert, err = builder.Build()

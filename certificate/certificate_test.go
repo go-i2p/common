@@ -258,20 +258,24 @@ func TestCertificateWithZeroLengthPayload(t *testing.T) {
 func TestNewCertificateDeuxFunction(t *testing.T) {
 	assert := assert.New(t)
 
+	// Per spec, HIDDEN certificates must have empty payload (total length 3).
+	// Creating a HIDDEN cert with non-empty payload should now be rejected.
 	payload := []byte{0x11, 0x22}
 	certType := CERT_HIDDEN
-	cert, err := NewCertificateWithType(uint8(certType), payload)
-	assert.Nil(err, "Expected no error when creating certificate with NewCertificateWithType")
+	_, err := NewCertificateWithType(uint8(certType), payload)
+	assert.NotNil(err, "Expected error when creating HIDDEN certificate with non-empty payload")
+	assert.Contains(err.Error(), "HIDDEN certificates must have empty payload")
+
+	// HIDDEN certificate with empty payload should succeed
+	cert, err := NewCertificateWithType(uint8(certType), []byte{})
+	assert.Nil(err, "Expected no error when creating HIDDEN certificate with empty payload")
 
 	typ, typErr := cert.Type()
 	assert.Nil(typErr, "Certificate type should not error for valid type")
 	assert.Equal(certType, typ, "Certificate type should match")
 	length, lenErr := cert.Length()
 	assert.Nil(lenErr, "Certificate length should not error for valid certificate")
-	assert.Equal(len(payload), length, "Certificate length should match payload length")
-	data, dataErr := cert.Data()
-	assert.Nil(dataErr, "Certificate data should not error for valid certificate")
-	assert.Equal(payload, data, "Certificate data should match payload")
+	assert.Equal(0, length, "Certificate length should be 0 for HIDDEN")
 }
 
 func TestNewCertificateWithInvalidPayloadLength(t *testing.T) {

@@ -92,10 +92,21 @@ func handleShortCertificateData(certificate Certificate, bytes []byte) (Certific
 
 // handleValidCertificateData processes the case where sufficient data is available.
 func handleValidCertificateData(certificate Certificate, bytes []byte) (Certificate, error) {
-	certificate.kind = data.Integer(bytes[0:CERT_TYPE_FIELD_END])
-	certificate.len = data.Integer(bytes[CERT_LENGTH_FIELD_START:CERT_LENGTH_FIELD_END])
+	// Defensive copy of all fields to prevent data aliasing.
+	// Without copying, mutation of the source byte slice would silently
+	// corrupt the certificate's kind, len, and payload fields.
+	kindCopy := make([]byte, CERT_TYPE_FIELD_END)
+	copy(kindCopy, bytes[0:CERT_TYPE_FIELD_END])
+	certificate.kind = data.Integer(kindCopy)
+
+	lenCopy := make([]byte, CERT_LENGTH_FIELD_END-CERT_LENGTH_FIELD_START)
+	copy(lenCopy, bytes[CERT_LENGTH_FIELD_START:CERT_LENGTH_FIELD_END])
+	certificate.len = data.Integer(lenCopy)
+
 	payloadLength := len(bytes) - CERT_MIN_SIZE
-	certificate.payload = bytes[CERT_MIN_SIZE:]
+	payloadCopy := make([]byte, payloadLength)
+	copy(payloadCopy, bytes[CERT_MIN_SIZE:])
+	certificate.payload = payloadCopy
 
 	if err := validateCertificatePayloadLength(certificate, bytes, payloadLength); err != nil {
 		return certificate, err
@@ -138,6 +149,15 @@ func validateTypeSpecificPayload(cert Certificate) error {
 	case CERT_NULL, CERT_HIDDEN:
 		if payloadLen != 0 {
 			return oops.Errorf("certificate type %d should have empty payload, got %d bytes", certType, payloadLen)
+		}
+	case CERT_SIGNED:
+		// I2P spec: SIGNED payload is exactly 40 bytes (DSA signature) or
+		// 72 bytes (40-byte signature + 32-byte Hash of signing Destination).
+		if payloadLen != CERT_SIGNED_PAYLOAD_SHORT && payloadLen != CERT_SIGNED_PAYLOAD_LONG {
+			return oops.Errorf(
+				"SIGNED certificate payload must be %d or %d bytes, got %d",
+				CERT_SIGNED_PAYLOAD_SHORT, CERT_SIGNED_PAYLOAD_LONG, payloadLen,
+			)
 		}
 	case CERT_KEY:
 		if payloadLen < CERT_MIN_KEY_PAYLOAD_SIZE {

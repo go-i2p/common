@@ -76,9 +76,12 @@ func NewCertificateWithType(certType uint8, payload []byte) (*Certificate, error
 		return nil, oops.Errorf("payload too long: %d bytes", len(payload))
 	}
 
-	// For NULL certificates, payload should be empty
+	// Per spec: NULL (type 0) and HIDDEN (type 2) certificates must have empty payload
 	if certType == CERT_NULL && len(payload) > CERT_EMPTY_PAYLOAD_SIZE {
 		return nil, oops.Errorf("NULL certificates must have empty payload")
+	}
+	if certType == CERT_HIDDEN && len(payload) > CERT_EMPTY_PAYLOAD_SIZE {
+		return nil, oops.Errorf("HIDDEN certificates must have empty payload per spec (total length 3)")
 	}
 
 	length, err := data.NewIntegerFromInt(len(payload), CERT_LENGTH_FIELD_SIZE)

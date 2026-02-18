@@ -213,8 +213,8 @@ func (cb *CertificateBuilder) buildPayloadIfNeeded() error {
 		return oops.Errorf("KEY certificates require either key types or explicit payload")
 	}
 
-	// For NULL certificates, ensure empty payload
-	if cb.certType == CERT_NULL {
+	// For NULL and HIDDEN certificates, ensure empty payload per spec
+	if cb.certType == CERT_NULL || cb.certType == CERT_HIDDEN {
 		cb.payload = []byte{}
 	}
 
