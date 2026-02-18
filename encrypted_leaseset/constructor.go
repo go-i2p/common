@@ -2,6 +2,7 @@ package encrypted_leaseset
 
 import (
 	"crypto/ed25519"
+	"crypto/sha512"
 
 	"github.com/go-i2p/common/destination"
 	"github.com/go-i2p/common/key_certificate"
@@ -191,21 +192,30 @@ func validateInputs(
 	return nil
 }
 
-// createSignature signs data using standard Ed25519 (no pre-hashing).
-// Supports [64]byte, *Ed25519PrivateKey, and 64-byte []byte key types.
+// createSignature signs data using Ed25519 with SHA-512 pre-hashing, matching
+// the go-i2p/crypto library's convention (Ed25519Signer.Sign pre-hashes with
+// SHA-512 before calling ed25519.Sign; Ed25519Verifier.Verify does the same).
+// Supports ed25519.PrivateKey, [64]byte, *Ed25519PrivateKey, and 64-byte []byte key types.
 func createSignature(signingKey interface{}, data []byte, sigType uint16) (sig.Signature, error) {
+	// Pre-hash with SHA-512 to match go-i2p/crypto Ed25519 convention
+	h := sha512.Sum512(data)
+
 	switch key := signingKey.(type) {
+	case ed25519.PrivateKey:
+		signatureBytes := ed25519.Sign(key, h[:])
+		return sig.NewSignatureFromBytes(signatureBytes, int(sigType)), nil
+
 	case [64]byte:
-		signatureBytes := ed25519.Sign(key[:], data)
+		signatureBytes := ed25519.Sign(key[:], h[:])
 		return sig.NewSignatureFromBytes(signatureBytes, int(sigType)), nil
 
 	case *goi2ped25519.Ed25519PrivateKey:
-		signatureBytes := ed25519.Sign(key.Bytes(), data)
+		signatureBytes := ed25519.Sign(key.Bytes(), h[:])
 		return sig.NewSignatureFromBytes(signatureBytes, int(sigType)), nil
 
 	case []byte:
 		if len(key) == ed25519.PrivateKeySize {
-			signatureBytes := ed25519.Sign(key, data)
+			signatureBytes := ed25519.Sign(key, h[:])
 			return sig.NewSignatureFromBytes(signatureBytes, int(sigType)), nil
 		}
 		return sig.Signature{}, oops.Code("invalid_key_length").
