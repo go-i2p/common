@@ -2,6 +2,7 @@ package encrypted_leaseset
 
 import (
 	"crypto/ed25519"
+	"crypto/sha512"
 	"encoding/binary"
 	"testing"
 	"time"
@@ -341,7 +342,7 @@ func TestSigningPublicKeyForVerificationOffline(t *testing.T) {
 		require.NoError(t, err)
 
 		// The key should be the transient public key, not the blinded one
-		assert.Equal(t, transientPub, spk.Bytes()[:ed25519.PublicKeySize],
+		assert.Equal(t, []byte(transientPub), spk.Bytes(),
 			"signingPublicKeyForVerification should return the transient key")
 	})
 
@@ -361,7 +362,7 @@ func TestSigningPublicKeyForVerificationOffline(t *testing.T) {
 		spk, err := noOfflineELS.signingPublicKeyForVerification()
 		require.NoError(t, err)
 
-		assert.Equal(t, destPub, spk.Bytes()[:ed25519.PublicKeySize],
+		assert.Equal(t, []byte(destPub), spk.Bytes(),
 			"signingPublicKeyForVerification should return the blinded key")
 	})
 }
@@ -429,10 +430,10 @@ func TestNoBlindedflag(t *testing.T) {
 	assert.Equal(t, uint16(0x0002), ENCRYPTED_LEASESET_FLAG_UNPUBLISHED)
 }
 
-// TestStandardEd25519Signing verifies finding #4: signing uses standard
-// Ed25519 (no SHA-512 pre-hashing). We verify by constructing and then
-// verifying — if pre-hashing were used, Verify() would fail.
-func TestStandardEd25519Signing(t *testing.T) {
+// TestEd25519SigningMatchesCryptoLibrary verifies finding #4: signing uses
+// SHA-512 pre-hashing to match the go-i2p/crypto library's convention.
+// We verify by constructing and verifying with the same SHA-512 convention.
+func TestEd25519SigningMatchesCryptoLibrary(t *testing.T) {
 	pub, priv, err := ed25519.GenerateKey(nil)
 	require.NoError(t, err)
 
@@ -449,10 +450,11 @@ func TestStandardEd25519Signing(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	// Manually verify with standard ed25519 library
+	// Manually verify with go-i2p's SHA-512 pre-hash convention
 	dataToVerify, err := els.dataForSigning()
 	require.NoError(t, err)
 
-	assert.True(t, ed25519.Verify(pub, dataToVerify, els.Signature().Bytes()),
-		"signature must be valid standard Ed25519 (not pre-hashed)")
+	h := sha512.Sum512(dataToVerify)
+	assert.True(t, ed25519.Verify(pub, h[:], els.Signature().Bytes()),
+		"signature must be valid under SHA-512 pre-hash convention (go-i2p/crypto)")
 }
