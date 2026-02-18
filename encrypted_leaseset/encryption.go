@@ -15,45 +15,27 @@ import (
 // DecryptInnerData decrypts the encrypted inner data of an EncryptedLeaseSet.
 //
 // The decryption process follows the I2P Proposal 123 specification:
-//  1. Extract ephemeral public key from encrypted data (first 32 bytes after cookie)
+//  1. Extract ephemeral public key from encrypted data (first 32 bytes)
 //  2. Perform X25519 ECDH with recipient's private key to derive shared secret
-//  3. Derive symmetric encryption key using HKDF-SHA256 from shared secret and cookie
+//  3. Derive symmetric encryption key using HKDF-SHA256
 //  4. Decrypt using ChaCha20-Poly1305 AEAD with derived key
 //  5. Parse decrypted data as LeaseSet2
 //
 // Parameters:
-//   - authCookie: The 32-byte cookie required for decryption (must match EncryptedLeaseSet cookie)
+//   - authCookie: 32-byte cookie for key derivation (reserved for future use in HKDF)
 //   - privateKey: Recipient's X25519 private key for ECDH (32 bytes)
 //
-// Returns:
-//   - LeaseSet2: The decrypted inner lease set containing actual destination and leases
-//   - error: ErrCookieMismatch if cookie doesn't match, ErrDecryptionFailed for crypto errors,
-//     ErrInvalidLeaseSet2 if decrypted data cannot be parsed
-//
-// Security:
-//   - Verifies cookie matches before attempting decryption
-//   - Uses authenticated encryption (AEAD) to prevent tampering
-//   - Derived key is unique to this specific cookie + private key combination
-//   - Does not expose timing information on decryption failure
-//
-// Spec: I2P Proposal 123 Section 5.2
+// NOTE: The cookie is NOT part of the cleartext EncryptedLeaseSet wire format.
+// It is an encryption-layer parameter used during key derivation.
 func (els *EncryptedLeaseSet) DecryptInnerData(authCookie []byte, privateKey interface{}) (*lease_set2.LeaseSet2, error) {
 	log.WithFields(logger.Fields{
 		"cookie_length":    len(authCookie),
 		"encrypted_length": len(els.encryptedInnerData),
 	}).Debug("Decrypting EncryptedLeaseSet inner data")
 
-	// Validate inputs
+	// Validate cookie length
 	if len(authCookie) != 32 {
 		return nil, oops.Errorf("invalid cookie length: expected 32, got %d", len(authCookie))
-	}
-
-	// Verify cookie matches
-	for i := 0; i < 32; i++ {
-		if authCookie[i] != els.cookie[i] {
-			log.Warn("Cookie mismatch during decryption")
-			return nil, oops.Errorf("cookie mismatch: unauthorized decryption attempt")
-		}
 	}
 
 	// Extract X25519 private key

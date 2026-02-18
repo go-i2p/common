@@ -7,50 +7,26 @@ import (
 	"github.com/samber/oops"
 )
 
-// ENCRYPTED_LEASESET_DBSTORE_TYPE is the DatabaseStore type byte for EncryptedLeaseSet.
-// Per the I2P spec, the signature is computed over all serialised data
-// PREPENDED with this single byte.
-const ENCRYPTED_LEASESET_DBSTORE_TYPE = 0x05
-
 // Verify verifies the cryptographic signature of the EncryptedLeaseSet.
 //
-// Per the I2P specification, the signature for an EncryptedLeaseSet is computed over
-// the serialised content PREPENDED with a single byte containing the
-// DatabaseStore type (0x05). The verified data is:
-//
-//	[]byte{0x05} + Bytes()[:len(Bytes()) - signatureLength]
-//
-// The signature is verified against the blinded destination's signing public key,
-// or the transient signing public key if offline signatures are present.
-//
-// Returns nil if the signature is valid, or an error describing the failure.
+// Per the I2P specification, the signature covers: 0x05 || content_without_signature.
+// The signing public key is the blinded public key, or the transient key if offline
+// signatures are present.
 func (els *EncryptedLeaseSet) Verify() error {
 	log.Debug("Verifying EncryptedLeaseSet signature")
 
-	// Serialize the full EncryptedLeaseSet (including the trailing signature)
-	fullBytes, err := els.Bytes()
+	// Serialize: type byte + content without signature
+	dataToVerify, err := els.dataForSigning()
 	if err != nil {
-		return oops.Errorf("failed to serialize EncryptedLeaseSet for verification: %w", err)
+		return oops.Errorf("failed to serialize for verification: %w", err)
 	}
 
-	// Get the signature bytes and length
 	sigBytes := els.signature.Bytes()
-	sigLen := len(sigBytes)
 
-	if len(fullBytes) < sigLen {
-		return oops.Errorf("EncryptedLeaseSet data too short for signature verification")
-	}
-
-	// Data to verify: type byte prefix + everything except the trailing signature
-	contentBytes := fullBytes[:len(fullBytes)-sigLen]
-	dataToVerify := make([]byte, 0, 1+len(contentBytes))
-	dataToVerify = append(dataToVerify, ENCRYPTED_LEASESET_DBSTORE_TYPE)
-	dataToVerify = append(dataToVerify, contentBytes...)
-
-	// Determine which signing public key to use for verification
+	// Determine the signing public key
 	signingPubKey, err := els.signingPublicKeyForVerification()
 	if err != nil {
-		return oops.Errorf("failed to get signing public key for verification: %w", err)
+		return oops.Errorf("failed to get signing public key: %w", err)
 	}
 
 	// Create verifier and verify
@@ -61,7 +37,7 @@ func (els *EncryptedLeaseSet) Verify() error {
 
 	if err := verifier.Verify(dataToVerify, sigBytes); err != nil {
 		log.WithError(err).Warn("EncryptedLeaseSet signature verification failed")
-		return oops.Errorf("EncryptedLeaseSet signature verification failed: %w", err)
+		return oops.Errorf("signature verification failed: %w", err)
 	}
 
 	log.Debug("EncryptedLeaseSet signature verification succeeded")
@@ -69,25 +45,25 @@ func (els *EncryptedLeaseSet) Verify() error {
 }
 
 // signingPublicKeyForVerification returns the appropriate signing public key
-// for signature verification. If offline keys are present, the transient
-// signing public key from the OfflineSignature is constructed and returned.
-// Otherwise, the blinded destination's signing public key is returned.
+// for signature verification. Uses the transient key from OfflineSignature if
+// present, otherwise constructs a key from sigType + blindedPublicKey.
 func (els *EncryptedLeaseSet) signingPublicKeyForVerification() (types.SigningPublicKey, error) {
 	if els.HasOfflineKeys() && els.offlineSignature != nil {
-		// Use transient signing public key from offline signature
 		transientKeyBytes := els.offlineSignature.TransientPublicKey()
 		transientSigType := els.offlineSignature.TransientSigType()
-		spk, err := key_certificate.ConstructSigningPublicKeyByType(transientKeyBytes, int(transientSigType))
+		spk, err := key_certificate.ConstructSigningPublicKeyByType(
+			transientKeyBytes, int(transientSigType))
 		if err != nil {
 			return nil, oops.Errorf("failed to construct transient signing public key: %w", err)
 		}
 		return spk, nil
 	}
 
-	// Use blinded destination's signing public key
-	spk, err := els.blindedDestination.SigningPublicKey()
+	// Construct from sigType + blindedPublicKey
+	spk, err := key_certificate.ConstructSigningPublicKeyByType(
+		els.blindedPublicKey, int(els.sigType))
 	if err != nil {
-		return nil, oops.Errorf("failed to get signing public key from blinded destination: %w", err)
+		return nil, oops.Errorf("failed to construct blinded signing public key: %w", err)
 	}
 	return spk, nil
 }

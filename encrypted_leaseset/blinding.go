@@ -57,12 +57,14 @@ var (
 //
 // Spec: I2P Proposal 123 - Encrypted LeaseSet
 func CreateBlindedDestination(dest destination.Destination, secret []byte, date time.Time) (destination.Destination, error) {
-	// Validate signature type - only Ed25519 is supported for blinding
+	// Validate signature type — Ed25519 (type 7) and RedDSA_SHA512_Ed25519 (type 11) supported.
+	// Per I2P spec, RedDSA type 11 is defined "For Destinations and encrypted leasesets only."
 	sigType := dest.KeyCertificate.SigningPublicKeyType()
-	if sigType != key_certificate.KEYCERT_SIGN_ED25519 {
+	if sigType != key_certificate.KEYCERT_SIGN_ED25519 &&
+		sigType != key_certificate.KEYCERT_SIGN_REDDSA_ED25519 {
 		return destination.Destination{},
 			oops.Wrapf(ErrUnsupportedSignatureType,
-				"destination uses signature type %d, only Ed25519 (type 7) supported for blinding",
+				"destination uses signature type %d, only Ed25519 (7) and RedDSA (11) supported for blinding",
 				sigType)
 	}
 

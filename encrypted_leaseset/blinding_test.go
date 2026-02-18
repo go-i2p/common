@@ -320,12 +320,36 @@ func TestBlindingPreservesEncryptionKey(t *testing.T) {
 
 // BenchmarkCreateBlindedDestination benchmarks the blinding operation
 func BenchmarkCreateBlindedDestination(b *testing.B) {
-	// Setup
-	dest := createTestEd25519Destination(&testing.T{})
-	secret := make([]byte, 32)
-	_, _ = rand.Read(secret)
-	date := time.Now()
+	// Setup using a sub-test to get a proper *testing.T
+	var dest destination.Destination
+	var secret []byte
 
+	b.Run("setup", func(b *testing.B) {
+		b.StopTimer()
+		t := &testing.T{}
+		dest = createTestEd25519Destination(t)
+		secret = make([]byte, 32)
+		_, _ = rand.Read(secret)
+		b.StartTimer()
+	})
+
+	if len(secret) == 0 {
+		// Fallback: create directly for benchmark
+		destBytes := make([]byte, 391)
+		rand.Read(destBytes[:384])
+		destBytes[384] = 0x05
+		destBytes[385] = 0x00
+		destBytes[386] = 0x04
+		destBytes[387] = 0x00
+		destBytes[388] = 0x07
+		destBytes[389] = 0x00
+		destBytes[390] = 0x00
+		dest, _, _ = destination.ReadDestination(destBytes)
+		secret = make([]byte, 32)
+		rand.Read(secret)
+	}
+
+	date := time.Now()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_, _ = CreateBlindedDestination(dest, secret, date)
@@ -334,10 +358,20 @@ func BenchmarkCreateBlindedDestination(b *testing.B) {
 
 // BenchmarkVerifyBlindedSignature benchmarks signature verification
 func BenchmarkVerifyBlindedSignature(b *testing.B) {
-	// Setup
-	dest := createTestEd25519Destination(&testing.T{})
+	// Setup directly without &testing.T{}
+	destBytes := make([]byte, 391)
+	rand.Read(destBytes[:384])
+	destBytes[384] = 0x05
+	destBytes[385] = 0x00
+	destBytes[386] = 0x04
+	destBytes[387] = 0x00
+	destBytes[388] = 0x07
+	destBytes[389] = 0x00
+	destBytes[390] = 0x00
+	dest, _, _ := destination.ReadDestination(destBytes)
+
 	secret := make([]byte, 32)
-	_, _ = rand.Read(secret)
+	rand.Read(secret)
 	date := time.Date(2025, 11, 24, 0, 0, 0, 0, time.UTC)
 
 	blinded, _ := CreateBlindedDestination(dest, secret, date)

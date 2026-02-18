@@ -2,86 +2,51 @@
 package encrypted_leaseset
 
 import (
-	"github.com/go-i2p/common/data"
-	"github.com/go-i2p/common/destination"
 	"github.com/go-i2p/common/offline_signature"
 	sig "github.com/go-i2p/common/signature"
 )
 
 // EncryptedLeaseSet represents an encrypted I2P LeaseSet2 (Database Store Type 5).
-// Introduced in I2P 0.9.38, it provides privacy and forward secrecy by encrypting
-// the destination, encryption keys, and leases. The blinded destination prevents
-// correlation between different encrypted lease sets of the same service.
 //
-// The encrypted inner data contains a complete LeaseSet2 structure encrypted with
-// a per-client symmetric key derived from the cookie and shared secret.
+// Wire Format (I2P spec 0.9.67 — https://geti2p.net/spec/common-structures#encryptedleaseset):
 //
-// Wire Format:
+//	sig_type            (2 bytes)   — Signing key type for the blinded public key
+//	blinded_public_key  (variable)  — Blinded signing public key (length from sig_type)
+//	published           (4 bytes)   — Timestamp in seconds since Unix epoch
+//	expires             (2 bytes)   — Expiration offset from published in seconds
+//	flags               (2 bytes)   — Bit 0: offline keys, Bit 1: unpublished, Bits 15‑2: reserved (0)
+//	[offline_signature] (variable)  — Present only if flags bit 0 is set
+//	len                 (2 bytes)   — Length of encrypted inner data
+//	encrypted_data      (len bytes) — Encrypted LeaseSet2 structure
+//	signature           (variable)  — Signature by blinded key or transient key (length from sig_type)
 //
-//	blinded_destination (387+ bytes) - Derived from actual destination using blinding factor
-//	published (4 bytes)               - Timestamp in seconds since epoch
-//	expires (2 bytes)                 - Expiration offset from published in seconds
-//	flags (2 bytes)                   - Same semantics as LeaseSet2
-//	[offline_signature] (variable)    - Present if flags bit 0 set
-//	options (2+ bytes)                - Mapping for service discovery
-//	cookie (32 bytes)                 - Anti-replay and key derivation
-//	inner_length (2 bytes)            - Length of encrypted inner data
-//	encrypted_inner_data (variable)   - Encrypted LeaseSet2 structure
-//	signature (variable)              - By blinded destination or transient key
-//
-// Security Properties:
-//   - Forward secrecy: Cookie rotation prevents past data decryption
-//   - Unlinkability: Blinded destination differs across publications
-//   - Anti-replay: Cookie prevents reuse of captured encrypted data
-//   - Client isolation: Each client can use unique symmetric key
-//
-// https://geti2p.net/spec/common-structures#encryptedleaseset
+// NOTE: This structure does NOT use the LeaseSet2Header. There is no options mapping
+// and no cookie in the cleartext wire format; those are internal to the encryption layer.
 type EncryptedLeaseSet struct {
-	// Blinded destination - derived from actual destination using blinding factor.
-	// This prevents correlation between different EncryptedLeaseSet instances
-	// for the same service.
-	blindedDestination destination.Destination
+	// sig_type — identifies the signing key algorithm for the blinded public key.
+	sigType uint16
 
-	// Published timestamp (4 bytes, seconds since Unix epoch).
-	// Used as base time for expiration calculation.
+	// blinded_public_key — the blinded signing public key bytes.
+	blindedPublicKey []byte
+
+	// published — seconds since Unix epoch.
 	published uint32
 
-	// Expiration offset from published (2 bytes, seconds).
-	// Maximum value is 65535 (approximately 18.2 hours).
+	// expires — offset in seconds from published.
 	expires uint16
 
-	// Flags field (2 bytes) - same semantics as LeaseSet2:
-	//   Bit 0: Offline signature present
-	//   Bit 1: Unpublished (not stored in network database)
-	//   Bit 2: Blinded key used (always set for EncryptedLeaseSet)
+	// flags — bit 0: offline keys, bit 1: unpublished, bits 15‑2: reserved.
 	flags uint16
 
-	// Optional offline signature (present if flags bit 0 set).
-	// Allows separation of long-term identity key from signing operations.
+	// offlineSignature — present when flags bit 0 is set.
 	offlineSignature *offline_signature.OfflineSignature
 
-	// Options mapping for service discovery (2+ bytes, sorted by key).
-	// Can contain metadata like service type, version, or capabilities.
-	options data.Mapping
-
-	// Cookie for anti-replay and key derivation (32 bytes).
-	// Used to derive symmetric encryption key via HKDF or similar KDF.
-	// Must be included in authorization to access the encrypted data.
-	cookie [32]byte
-
-	// Length of encrypted inner data (2 bytes).
-	// Allows efficient buffer allocation before decryption.
+	// innerLength — length of encrypted inner data.
 	innerLength uint16
 
-	// Encrypted inner lease set data (contains LeaseSet2-like structure).
-	// Decryption requires:
-	//   1. Correct cookie (matches this field)
-	//   2. Recipient's private key (for ECDH shared secret)
-	//   3. Key derivation (HKDF-SHA256 from cookie + shared secret)
-	//   4. Authenticated decryption (ChaCha20-Poly1305 or AES-256-GCM)
+	// encryptedInnerData — the encrypted LeaseSet2 payload.
 	encryptedInnerData []byte
 
-	// Signature by blinded destination or transient key.
-	// Signs all preceding data prepended with database store type (0x05).
+	// signature — over all preceding data prepended with DBSTORE type byte (0x05).
 	signature sig.Signature
 }
