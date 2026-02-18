@@ -3,6 +3,7 @@ package router_info
 
 import (
 	"crypto/ed25519"
+	"crypto/sha512"
 
 	"github.com/go-i2p/common/signature"
 	"github.com/go-i2p/logger"
@@ -46,7 +47,10 @@ func (ri *RouterInfo) VerifySignature() (bool, error) {
 		if len(keyBytes) != ed25519.PublicKeySize {
 			return false, oops.Errorf("invalid Ed25519 public key size: %d", len(keyBytes))
 		}
-		return ed25519.Verify(keyBytes, dataBytes, sigBytes), nil
+		// The go-i2p Ed25519 signer pre-hashes data with SHA-512 before signing,
+		// matching the I2P EdDSA-SHA512-Ed25519 convention.
+		h := sha512.Sum512(dataBytes)
+		return ed25519.Verify(keyBytes, h[:], sigBytes), nil
 	default:
 		return false, oops.Errorf("unsupported signature type for verification: %d", sigType)
 	}
