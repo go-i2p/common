@@ -55,41 +55,61 @@ func (mapping Mapping) Values() MappingValues {
 
 // Data returns a Mapping in its []byte form.
 // Returns nil if the mapping is not properly initialized.
+// The size field is recalculated from the serialized pairs to ensure consistency.
 func (mapping *Mapping) Data() []byte {
 	if mapping == nil || mapping.size == nil {
 		log.Error("Mapping.Data() called on nil or uninitialized mapping")
 		return nil
 	}
-	bytes := mapping.size.Bytes()
-	for _, pair := range mapping.Values() {
-		klen, err := pair[0].Length()
+	payload := serializeMappingPairs(mapping.Values())
+	sizeBytes := EncodeUint16(uint16(len(payload)))
+	result := make([]byte, 0, 2+len(payload))
+	result = append(result, sizeBytes[:]...)
+	result = append(result, payload...)
+	return result
+}
+
+// serializeMappingPairs serializes key-value pairs into their wire format.
+// Pairs that fail to serialize are skipped with a log warning.
+func serializeMappingPairs(pairs MappingValues) []byte {
+	var payload []byte
+	for _, pair := range pairs {
+		serialized, err := serializeOnePair(pair)
 		if err != nil {
-			log.WithError(err).Error("Failed to get key length in Mapping.Data()")
+			log.WithError(err).Warn("Skipping invalid pair in Mapping.Data()")
 			continue
 		}
-		keylen, err := NewIntegerFromInt(klen, KEY_VAL_INTEGER_LENGTH)
-		if err != nil {
-			log.WithError(err).Error("Failed to encode key length in Mapping.Data()")
-			continue
-		}
-		bytes = append(bytes, keylen.Bytes()...)
-		bytes = append(bytes, pair[0][1:]...)
-		bytes = append(bytes, MAPPING_EQUALS_DELIMITER)
-		vlen, err := pair[1].Length()
-		if err != nil {
-			log.WithError(err).Error("Failed to get value length in Mapping.Data()")
-			continue
-		}
-		vallen, err := NewIntegerFromInt(vlen, KEY_VAL_INTEGER_LENGTH)
-		if err != nil {
-			log.WithError(err).Error("Failed to encode value length in Mapping.Data()")
-			continue
-		}
-		bytes = append(bytes, vallen.Bytes()...)
-		bytes = append(bytes, pair[1][1:]...)
-		bytes = append(bytes, MAPPING_SEMICOLON_DELIMITER)
+		payload = append(payload, serialized...)
 	}
-	return bytes
+	return payload
+}
+
+// serializeOnePair serializes a single key=value; pair.
+func serializeOnePair(pair [2]I2PString) ([]byte, error) {
+	klen, err := pair[0].Length()
+	if err != nil {
+		return nil, err
+	}
+	keylen, err := NewIntegerFromInt(klen, KEY_VAL_INTEGER_LENGTH)
+	if err != nil {
+		return nil, err
+	}
+	vlen, err := pair[1].Length()
+	if err != nil {
+		return nil, err
+	}
+	vallen, err := NewIntegerFromInt(vlen, KEY_VAL_INTEGER_LENGTH)
+	if err != nil {
+		return nil, err
+	}
+	var buf []byte
+	buf = append(buf, keylen.Bytes()...)
+	buf = append(buf, pair[0][1:]...)
+	buf = append(buf, MAPPING_EQUALS_DELIMITER)
+	buf = append(buf, vallen.Bytes()...)
+	buf = append(buf, pair[1][1:]...)
+	buf = append(buf, MAPPING_SEMICOLON_DELIMITER)
+	return buf, nil
 }
 
 // HasDuplicateKeys returns true if two keys in a mapping are identical.

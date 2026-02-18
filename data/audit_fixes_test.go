@@ -350,3 +350,142 @@ func TestMappingDataRoundTrip(t *testing.T) {
 		require.Equal(t, len(origVals), len(reparsedVals))
 	})
 }
+
+// =============================================================================
+// Tests for Bug Fix: NewIntegerFromInt panics on negative/zero size
+// =============================================================================
+
+// TestNewIntegerFromIntSizeValidation verifies that NewIntegerFromInt
+// returns an error (not a panic) for invalid size values.
+func TestNewIntegerFromIntSizeValidation(t *testing.T) {
+	t.Run("negative size returns error", func(t *testing.T) {
+		result, err := NewIntegerFromInt(1, -1)
+		require.Error(t, err, "Negative size should return error, not panic")
+		assert.Nil(t, result)
+		assert.Contains(t, err.Error(), "invalid integer size")
+	})
+
+	t.Run("zero size returns error", func(t *testing.T) {
+		result, err := NewIntegerFromInt(1, 0)
+		require.Error(t, err, "Zero size should return error")
+		assert.Nil(t, result)
+		assert.Contains(t, err.Error(), "invalid integer size")
+	})
+
+	t.Run("size exceeds max returns error", func(t *testing.T) {
+		result, err := NewIntegerFromInt(1, 9)
+		require.Error(t, err, "Size > MAX_INTEGER_SIZE should return error")
+		assert.Nil(t, result)
+		assert.Contains(t, err.Error(), "invalid integer size")
+	})
+
+	t.Run("valid size 1", func(t *testing.T) {
+		result, err := NewIntegerFromInt(42, 1)
+		require.NoError(t, err)
+		require.NotNil(t, result)
+		assert.Equal(t, 42, result.Int())
+	})
+
+	t.Run("valid size 8", func(t *testing.T) {
+		result, err := NewIntegerFromInt(123456789, 8)
+		require.NoError(t, err)
+		require.NotNil(t, result)
+		assert.Equal(t, 123456789, result.Int())
+	})
+
+	t.Run("negative value returns error", func(t *testing.T) {
+		result, err := NewIntegerFromInt(-1, 2)
+		require.Error(t, err)
+		assert.Nil(t, result)
+		assert.Contains(t, err.Error(), "negative value")
+	})
+}
+
+// =============================================================================
+// Tests for Bug Fix: Mapping.Data() size field matches serialized content
+// =============================================================================
+
+// TestMappingDataSizeConsistency verifies that the size field in the
+// serialized output of Mapping.Data() always matches the actual payload.
+func TestMappingDataSizeConsistency(t *testing.T) {
+	t.Run("size matches payload for valid mapping", func(t *testing.T) {
+		gomap := map[string]string{"key": "val"}
+		mapping, err := GoMapToMapping(gomap)
+		require.NoError(t, err)
+
+		serialized := mapping.Data()
+		require.NotNil(t, serialized)
+		require.True(t, len(serialized) >= 2, "Need at least 2 bytes for size field")
+
+		// First 2 bytes are the size field
+		declaredSize := int(binary.BigEndian.Uint16(serialized[:2]))
+		actualPayload := len(serialized) - 2
+
+		assert.Equal(t, actualPayload, declaredSize,
+			"Declared size (%d) must match actual payload (%d)", declaredSize, actualPayload)
+	})
+
+	t.Run("size recalculated after round trip", func(t *testing.T) {
+		gomap := map[string]string{"host": "127.0.0.1", "port": "7654"}
+		mapping, err := GoMapToMapping(gomap)
+		require.NoError(t, err)
+
+		serialized := mapping.Data()
+		require.NotNil(t, serialized)
+
+		declaredSize := int(binary.BigEndian.Uint16(serialized[:2]))
+		actualPayload := len(serialized) - 2
+		assert.Equal(t, actualPayload, declaredSize)
+
+		// Verify round-trip still works
+		reparsed, remainder, errs := ReadMapping(serialized)
+		assert.Empty(t, errs)
+		assert.Empty(t, remainder)
+		assert.Equal(t, len(mapping.Values()), len(reparsed.Values()))
+	})
+}
+
+// =============================================================================
+// Tests for Bug Fix: verifyI2PStringLength checks actual byte count
+// =============================================================================
+
+// TestVerifyI2PStringLengthActualCheck verifies that verifyI2PStringLength
+// compares the actual byte count of the string data (not the length byte
+// value re-read from the same position).
+func TestVerifyI2PStringLengthActualCheck(t *testing.T) {
+	t.Run("valid string passes verification", func(t *testing.T) {
+		// Length byte says 5, actual data is 5 bytes
+		str := I2PString([]byte{0x05, 'h', 'e', 'l', 'l', 'o'})
+		err := verifyI2PStringLength(str, 5)
+		assert.NoError(t, err)
+	})
+
+	t.Run("truncated string fails verification", func(t *testing.T) {
+		// String says 5 bytes but only has 3 data bytes (total len=4)
+		str := I2PString([]byte{0x05, 'h', 'e', 'l'})
+		err := verifyI2PStringLength(str, 5)
+		assert.ErrorIs(t, err, ErrLengthMismatch,
+			"Should detect mismatch between actual data (3 bytes) and expected (5)")
+	})
+
+	t.Run("extra data fails verification", func(t *testing.T) {
+		// Length byte says 2 but there are 4 data bytes (total len=5)
+		str := I2PString([]byte{0x02, 'a', 'b', 'c', 'd'})
+		err := verifyI2PStringLength(str, 2)
+		assert.ErrorIs(t, err, ErrLengthMismatch,
+			"Should detect mismatch between actual data (4 bytes) and expected (2)")
+	})
+
+	t.Run("empty string with zero length", func(t *testing.T) {
+		// Length byte says 0, no data bytes
+		str := I2PString([]byte{0x00})
+		err := verifyI2PStringLength(str, 0)
+		assert.NoError(t, err, "Empty string with matching zero length should pass")
+	})
+
+	t.Run("empty input fails", func(t *testing.T) {
+		str := I2PString([]byte{})
+		err := verifyI2PStringLength(str, 0)
+		assert.ErrorIs(t, err, ErrZeroLength)
+	})
+}

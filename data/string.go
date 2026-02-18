@@ -291,17 +291,21 @@ func extractI2PStringData(data []byte, length int) (I2PString, []byte) {
 	return str, remainder
 }
 
-// verifyI2PStringLength verifies that the extracted string's length matches the expected length.
+// verifyI2PStringLength verifies that the extracted string's actual byte count
+// matches the declared length field (first byte).
 // Returns error if there is a length mismatch.
 func verifyI2PStringLength(str I2PString, expectedLength int) error {
-	l, err := str.Length()
-	if l != expectedLength {
-		err = ErrLengthMismatch
+	if len(str) == 0 {
+		return ErrZeroLength
+	}
+	// The actual data bytes are everything after the length prefix byte.
+	actualDataLen := len(str) - 1
+	if actualDataLen != expectedLength {
 		log.WithFields(logger.Fields{
 			"expected_length": expectedLength,
-			"actual_length":   l,
+			"actual_data_len": actualDataLen,
 		}).Error("I2PString length mismatch")
-		return err
+		return ErrLengthMismatch
 	}
 	return nil
 }

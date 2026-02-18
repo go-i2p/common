@@ -72,6 +72,9 @@ func validateIntegerInput(value int, size int) error {
 	if value < 0 {
 		return oops.Errorf("cannot create integer from negative value: %d", value)
 	}
+	if size < 1 || size > MAX_INTEGER_SIZE {
+		return oops.Errorf("invalid integer size: %d (must be 1-%d)", size, MAX_INTEGER_SIZE)
+	}
 	return nil
 }
 
