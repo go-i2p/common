@@ -23,6 +23,18 @@ func (ls *LeaseSet) Validate() error {
 	if ls == nil {
 		return oops.Errorf("lease set is nil")
 	}
+	if err := validateLeaseSetCounts(ls); err != nil {
+		return err
+	}
+	if err := validateLeaseSetKeys(ls); err != nil {
+		return err
+	}
+	return validateLeaseSetSignature(ls)
+}
+
+// validateLeaseSetCounts validates that the lease count is within bounds and matches
+// the actual number of leases.
+func validateLeaseSetCounts(ls *LeaseSet) error {
 	if ls.leaseCount > LEASE_SET_MAX_LEASES {
 		return oops.Errorf("lease set cannot have more than 16 leases")
 	}
@@ -30,6 +42,12 @@ func (ls *LeaseSet) Validate() error {
 		return oops.Errorf("lease count mismatch: count field is %d but have %d leases",
 			ls.leaseCount, len(ls.leases))
 	}
+	return nil
+}
+
+// validateLeaseSetKeys validates that the encryption key and signing key are present
+// and have the correct sizes.
+func validateLeaseSetKeys(ls *LeaseSet) error {
 	if ls.encryptionKey == nil {
 		return oops.Errorf("encryption key is required")
 	}
@@ -40,7 +58,11 @@ func (ls *LeaseSet) Validate() error {
 	if ls.signingKey == nil {
 		return oops.Errorf("signing key is required")
 	}
-	// Only validate signature if it has been set (non-zero)
+	return nil
+}
+
+// validateLeaseSetSignature validates the signature if it has been set (non-zero bytes).
+func validateLeaseSetSignature(ls *LeaseSet) error {
 	if len(ls.signature.Bytes()) > 0 {
 		if err := ls.signature.Validate(); err != nil {
 			return oops.Errorf("invalid signature: %w", err)
@@ -125,36 +147,44 @@ func validateSigningKey(dest destination.Destination, signingKey types.SigningPu
 	}
 
 	if kind == certificate.CERT_KEY {
-		keyCert, err := key_certificate.KeyCertificateFromCertificate(cert)
-		if err != nil {
-			return oops.Errorf("failed to create key certificate: %w", err)
-		}
+		return validateKeyCertSigningKey(dest, signingKey)
+	}
+	return validateNullCertSigningKey(signingKey)
+}
 
-		// Validate signing key size
-		expectedSize := keyCert.SigningPublicKeySize()
-		if len(signingKey.Bytes()) != expectedSize {
+// validateKeyCertSigningKey validates the signing key size and type against a key
+// certificate's requirements.
+func validateKeyCertSigningKey(dest destination.Destination, signingKey types.SigningPublicKey) error {
+	keyCert, err := key_certificate.KeyCertificateFromCertificate(dest.Certificate())
+	if err != nil {
+		return oops.Errorf("failed to create key certificate: %w", err)
+	}
+
+	expectedSize := keyCert.SigningPublicKeySize()
+	if len(signingKey.Bytes()) != expectedSize {
+		return oops.Errorf(
+			"signing key size mismatch: got %d, expected %d for signing type %d",
+			len(signingKey.Bytes()), expectedSize, keyCert.SigningPublicKeyType(),
+		)
+	}
+
+	if typedKey, ok := signingKey.(interface{ SigningPublicKeyType() int }); ok {
+		if typedKey.SigningPublicKeyType() != keyCert.SigningPublicKeyType() {
 			return oops.Errorf(
-				"signing key size mismatch: got %d, expected %d for signing type %d",
-				len(signingKey.Bytes()), expectedSize, keyCert.SigningPublicKeyType(),
+				"signing key type mismatch: key reports type %d, destination requires type %d",
+				typedKey.SigningPublicKeyType(), keyCert.SigningPublicKeyType(),
 			)
 		}
+	}
+	return nil
+}
 
-		// Validate signing key type matches by checking the key
-		// reports the same type as the destination certificate
-		if typedKey, ok := signingKey.(interface{ SigningPublicKeyType() int }); ok {
-			if typedKey.SigningPublicKeyType() != keyCert.SigningPublicKeyType() {
-				return oops.Errorf(
-					"signing key type mismatch: key reports type %d, destination requires type %d",
-					typedKey.SigningPublicKeyType(), keyCert.SigningPublicKeyType(),
-				)
-			}
-		}
-	} else {
-		// Default DSA size for NULL certificate
-		if len(signingKey.Bytes()) != LEASE_SET_SPK_SIZE {
-			return oops.Errorf("invalid signing key size for NULL certificate: got %d, expected %d",
-				len(signingKey.Bytes()), LEASE_SET_SPK_SIZE)
-		}
+// validateNullCertSigningKey validates the signing key size for a NULL certificate,
+// which uses the default DSA size.
+func validateNullCertSigningKey(signingKey types.SigningPublicKey) error {
+	if len(signingKey.Bytes()) != LEASE_SET_SPK_SIZE {
+		return oops.Errorf("invalid signing key size for NULL certificate: got %d, expected %d",
+			len(signingKey.Bytes()), LEASE_SET_SPK_SIZE)
 	}
 	return nil
 }

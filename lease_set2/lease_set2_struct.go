@@ -165,41 +165,54 @@ func (ls2 *LeaseSet2) Validate() error {
 	if ls2 == nil {
 		return oops.Errorf("LeaseSet2 is nil")
 	}
+	if err := validateEncryptionKeys(ls2.encryptionKeys); err != nil {
+		return err
+	}
+	if err := validateOfflineSignatureConsistency(ls2.HasOfflineKeys(), ls2.offlineSignature); err != nil {
+		return err
+	}
+	return validateReservedFlagsAndLeases(ls2.flags, ls2.leases)
+}
 
-	// Check encryption keys
-	if len(ls2.encryptionKeys) < 1 {
+// validateEncryptionKeys validates the encryption key count and internal consistency
+// of each encryption key in the LeaseSet2.
+func validateEncryptionKeys(keys []EncryptionKey) error {
+	if len(keys) < 1 {
 		return oops.Errorf("LeaseSet2 must have at least 1 encryption key")
 	}
-	if len(ls2.encryptionKeys) > LEASESET2_MAX_ENCRYPTION_KEYS {
-		return oops.Errorf("LeaseSet2 has too many encryption keys: %d (max %d)", len(ls2.encryptionKeys), LEASESET2_MAX_ENCRYPTION_KEYS)
+	if len(keys) > LEASESET2_MAX_ENCRYPTION_KEYS {
+		return oops.Errorf("LeaseSet2 has too many encryption keys: %d (max %d)", len(keys), LEASESET2_MAX_ENCRYPTION_KEYS)
 	}
-
-	// Validate each encryption key
-	for i, key := range ls2.encryptionKeys {
+	for i, key := range keys {
 		if err := validateEncryptionKeyConsistency(i, key); err != nil {
 			return err
 		}
 	}
+	return nil
+}
 
-	// Validate offline signature flag consistency
-	if ls2.HasOfflineKeys() && ls2.offlineSignature == nil {
+// validateOfflineSignatureConsistency validates that the offline keys flag matches
+// the presence or absence of an offline signature.
+func validateOfflineSignatureConsistency(hasOfflineKeys bool, offlineSig *offline_signature.OfflineSignature) error {
+	if hasOfflineKeys && offlineSig == nil {
 		return oops.Errorf("OFFLINE_KEYS flag set but no offline signature present")
 	}
-	if !ls2.HasOfflineKeys() && ls2.offlineSignature != nil {
+	if !hasOfflineKeys && offlineSig != nil {
 		return oops.Errorf("offline signature present but OFFLINE_KEYS flag not set")
 	}
+	return nil
+}
 
-	// Check reserved flag bits
+// validateReservedFlagsAndLeases validates that reserved flag bits are zero and the
+// lease count does not exceed the maximum.
+func validateReservedFlagsAndLeases(flags uint16, leases []lease.Lease2) error {
 	reservedMask := uint16(0xFFF8)
-	if ls2.flags&reservedMask != 0 {
-		return oops.Errorf("LeaseSet2 has non-zero reserved flag bits: 0x%04x", ls2.flags&reservedMask)
+	if flags&reservedMask != 0 {
+		return oops.Errorf("LeaseSet2 has non-zero reserved flag bits: 0x%04x", flags&reservedMask)
 	}
-
-	// Validate lease count
-	if len(ls2.leases) > LEASESET2_MAX_LEASES {
-		return oops.Errorf("LeaseSet2 has too many leases: %d (max %d)", len(ls2.leases), LEASESET2_MAX_LEASES)
+	if len(leases) > LEASESET2_MAX_LEASES {
+		return oops.Errorf("LeaseSet2 has too many leases: %d (max %d)", len(leases), LEASESET2_MAX_LEASES)
 	}
-
 	return nil
 }
 

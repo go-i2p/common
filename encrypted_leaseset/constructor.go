@@ -137,15 +137,24 @@ func validateInputs(
 	offlineSig *offline_signature.OfflineSignature,
 	encryptedInnerData []byte,
 ) error {
-	// Validate sig_type
+	if err := validateSigTypeAndKeySize(sigType, blindedPublicKey); err != nil {
+		return err
+	}
+	if err := validateConstructorFlags(expiresOffset, flags, offlineSig); err != nil {
+		return err
+	}
+	return validateEncryptedPayload(encryptedInnerData)
+}
+
+// validateSigTypeAndKeySize validates the signing key type is known and the blinded
+// public key has the correct size for that type.
+func validateSigTypeAndKeySize(sigType uint16, blindedPublicKey []byte) error {
 	sizes, ok := key_certificate.SigningKeySizes[int(sigType)]
 	if !ok {
 		return oops.Code("unknown_sig_type").
 			With("sig_type", sigType).
 			Errorf("unknown signing key type: %d", sigType)
 	}
-
-	// Validate blinded public key size
 	if len(blindedPublicKey) != sizes.SigningPublicKeySize {
 		return oops.Code("invalid_key_size").
 			With("got", len(blindedPublicKey)).
@@ -153,20 +162,20 @@ func validateInputs(
 			Errorf("blinded public key size %d != expected %d for sig_type %d",
 				len(blindedPublicKey), sizes.SigningPublicKeySize, sigType)
 	}
+	return nil
+}
 
-	// Validate expires offset
+// validateConstructorFlags validates the expires offset, reserved flags, and offline
+// signature consistency for the EncryptedLeaseSet constructor.
+func validateConstructorFlags(expiresOffset uint16, flags uint16, offlineSig *offline_signature.OfflineSignature) error {
 	if expiresOffset == 0 {
 		return oops.Code("zero_expires").
 			Errorf("expires offset cannot be zero")
 	}
-
-	// Validate reserved flags
 	if flags&ENCRYPTED_LEASESET_RESERVED_FLAGS_MASK != 0 {
 		return oops.Code("reserved_flags_set").
 			Errorf("reserved flag bits 15‑2 must be zero, got 0x%04x", flags)
 	}
-
-	// Validate offline signature flag consistency
 	if (flags&ENCRYPTED_LEASESET_FLAG_OFFLINE_KEYS) != 0 && offlineSig == nil {
 		return oops.Code("missing_offline_sig").
 			Errorf("OFFLINE_KEYS flag set but no offline signature provided")
@@ -175,8 +184,12 @@ func validateInputs(
 		return oops.Code("unexpected_offline_sig").
 			Errorf("offline signature provided but OFFLINE_KEYS flag not set")
 	}
+	return nil
+}
 
-	// Validate encrypted inner data
+// validateEncryptedPayload validates that the encrypted inner data is present and
+// meets the minimum size requirement.
+func validateEncryptedPayload(encryptedInnerData []byte) error {
 	if len(encryptedInnerData) == 0 {
 		return oops.Code("empty_encrypted_data").
 			Errorf("encrypted inner data cannot be empty")
@@ -188,7 +201,6 @@ func validateInputs(
 			Errorf("encrypted inner data size %d < minimum %d",
 				len(encryptedInnerData), ENCRYPTED_LEASESET_MIN_ENCRYPTED_SIZE)
 	}
-
 	return nil
 }
 

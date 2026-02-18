@@ -282,39 +282,57 @@ func signRouterInfoData(routerInfo *RouterInfo, signer types.Signer, sigType int
 // Returns an error if any required field is nil.
 func (router_info RouterInfo) Bytes() ([]byte, error) {
 	log.Debug("Converting RouterInfo to bytes")
-	if router_info.router_identity == nil {
-		return nil, oops.Errorf("cannot serialize RouterInfo: router_identity is nil")
+	if err := validateBytesPrerequisites(&router_info); err != nil {
+		return nil, err
 	}
-	if router_info.published == nil {
-		return nil, oops.Errorf("cannot serialize RouterInfo: published is nil")
+	bytes, err := serializeRouterInfoFields(&router_info)
+	if err != nil {
+		return nil, err
 	}
-	if router_info.size == nil {
-		return nil, oops.Errorf("cannot serialize RouterInfo: size is nil")
+	log.WithField("bytes_length", len(bytes)).Debug("Converted RouterInfo to bytes")
+	return bytes, nil
+}
+
+// validateBytesPrerequisites checks that all required RouterInfo fields are non-nil
+// before serialization.
+func validateBytesPrerequisites(ri *RouterInfo) error {
+	if ri.router_identity == nil {
+		return oops.Errorf("cannot serialize RouterInfo: router_identity is nil")
 	}
-	if router_info.peer_size == nil {
-		return nil, oops.Errorf("cannot serialize RouterInfo: peer_size is nil")
+	if ri.published == nil {
+		return oops.Errorf("cannot serialize RouterInfo: published is nil")
 	}
-	if router_info.options == nil {
-		return nil, oops.Errorf("cannot serialize RouterInfo: options is nil")
+	if ri.size == nil {
+		return oops.Errorf("cannot serialize RouterInfo: size is nil")
 	}
-	if router_info.signature == nil {
-		return nil, oops.Errorf("cannot serialize RouterInfo: signature is nil")
+	if ri.peer_size == nil {
+		return oops.Errorf("cannot serialize RouterInfo: peer_size is nil")
 	}
-	identityBytes, err := router_info.router_identity.Bytes()
+	if ri.options == nil {
+		return oops.Errorf("cannot serialize RouterInfo: options is nil")
+	}
+	if ri.signature == nil {
+		return oops.Errorf("cannot serialize RouterInfo: signature is nil")
+	}
+	return nil
+}
+
+// serializeRouterInfoFields serializes all RouterInfo fields into a byte slice.
+func serializeRouterInfoFields(ri *RouterInfo) ([]byte, error) {
+	identityBytes, err := ri.router_identity.Bytes()
 	if err != nil {
 		return nil, err
 	}
 	var bytes []byte
 	bytes = append(bytes, identityBytes...)
-	bytes = append(bytes, router_info.published.Bytes()...)
-	bytes = append(bytes, router_info.size.Bytes()...)
-	for _, addr := range router_info.addresses {
+	bytes = append(bytes, ri.published.Bytes()...)
+	bytes = append(bytes, ri.size.Bytes()...)
+	for _, addr := range ri.addresses {
 		bytes = append(bytes, addr.Bytes()...)
 	}
-	bytes = append(bytes, router_info.peer_size.Bytes()...)
-	bytes = append(bytes, router_info.options.Data()...)
-	bytes = append(bytes, router_info.signature.Bytes()...)
-	log.WithField("bytes_length", len(bytes)).Debug("Converted RouterInfo to bytes")
+	bytes = append(bytes, ri.peer_size.Bytes()...)
+	bytes = append(bytes, ri.options.Data()...)
+	bytes = append(bytes, ri.signature.Bytes()...)
 	return bytes, nil
 }
 

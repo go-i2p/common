@@ -19,14 +19,8 @@ var log = logger.GetGoI2PLogger()
 // passing data directly to ed25519.Verify which performs its own internal
 // SHA-512 hashing. This is consistent with Java I2P and i2pd.
 func (ri *RouterInfo) VerifySignature() (bool, error) {
-	if ri == nil {
-		return false, oops.Errorf("router info is nil")
-	}
-	if ri.router_identity == nil {
-		return false, oops.Errorf("router identity is nil")
-	}
-	if ri.signature == nil {
-		return false, oops.Errorf("signature is nil")
+	if err := validateSignaturePrerequisites(ri); err != nil {
+		return false, err
 	}
 
 	dataBytes, err := ri.serializeWithoutSignature()
@@ -34,6 +28,27 @@ func (ri *RouterInfo) VerifySignature() (bool, error) {
 		return false, oops.Errorf("failed to serialize data for verification: %w", err)
 	}
 
+	return verifyRouterInfoSignature(ri, dataBytes)
+}
+
+// validateSignaturePrerequisites checks that all required components for signature
+// verification are present and non-nil.
+func validateSignaturePrerequisites(ri *RouterInfo) error {
+	if ri == nil {
+		return oops.Errorf("router info is nil")
+	}
+	if ri.router_identity == nil {
+		return oops.Errorf("router identity is nil")
+	}
+	if ri.signature == nil {
+		return oops.Errorf("signature is nil")
+	}
+	return nil
+}
+
+// verifyRouterInfoSignature performs the actual cryptographic signature verification
+// based on the signature type. Currently supports Ed25519 (type 7).
+func verifyRouterInfoSignature(ri *RouterInfo, dataBytes []byte) (bool, error) {
 	sigBytes := ri.signature.Bytes()
 	signingKey, err := ri.router_identity.SigningPublicKey()
 	if err != nil {
@@ -50,7 +65,6 @@ func (ri *RouterInfo) VerifySignature() (bool, error) {
 		if len(keyBytes) != ed25519.PublicKeySize {
 			return false, oops.Errorf("invalid Ed25519 public key size: %d", len(keyBytes))
 		}
-		// Standard Ed25519 (PureEdDSA per RFC 8032) — pass raw data directly
 		return ed25519.Verify(keyBytes, dataBytes, sigBytes), nil
 	default:
 		return false, oops.Errorf("unsupported signature type for verification: %d", sigType)
@@ -63,12 +77,29 @@ func (ri *RouterInfo) Validate() error {
 	if ri == nil {
 		return oops.Errorf("router info is nil")
 	}
+	if err := validateRouterIdentity(ri); err != nil {
+		return err
+	}
+	if err := validateTimestampAndSize(ri); err != nil {
+		return err
+	}
+	return validateAddressesAndOptions(ri)
+}
+
+// validateRouterIdentity validates the router identity is present and valid.
+func validateRouterIdentity(ri *RouterInfo) error {
 	if ri.router_identity == nil {
 		return oops.Errorf("router identity is required")
 	}
 	if err := ri.router_identity.Validate(); err != nil {
 		return oops.Errorf("invalid router identity: %w", err)
 	}
+	return nil
+}
+
+// validateTimestampAndSize validates the published date and size fields are present
+// and have valid values.
+func validateTimestampAndSize(ri *RouterInfo) error {
 	if ri.published == nil {
 		return oops.Errorf("published date is required")
 	}
@@ -78,10 +109,15 @@ func (ri *RouterInfo) Validate() error {
 	if ri.size == nil {
 		return oops.Errorf("size field is required")
 	}
+	return nil
+}
+
+// validateAddressesAndOptions validates that addresses are present, their count
+// matches the size field, and that options and signature are properly set.
+func validateAddressesAndOptions(ri *RouterInfo) error {
 	if len(ri.addresses) == 0 {
 		return oops.Errorf("router must have at least one address")
 	}
-	// Validate the size matches the actual number of addresses
 	sizeValue := ri.size.Int()
 	if sizeValue != len(ri.addresses) {
 		return oops.Errorf("size mismatch: size field is %d but have %d addresses", sizeValue, len(ri.addresses))

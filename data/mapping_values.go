@@ -332,36 +332,18 @@ func parseKeyValuePairs(remainder []byte, map_values MappingValues, errs []error
 	previousLength := len(remainder)
 
 	for {
-		// Safety limit: prevent infinite loops with malformed data
-		if pairCount >= MAX_MAPPING_PAIRS {
-			log.WithFields(logger.Fields{
-				"at":         "(Mapping) Values",
-				"pair_count": pairCount,
-				"max_pairs":  MAX_MAPPING_PAIRS,
-				"reason":     "exceeded maximum mapping pairs",
-			}).Error("mapping format violation")
-			errs = append(errs, oops.Errorf("exceeded maximum mapping pairs (%d)", MAX_MAPPING_PAIRS))
+		if shouldStopLoop(pairCount, remainder, previousLength) {
+			if pairCount >= MAX_MAPPING_PAIRS {
+				errs = append(errs, oops.Errorf("exceeded maximum mapping pairs (%d)", MAX_MAPPING_PAIRS))
+			}
 			break
 		}
 
-		if !hasMinimumBytesForKeyValuePair(remainder) {
+		if err := checkForwardProgress(pairCount, len(remainder), previousLength); err != nil {
+			errs = append(errs, err)
 			break
 		}
-
-		// Forward progress check: ensure we're consuming bytes
-		currentLength := len(remainder)
-		if currentLength >= previousLength && pairCount > 0 {
-			log.WithFields(logger.Fields{
-				"at":              "(Mapping) Values",
-				"pair_count":      pairCount,
-				"current_length":  currentLength,
-				"previous_length": previousLength,
-				"reason":          "no forward progress in parsing",
-			}).Error("mapping format violation - infinite loop detected")
-			errs = append(errs, oops.Errorf("no forward progress in parsing mapping (infinite loop detected)"))
-			break
-		}
-		previousLength = currentLength
+		previousLength = len(remainder)
 
 		var keyValuePair [2]I2PString
 		var err error
@@ -374,7 +356,6 @@ func parseKeyValuePairs(remainder []byte, map_values MappingValues, errs []error
 			}
 		}
 
-		// Always add the key-value pair even if there were errors (preserves original behavior)
 		map_values = append(map_values, keyValuePair)
 		pairCount++
 		if len(remainder) == 0 {
@@ -392,6 +373,37 @@ func parseKeyValuePairs(remainder []byte, map_values MappingValues, errs []error
 	}).Debug("Completed parsing key-value pairs")
 
 	return remainder, map_values, errs
+}
+
+// shouldStopLoop checks whether the parsing loop should terminate due to
+// exceeding the maximum pair count or insufficient data.
+func shouldStopLoop(pairCount int, remainder []byte, previousLength int) bool {
+	if pairCount >= MAX_MAPPING_PAIRS {
+		log.WithFields(logger.Fields{
+			"at":         "(Mapping) Values",
+			"pair_count": pairCount,
+			"max_pairs":  MAX_MAPPING_PAIRS,
+			"reason":     "exceeded maximum mapping pairs",
+		}).Error("mapping format violation")
+		return true
+	}
+	return !hasMinimumBytesForKeyValuePair(remainder)
+}
+
+// checkForwardProgress detects infinite loops by verifying the parser consumes bytes
+// on each iteration after the first pair.
+func checkForwardProgress(pairCount int, currentLength int, previousLength int) error {
+	if currentLength >= previousLength && pairCount > 0 {
+		log.WithFields(logger.Fields{
+			"at":              "(Mapping) Values",
+			"pair_count":      pairCount,
+			"current_length":  currentLength,
+			"previous_length": previousLength,
+			"reason":          "no forward progress in parsing",
+		}).Error("mapping format violation - infinite loop detected")
+		return oops.Errorf("no forward progress in parsing mapping (infinite loop detected)")
+	}
+	return nil
 }
 
 // parseSingleKeyValuePair extracts one complete key-value pair from the remainder data.

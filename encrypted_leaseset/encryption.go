@@ -33,58 +33,83 @@ func (els *EncryptedLeaseSet) DecryptInnerData(authCookie []byte, privateKey int
 		"encrypted_length": len(els.encryptedInnerData),
 	}).Debug("Decrypting EncryptedLeaseSet inner data")
 
-	// Validate cookie length
 	if len(authCookie) != 32 {
 		return nil, oops.Errorf("invalid cookie length: expected 32, got %d", len(authCookie))
 	}
 
-	// Extract X25519 private key
-	// IMPORTANT: We need to keep privKey as pointer for SharedKey() call
-	var privKey *x25519.PrivateKey
-	if pk, ok := privateKey.(*x25519.PrivateKey); ok {
-		privKey = pk
-	} else if pk, ok := privateKey.(x25519.PrivateKey); ok {
-		// Handle value type (e.g., from recipientPriv[:])
-		privKey = &pk
-	} else if privKeyBytes, ok := privateKey.([]byte); ok {
-		if len(privKeyBytes) != x25519.PrivateKeySize {
+	privKey, err := extractX25519PrivateKey(privateKey)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := validateEncryptedDataLength(els.encryptedInnerData); err != nil {
+		return nil, err
+	}
+
+	derivedKey, err := deriveDecryptionKey(privKey, els.encryptedInnerData[:x25519.PublicKeySize])
+	if err != nil {
+		return nil, err
+	}
+
+	plaintext, err := decryptWithAEAD(derivedKey, els.encryptedInnerData)
+	if err != nil {
+		return nil, err
+	}
+
+	return parseDecryptedLeaseSet2(plaintext)
+}
+
+// extractX25519PrivateKey converts a private key from various supported types
+// to an *x25519.PrivateKey suitable for ECDH key exchange.
+// Supports *x25519.PrivateKey, x25519.PrivateKey (value), and 32-byte []byte.
+func extractX25519PrivateKey(privateKey interface{}) (*x25519.PrivateKey, error) {
+	switch pk := privateKey.(type) {
+	case *x25519.PrivateKey:
+		return pk, nil
+	case x25519.PrivateKey:
+		return &pk, nil
+	case []byte:
+		if len(pk) != x25519.PrivateKeySize {
 			return nil, oops.Errorf("invalid private key length: expected %d, got %d",
-				x25519.PrivateKeySize, len(privKeyBytes))
+				x25519.PrivateKeySize, len(pk))
 		}
-		pk := x25519.PrivateKey{}
-		copy(pk[:], privKeyBytes)
-		privKey = &pk
-	} else {
+		result := x25519.PrivateKey{}
+		copy(result[:], pk)
+		return &result, nil
+	default:
 		return nil, oops.Errorf("invalid private key type: expected *x25519.PrivateKey, x25519.PrivateKey, or 32-byte []byte")
 	}
+}
 
-	// Encrypted data format:
-	// [ephemeral_public_key (32)] [nonce (12)] [ciphertext] [tag (16)]
-	if len(els.encryptedInnerData) < x25519.PublicKeySize+chacha20poly1305.NonceSize+chacha20poly1305.TagSize {
-		return nil, oops.Errorf("encrypted data too short: need at least %d bytes, got %d",
-			x25519.PublicKeySize+chacha20poly1305.NonceSize+chacha20poly1305.TagSize,
-			len(els.encryptedInnerData))
+// validateEncryptedDataLength checks that the encrypted data has sufficient bytes
+// for the ephemeral public key, nonce, and authentication tag.
+func validateEncryptedDataLength(data []byte) error {
+	minSize := x25519.PublicKeySize + chacha20poly1305.NonceSize + chacha20poly1305.TagSize
+	if len(data) < minSize {
+		return oops.Errorf("encrypted data too short: need at least %d bytes, got %d",
+			minSize, len(data))
 	}
+	return nil
+}
 
-	// Extract ephemeral public key (first 32 bytes)
-	ephemeralPubBytes := els.encryptedInnerData[:x25519.PublicKeySize]
-
+// deriveDecryptionKey performs X25519 ECDH with the given private key and ephemeral
+// public key, then derives a symmetric key via HKDF-SHA256 for ChaCha20-Poly1305.
+func deriveDecryptionKey(privKey *x25519.PrivateKey, ephemeralPubBytes []byte) ([32]byte, error) {
 	log.WithField("ephemeral_pub", ephemeralPubBytes).Debug("Extracted ephemeral public key")
 
-	// Perform X25519 ECDH to derive shared secret
-	// Use the bytes directly - recreating x25519.PublicKey from bytes doesn't work
 	sharedSecret, err := privKey.SharedKey(ephemeralPubBytes)
 	if err != nil {
 		log.WithError(err).Error("X25519 key exchange failed")
-		return nil, oops.Errorf("X25519 ECDH failed: %w", err)
+		return [32]byte{}, oops.Errorf("X25519 ECDH failed: %w", err)
 	}
-
 	log.Debug("Derived shared secret via X25519 ECDH")
 
-	// Derive encryption key using HKDF-SHA256
-	// Input: shared secret (32 bytes) + cookie (32 bytes)
-	// Purpose: PurposeEncryptedLeaseSetEncryption
-	// Output: 32-byte ChaCha20-Poly1305 key
+	return deriveSymmetricKey(sharedSecret)
+}
+
+// deriveSymmetricKey derives a ChaCha20-Poly1305 symmetric key from a shared secret
+// using HKDF-SHA256 with PurposeEncryptedLeaseSetEncryption.
+func deriveSymmetricKey(sharedSecret []byte) ([32]byte, error) {
 	var rootKey [32]byte
 	copy(rootKey[:], sharedSecret)
 
@@ -92,32 +117,25 @@ func (els *EncryptedLeaseSet) DecryptInnerData(authCookie []byte, privateKey int
 	derivedKey, err := kd.DeriveForPurpose(kdf.PurposeEncryptedLeaseSetEncryption)
 	if err != nil {
 		log.WithError(err).Error("Key derivation failed")
-		return nil, oops.Errorf("HKDF key derivation failed: %w", err)
+		return [32]byte{}, oops.Errorf("HKDF key derivation failed: %w", err)
 	}
-
 	log.Debug("Derived encryption key using HKDF-SHA256")
+	return derivedKey, nil
+}
 
-	// Create ChaCha20-Poly1305 AEAD cipher
+// decryptWithAEAD decrypts the encrypted data using ChaCha20-Poly1305 AEAD.
+// The data format is: [ephemeral_pub(32)][nonce(12)][ciphertext][tag(16)].
+func decryptWithAEAD(derivedKey [32]byte, encryptedData []byte) ([]byte, error) {
 	aead, err := chacha20poly1305.NewAEAD(derivedKey)
 	if err != nil {
 		log.WithError(err).Error("Failed to create AEAD cipher")
 		return nil, oops.Errorf("ChaCha20-Poly1305 initialization failed: %w", err)
 	}
 
-	// Extract nonce (12 bytes after ephemeral public key)
-	offset := x25519.PublicKeySize
-	nonce := els.encryptedInnerData[offset : offset+chacha20poly1305.NonceSize]
-
-	// Extract ciphertext + tag (everything after nonce)
-	ciphertextWithTag := els.encryptedInnerData[offset+chacha20poly1305.NonceSize:]
-
-	// Split ciphertext and tag
-	if len(ciphertextWithTag) < chacha20poly1305.TagSize {
-		return nil, oops.Errorf("ciphertext too short: need at least %d bytes for tag", chacha20poly1305.TagSize)
+	nonce, ciphertext, tag, err := extractEncryptionComponents(encryptedData)
+	if err != nil {
+		return nil, err
 	}
-	ciphertext := ciphertextWithTag[:len(ciphertextWithTag)-chacha20poly1305.TagSize]
-	var tag [chacha20poly1305.TagSize]byte
-	copy(tag[:], ciphertextWithTag[len(ciphertextWithTag)-chacha20poly1305.TagSize:])
 
 	log.WithFields(logger.Fields{
 		"nonce_length":      len(nonce),
@@ -125,16 +143,36 @@ func (els *EncryptedLeaseSet) DecryptInnerData(authCookie []byte, privateKey int
 		"tag_length":        len(tag),
 	}).Debug("Extracted encryption components")
 
-	// Decrypt using ChaCha20-Poly1305 with empty associated data
-	plaintext, err := aead.Decrypt(ciphertext, tag[:], nil, nonce)
+	plaintext, err := aead.Decrypt(ciphertext, tag, nil, nonce)
 	if err != nil {
 		log.WithError(err).Warn("Decryption failed - invalid key or tampered data")
 		return nil, oops.Errorf("ChaCha20-Poly1305 decryption failed: %w", err)
 	}
 
 	log.WithField("plaintext_length", len(plaintext)).Debug("Successfully decrypted inner data")
+	return plaintext, nil
+}
 
-	// Parse decrypted data as LeaseSet2
+// extractEncryptionComponents splits encrypted data into nonce, ciphertext, and tag.
+// Expected format after ephemeral public key: [nonce(12)][ciphertext][tag(16)].
+func extractEncryptionComponents(encryptedData []byte) (nonce, ciphertext, tag []byte, err error) {
+	offset := x25519.PublicKeySize
+	nonce = encryptedData[offset : offset+chacha20poly1305.NonceSize]
+
+	ciphertextWithTag := encryptedData[offset+chacha20poly1305.NonceSize:]
+	if len(ciphertextWithTag) < chacha20poly1305.TagSize {
+		return nil, nil, nil, oops.Errorf("ciphertext too short: need at least %d bytes for tag", chacha20poly1305.TagSize)
+	}
+
+	ciphertext = ciphertextWithTag[:len(ciphertextWithTag)-chacha20poly1305.TagSize]
+	tag = make([]byte, chacha20poly1305.TagSize)
+	copy(tag, ciphertextWithTag[len(ciphertextWithTag)-chacha20poly1305.TagSize:])
+	return nonce, ciphertext, tag, nil
+}
+
+// parseDecryptedLeaseSet2 parses decrypted plaintext bytes as a LeaseSet2 structure
+// and logs the result.
+func parseDecryptedLeaseSet2(plaintext []byte) (*lease_set2.LeaseSet2, error) {
 	innerLS2, _, err := lease_set2.ReadLeaseSet2(plaintext)
 	if err != nil {
 		log.WithError(err).Error("Failed to parse decrypted data as LeaseSet2")
@@ -192,92 +230,103 @@ func EncryptInnerLeaseSet2(ls2 *lease_set2.LeaseSet2, cookie [32]byte, recipient
 		"num_leases": len(ls2.Leases()),
 	}).Debug("Encrypting LeaseSet2 for EncryptedLeaseSet")
 
-	// Serialize LeaseSet2 to bytes
+	plaintext, err := serializeLeaseSet2Plaintext(ls2)
+	if err != nil {
+		return nil, err
+	}
+
+	recipientPubBytes, err := extractRecipientPublicKeyBytes(recipientPublicKey)
+	if err != nil {
+		return nil, err
+	}
+
+	ephemeralPub, derivedKey, err := deriveEncryptionKey(recipientPubBytes)
+	if err != nil {
+		return nil, err
+	}
+
+	return encryptAndAssemble(plaintext, derivedKey, ephemeralPub)
+}
+
+// serializeLeaseSet2Plaintext serializes a LeaseSet2 to bytes for encryption.
+func serializeLeaseSet2Plaintext(ls2 *lease_set2.LeaseSet2) ([]byte, error) {
 	plaintext, err := ls2.Bytes()
 	if err != nil {
 		log.WithError(err).Error("Failed to serialize LeaseSet2")
 		return nil, oops.Errorf("LeaseSet2 serialization failed: %w", err)
 	}
-
 	log.WithField("plaintext_length", len(plaintext)).Debug("Serialized LeaseSet2")
+	return plaintext, nil
+}
 
-	// Convert recipientPublicKey to []byte for SharedKey
-	// IMPORTANT: We cannot create x25519.PublicKey from bytes - it breaks validation
-	// Instead, we extract bytes and use them directly in SharedKey()
-	var recipientPubBytes []byte
-	if pub, ok := recipientPublicKey.(*x25519.PublicKey); ok {
-		recipientPubBytes = (*pub)[:]
-	} else if pub, ok := recipientPublicKey.(x25519.PublicKey); ok {
-		// Handle value type (e.g., from recipientPub[:])
-		recipientPubBytes = pub[:]
-	} else if c25519Pub, ok := recipientPublicKey.(curve25519.Curve25519PublicKey); ok {
-		if len(c25519Pub) != x25519.PublicKeySize {
+// extractRecipientPublicKeyBytes converts a recipient public key from various
+// supported types to a raw byte slice for use in X25519 ECDH.
+// Supports *x25519.PublicKey, x25519.PublicKey, Curve25519PublicKey, and 32-byte []byte.
+func extractRecipientPublicKeyBytes(recipientPublicKey interface{}) ([]byte, error) {
+	switch pub := recipientPublicKey.(type) {
+	case *x25519.PublicKey:
+		return (*pub)[:], nil
+	case x25519.PublicKey:
+		return pub[:], nil
+	case curve25519.Curve25519PublicKey:
+		if len(pub) != x25519.PublicKeySize {
 			return nil, oops.Errorf("invalid Curve25519PublicKey length: expected %d, got %d",
-				x25519.PublicKeySize, len(c25519Pub))
+				x25519.PublicKeySize, len(pub))
 		}
-		recipientPubBytes = []byte(c25519Pub)
-	} else if pubKeyBytes, ok := recipientPublicKey.([]byte); ok {
-		if len(pubKeyBytes) != x25519.PublicKeySize {
+		return []byte(pub), nil
+	case []byte:
+		if len(pub) != x25519.PublicKeySize {
 			return nil, oops.Errorf("invalid public key length: expected %d, got %d",
-				x25519.PublicKeySize, len(pubKeyBytes))
+				x25519.PublicKeySize, len(pub))
 		}
-		recipientPubBytes = pubKeyBytes
-	} else {
+		return pub, nil
+	default:
 		return nil, oops.Errorf("invalid public key type: expected *x25519.PublicKey, x25519.PublicKey, Curve25519PublicKey, or 32-byte []byte")
 	}
+}
 
-	// Generate ephemeral X25519 key pair for this encryption
+// deriveEncryptionKey generates an ephemeral X25519 key pair, performs ECDH with the
+// recipient's public key, and derives a symmetric encryption key via HKDF-SHA256.
+// Returns the ephemeral public key and derived symmetric key.
+func deriveEncryptionKey(recipientPubBytes []byte) (x25519.PublicKey, [32]byte, error) {
 	ephemeralPub, ephemeralPriv, err := x25519.GenerateKey(rand.Reader)
 	if err != nil {
 		log.WithError(err).Error("Failed to generate ephemeral key pair")
-		return nil, oops.Errorf("ephemeral key generation failed: %w", err)
+		return nil, [32]byte{}, oops.Errorf("ephemeral key generation failed: %w", err)
 	}
-
 	log.Debug("Generated ephemeral X25519 key pair")
 
-	// Perform X25519 ECDH to derive shared secret
-	// CRITICAL: Use recipientPubBytes directly - DO NOT create x25519.PublicKey from bytes
 	sharedSecret, err := ephemeralPriv.SharedKey(recipientPubBytes)
 	if err != nil {
 		log.WithError(err).Error("X25519 key exchange failed")
-		return nil, oops.Errorf("X25519 ECDH failed: %w", err)
+		return nil, [32]byte{}, oops.Errorf("X25519 ECDH failed: %w", err)
 	}
-
 	log.Debug("Derived shared secret via X25519 ECDH")
 
-	// Derive encryption key using HKDF-SHA256
-	// Input: shared secret (32 bytes) + cookie (32 bytes)
-	// Purpose: PurposeEncryptedLeaseSetEncryption
-	// Output: 32-byte ChaCha20-Poly1305 key
-	var rootKey [32]byte
-	copy(rootKey[:], sharedSecret)
-
-	kd := kdf.NewKeyDerivation(rootKey)
-	derivedKey, err := kd.DeriveForPurpose(kdf.PurposeEncryptedLeaseSetEncryption)
+	derivedKey, err := deriveSymmetricKey(sharedSecret)
 	if err != nil {
-		log.WithError(err).Error("Key derivation failed")
-		return nil, oops.Errorf("HKDF key derivation failed: %w", err)
+		return nil, [32]byte{}, err
 	}
 
-	log.Debug("Derived encryption key using HKDF-SHA256")
+	return ephemeralPub, derivedKey, nil
+}
 
-	// Create ChaCha20-Poly1305 AEAD cipher
+// encryptAndAssemble encrypts plaintext using ChaCha20-Poly1305 AEAD and assembles
+// the final encrypted data in the format: [ephemeral_pub(32)][nonce(12)][ciphertext][tag(16)].
+func encryptAndAssemble(plaintext []byte, derivedKey [32]byte, ephemeralPub x25519.PublicKey) ([]byte, error) {
 	aead, err := chacha20poly1305.NewAEAD(derivedKey)
 	if err != nil {
 		log.WithError(err).Error("Failed to create AEAD cipher")
 		return nil, oops.Errorf("ChaCha20-Poly1305 initialization failed: %w", err)
 	}
 
-	// Generate random 12-byte nonce
 	nonce := make([]byte, chacha20poly1305.NonceSize)
 	if _, err := rand.Read(nonce); err != nil {
 		log.WithError(err).Error("Failed to generate random nonce")
 		return nil, oops.Errorf("nonce generation failed: %w", err)
 	}
-
 	log.WithField("nonce", nonce).Debug("Generated random nonce")
 
-	// Encrypt using ChaCha20-Poly1305 with empty associated data
 	ciphertext, tag, err := aead.Encrypt(plaintext, nil, nonce)
 	if err != nil {
 		log.WithError(err).Error("Encryption failed")
@@ -289,7 +338,6 @@ func EncryptInnerLeaseSet2(ls2 *lease_set2.LeaseSet2, cookie [32]byte, recipient
 		"tag_length":        len(tag),
 	}).Debug("Encrypted plaintext")
 
-	// Construct encrypted data: [ephemeral_pub(32)][nonce(12)][ciphertext][tag(16)]
 	encryptedData := make([]byte, 0, x25519.PublicKeySize+chacha20poly1305.NonceSize+len(ciphertext)+chacha20poly1305.TagSize)
 	encryptedData = append(encryptedData, ephemeralPub[:]...)
 	encryptedData = append(encryptedData, nonce...)

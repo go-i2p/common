@@ -366,38 +366,53 @@ func (els *EncryptedLeaseSet) Validate() error {
 	if els == nil {
 		return oops.Errorf("encrypted lease set is nil")
 	}
+	if err := validateSigTypeAndKey(els); err != nil {
+		return err
+	}
+	if err := validateEncryptedLeaseSetFields(els); err != nil {
+		return err
+	}
+	if err := validateEncryptedInnerDataIntegrity(els); err != nil {
+		return err
+	}
+	return els.signature.Validate()
+}
 
-	// Validate sig_type is known
+// validateSigTypeAndKey validates that the sig_type is known and the blinded public key
+// matches the expected size for that type.
+func validateSigTypeAndKey(els *EncryptedLeaseSet) error {
 	sizes, ok := key_certificate.SigningKeySizes[int(els.sigType)]
 	if !ok {
 		return oops.Errorf("unknown sig_type: %d", els.sigType)
 	}
-
-	// Validate blinded public key size
 	if len(els.blindedPublicKey) != sizes.SigningPublicKeySize {
 		return oops.Errorf("blinded public key size %d != expected %d for sig_type %d",
 			len(els.blindedPublicKey), sizes.SigningPublicKeySize, els.sigType)
 	}
+	return nil
+}
 
-	// Validate expires is non-zero
+// validateEncryptedLeaseSetFields validates the expires, reserved flags, and offline
+// signature consistency of the EncryptedLeaseSet.
+func validateEncryptedLeaseSetFields(els *EncryptedLeaseSet) error {
 	if els.expires == 0 {
 		return oops.Errorf("expires offset cannot be zero")
 	}
-
-	// Validate reserved flag bits are zero
 	if els.flags&ENCRYPTED_LEASESET_RESERVED_FLAGS_MASK != 0 {
 		return oops.Errorf("reserved flag bits 15‑2 must be zero")
 	}
-
-	// Validate offline signature flag consistency
 	if els.HasOfflineKeys() && els.offlineSignature == nil {
 		return oops.Errorf("offline keys flag set but no offline signature present")
 	}
 	if !els.HasOfflineKeys() && els.offlineSignature != nil {
 		return oops.Errorf("offline signature present but offline keys flag not set")
 	}
+	return nil
+}
 
-	// Validate encrypted inner data
+// validateEncryptedInnerDataIntegrity validates that the encrypted inner data is present,
+// meets minimum size requirements, and matches the declared inner length.
+func validateEncryptedInnerDataIntegrity(els *EncryptedLeaseSet) error {
 	if len(els.encryptedInnerData) == 0 {
 		return oops.Errorf("encrypted inner data cannot be empty")
 	}
@@ -409,12 +424,6 @@ func (els *EncryptedLeaseSet) Validate() error {
 		return oops.Errorf("inner length mismatch: field=%d, data=%d",
 			els.innerLength, len(els.encryptedInnerData))
 	}
-
-	// Validate signature
-	if err := els.signature.Validate(); err != nil {
-		return oops.Errorf("invalid signature: %w", err)
-	}
-
 	return nil
 }
 

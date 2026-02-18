@@ -788,7 +788,23 @@ func validateLeaseSet2Inputs(
 	encryptionKeys []EncryptionKey,
 	leases []lease.Lease2,
 ) error {
-	// Validate destination size (minimum 387 bytes per I2P spec)
+	if err := validateDestinationSize(dest); err != nil {
+		return err
+	}
+	if err := validateExpiresOffset(expiresOffset); err != nil {
+		return err
+	}
+	if err := validateOfflineSignatureFlags(flags, offlineSig); err != nil {
+		return err
+	}
+	if err := validateEncryptionKeyInputs(encryptionKeys); err != nil {
+		return err
+	}
+	return validateLeaseInputs(leases)
+}
+
+// validateDestinationSize validates that the destination meets the minimum size requirement.
+func validateDestinationSize(dest destination.Destination) error {
 	destBytes, err := dest.Bytes()
 	if err != nil {
 		return oops.Errorf("invalid destination: %w", err)
@@ -800,16 +816,23 @@ func validateLeaseSet2Inputs(
 			With("minimum", LEASESET2_MIN_DESTINATION_SIZE).
 			Errorf("destination size must be at least %d bytes", LEASESET2_MIN_DESTINATION_SIZE)
 	}
+	return nil
+}
 
-	// Validate expiration offset
+// validateExpiresOffset validates that the expiration offset is within allowed range.
+func validateExpiresOffset(expiresOffset uint16) error {
 	if expiresOffset > LEASESET2_MAX_EXPIRES_OFFSET {
 		return oops.
 			Code("invalid_expires_offset").
 			With("max_allowed", LEASESET2_MAX_EXPIRES_OFFSET).
 			Errorf("expires offset %d exceeds maximum %d", expiresOffset, LEASESET2_MAX_EXPIRES_OFFSET)
 	}
+	return nil
+}
 
-	// Validate offline signature flag consistency
+// validateOfflineSignatureFlags validates consistency between the offline keys flag and
+// the presence of an offline signature structure.
+func validateOfflineSignatureFlags(flags uint16, offlineSig *offline_signature.OfflineSignature) error {
 	if (flags&LEASESET2_FLAG_OFFLINE_KEYS) != 0 && offlineSig == nil {
 		return oops.
 			Code("missing_offline_signature").
@@ -820,8 +843,11 @@ func validateLeaseSet2Inputs(
 			Code("unexpected_offline_signature").
 			Errorf("offline signature provided but OFFLINE_KEYS flag not set")
 	}
+	return nil
+}
 
-	// Validate encryption keys
+// validateEncryptionKeyInputs validates the encryption key count and internal consistency.
+func validateEncryptionKeyInputs(encryptionKeys []EncryptionKey) error {
 	if len(encryptionKeys) < 1 {
 		return oops.
 			Code("no_encryption_keys").
@@ -833,8 +859,21 @@ func validateLeaseSet2Inputs(
 			With("max_allowed", LEASESET2_MAX_ENCRYPTION_KEYS).
 			Errorf("too many encryption keys: %d exceeds maximum %d", len(encryptionKeys), LEASESET2_MAX_ENCRYPTION_KEYS)
 	}
+	for i, key := range encryptionKeys {
+		if int(key.KeyLen) != len(key.KeyData) {
+			return oops.
+				Code("encryption_key_len_mismatch").
+				With("key_index", i).
+				With("declared_len", key.KeyLen).
+				With("actual_len", len(key.KeyData)).
+				Errorf("encryption key %d: declared KeyLen %d does not match actual KeyData length %d", i, key.KeyLen, len(key.KeyData))
+		}
+	}
+	return nil
+}
 
-	// Validate leases: spec requires at least 1 lease for LeaseSet2 variants
+// validateLeaseInputs validates the lease count is within the allowed range.
+func validateLeaseInputs(leases []lease.Lease2) error {
 	if len(leases) < 1 {
 		return oops.
 			Code("no_leases").
@@ -846,19 +885,6 @@ func validateLeaseSet2Inputs(
 			With("max_allowed", LEASESET2_MAX_LEASES).
 			Errorf("too many leases: %d exceeds maximum %d", len(leases), LEASESET2_MAX_LEASES)
 	}
-
-	// Validate encryption key consistency: KeyLen must match len(KeyData)
-	for i, key := range encryptionKeys {
-		if int(key.KeyLen) != len(key.KeyData) {
-			return oops.
-				Code("encryption_key_len_mismatch").
-				With("key_index", i).
-				With("declared_len", key.KeyLen).
-				With("actual_len", len(key.KeyData)).
-				Errorf("encryption key %d: declared KeyLen %d does not match actual KeyData length %d", i, key.KeyLen, len(key.KeyData))
-		}
-	}
-
 	return nil
 }
 

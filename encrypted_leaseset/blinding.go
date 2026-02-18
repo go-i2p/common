@@ -156,47 +156,43 @@ func CreateBlindedDestination(dest destination.Destination, secret []byte, date 
 //
 // Spec: I2P Proposal 123 - Encrypted LeaseSet
 func VerifyBlindedSignature(blinded, original destination.Destination, alpha [32]byte) bool {
-	// Both destinations must use Ed25519
-	if original.KeyCertificate.SigningPublicKeyType() != key_certificate.KEYCERT_SIGN_ED25519 ||
-		blinded.KeyCertificate.SigningPublicKeyType() != key_certificate.KEYCERT_SIGN_ED25519 {
-		return false
-	}
-
-	// Get original signing key
-	originalKey, err := original.SigningPublicKey()
+	origPubKey, err := extractEd25519SigningKey(original)
 	if err != nil {
 		return false
 	}
-	if originalKey.Len() != 32 {
-		return false
-	}
 
-	// Get blinded signing key
-	blindedKey, err := blinded.SigningPublicKey()
+	blindedKeyBytes, err := extractEd25519SigningKey(blinded)
 	if err != nil {
 		return false
 	}
-	if blindedKey.Len() != 32 {
-		return false
+
+	return compareBlindedKeys(origPubKey, blindedKeyBytes, alpha)
+}
+
+// extractEd25519SigningKey validates that the destination uses Ed25519 and returns
+// the 32-byte signing public key.
+func extractEd25519SigningKey(dest destination.Destination) ([32]byte, error) {
+	var result [32]byte
+	if dest.KeyCertificate.SigningPublicKeyType() != key_certificate.KEYCERT_SIGN_ED25519 {
+		return result, oops.Errorf("destination does not use Ed25519")
 	}
+	key, err := dest.SigningPublicKey()
+	if err != nil {
+		return result, err
+	}
+	if key.Len() != 32 {
+		return result, oops.Errorf("invalid Ed25519 key length: %d", key.Len())
+	}
+	copy(result[:], key.Bytes())
+	return result, nil
+}
 
-	// Convert to arrays
-	var origPubKey [32]byte
-	copy(origPubKey[:], originalKey.Bytes())
-
-	// Compute expected blinded key
+// compareBlindedKeys computes the expected blinded key from the original key and alpha,
+// then compares it against the actual blinded key bytes.
+func compareBlindedKeys(origPubKey [32]byte, blindedPubKey [32]byte, alpha [32]byte) bool {
 	expectedBlindedKey, err := ed25519.BlindPublicKey(origPubKey, alpha)
 	if err != nil {
 		return false
 	}
-
-	// Compare expected with actual
-	blindedBytes := blindedKey.Bytes()
-	for i := 0; i < 32; i++ {
-		if expectedBlindedKey[i] != blindedBytes[i] {
-			return false
-		}
-	}
-
-	return true
+	return expectedBlindedKey == blindedPubKey
 }
