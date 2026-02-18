@@ -132,6 +132,15 @@ func NewKeysAndCert(
 // Returns an error if any required field is nil, or if key sizes don't match
 // the KeyCertificate key types.
 func (kac *KeysAndCert) Validate() error {
+	if err := validateRequiredFields(kac); err != nil {
+		return err
+	}
+	return validateKeySizes(kac)
+}
+
+// validateRequiredFields checks that the KeysAndCert and all its required
+// sub-fields are non-nil.
+func validateRequiredFields(kac *KeysAndCert) error {
 	if kac == nil {
 		return oops.Errorf("KeysAndCert is nil")
 	}
@@ -144,7 +153,12 @@ func (kac *KeysAndCert) Validate() error {
 	if kac.SigningPublic == nil {
 		return oops.Errorf("SigningPublic key is required")
 	}
-	// Verify key sizes match the certificate's declared types
+	return nil
+}
+
+// validateKeySizes verifies that the actual crypto and signing key sizes match
+// the sizes declared by the KeyCertificate.
+func validateKeySizes(kac *KeysAndCert) error {
 	expectedCryptoSize := kac.KeyCertificate.CryptoSize()
 	if expectedCryptoSize > 0 && kac.ReceivingPublic.Len() != expectedCryptoSize {
 		return oops.Errorf(

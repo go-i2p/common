@@ -57,62 +57,82 @@ var (
 //
 // Spec: I2P Proposal 123 - Encrypted LeaseSet
 func CreateBlindedDestination(dest destination.Destination, secret []byte, date time.Time) (destination.Destination, error) {
-	// Validate signature type — Ed25519 (type 7) and RedDSA_SHA512_Ed25519 (type 11) supported.
-	// Per I2P spec, RedDSA type 11 is defined "For Destinations and encrypted leasesets only."
+	if err := validateBlindingSigType(dest); err != nil {
+		return destination.Destination{}, err
+	}
+
+	blindedPubKey, err := deriveBlindedPublicKey(dest, secret, date)
+	if err != nil {
+		return destination.Destination{}, err
+	}
+
+	return assembleBlindedDestination(dest, blindedPubKey)
+}
+
+// validateBlindingSigType checks that the destination uses an Ed25519-compatible
+// signature type suitable for blinding operations.
+func validateBlindingSigType(dest destination.Destination) error {
 	sigType := dest.KeyCertificate.SigningPublicKeyType()
 	if sigType != key_certificate.KEYCERT_SIGN_ED25519 &&
 		sigType != key_certificate.KEYCERT_SIGN_REDDSA_ED25519 {
-		return destination.Destination{},
-			oops.Wrapf(ErrUnsupportedSignatureType,
-				"destination uses signature type %d, only Ed25519 (7) and RedDSA (11) supported for blinding",
-				sigType)
+		return oops.Wrapf(ErrUnsupportedSignatureType,
+			"destination uses signature type %d, only Ed25519 (7) and RedDSA (11) supported for blinding",
+			sigType)
 	}
+	return nil
+}
 
-	// Format date as YYYY-MM-DD for blinding factor derivation
+// deriveBlindedPublicKey derives the blinding factor from the secret and date,
+// extracts the original signing key, and computes the blinded public key.
+func deriveBlindedPublicKey(dest destination.Destination, secret []byte, date time.Time) ([32]byte, error) {
 	dateStr := date.UTC().Format("2006-01-02")
 
-	// Derive blinding factor from secret and date
 	alpha, err := kdf.DeriveBlindingFactor(secret, dateStr)
 	if err != nil {
-		return destination.Destination{},
-			oops.Wrapf(ErrInvalidSecret, "failed to derive blinding factor: %w", err)
+		return [32]byte{}, oops.Wrapf(ErrInvalidSecret, "failed to derive blinding factor: %w", err)
 	}
 
-	// Get the original Ed25519 signing public key (32 bytes)
-	originalSigningKey, err := dest.SigningPublicKey()
+	pubKey, err := extractOriginalSigningKey(dest)
 	if err != nil {
-		return destination.Destination{},
-			oops.Wrapf(ErrBlindingFailed, "failed to get signing public key: %w", err)
+		return [32]byte{}, err
 	}
 
-	// Verify we have exactly 32 bytes for Ed25519
-	if originalSigningKey.Len() != 32 {
-		return destination.Destination{},
-			oops.Wrapf(ErrBlindingFailed,
-				"Ed25519 public key has wrong length: got %d, expected 32",
-				originalSigningKey.Len())
-	}
-
-	// Convert to [32]byte array for blinding operation
-	var pubKey [32]byte
-	copy(pubKey[:], originalSigningKey.Bytes())
-
-	// Blind the public key: P' = P + [alpha]B
 	blindedPubKey, err := ed25519.BlindPublicKey(pubKey, alpha)
 	if err != nil {
-		return destination.Destination{},
-			oops.Wrapf(ErrBlindingFailed, "failed to blind public key: %w", err)
+		return [32]byte{}, oops.Wrapf(ErrBlindingFailed, "failed to blind public key: %w", err)
 	}
 
-	// Create new Ed25519 signing public key from blinded bytes
+	return blindedPubKey, nil
+}
+
+// extractOriginalSigningKey retrieves and validates the 32-byte Ed25519 signing
+// public key from a destination.
+func extractOriginalSigningKey(dest destination.Destination) ([32]byte, error) {
+	originalSigningKey, err := dest.SigningPublicKey()
+	if err != nil {
+		return [32]byte{}, oops.Wrapf(ErrBlindingFailed, "failed to get signing public key: %w", err)
+	}
+
+	if originalSigningKey.Len() != 32 {
+		return [32]byte{}, oops.Wrapf(ErrBlindingFailed,
+			"Ed25519 public key has wrong length: got %d, expected 32",
+			originalSigningKey.Len())
+	}
+
+	var pubKey [32]byte
+	copy(pubKey[:], originalSigningKey.Bytes())
+	return pubKey, nil
+}
+
+// assembleBlindedDestination constructs a new destination with the blinded signing
+// key, preserving the original encryption key, padding, and key certificate.
+func assembleBlindedDestination(dest destination.Destination, blindedPubKey [32]byte) (destination.Destination, error) {
 	blindedSigningKey, err := ed25519.NewEd25519PublicKey(blindedPubKey[:])
 	if err != nil {
 		return destination.Destination{},
 			oops.Wrapf(ErrBlindingFailed, "failed to create blinded signing key: %w", err)
 	}
 
-	// Create new KeysAndCert with the blinded signing key, keeping the same
-	// encryption key, padding, and key certificate
 	blindedKeysAndCert, err := keys_and_cert.NewKeysAndCert(
 		dest.KeyCertificate,
 		dest.ReceivingPublic,
@@ -124,12 +144,7 @@ func CreateBlindedDestination(dest destination.Destination, secret []byte, date 
 			oops.Wrapf(ErrBlindingFailed, "failed to construct blinded keys and cert: %w", err)
 	}
 
-	// Wrap in Destination
-	blindedDest := destination.Destination{
-		KeysAndCert: blindedKeysAndCert,
-	}
-
-	return blindedDest, nil
+	return destination.Destination{KeysAndCert: blindedKeysAndCert}, nil
 }
 
 // VerifyBlindedSignature verifies that a blinded destination was correctly derived

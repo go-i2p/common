@@ -63,33 +63,48 @@ func NewCertificate() *Certificate {
 
 // NewCertificateWithType creates a new Certificate with specified type and payload
 func NewCertificateWithType(certType uint8, payload []byte) (*Certificate, error) {
-	// Validate certificate type
+	if err := validateCertType(certType); err != nil {
+		return nil, err
+	}
+
+	if err := validateCertPayload(certType, payload); err != nil {
+		return nil, err
+	}
+
+	return buildCertificate(certType, payload)
+}
+
+// validateCertType checks that the certificate type is a recognized value.
+func validateCertType(certType uint8) error {
 	switch certType {
 	case CERT_NULL, CERT_HASHCASH, CERT_HIDDEN, CERT_SIGNED, CERT_MULTIPLE, CERT_KEY:
-		// Valid type
+		return nil
 	default:
-		return nil, oops.Errorf("invalid certificate type: %d", certType)
+		return oops.Errorf("invalid certificate type: %d", certType)
 	}
+}
 
-	// Validate payload length
+// validateCertPayload checks that the payload satisfies the constraints for the
+// given certificate type including maximum size and type-specific rules.
+func validateCertPayload(certType uint8, payload []byte) error {
 	if len(payload) > CERT_MAX_PAYLOAD_SIZE {
-		return nil, oops.Errorf("payload too long: %d bytes", len(payload))
+		return oops.Errorf("payload too long: %d bytes", len(payload))
 	}
-
-	// Per spec: NULL (type 0) and HIDDEN (type 2) certificates must have empty payload
 	if certType == CERT_NULL && len(payload) > CERT_EMPTY_PAYLOAD_SIZE {
-		return nil, oops.Errorf("NULL certificates must have empty payload")
+		return oops.Errorf("NULL certificates must have empty payload")
 	}
 	if certType == CERT_HIDDEN && len(payload) > CERT_EMPTY_PAYLOAD_SIZE {
-		return nil, oops.Errorf("HIDDEN certificates must have empty payload per spec (total length 3)")
+		return oops.Errorf("HIDDEN certificates must have empty payload per spec (total length 3)")
 	}
-
-	// Per spec: SIGNED (type 3) payload must be exactly 40 or 72 bytes.
 	if certType == CERT_SIGNED && len(payload) != CERT_SIGNED_PAYLOAD_SHORT && len(payload) != CERT_SIGNED_PAYLOAD_LONG {
-		return nil, oops.Errorf("SIGNED certificates must have payload of %d or %d bytes, got %d",
+		return oops.Errorf("SIGNED certificates must have payload of %d or %d bytes, got %d",
 			CERT_SIGNED_PAYLOAD_SHORT, CERT_SIGNED_PAYLOAD_LONG, len(payload))
 	}
+	return nil
+}
 
+// buildCertificate constructs a Certificate from a validated type and payload.
+func buildCertificate(certType uint8, payload []byte) (*Certificate, error) {
 	length, err := data.NewIntegerFromInt(len(payload), CERT_LENGTH_FIELD_SIZE)
 	if err != nil {
 		return nil, oops.Errorf("failed to create length integer: %w", err)
@@ -101,7 +116,6 @@ func NewCertificateWithType(certType uint8, payload []byte) (*Certificate, error
 		payload: make([]byte, len(payload)),
 	}
 
-	// Copy payload if present
 	if len(payload) > CERT_EMPTY_PAYLOAD_SIZE {
 		copy(cert.payload, payload)
 	}

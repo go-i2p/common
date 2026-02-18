@@ -2,6 +2,7 @@
 package router_address
 
 import (
+	"bytes"
 	"net"
 	"strconv"
 	"strings"
@@ -262,33 +263,43 @@ func (ra RouterAddress) IntroducerTagString(num int) data.I2PString {
 func (ra RouterAddress) Host() (net.Addr, error) {
 	log.Debug("Getting host from RouterAddress")
 
-	// Check if host key exists
-	if !ra.CheckOption(HOST_OPTION_KEY) {
-		log.Warn("RouterAddress missing required host key")
-		return nil, oops.Errorf("RouterAddress missing required '%s' key in options mapping", HOST_OPTION_KEY)
-	}
-
-	host := ra.HostString()
-	if host == nil {
-		log.Warn("RouterAddress host option is nil")
-		return nil, oops.Errorf("RouterAddress '%s' option is nil", HOST_OPTION_KEY)
-	}
-
-	hostBytes, err := host.Data()
+	hostBytes, err := extractOptionBytes(ra, HOST_OPTION_KEY, ra.HostString())
 	if err != nil {
-		log.WithError(err).Warn("Failed to get host data")
-		return nil, oops.Wrapf(err, "RouterAddress '%s' option data invalid", HOST_OPTION_KEY)
+		return nil, err
 	}
 
-	if len(hostBytes) == 0 {
-		log.Warn("RouterAddress host option is empty")
-		return nil, oops.Errorf("RouterAddress '%s' option is empty", HOST_OPTION_KEY)
-	}
+	return resolveHostIP(hostBytes)
+}
 
+// extractOptionBytes retrieves and validates the byte content of a named
+// RouterAddress option. Returns an error if the option is missing, nil, or empty.
+func extractOptionBytes(ra RouterAddress, key string, option data.I2PString) (string, error) {
+	if !ra.CheckOption(key) {
+		log.Warn("RouterAddress missing required " + key + " key")
+		return "", oops.Errorf("RouterAddress missing required '%s' key in options mapping", key)
+	}
+	if option == nil {
+		log.Warn("RouterAddress " + key + " option is nil")
+		return "", oops.Errorf("RouterAddress '%s' option is nil", key)
+	}
+	content, err := option.Data()
+	if err != nil {
+		log.WithError(err).Warn("Failed to get " + key + " data")
+		return "", oops.Wrapf(err, "RouterAddress '%s' option data invalid", key)
+	}
+	if len(content) == 0 {
+		log.Warn("RouterAddress " + key + " option is empty")
+		return "", oops.Errorf("RouterAddress '%s' option is empty", key)
+	}
+	return content, nil
+}
+
+// resolveHostIP parses a host string as an IP address and resolves it to a net.Addr.
+func resolveHostIP(hostBytes string) (net.Addr, error) {
 	ip := net.ParseIP(hostBytes)
 	if ip == nil {
-		log.WithField("hostBytes", string(hostBytes)).Error("Failed to parse IP address")
-		return nil, oops.Errorf("RouterAddress '%s' option contains invalid IP address: %q", HOST_OPTION_KEY, string(hostBytes))
+		log.WithField("hostBytes", hostBytes).Error("Failed to parse IP address")
+		return nil, oops.Errorf("RouterAddress '%s' option contains invalid IP address: %q", HOST_OPTION_KEY, hostBytes)
 	}
 
 	addr, err := net.ResolveIPAddr("", ip.String())
@@ -305,33 +316,21 @@ func (ra RouterAddress) Host() (net.Addr, error) {
 func (ra RouterAddress) Port() (string, error) {
 	log.Debug("Getting port from RouterAddress")
 
-	// Check if port key exists
-	if !ra.CheckOption(PORT_OPTION_KEY) {
-		log.Warn("RouterAddress missing required port key")
-		return "", oops.Errorf("RouterAddress missing required '%s' key in options mapping", PORT_OPTION_KEY)
-	}
-
-	port := ra.PortString()
-	if port == nil {
-		log.Warn("RouterAddress port option is nil")
-		return "", oops.Errorf("RouterAddress '%s' option is nil", PORT_OPTION_KEY)
-	}
-
-	portBytes, err := port.Data()
+	portBytes, err := extractOptionBytes(ra, PORT_OPTION_KEY, ra.PortString())
 	if err != nil {
-		log.WithError(err).Warn("Failed to get port data")
-		return "", oops.Wrapf(err, "RouterAddress '%s' option data invalid", PORT_OPTION_KEY)
+		return "", err
 	}
 
-	if len(portBytes) == 0 {
-		log.Warn("RouterAddress port option is empty")
-		return "", oops.Errorf("RouterAddress '%s' option is empty", PORT_OPTION_KEY)
-	}
+	return validatePortValue(portBytes)
+}
 
+// validatePortValue parses a port string, checks it is a valid integer in
+// the range 1-65535, and returns it as a string.
+func validatePortValue(portBytes string) (string, error) {
 	val, err := strconv.Atoi(portBytes)
 	if err != nil {
-		log.WithError(err).WithField("portBytes", string(portBytes)).Error("Failed to convert port to integer")
-		return "", oops.Wrapf(err, "RouterAddress '%s' option is not a valid number: %q", PORT_OPTION_KEY, string(portBytes))
+		log.WithError(err).WithField("portBytes", portBytes).Error("Failed to convert port to integer")
+		return "", oops.Wrapf(err, "RouterAddress '%s' option is not a valid number: %q", PORT_OPTION_KEY, portBytes)
 	}
 
 	if val < 1 || val > 65535 {
@@ -463,23 +462,17 @@ func (ra RouterAddress) Equals(other RouterAddress) bool {
 	if ra.Cost() != other.Cost() {
 		return false
 	}
-	raExp := ra.Expiration()
-	otherExp := other.Expiration()
-	if raExp != otherExp {
+	if ra.Expiration() != other.Expiration() {
 		return false
 	}
-	raBytes := ra.Bytes()
-	otherBytes := other.Bytes()
-	if raBytes == nil || otherBytes == nil {
-		return raBytes == nil && otherBytes == nil
+	return compareBytesContent(ra.Bytes(), other.Bytes())
+}
+
+// compareBytesContent checks whether two byte slices are identical, treating two
+// nil slices as equal.
+func compareBytesContent(a, b []byte) bool {
+	if a == nil || b == nil {
+		return a == nil && b == nil
 	}
-	if len(raBytes) != len(otherBytes) {
-		return false
-	}
-	for i := range raBytes {
-		if raBytes[i] != otherBytes[i] {
-			return false
-		}
-	}
-	return true
+	return bytes.Equal(a, b)
 }

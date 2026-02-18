@@ -365,6 +365,15 @@ func (o *OfflineSignature) ValidateStructure() error {
 	if o.expires == 0 {
 		return errors.New("offline signature has zero expiration timestamp")
 	}
+	if err := validateTransientKeySize(o); err != nil {
+		return err
+	}
+	return validateDestinationSigSize(o)
+}
+
+// validateTransientKeySize checks that the transient public key has the expected
+// size for its declared signature type.
+func validateTransientKeySize(o *OfflineSignature) error {
 	expectedKeySize := SigningPublicKeySize(o.sigtype)
 	if expectedKeySize == 0 {
 		return fmt.Errorf("%w: transient key type %d",
@@ -374,6 +383,12 @@ func (o *OfflineSignature) ValidateStructure() error {
 		return fmt.Errorf("transient public key size mismatch: expected %d bytes, got %d bytes",
 			expectedKeySize, len(o.transientPublicKey))
 	}
+	return nil
+}
+
+// validateDestinationSigSize checks that the signature has the expected size for
+// the destination's declared signature type.
+func validateDestinationSigSize(o *OfflineSignature) error {
 	expectedSigSize := SignatureSize(o.destinationSigType)
 	if expectedSigSize == 0 {
 		return fmt.Errorf("%w: destination signature type %d",

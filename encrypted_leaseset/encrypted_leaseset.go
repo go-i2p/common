@@ -23,65 +23,73 @@ var log = logger.GetGoI2PLogger()
 func ReadEncryptedLeaseSet(data []byte) (els EncryptedLeaseSet, remainder []byte, err error) {
 	log.Debug("Parsing EncryptedLeaseSet structure")
 
+	if err = validateEncryptedLeaseSetSize(data); err != nil {
+		return
+	}
+
+	remainder, err = parseAllEncryptedLeaseSetFields(&els, data)
+	if err != nil {
+		return
+	}
+
+	if err = els.Validate(); err != nil {
+		return
+	}
+
+	logParsedEncryptedLeaseSet(&els)
+	return
+}
+
+// validateEncryptedLeaseSetSize checks that the input data meets the minimum size
+// requirement for an EncryptedLeaseSet.
+func validateEncryptedLeaseSetSize(data []byte) error {
 	if len(data) < ENCRYPTED_LEASESET_MIN_SIZE {
-		err = oops.Code("encrypted_leaseset_too_short").
+		return oops.Code("encrypted_leaseset_too_short").
 			With("data_length", len(data)).
 			With("minimum_required", ENCRYPTED_LEASESET_MIN_SIZE).
 			Errorf("data too short for EncryptedLeaseSet: got %d bytes, need at least %d",
 				len(data), ENCRYPTED_LEASESET_MIN_SIZE)
-		return
 	}
+	return nil
+}
 
-	// 1. sig_type (2 bytes)
-	data, err = parseSigType(&els, data)
+// parseAllEncryptedLeaseSetFields parses all wire-format fields in sequence:
+// sig_type, blinded_public_key, header fields, offline signature, encrypted data, and signature.
+func parseAllEncryptedLeaseSetFields(els *EncryptedLeaseSet, data []byte) ([]byte, error) {
+	var err error
+
+	data, err = parseSigType(els, data)
 	if err != nil {
-		return
+		return nil, err
 	}
-
-	// 2. blinded_public_key (size from sig_type)
-	data, err = parseBlindedPublicKey(&els, data)
+	data, err = parseBlindedPublicKey(els, data)
 	if err != nil {
-		return
+		return nil, err
 	}
-
-	// 3. published(4) + expires(2) + flags(2)
-	data, err = parseHeaderFields(&els, data)
+	data, err = parseHeaderFields(els, data)
 	if err != nil {
-		return
+		return nil, err
 	}
-
-	// 4. Optional offline signature (if flags bit 0)
-	data, err = parseOfflineSignature(&els, data)
+	data, err = parseOfflineSignature(els, data)
 	if err != nil {
-		return
+		return nil, err
 	}
-
-	// 5. len(2) + encrypted_data(len)
-	data, err = parseEncryptedInnerData(&els, data)
+	data, err = parseEncryptedInnerData(els, data)
 	if err != nil {
-		return
+		return nil, err
 	}
+	return parseSignatureAndFinalize(els, data)
+}
 
-	// 6. signature
-	remainder, err = parseSignatureAndFinalize(&els, data)
-	if err != nil {
-		return
-	}
-
-	// 7. Post-parse validation
-	if vErr := els.Validate(); vErr != nil {
-		err = vErr
-		return
-	}
-
+// logParsedEncryptedLeaseSet logs diagnostic details after successfully parsing
+// an EncryptedLeaseSet.
+func logParsedEncryptedLeaseSet(els *EncryptedLeaseSet) {
 	log.WithFields(logger.Fields{
 		"sig_type":       els.sigType,
 		"inner_length":   els.innerLength,
 		"has_offline":    els.HasOfflineKeys(),
 		"is_unpublished": els.IsUnpublished(),
 	}).Debug("Successfully parsed EncryptedLeaseSet")
-
-	return
 }
 
 // parseSigType reads the 2-byte sig_type field and validates it is a known type.

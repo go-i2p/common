@@ -136,6 +136,12 @@ func ReadLeaseSet(data []byte) (LeaseSet, error) {
 		return LeaseSet{}, err
 	}
 
+	return parseLeaseSetComponents(data)
+}
+
+// parseLeaseSetComponents parses the destination, encryption key, signing key,
+// leases, and signature from validated LeaseSet data.
+func parseLeaseSetComponents(data []byte) (LeaseSet, error) {
 	dest, remainder, err := ReadDestinationFromLeaseSet(data)
 	if err != nil {
 		return LeaseSet{}, oops.Errorf("failed to read destination: %w", err)

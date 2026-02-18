@@ -151,30 +151,42 @@ func (cb *CertificateBuilder) Validate() error {
 		return oops.Errorf("certificate builder is nil")
 	}
 
-	// Validate certificate type
 	if err := cb.validateCertificateType(); err != nil {
 		return err
 	}
 
-	// Validate KEY certificate has either key types or explicit payload
-	if cb.certType == CERT_KEY {
-		if cb.signingType == nil && cb.cryptoType == nil && !cb.payloadSet {
-			return oops.Errorf("KEY certificates require either key types or explicit payload")
-		}
-		if cb.signingType != nil && cb.cryptoType == nil {
-			return oops.Errorf("signing type set but crypto type not set")
-		}
-		if cb.cryptoType != nil && cb.signingType == nil {
-			return oops.Errorf("crypto type set but signing type not set")
-		}
+	if err := cb.validateKeyCertificateFields(); err != nil {
+		return err
 	}
 
-	// Validate payload consistency
+	cb.warnPayloadConflict()
+	return nil
+}
+
+// validateKeyCertificateFields checks that KEY certificate builders have
+// the required key type fields set and are internally consistent.
+func (cb *CertificateBuilder) validateKeyCertificateFields() error {
+	if cb.certType != CERT_KEY {
+		return nil
+	}
+	if cb.signingType == nil && cb.cryptoType == nil && !cb.payloadSet {
+		return oops.Errorf("KEY certificates require either key types or explicit payload")
+	}
+	if cb.signingType != nil && cb.cryptoType == nil {
+		return oops.Errorf("signing type set but crypto type not set")
+	}
+	if cb.cryptoType != nil && cb.signingType == nil {
+		return oops.Errorf("crypto type set but signing type not set")
+	}
+	return nil
+}
+
+// warnPayloadConflict logs a warning when both an explicit payload and key types
+// are set, since key types will be ignored.
+func (cb *CertificateBuilder) warnPayloadConflict() {
 	if cb.payloadSet && cb.signingType != nil {
 		log.Warn("Both explicit payload and key types set - key types will be ignored")
 	}
-
-	return nil
 }
 
 // validateCertificateType validates that the certificate type is valid.

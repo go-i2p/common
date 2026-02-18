@@ -63,6 +63,18 @@ func (ra *RouterAddress) Validate() error {
 	if ra == nil {
 		return oops.Errorf("router address is nil")
 	}
+	if err := validateRouterAddressFields(ra); err != nil {
+		return err
+	}
+	if err := ra.TransportOptions.Validate(); err != nil {
+		return oops.Errorf("invalid transport options: %w", err)
+	}
+	return nil
+}
+
+// validateRouterAddressFields checks that all required RouterAddress fields
+// are non-nil and non-empty.
+func validateRouterAddressFields(ra *RouterAddress) error {
 	if ra.TransportCost == nil {
 		return oops.Errorf("transport cost is required")
 	}
@@ -74,9 +86,6 @@ func (ra *RouterAddress) Validate() error {
 	}
 	if ra.TransportOptions == nil {
 		return oops.Errorf("transport options are required")
-	}
-	if err := ra.TransportOptions.Validate(); err != nil {
-		return oops.Errorf("invalid transport options: %w", err)
 	}
 	return nil
 }

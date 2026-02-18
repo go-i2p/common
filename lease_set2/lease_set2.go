@@ -180,43 +180,41 @@ func (ls2 *LeaseSet2) Bytes() ([]byte, error) {
 func ReadLeaseSet2(data []byte) (ls2 LeaseSet2, remainder []byte, err error) {
 	log.Debug("Parsing LeaseSet2 structure")
 
-	// Parse destination and header fields
 	data, err = parseDestinationAndHeader(&ls2, data)
 	if err != nil {
 		return
 	}
 
-	// Parse optional offline signature
 	data, err = parseOfflineSignature(&ls2, data)
 	if err != nil {
 		return
 	}
 
-	// Parse options mapping
 	data, err = parseOptionsMapping(&ls2, data)
 	if err != nil {
 		return
 	}
 
-	// Parse encryption keys
-	data, err = parseEncryptionKeys(&ls2, data)
-	if err != nil {
-		return
-	}
-
-	// Parse Lease2 structures
-	data, err = parseLeases(&ls2, data)
-	if err != nil {
-		return
-	}
-
-	// Parse signature and finalize
-	remainder, err = parseSignatureAndFinalize(&ls2, data)
-	if err != nil {
-		return
-	}
-
+	remainder, err = parseKeysLeasesAndSignature(&ls2, data)
 	return
+}
+
+// parseKeysLeasesAndSignature parses the encryption keys, lease structures,
+// and trailing signature from the remaining LeaseSet2 data.
+func parseKeysLeasesAndSignature(ls2 *LeaseSet2, data []byte) ([]byte, error) {
+	var err error
+
+	data, err = parseEncryptionKeys(ls2, data)
+	if err != nil {
+		return nil, err
+	}
+
+	data, err = parseLeases(ls2, data)
+	if err != nil {
+		return nil, err
+	}
+
+	return parseSignatureAndFinalize(ls2, data)
 }
 
 // parseDestinationAndHeader validates minimum size and parses the destination and header fields.

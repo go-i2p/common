@@ -333,9 +333,7 @@ func parseKeyValuePairs(remainder []byte, map_values MappingValues, errs []error
 
 	for {
 		if shouldStopLoop(pairCount, remainder, previousLength) {
-			if pairCount >= MAX_MAPPING_PAIRS {
-				errs = append(errs, oops.Errorf("exceeded maximum mapping pairs (%d)", MAX_MAPPING_PAIRS))
-			}
+			errs = appendMaxPairsError(errs, pairCount)
 			break
 		}
 
@@ -345,34 +343,52 @@ func parseKeyValuePairs(remainder []byte, map_values MappingValues, errs []error
 		}
 		previousLength = len(remainder)
 
-		var keyValuePair [2]I2PString
-		var err error
-
-		remainder, keyValuePair, err = parseSingleKeyValuePair(remainder, encounteredKeysMap)
-		if err != nil {
-			errs = append(errs, err)
-			if shouldStopParsing(err) {
-				break
-			}
-		}
-
-		map_values = append(map_values, keyValuePair)
+		var stop bool
+		remainder, map_values, errs, stop = parseNextPair(remainder, map_values, errs, encounteredKeysMap)
 		pairCount++
-		if len(remainder) == 0 {
+		if stop {
 			break
 		}
 
-		storeEncounteredKey(keyValuePair[0], encounteredKeysMap)
+		storeEncounteredKey(map_values[len(map_values)-1][0], encounteredKeysMap)
 	}
 
+	logKeyValuePairsResult(pairCount, len(errs), len(remainder))
+	return remainder, map_values, errs
+}
+
+// appendMaxPairsError appends a maximum-pairs-exceeded error if the pair count
+// has reached the limit.
+func appendMaxPairsError(errs []error, pairCount int) []error {
+	if pairCount >= MAX_MAPPING_PAIRS {
+		errs = append(errs, oops.Errorf("exceeded maximum mapping pairs (%d)", MAX_MAPPING_PAIRS))
+	}
+	return errs
+}
+
+// parseNextPair parses a single key-value pair from the remainder and appends it
+// to map_values. Returns true for stop if parsing should halt.
+func parseNextPair(remainder []byte, map_values MappingValues, errs []error, encounteredKeysMap map[string]bool) ([]byte, MappingValues, []error, bool) {
+	remainder, keyValuePair, err := parseSingleKeyValuePair(remainder, encounteredKeysMap)
+	if err != nil {
+		errs = append(errs, err)
+		if shouldStopParsing(err) {
+			return remainder, map_values, errs, true
+		}
+	}
+
+	map_values = append(map_values, keyValuePair)
+	return remainder, map_values, errs, len(remainder) == 0
+}
+
+// logKeyValuePairsResult logs the summary of parsing key-value pairs.
+func logKeyValuePairsResult(pairCount, errCount, remainderLen int) {
 	log.WithFields(logger.Fields{
 		"at":              "(Mapping) Values",
 		"pairs_parsed":    pairCount,
-		"errors":          len(errs),
-		"remainder_bytes": len(remainder),
+		"errors":          errCount,
+		"remainder_bytes": remainderLen,
 	}).Debug("Completed parsing key-value pairs")
-
-	return remainder, map_values, errs
 }
 
 // shouldStopLoop checks whether the parsing loop should terminate due to
