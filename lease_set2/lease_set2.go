@@ -3,10 +3,13 @@ package lease_set2
 
 import (
 	"encoding/binary"
+	"sort"
+	"strings"
 	"time"
 
 	common "github.com/go-i2p/common/data"
 	"github.com/go-i2p/common/destination"
+	"github.com/go-i2p/common/key_certificate"
 	"github.com/go-i2p/common/lease"
 	"github.com/go-i2p/common/offline_signature"
 	sig "github.com/go-i2p/common/signature"
@@ -132,73 +135,24 @@ func (ls2 *LeaseSet2) Signature() sig.Signature {
 //
 // Returns the serialized LeaseSet2 or error if serialization fails.
 func (ls2 *LeaseSet2) Bytes() ([]byte, error) {
-	result := make([]byte, 0)
-
-	// Add destination
-	destBytes, err := ls2.destination.KeysAndCert.Bytes()
+	content, err := serializeLeaseSet2Content(
+		ls2.destination, ls2.published, ls2.expires, ls2.flags,
+		ls2.offlineSignature, ls2.options, ls2.encryptionKeys, ls2.leases,
+	)
 	if err != nil {
-		return nil, oops.Errorf("failed to serialize destination: %w", err)
-	}
-	result = append(result, destBytes...)
-
-	// Add published timestamp (4 bytes)
-	publishedBytes := make([]byte, 4)
-	binary.BigEndian.PutUint32(publishedBytes, ls2.published)
-	result = append(result, publishedBytes...)
-
-	// Add expires offset (2 bytes)
-	expiresBytes := make([]byte, 2)
-	binary.BigEndian.PutUint16(expiresBytes, ls2.expires)
-	result = append(result, expiresBytes...)
-
-	// Add flags (2 bytes)
-	flagsBytes := make([]byte, 2)
-	binary.BigEndian.PutUint16(flagsBytes, ls2.flags)
-	result = append(result, flagsBytes...)
-
-	// Add offline signature if present
-	if ls2.offlineSignature != nil {
-		result = append(result, ls2.offlineSignature.Bytes()...)
-	}
-
-	// Add options mapping
-	if len(ls2.options.Values()) > 0 {
-		result = append(result, ls2.options.Data()...)
-	} else {
-		// Empty mapping (2 bytes of zero)
-		result = append(result, 0x00, 0x00)
-	}
-
-	// Add encryption keys
-	result = append(result, byte(len(ls2.encryptionKeys)))
-	for _, key := range ls2.encryptionKeys {
-		keyTypeBytes := make([]byte, 2)
-		binary.BigEndian.PutUint16(keyTypeBytes, key.KeyType)
-		result = append(result, keyTypeBytes...)
-
-		keyLenBytes := make([]byte, 2)
-		binary.BigEndian.PutUint16(keyLenBytes, key.KeyLen)
-		result = append(result, keyLenBytes...)
-
-		result = append(result, key.KeyData...)
-	}
-
-	// Add leases
-	result = append(result, byte(len(ls2.leases)))
-	for _, l := range ls2.leases {
-		result = append(result, l.Bytes()...)
+		return nil, err
 	}
 
 	// Add signature
+	result := content
 	result = append(result, ls2.signature.Bytes()...)
 
 	log.WithFields(logger.Fields{
-		"total_size":       len(result),
-		"destination_size": len(destBytes),
-		"encryption_keys":  len(ls2.encryptionKeys),
-		"leases":           len(ls2.leases),
-		"has_offline_sig":  ls2.offlineSignature != nil,
-		"options_count":    len(ls2.options.Values()),
+		"total_size":      len(result),
+		"encryption_keys": len(ls2.encryptionKeys),
+		"leases":          len(ls2.leases),
+		"has_offline_sig": ls2.offlineSignature != nil,
+		"options_count":   len(ls2.options.Values()),
 	}).Debug("Serialized LeaseSet2 to bytes")
 
 	return result, nil
@@ -334,6 +288,16 @@ func parseHeaderFields(ls2 *LeaseSet2, data []byte) []byte {
 	ls2.flags = binary.BigEndian.Uint16(data[:LEASESET2_FLAGS_SIZE])
 	data = data[LEASESET2_FLAGS_SIZE:]
 
+	// Warn if reserved flag bits (bits 15-3) are set per spec:
+	// "Bits 15-3: Reserved, set to 0 for compatibility with future uses."
+	reservedMask := uint16(0xFFF8) // bits 15-3
+	if ls2.flags&reservedMask != 0 {
+		log.WithFields(logger.Fields{
+			"flags":         ls2.flags,
+			"reserved_bits": ls2.flags & reservedMask,
+		}).Warn("LeaseSet2 has non-zero reserved flag bits (bits 15-3 should be 0)")
+	}
+
 	log.WithFields(logger.Fields{
 		"published": ls2.published,
 		"expires":   ls2.expires,
@@ -392,22 +356,66 @@ func parseOfflineSignature(ls2 *LeaseSet2, data []byte) ([]byte, error) {
 
 // parseOptionsMapping parses the options mapping containing service record options.
 // Returns remaining data after parsing or error if parsing fails.
+//
+// Note: ReadMapping returns a warning ("data exists beyond length of mapping")
+// whenever the input slice extends past the declared mapping size. This is
+// expected here because the options mapping is always embedded in the larger
+// LeaseSet2 structure.  We therefore treat that specific warning as non-fatal
+// and only propagate genuine parse failures.
 func parseOptionsMapping(ls2 *LeaseSet2, data []byte) ([]byte, error) {
 	mapping, rem, errs := common.ReadMapping(data)
 	if len(errs) > 0 {
-		err := oops.
-			Code("options_parse_failed").
-			Wrapf(errs[0], "failed to parse options mapping in LeaseSet2")
-		log.WithFields(logger.Fields{
-			"at":     "parseOptionsMapping",
-			"reason": "options mapping parse failed",
-		}).Error(err.Error())
-		return nil, err
+		// Filter: the "data exists beyond length" warning is expected when
+		// a mapping is embedded inside a larger byte stream.
+		var fatal []error
+		for _, e := range errs {
+			if strings.Contains(e.Error(), "data exists beyond length of mapping") {
+				log.Debug("options mapping: ignoring 'data beyond length' warning (expected in embedded context)")
+				continue
+			}
+			fatal = append(fatal, e)
+		}
+		if len(fatal) > 0 {
+			err := oops.
+				Code("options_parse_failed").
+				Wrapf(fatal[0], "failed to parse options mapping in LeaseSet2")
+			log.WithFields(logger.Fields{
+				"at":     "parseOptionsMapping",
+				"reason": "options mapping parse failed",
+			}).Error(err.Error())
+			return nil, err
+		}
 	}
 	ls2.options = mapping
+
+	// Warn if options mapping keys are not sorted per spec:
+	// "Options MUST be sorted by key for signature invariance."
+	warnIfOptionsUnsorted(mapping)
+
 	log.Debug("Parsed options mapping")
 
 	return rem, nil
+}
+
+// warnIfOptionsUnsorted checks if the mapping keys are sorted lexicographically
+// and logs a warning if they are not. Per spec: "Options MUST be sorted by key
+// for signature invariance."
+func warnIfOptionsUnsorted(mapping common.Mapping) {
+	vals := mapping.Values()
+	if len(vals) <= 1 {
+		return
+	}
+	keys := make([]string, 0, len(vals))
+	for _, pair := range vals {
+		keyData, err := pair[0].Data()
+		if err != nil {
+			return // can't check, skip
+		}
+		keys = append(keys, keyData)
+	}
+	if !sort.StringsAreSorted(keys) {
+		log.Warn("LeaseSet2 options mapping keys are not sorted; spec requires sorted keys for signature invariance")
+	}
 }
 
 // parseEncryptionKeys parses the encryption keys from the data.
@@ -533,11 +541,25 @@ func extractEncryptionKeyData(data []byte, keyLen uint16) ([]byte, []byte) {
 
 // storeEncryptionKey stores the parsed encryption key in the LeaseSet2 structure.
 // Logs the parsed key information at debug level.
+// Warns if the declared key length does not match the expected size for the key type.
 func storeEncryptionKey(ls2 *LeaseSet2, keyIndex int, keyType uint16, keyLen uint16, keyData []byte) {
 	ls2.encryptionKeys[keyIndex] = EncryptionKey{
 		KeyType: keyType,
 		KeyLen:  keyLen,
 		KeyData: keyData,
+	}
+
+	// Validate key type/length consistency per spec:
+	// "keylen: Must match the specified length of the encryption type."
+	if expectedSize, ok := key_certificate.CryptoPublicKeySizes[keyType]; ok {
+		if int(keyLen) != expectedSize {
+			log.WithFields(logger.Fields{
+				"key_index":    keyIndex,
+				"key_type":     keyType,
+				"declared_len": keyLen,
+				"expected_len": expectedSize,
+			}).Warn("Encryption key length does not match expected size for key type")
+		}
 	}
 
 	log.WithFields(logger.Fields{
@@ -812,7 +834,12 @@ func validateLeaseSet2Inputs(
 			Errorf("too many encryption keys: %d exceeds maximum %d", len(encryptionKeys), LEASESET2_MAX_ENCRYPTION_KEYS)
 	}
 
-	// Validate leases
+	// Validate leases: spec requires at least 1 lease for LeaseSet2 variants
+	if len(leases) < 1 {
+		return oops.
+			Code("no_leases").
+			Errorf("at least one lease is required per I2P specification")
+	}
 	if len(leases) > LEASESET2_MAX_LEASES {
 		return oops.
 			Code("too_many_leases").
@@ -820,10 +847,24 @@ func validateLeaseSet2Inputs(
 			Errorf("too many leases: %d exceeds maximum %d", len(leases), LEASESET2_MAX_LEASES)
 	}
 
+	// Validate encryption key consistency: KeyLen must match len(KeyData)
+	for i, key := range encryptionKeys {
+		if int(key.KeyLen) != len(key.KeyData) {
+			return oops.
+				Code("encryption_key_len_mismatch").
+				With("key_index", i).
+				With("declared_len", key.KeyLen).
+				With("actual_len", len(key.KeyData)).
+				Errorf("encryption key %d: declared KeyLen %d does not match actual KeyData length %d", i, key.KeyLen, len(key.KeyData))
+		}
+	}
+
 	return nil
 }
 
 // serializeLeaseSet2ForSigning constructs the byte representation for signing.
+// Per the I2P spec: "The signature is over the data above, PREPENDED with the
+// single byte containing the DatabaseStore type (3)."
 func serializeLeaseSet2ForSigning(
 	dest destination.Destination,
 	published uint32,
@@ -834,11 +875,38 @@ func serializeLeaseSet2ForSigning(
 	encryptionKeys []EncryptionKey,
 	leases []lease.Lease2,
 ) ([]byte, error) {
-	// Start with destination
-	data, err := dest.KeysAndCert.Bytes()
+	content, err := serializeLeaseSet2Content(dest, published, expiresOffset, flags, offlineSig, options, encryptionKeys, leases)
 	if err != nil {
-		return nil, oops.Errorf("failed to serialize destination KeysAndCert: %w", err)
+		return nil, err
 	}
+	// Prepend DatabaseStore type byte (0x03) per I2P spec
+	data := make([]byte, 0, 1+len(content))
+	data = append(data, LEASESET2_DBSTORE_TYPE)
+	data = append(data, content...)
+	return data, nil
+}
+
+// serializeLeaseSet2Content serializes all LeaseSet2 fields (excluding the signature)
+// into a byte slice. This shared helper is used by both Bytes() and serializeLeaseSet2ForSigning()
+// to avoid duplicated serialization logic.
+func serializeLeaseSet2Content(
+	dest destination.Destination,
+	published uint32,
+	expiresOffset uint16,
+	flags uint16,
+	offlineSig *offline_signature.OfflineSignature,
+	options common.Mapping,
+	encryptionKeys []EncryptionKey,
+	leases []lease.Lease2,
+) ([]byte, error) {
+	data := make([]byte, 0)
+
+	// Add destination
+	destBytes, err := dest.Bytes()
+	if err != nil {
+		return nil, oops.Errorf("failed to serialize destination: %w", err)
+	}
+	data = append(data, destBytes...)
 
 	// Add published timestamp (4 bytes)
 	publishedBytes := make([]byte, 4)
@@ -864,7 +932,6 @@ func serializeLeaseSet2ForSigning(
 	if len(options.Values()) > 0 {
 		data = append(data, options.Data()...)
 	} else {
-		// Empty mapping (2 bytes of zero)
 		data = append(data, 0x00, 0x00)
 	}
 
@@ -885,7 +952,7 @@ func serializeLeaseSet2ForSigning(
 	// Add leases
 	data = append(data, byte(len(leases)))
 	for _, l := range leases {
-		data = append(data, l[:]...)
+		data = append(data, l.Bytes()...)
 	}
 
 	return data, nil

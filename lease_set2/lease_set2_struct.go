@@ -4,9 +4,11 @@ package lease_set2
 import (
 	common "github.com/go-i2p/common/data"
 	"github.com/go-i2p/common/destination"
+	"github.com/go-i2p/common/key_certificate"
 	"github.com/go-i2p/common/lease"
 	"github.com/go-i2p/common/offline_signature"
 	sig "github.com/go-i2p/common/signature"
+	"github.com/samber/oops"
 )
 
 /*
@@ -147,4 +149,77 @@ type EncryptionKey struct {
 	KeyType uint16 // Encryption key type (2 bytes) - see key_certificate constants
 	KeyLen  uint16 // Length of the key data (2 bytes)
 	KeyData []byte // Encryption key data (keyLen bytes)
+}
+
+// Validate checks the structural integrity of the LeaseSet2.
+// It verifies:
+//   - At least 1 encryption key is present
+//   - Encryption key count does not exceed maximum
+//   - Each encryption key has consistent KeyLen and KeyData length
+//   - Each encryption key's KeyLen matches the expected size for its KeyType
+//   - Offline signature flag is consistent with OfflineSignature presence
+//   - Reserved flag bits are zero
+//
+// Returns nil if valid, or an error describing the first issue found.
+func (ls2 *LeaseSet2) Validate() error {
+	if ls2 == nil {
+		return oops.Errorf("LeaseSet2 is nil")
+	}
+
+	// Check encryption keys
+	if len(ls2.encryptionKeys) < 1 {
+		return oops.Errorf("LeaseSet2 must have at least 1 encryption key")
+	}
+	if len(ls2.encryptionKeys) > LEASESET2_MAX_ENCRYPTION_KEYS {
+		return oops.Errorf("LeaseSet2 has too many encryption keys: %d (max %d)", len(ls2.encryptionKeys), LEASESET2_MAX_ENCRYPTION_KEYS)
+	}
+
+	// Validate each encryption key
+	for i, key := range ls2.encryptionKeys {
+		if err := validateEncryptionKeyConsistency(i, key); err != nil {
+			return err
+		}
+	}
+
+	// Validate offline signature flag consistency
+	if ls2.HasOfflineKeys() && ls2.offlineSignature == nil {
+		return oops.Errorf("OFFLINE_KEYS flag set but no offline signature present")
+	}
+	if !ls2.HasOfflineKeys() && ls2.offlineSignature != nil {
+		return oops.Errorf("offline signature present but OFFLINE_KEYS flag not set")
+	}
+
+	// Check reserved flag bits
+	reservedMask := uint16(0xFFF8)
+	if ls2.flags&reservedMask != 0 {
+		return oops.Errorf("LeaseSet2 has non-zero reserved flag bits: 0x%04x", ls2.flags&reservedMask)
+	}
+
+	// Validate lease count
+	if len(ls2.leases) > LEASESET2_MAX_LEASES {
+		return oops.Errorf("LeaseSet2 has too many leases: %d (max %d)", len(ls2.leases), LEASESET2_MAX_LEASES)
+	}
+
+	return nil
+}
+
+// validateEncryptionKeyConsistency checks that an encryption key's declared length
+// matches both the actual data length and the expected size for its key type.
+func validateEncryptionKeyConsistency(index int, key EncryptionKey) error {
+	if int(key.KeyLen) != len(key.KeyData) {
+		return oops.Errorf("encryption key %d: declared KeyLen %d does not match actual KeyData length %d",
+			index, key.KeyLen, len(key.KeyData))
+	}
+	if expectedSize, ok := key_certificate.CryptoPublicKeySizes[key.KeyType]; ok {
+		if int(key.KeyLen) != expectedSize {
+			return oops.Errorf("encryption key %d: KeyLen %d does not match expected size %d for key type %d",
+				index, key.KeyLen, expectedSize, key.KeyType)
+		}
+	}
+	return nil
+}
+
+// IsValid returns true if the LeaseSet2 passes structural validation.
+func (ls2 *LeaseSet2) IsValid() bool {
+	return ls2.Validate() == nil
 }

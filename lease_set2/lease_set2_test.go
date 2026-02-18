@@ -652,13 +652,13 @@ func TestNewLeaseSet2ValidationErrors(t *testing.T) {
 		expectError    bool
 	}{
 		{
-			name:           "valid minimal",
+			name:           "valid minimal - no leases",
 			expiresOffset:  600,
 			flags:          0,
 			offlineSig:     nil,
 			encryptionKeys: []EncryptionKey{encKey},
 			leases:         []lease.Lease2{},
-			expectError:    false,
+			expectError:    true,
 		},
 		{
 			name:           "no encryption keys",
