@@ -115,7 +115,8 @@ func TestMappingValuesAdd(t *testing.T) {
 	t.Run("empty_value", func(t *testing.T) {
 		mv := NewMappingValues(0)
 		mv, err := mv.Add("key", "")
-		assert.Error(t, err, "should reject empty value")
+		assert.NoError(t, err, "empty values are allowed per I2P spec: Length may be 0")
+		assert.Equal(t, 1, len(mv), "should have one pair with empty value")
 	})
 
 	t.Run("key_too_long", func(t *testing.T) {

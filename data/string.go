@@ -65,10 +65,10 @@ func (str I2PString) Length() (length int, err error) {
 		err = ErrZeroLength
 		return
 	}
-	l, _, err := NewInteger(str[:], 1)
-	if err != nil {
-		log.WithError(err).Error("Failed to create Integer from I2PString")
-		return l.Int(), err
+	l, _ := ReadInteger(str[:], 1)
+	if l == nil {
+		log.Error("Failed to read Integer from I2PString")
+		return 0, oops.Errorf("failed to read I2PString length byte")
 	}
 	length = l.Int()
 	str_len := len(str)
@@ -261,12 +261,12 @@ func validateI2PStringData(data []byte) error {
 // parseI2PStringLength parses the length field from the I2PString data.
 // Returns the length value and any error encountered during parsing.
 func parseI2PStringLength(data []byte) (int, error) {
-	length, _, err := NewInteger(data, 1)
-	if err != nil {
-		log.WithError(err).Error("Failed to read I2PString length")
-		return 0, err
+	l, _ := ReadInteger(data, 1)
+	if l == nil {
+		log.Error("Failed to read I2PString length")
+		return 0, oops.Errorf("failed to read I2PString length")
 	}
-	return length.Int(), nil
+	return l.Int(), nil
 }
 
 // validateI2PStringDataLength validates that sufficient data exists for the specified string length.

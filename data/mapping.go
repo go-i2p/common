@@ -169,6 +169,27 @@ func (mapping *Mapping) IsValid() bool {
 	return mapping.Validate() == nil
 }
 
+// ToGoMap converts a Mapping to a Go map[string]string.
+// Returns an error if any key or value cannot be extracted.
+func (mapping *Mapping) ToGoMap() (map[string]string, error) {
+	if mapping == nil {
+		return nil, oops.Errorf("mapping is nil")
+	}
+	result := make(map[string]string)
+	for _, pair := range mapping.Values() {
+		key, err := pair[0].Data()
+		if err != nil {
+			return nil, oops.Wrapf(err, "failed to extract key")
+		}
+		val, err := pair[1].Data()
+		if err != nil {
+			return nil, oops.Wrapf(err, "failed to extract value for key %q", key)
+		}
+		result[key] = val
+	}
+	return result, nil
+}
+
 // GoMapToMapping converts a Go map of unformatted strings to *Mapping.
 func GoMapToMapping(gomap map[string]string) (mapping *Mapping, err error) {
 	log.WithFields(logger.Fields{
@@ -225,6 +246,8 @@ func ReadMapping(bytes []byte) (mapping Mapping, remainder []byte, err []error) 
 
 	if size.Int() == 0 {
 		log.Warn("Mapping size is zero")
+		emptyVals := make(MappingValues, 0)
+		mapping.vals = &emptyVals
 		return
 	}
 
@@ -245,11 +268,13 @@ func validateMappingInputData(bytes []byte) error {
 
 // parseMappingSize extracts the size field from the beginning of the mapping data.
 func parseMappingSize(bytes []byte) (*Integer, []byte, error) {
-	size, remainder, err := NewInteger(bytes, MAPPING_SIZE_FIELD_LENGTH)
-	if err != nil {
-		log.WithError(err).Error("Failed to read Mapping size")
+	i, remainder := ReadInteger(bytes, MAPPING_SIZE_FIELD_LENGTH)
+	if i == nil {
+		log.Error("Failed to read Mapping size")
+		return nil, remainder, oops.Errorf("failed to read mapping size")
 	}
-	return size, remainder, err
+	size := &i
+	return size, remainder, nil
 }
 
 // processMappingData handles the main data processing logic with length validation.

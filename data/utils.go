@@ -35,9 +35,16 @@ func intFromBytes(number []byte) (value int, err error) {
 // WrapErrors compiles a slice of errors and returns them wrapped together as a single error.
 // Used in: errors.go
 func WrapErrors(errs []error) error {
+	if len(errs) == 0 {
+		return nil
+	}
 	var err error
 	for i, e := range errs {
-		err = oops.Errorf("%v\n\t%d: %v", err, i, e)
+		if i == 0 {
+			err = oops.Errorf("\t%d: %v", i, e)
+		} else {
+			err = oops.Errorf("%v\n\t%d: %v", err, i, e)
+		}
 	}
 	return err
 }

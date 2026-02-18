@@ -26,9 +26,9 @@ const MAPPING_SEMICOLON_DELIMITER = 0x3b
 // Cross-Ref: mapping.go
 const KEY_VAL_INTEGER_LENGTH = 1
 
-// MAPPING_MIN_SIZE is the minimum size in bytes for a valid I2P mapping (2-byte length field + at least 1 byte data)
+// MAPPING_MIN_SIZE is the minimum size in bytes for a valid I2P mapping (2-byte size field; size=0 is valid)
 // Cross-Ref: mapping.go
-const MAPPING_MIN_SIZE = 3
+const MAPPING_MIN_SIZE = 2
 
 // MAPPING_SIZE_FIELD_LENGTH is the length in bytes of the mapping size field in I2P mappings
 // Cross-Ref: mapping.go

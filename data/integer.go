@@ -107,8 +107,11 @@ func createIntegerFromBytes(value int, size int) (*Integer, error) {
 		integerSize = size
 	}
 
-	objinteger, _, err := NewInteger(bytes[MAX_INTEGER_SIZE-integerSize:], integerSize)
-	return objinteger, err
+	i, _ := ReadInteger(bytes[MAX_INTEGER_SIZE-integerSize:], integerSize)
+	if i == nil {
+		return nil, oops.Errorf("failed to create integer from bytes")
+	}
+	return &i, nil
 }
 
 // NewIntegerFromInt creates a new Integer from a Go integer of a specified []byte length.

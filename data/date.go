@@ -1,4 +1,3 @@
-// Package data implements common data structures used in higher level structures.
 package data
 
 import (

@@ -161,7 +161,12 @@ func EncodeIntN(value int, size int) ([]byte, error) {
 	}
 
 	// Check if value fits in the specified size
-	maxValue := uint64(1<<(size*8)) - 1
+	var maxValue uint64
+	if size >= 8 {
+		maxValue = ^uint64(0) // math.MaxUint64
+	} else {
+		maxValue = uint64(1<<(size*8)) - 1
+	}
 	if uint64(value) > maxValue {
 		return nil, oops.Errorf("value %d exceeds maximum for %d bytes (max: %d)", value, size, maxValue)
 	}

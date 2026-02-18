@@ -1,6 +1,7 @@
 package data
 
 import (
+	"errors"
 	"sort"
 
 	"github.com/go-i2p/logger"
@@ -61,15 +62,12 @@ func (mv MappingValues) Add(key, value string) (MappingValues, error) {
 		"value": value,
 	}).Debug("Adding key-value pair to MappingValues")
 
-	// Reject empty keys and values
+	// Reject empty keys (keys must be non-empty for lookup)
 	if key == "" {
 		log.Error("Empty key not allowed in MappingValues")
 		return mv, oops.Errorf("empty key not allowed")
 	}
-	if value == "" {
-		log.Error("Empty value not allowed in MappingValues")
-		return mv, oops.Errorf("empty value not allowed")
-	}
+	// Empty values are allowed per I2P spec: "Length may be 0"
 
 	// Validate and convert key
 	keyStr, err := NewI2PString(key)
@@ -469,8 +467,7 @@ func parseAndValidateValue(remainder []byte) ([]byte, I2PString, error) {
 // shouldStopParsing determines if parsing should halt based on the error type.
 func shouldStopParsing(err error) bool {
 	// Stop parsing on delimiter validation errors which indicate format corruption
-	errStr := err.Error()
-	return errStr == "mapping format violation, expected =" || errStr == "mapping format violation, expected ;"
+	return errors.Is(err, ErrMappingExpectedEquals) || errors.Is(err, ErrMappingExpectedSemicolon)
 }
 
 // hasMinimumBytesForKeyValuePair checks if there are enough bytes for another key-value pair.
@@ -525,7 +522,10 @@ func validateAndConsumeDelimiter(remainder []byte, delimiter byte, delimiterName
 			"value:": string(remainder),
 		}).Warn("mapping format violation")
 		log.Printf("ERRVAL: %s", remainder)
-		return remainder, oops.Errorf("mapping format violation, expected %s", delimiterName)
+		if delimiter == MAPPING_EQUALS_DELIMITER {
+			return remainder, ErrMappingExpectedEquals
+		}
+		return remainder, ErrMappingExpectedSemicolon
 	}
 	return remainder[1:], nil
 }
