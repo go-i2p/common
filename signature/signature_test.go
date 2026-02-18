@@ -81,9 +81,9 @@ func TestNewSignature(t *testing.T) {
 }
 
 func TestSignatureValidate(t *testing.T) {
-	t.Run("nil signature", func(t *testing.T) {
+	t.Run("nil signature via ValidatePtr", func(t *testing.T) {
 		var sig *Signature
-		err := sig.Validate()
+		err := ValidatePtr(sig)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "signature is nil")
 	})
@@ -170,9 +170,9 @@ func TestSignatureValidate(t *testing.T) {
 }
 
 func TestSignatureIsValid(t *testing.T) {
-	t.Run("nil signature", func(t *testing.T) {
+	t.Run("nil signature via ValidatePtr", func(t *testing.T) {
 		var sig *Signature
-		assert.False(t, sig.IsValid())
+		assert.Error(t, ValidatePtr(sig))
 	})
 
 	t.Run("valid signature", func(t *testing.T) {

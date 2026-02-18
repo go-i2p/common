@@ -211,8 +211,10 @@ func FuzzReadMapping(f *testing.F) {
 	f.Add([]byte{0xFF, 0xFF})                                     // very large size
 	f.Add([]byte{0x00})                                           // too short
 	f.Add([]byte{})                                               // empty
-	f.Add([]byte{0x00, 0x06, 0x01, 0x61, 0x3d, 0x01, 0x62, 0x3b,
-		0x01, 0x63, 0x3d, 0x01, 0x64, 0x3b}) // extra data beyond size
+	f.Add([]byte{
+		0x00, 0x06, 0x01, 0x61, 0x3d, 0x01, 0x62, 0x3b,
+		0x01, 0x63, 0x3d, 0x01, 0x64, 0x3b,
+	}) // extra data beyond size
 
 	f.Fuzz(func(t *testing.T, data []byte) {
 		// ReadMapping should never panic on any input

@@ -1,4 +1,3 @@
-// Package signature implements the I2P Signature common data structure
 package signature
 
 import (
@@ -22,6 +21,11 @@ DSA_SHA1. As of release 0.9.12, other types may be supported, depending on conte
 */
 
 // Signature is the represenation of an I2P Signature.
+//
+// Byte order note per I2P spec: all signature types are Big Endian, EXCEPT
+// EdDSA and RedDSA (types 7, 8, 11), which are stored and transmitted in
+// Little Endian format. This struct stores raw bytes as received; no endian
+// conversion is performed.
 //
 // https://geti2p.net/spec/common-structures#signature
 type Signature struct {
@@ -92,12 +96,16 @@ func (s Signature) Type() int {
 	return s.sigType
 }
 
-// Bytes returns the raw signature data as a byte slice for compatibility.
-// This method provides access to the underlying signature bytes without exposing
-// the internal structure, enabling integration with external cryptographic libraries.
+// Bytes returns a copy of the raw signature data as a byte slice.
+// A defensive copy is returned to prevent callers from mutating the
+// internal state, preserving the integrity of constant-time Equal() comparisons.
 func (s Signature) Bytes() []byte {
-	// Return signature data for use with cryptographic verification functions
-	return s.data
+	if s.data == nil {
+		return nil
+	}
+	out := make([]byte, len(s.data))
+	copy(out, s.data)
+	return out
 }
 
 // Len returns the length of the signature data in bytes.
@@ -124,10 +132,21 @@ func (s Signature) Equal(other *Signature) bool {
 	return subtle.ConstantTimeCompare(s.data, other.data) == 1
 }
 
+// Serialize produces the wire-format byte representation of the signature.
+// The output contains only the raw signature bytes (the type is inferred
+// from context per the I2P specification, so it is not included).
+//
+// Byte order note per I2P spec:
+//   - All signature types are Big Endian, EXCEPT EdDSA and RedDSA
+//     (types 7, 8, 11), which are stored and transmitted in Little Endian format.
+//   - The Signature struct stores bytes as received; no endian conversion is performed.
+func (s Signature) Serialize() []byte {
+	return s.Bytes()
+}
+
 // String returns a string representation of the signature type and length.
 // Provides human-readable information about the signature for debugging and logging.
 // Format: "Signature{type: X, length: Y}" where X is the algorithm type and Y is byte length.
 func (s Signature) String() string {
-	// Format signature information for debugging and diagnostic output
 	return fmt.Sprintf("Signature{type: %d, length: %d}", s.sigType, len(s.data))
 }

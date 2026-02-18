@@ -1,4 +1,3 @@
-// Package signature implements the I2P Signature common data structure
 package signature
 
 import (
