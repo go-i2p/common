@@ -280,49 +280,70 @@ func validateEntryCount(numEntries int) error {
 // parseSingleEntry parses a single MetaLeaseSetEntry at the specified index.
 // Returns remaining data after parsing or error if parsing fails.
 func parseSingleEntry(mls *MetaLeaseSet, entryIndex int, data []byte) ([]byte, error) {
-	// Validate minimum size for entry header (hash + type + expires + cost)
+	if err := validateEntryMinSize(entryIndex, len(data)); err != nil {
+		return nil, err
+	}
+
+	var entry MetaLeaseSetEntry
+	data = parseEntryFixedFields(&entry, data)
+
+	if err := validateEntryType(entry.leaseType, entryIndex); err != nil {
+		return nil, err
+	}
+
+	rem, err := parseEntryProperties(&entry, entryIndex, data)
+	if err != nil {
+		return nil, err
+	}
+
+	mls.entries[entryIndex] = entry
+	logParsedEntry(entryIndex, &entry)
+	return rem, nil
+}
+
+// validateEntryMinSize checks that there is enough data remaining to read the
+// fixed-size header fields of a MetaLeaseSet entry.
+func validateEntryMinSize(entryIndex int, dataLen int) error {
 	minSize := META_LEASESET_ENTRY_HASH_SIZE + META_LEASESET_ENTRY_TYPE_SIZE +
 		META_LEASESET_ENTRY_EXPIRES_SIZE + META_LEASESET_ENTRY_COST_SIZE +
 		META_LEASESET_ENTRY_MIN_PROPERTIES_SIZE
 
-	if len(data) < minSize {
+	if dataLen < minSize {
 		err := oops.
 			Code("entry_too_short").
 			With("entry_index", entryIndex).
-			With("remaining_length", len(data)).
+			With("remaining_length", dataLen).
 			With("minimum_required", minSize).
 			Errorf("insufficient data for entry %d", entryIndex)
 		log.WithFields(logger.Fields{
 			"at":          "parseSingleEntry",
 			"entry_index": entryIndex,
 		}).Error(err.Error())
-		return nil, err
+		return err
 	}
+	return nil
+}
 
-	var entry MetaLeaseSetEntry
-
-	// Parse hash (32 bytes)
+// parseEntryFixedFields reads the hash, type, expires, and cost fields from data
+// into the entry and returns the remaining data.
+func parseEntryFixedFields(entry *MetaLeaseSetEntry, data []byte) []byte {
 	copy(entry.hash[:], data[:META_LEASESET_ENTRY_HASH_SIZE])
 	data = data[META_LEASESET_ENTRY_HASH_SIZE:]
 
-	// Parse type (1 byte)
 	entry.leaseType = data[0]
 	data = data[META_LEASESET_ENTRY_TYPE_SIZE:]
 
-	// Validate entry type
-	if err := validateEntryType(entry.leaseType, entryIndex); err != nil {
-		return nil, err
-	}
-
-	// Parse expires (4 bytes)
 	entry.expires = binary.BigEndian.Uint32(data[:META_LEASESET_ENTRY_EXPIRES_SIZE])
 	data = data[META_LEASESET_ENTRY_EXPIRES_SIZE:]
 
-	// Parse cost (1 byte)
 	entry.cost = data[0]
 	data = data[META_LEASESET_ENTRY_COST_SIZE:]
 
-	// Parse properties mapping
+	return data
+}
+
+// parseEntryProperties reads the properties mapping for a MetaLeaseSet entry.
+func parseEntryProperties(entry *MetaLeaseSetEntry, entryIndex int, data []byte) ([]byte, error) {
 	properties, rem, errs := common.ReadMapping(data)
 	if len(errs) > 0 {
 		err := oops.
@@ -336,17 +357,17 @@ func parseSingleEntry(mls *MetaLeaseSet, entryIndex int, data []byte) ([]byte, e
 		return nil, err
 	}
 	entry.properties = properties
+	return rem, nil
+}
 
-	mls.entries[entryIndex] = entry
-
+// logParsedEntry logs diagnostic details after successfully parsing a MetaLeaseSet entry.
+func logParsedEntry(entryIndex int, entry *MetaLeaseSetEntry) {
 	log.WithFields(logger.Fields{
 		"entry_index": entryIndex,
 		"type":        entry.leaseType,
 		"cost":        entry.cost,
 		"expires":     entry.expires,
 	}).Debug("Parsed MetaLeaseSet entry")
-
-	return rem, nil
 }
 
 // validateEntryType validates that the entry type is a valid lease set type.
