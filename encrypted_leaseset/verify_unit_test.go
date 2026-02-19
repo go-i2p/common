@@ -1,5 +1,4 @@
 package encrypted_leaseset
-package encrypted_leaseset
 
 import (
 	"crypto/ed25519"
