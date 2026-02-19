@@ -122,9 +122,14 @@ func TestValidation_ReadLeaseSetNoVerify(t *testing.T) {
 // --- ParseSignature error handling ---
 
 func TestValidation_ParseSignatureErrorHandling(t *testing.T) {
-	// parseSignature should handle too-short data gracefully
+	// parseSignature needs a destination.Destination with a valid certificate
+	// to determine signature size. With a zero-value dest and short data,
+	// it should return an error.
+	dest, _, _, _, err := generateTestDestination(t)
+	require.NoError(t, err)
+
 	shortData := make([]byte, 5)
-	_, err := parseSignature(shortData, 10, 64)
+	_, _, err = parseSignature(shortData, *dest)
 	assert.Error(t, err)
 }
 

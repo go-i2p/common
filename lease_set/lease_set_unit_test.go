@@ -361,14 +361,16 @@ func TestUnit_DetermineSignatureSizeCorrect(t *testing.T) {
 	require.NoError(t, err)
 
 	dest := leaseSet.Destination()
-	destBytes, err := dest.KeysAndCert.Bytes()
+	cert := dest.Certificate()
+	kind, err := cert.Type()
 	require.NoError(t, err)
 
-	sigSize, err := determineSignatureSize(destBytes)
-	assert.NoError(t, err)
+	sigSize := determineSignatureSize(cert, kind)
 	assert.True(t, sigSize > 0, "signature size should be positive")
 
 	// Verify total bytes = dest + encKey + sigKey + 1 (count) + leases + sig
+	destBytes, err := dest.KeysAndCert.Bytes()
+	require.NoError(t, err)
 	sigKey, err := leaseSet.SigningKey()
 	require.NoError(t, err)
 
@@ -386,10 +388,10 @@ func TestUnit_DetermineSigningKeySizeUsesCorrectAPI(t *testing.T) {
 	require.NoError(t, err)
 
 	dest := leaseSet.Destination()
-	destBytes, err := dest.KeysAndCert.Bytes()
+	cert := dest.Certificate()
+	kind, err := cert.Type()
 	require.NoError(t, err)
 
-	sigKeySize, err := determineSigningKeySize(destBytes)
-	assert.NoError(t, err)
+	sigKeySize := determineSigningKeySize(cert, kind)
 	assert.Equal(t, 32, sigKeySize, "Ed25519 signing key should be 32 bytes")
 }
