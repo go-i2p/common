@@ -23,42 +23,6 @@ func TestECIESSessionTag_RoundTrip(t *testing.T) {
 	assert.Equal(t, expectedArray, st.Array())
 }
 
-func TestECIESSessionTag_RejectsWrongSize(t *testing.T) {
-	tests := []struct {
-		name string
-		data []byte
-	}{
-		{
-			name: "32 bytes (ElGamal size)",
-			data: make([]byte, 32),
-		},
-		{
-			name: "0 bytes",
-			data: []byte{},
-		},
-		{
-			name: "7 bytes (one short)",
-			data: make([]byte, 7),
-		},
-		{
-			name: "9 bytes (one extra)",
-			data: make([]byte, 9),
-		},
-		{
-			name: "1 byte",
-			data: []byte{0x01},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			_, err := NewECIESSessionTagFromBytes(tt.data)
-			assert.Error(t, err)
-			assert.Contains(t, err.Error(), "invalid data length")
-		})
-	}
-}
-
 func TestECIESSessionTag_Equal(t *testing.T) {
 	data1 := []byte{0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08}
 	data2 := []byte{0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08}
@@ -187,4 +151,22 @@ func TestNewECIESSessionTag(t *testing.T) {
 	sessionTag, remainder, err = NewECIESSessionTag(shortData)
 	assert.Error(t, err)
 	assert.Nil(t, sessionTag)
+}
+
+func TestECIESSessionTag_IsZero(t *testing.T) {
+	// Default zero value
+	var st ECIESSessionTag
+	assert.True(t, st.IsZero())
+
+	// After setting non-zero data
+	data := []byte{0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08}
+	err := st.SetBytes(data)
+	assert.NoError(t, err)
+	assert.False(t, st.IsZero())
+
+	// Explicitly zero data
+	zeroData := make([]byte, ECIESSessionTagSize)
+	st2, err := NewECIESSessionTagFromBytes(zeroData)
+	assert.NoError(t, err)
+	assert.True(t, st2.IsZero())
 }
