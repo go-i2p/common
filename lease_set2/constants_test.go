@@ -54,5 +54,5 @@ func TestLeaseSet2ExpirationConstants(t *testing.T) {
 
 // TestLeaseSet2DbStoreTypeConstant verifies the DatabaseStore type byte
 func TestLeaseSet2DbStoreTypeConstant(t *testing.T) {
-	assert.Equal(t, byte(0x03), LEASESET2_DBSTORE_TYPE)
+	assert.Equal(t, 0x03, LEASESET2_DBSTORE_TYPE)
 }

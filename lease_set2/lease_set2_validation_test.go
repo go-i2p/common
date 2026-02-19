@@ -6,6 +6,7 @@ import (
 	"time"
 
 	common "github.com/go-i2p/common/data"
+	"github.com/go-i2p/common/destination"
 	"github.com/go-i2p/common/key_certificate"
 	"github.com/go-i2p/common/lease"
 	"github.com/go-i2p/common/offline_signature"
@@ -462,8 +463,8 @@ func TestParserWarnsOnEncKeyTypeLenMismatch(t *testing.T) {
 	keyLenBytes := make([]byte, 2)
 	binary.BigEndian.PutUint16(keyLenBytes, 64) // wrong: X25519 should be 32
 	data = append(data, keyLenBytes...)
-	data = append(data, make([]byte, 64)...)    // 64 bytes of key data
-	data = append(data, 0x00)                   // 0 leases
+	data = append(data, make([]byte, 64)...) // 64 bytes of key data
+	data = append(data, 0x00)                // 0 leases
 	data = append(data, make([]byte, signature.EdDSA_SHA512_Ed25519_SIZE)...)
 
 	ls2, _, err := ReadLeaseSet2(data)
