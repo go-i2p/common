@@ -12,7 +12,7 @@ func FuzzReadLeaseSet2(f *testing.F) {
 	// Build a valid seed inline since buildMinimalLeaseSet2Data takes *testing.T
 	seed := func() []byte {
 		destData := make([]byte, 391)
-		copy(destData[0:], make([]byte, 256))  // public key
+		copy(destData[0:], make([]byte, 256))   // public key
 		copy(destData[256:], make([]byte, 128)) // signing key padding
 		destData[384] = 0x05                    // cert type = key cert
 		destData[385] = 0x00                    // cert length high byte
