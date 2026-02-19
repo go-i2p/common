@@ -2,7 +2,6 @@ package encrypted_leaseset
 
 import (
 	"crypto/rand"
-	"encoding/binary"
 	"testing"
 	"time"
 
@@ -12,69 +11,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// ——— Test helpers ———
-
-// createSpecCompliantELS builds a minimal spec-compliant EncryptedLeaseSet wire blob.
-// Wire order: sig_type(2) | blinded_key(32) | published(4) | expires(2) | flags(2) |
-//
-//	len(2) | encrypted_data(innerLen) | signature(64)
-func createSpecCompliantELS(t *testing.T, innerLen int, flags uint16) []byte {
-	t.Helper()
-
-	data := make([]byte, 0, 109+innerLen)
-
-	// sig_type = Ed25519 (7)
-	buf := make([]byte, 2)
-	binary.BigEndian.PutUint16(buf, key_certificate.KEYCERT_SIGN_ED25519)
-	data = append(data, buf...)
-
-	// blinded_public_key (32 bytes)
-	blindedKey := make([]byte, 32)
-	_, _ = rand.Read(blindedKey)
-	data = append(data, blindedKey...)
-
-	// published (4 bytes)
-	buf = make([]byte, 4)
-	binary.BigEndian.PutUint32(buf, uint32(time.Now().Unix()))
-	data = append(data, buf...)
-
-	// expires (2 bytes) - 600 seconds
-	buf = make([]byte, 2)
-	binary.BigEndian.PutUint16(buf, 600)
-	data = append(data, buf...)
-
-	// flags (2 bytes)
-	buf = make([]byte, 2)
-	binary.BigEndian.PutUint16(buf, flags)
-	data = append(data, buf...)
-
-	// inner_length (2 bytes)
-	buf = make([]byte, 2)
-	binary.BigEndian.PutUint16(buf, uint16(innerLen))
-	data = append(data, buf...)
-
-	// encrypted_data
-	encData := make([]byte, innerLen)
-	_, _ = rand.Read(encData)
-	data = append(data, encData...)
-
-	// signature (64 bytes for Ed25519)
-	sigData := make([]byte, 64)
-	_, _ = rand.Read(sigData)
-	data = append(data, sigData...)
-
-	return data
-}
-
-// ——— Unit tests ———
-
-func TestEncryptedLeaseSetConstants(t *testing.T) {
-	assert.Equal(t, uint8(5), ENCRYPTED_LEASESET_TYPE)
-	assert.Equal(t, 109, ENCRYPTED_LEASESET_MIN_SIZE)
-	assert.Equal(t, uint16(0x0001), ENCRYPTED_LEASESET_FLAG_OFFLINE_KEYS)
-	assert.Equal(t, uint16(0x0002), ENCRYPTED_LEASESET_FLAG_UNPUBLISHED)
-	assert.Equal(t, uint16(0xFFFC), ENCRYPTED_LEASESET_RESERVED_FLAGS_MASK)
-}
+// ————————————————————————————————————————————————
+// Unit tests for ReadEncryptedLeaseSet and accessor methods
+// Source: encrypted_leaseset.go
+// ————————————————————————————————————————————————
 
 func TestReadEncryptedLeaseSet(t *testing.T) {
 	data := createSpecCompliantELS(t, 100, 0)
@@ -101,58 +41,6 @@ func TestReadEncryptedLeaseSetWithRemainder(t *testing.T) {
 	_, remainder, err := ReadEncryptedLeaseSet(data)
 	require.NoError(t, err)
 	assert.Equal(t, extra, remainder, "should return unparsed trailing data")
-}
-
-func TestReadEncryptedLeaseSetTooShort(t *testing.T) {
-	tests := []struct {
-		name string
-		size int
-	}{
-		{"Empty", 0},
-		{"100 bytes", 100},
-		{"Just under minimum", ENCRYPTED_LEASESET_MIN_SIZE - 1},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			_, _, err := ReadEncryptedLeaseSet(make([]byte, tt.size))
-			assert.Error(t, err)
-			assert.Contains(t, err.Error(), "too short")
-		})
-	}
-}
-
-func TestReadEncryptedLeaseSetZeroInnerLength(t *testing.T) {
-	data := make([]byte, 0, 120)
-	// sig_type = Ed25519
-	data = append(data, 0x00, 0x07)
-	// blinded key (32)
-	data = append(data, make([]byte, 32)...)
-	// published (4)
-	buf := make([]byte, 4)
-	binary.BigEndian.PutUint32(buf, uint32(time.Now().Unix()))
-	data = append(data, buf...)
-	// expires (2) = 600
-	data = append(data, 0x02, 0x58)
-	// flags (2) = 0
-	data = append(data, 0x00, 0x00)
-	// inner_length = 0 (invalid)
-	data = append(data, 0x00, 0x00)
-	// Add 1 dummy byte so total >= 109 minimum, then 64-byte signature
-	data = append(data, 0x00)
-	data = append(data, make([]byte, 64)...)
-
-	_, _, err := ReadEncryptedLeaseSet(data)
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "inner length cannot be zero")
-}
-
-func TestReadEncryptedLeaseSetReservedFlags(t *testing.T) {
-	// Create ELS with reserved bit 2 set (old BLINDED flag) — should be rejected
-	data := createSpecCompliantELS(t, 100, 0x0004) // bit 2
-
-	_, _, err := ReadEncryptedLeaseSet(data)
-	assert.Error(t, err, "reserved flag bits must cause rejection")
-	assert.Contains(t, err.Error(), "reserved flag bits")
 }
 
 func TestEncryptedLeaseSetFlagChecks(t *testing.T) {
@@ -288,66 +176,6 @@ func TestEncryptedLeaseSetRoundTripDeterministic(t *testing.T) {
 	assert.Equal(t, bytes1, bytes2, "round-trip serialization must be deterministic")
 }
 
-func TestEncryptedLeaseSetValidate(t *testing.T) {
-	t.Run("nil", func(t *testing.T) {
-		var els *EncryptedLeaseSet
-		assert.Error(t, els.Validate())
-	})
-
-	t.Run("unknown sig_type", func(t *testing.T) {
-		els := &EncryptedLeaseSet{sigType: 999}
-		assert.ErrorContains(t, els.Validate(), "unknown sig_type")
-	})
-
-	t.Run("wrong key size", func(t *testing.T) {
-		els := &EncryptedLeaseSet{
-			sigType:          key_certificate.KEYCERT_SIGN_ED25519,
-			blindedPublicKey: make([]byte, 16), // wrong size
-		}
-		assert.ErrorContains(t, els.Validate(), "blinded public key size")
-	})
-
-	t.Run("zero expires", func(t *testing.T) {
-		els := &EncryptedLeaseSet{
-			sigType:          key_certificate.KEYCERT_SIGN_ED25519,
-			blindedPublicKey: make([]byte, 32),
-			expires:          0,
-		}
-		assert.ErrorContains(t, els.Validate(), "expires offset cannot be zero")
-	})
-
-	t.Run("reserved flags set", func(t *testing.T) {
-		els := &EncryptedLeaseSet{
-			sigType:          key_certificate.KEYCERT_SIGN_ED25519,
-			blindedPublicKey: make([]byte, 32),
-			expires:          600,
-			flags:            0x0004, // reserved bit 2
-		}
-		assert.ErrorContains(t, els.Validate(), "reserved flag bits")
-	})
-
-	t.Run("empty encrypted data", func(t *testing.T) {
-		els := &EncryptedLeaseSet{
-			sigType:            key_certificate.KEYCERT_SIGN_ED25519,
-			blindedPublicKey:   make([]byte, 32),
-			expires:            600,
-			encryptedInnerData: []byte{},
-		}
-		assert.ErrorContains(t, els.Validate(), "cannot be empty")
-	})
-
-	t.Run("encrypted data below minimum crypto overhead", func(t *testing.T) {
-		els := &EncryptedLeaseSet{
-			sigType:            key_certificate.KEYCERT_SIGN_ED25519,
-			blindedPublicKey:   make([]byte, 32),
-			expires:            600,
-			innerLength:        50,
-			encryptedInnerData: make([]byte, 50), // < 61 minimum
-		}
-		assert.ErrorContains(t, els.Validate(), "too small")
-	})
-}
-
 func TestEncryptedLeaseSetLargeInnerData(t *testing.T) {
 	data := createSpecCompliantELS(t, 1000, 0)
 
@@ -362,13 +190,4 @@ func TestEncryptedLeaseSetLargeInnerData(t *testing.T) {
 	els2, _, err := ReadEncryptedLeaseSet(serialized)
 	require.NoError(t, err)
 	assert.Equal(t, uint16(1000), els2.InnerLength())
-}
-
-func TestEncryptedLeaseSetUnknownSigType(t *testing.T) {
-	data := make([]byte, 200)
-	// sig_type = 999 (unknown)
-	binary.BigEndian.PutUint16(data[:2], 999)
-	_, _, err := ReadEncryptedLeaseSet(data)
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "unknown signing key type")
 }

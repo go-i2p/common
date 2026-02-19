@@ -1,80 +1,23 @@
 package encrypted_leaseset
 
 import (
+	"crypto/ed25519"
 	"crypto/rand"
 	"testing"
 	"time"
 
-	"github.com/go-i2p/common/data"
 	"github.com/go-i2p/common/destination"
 	"github.com/go-i2p/common/key_certificate"
-	"github.com/go-i2p/common/lease"
-	"github.com/go-i2p/common/lease_set2"
-	"github.com/go-i2p/crypto/ed25519"
+	goi2ped25519 "github.com/go-i2p/crypto/ed25519"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.step.sm/crypto/x25519"
 )
 
-// ——— Test helpers ———
-
-// createTestLeaseSet2 creates a minimal valid LeaseSet2 for testing.
-func createTestLeaseSet2(t *testing.T) *lease_set2.LeaseSet2 {
-	t.Helper()
-
-	destBytes := createTestDestinationBytes(t)
-	dest, _, err := destination.ReadDestination(destBytes)
-	require.NoError(t, err)
-
-	x25519Pub, _, err := x25519.GenerateKey(rand.Reader)
-	require.NoError(t, err)
-
-	encryptionKey := lease_set2.EncryptionKey{
-		KeyType: key_certificate.KEYCERT_CRYPTO_X25519,
-		KeyLen:  32,
-		KeyData: x25519Pub[:],
-	}
-
-	var tunnelGwHash data.Hash
-	_, _ = rand.Read(tunnelGwHash[:])
-	testLease2, err := lease.NewLease2(tunnelGwHash, 12345, time.Now().Add(10*time.Minute))
-	require.NoError(t, err)
-
-	_, ed25519SigningPriv, err := ed25519.GenerateEd25519KeyPair()
-	require.NoError(t, err)
-
-	ls2, err := lease_set2.NewLeaseSet2(
-		dest,
-		uint32(time.Now().Unix()),
-		600,
-		0,
-		nil,
-		data.Mapping{},
-		[]lease_set2.EncryptionKey{encryptionKey},
-		[]lease.Lease2{*testLease2},
-		ed25519SigningPriv,
-	)
-	require.NoError(t, err)
-	return &ls2
-}
-
-// createTestDestinationBytes creates a 391-byte destination (ElGamal + Ed25519).
-func createTestDestinationBytes(t *testing.T) []byte {
-	t.Helper()
-
-	keysData := make([]byte, 384)
-	_, _ = rand.Read(keysData)
-
-	certData := []byte{
-		0x05,       // Certificate type = KEY
-		0x00, 0x04, // Certificate length = 4
-		0x00, 0x07, // Signing key type = Ed25519 (7)
-		0x00, 0x00, // Crypto key type = ElGamal (0)
-	}
-	return append(keysData, certData...)
-}
-
-// ——— Constructor tests ———
+// ————————————————————————————————————————————————
+// Unit tests for NewEncryptedLeaseSet and NewEncryptedLeaseSetFromDestination
+// Source: constructor.go
+// ————————————————————————————————————————————————
 
 func TestNewEncryptedLeaseSet(t *testing.T) {
 	ls2 := createTestLeaseSet2(t)
@@ -87,7 +30,7 @@ func TestNewEncryptedLeaseSet(t *testing.T) {
 	encryptedData, err := EncryptInnerLeaseSet2(ls2, cookie, &recipientPub)
 	require.NoError(t, err)
 
-	_, signingPriv, err := ed25519.GenerateEd25519KeyPair()
+	_, signingPriv, err := goi2ped25519.GenerateEd25519KeyPair()
 	require.NoError(t, err)
 
 	blindedKey := make([]byte, 32)
@@ -128,10 +71,9 @@ func TestNewEncryptedLeaseSetFromDestination(t *testing.T) {
 	encryptedData, err := EncryptInnerLeaseSet2(ls2, cookie, &recipientPub)
 	require.NoError(t, err)
 
-	_, signingPriv, err := ed25519.GenerateEd25519KeyPair()
+	_, signingPriv, err := goi2ped25519.GenerateEd25519KeyPair()
 	require.NoError(t, err)
 
-	// Create a blinded destination
 	destBytes := createTestDestinationBytes(t)
 	dest, _, err := destination.ReadDestination(destBytes)
 	require.NoError(t, err)
@@ -160,7 +102,7 @@ func TestNewEncryptedLeaseSetWithByteSliceKey(t *testing.T) {
 	encryptedData, err := EncryptInnerLeaseSet2(ls2, cookie, &recipientPub)
 	require.NoError(t, err)
 
-	_, signingPriv, err := ed25519.GenerateEd25519KeyPair()
+	_, signingPriv, err := goi2ped25519.GenerateEd25519KeyPair()
 	require.NoError(t, err)
 	signingPrivBytes := signingPriv.Bytes()
 
@@ -186,7 +128,7 @@ func TestNewEncryptedLeaseSetReservedFlags(t *testing.T) {
 	_, _ = rand.Read(blindedKey)
 	encData := make([]byte, ENCRYPTED_LEASESET_MIN_ENCRYPTED_SIZE)
 	_, _ = rand.Read(encData)
-	_, signingPriv, _ := ed25519.GenerateEd25519KeyPair()
+	_, signingPriv, _ := goi2ped25519.GenerateEd25519KeyPair()
 
 	_, err := NewEncryptedLeaseSet(
 		key_certificate.KEYCERT_SIGN_ED25519,
@@ -207,7 +149,7 @@ func TestNewEncryptedLeaseSetZeroExpires(t *testing.T) {
 	_, _ = rand.Read(blindedKey)
 	encData := make([]byte, ENCRYPTED_LEASESET_MIN_ENCRYPTED_SIZE)
 	_, _ = rand.Read(encData)
-	_, signingPriv, _ := ed25519.GenerateEd25519KeyPair()
+	_, signingPriv, _ := goi2ped25519.GenerateEd25519KeyPair()
 
 	_, err := NewEncryptedLeaseSet(
 		key_certificate.KEYCERT_SIGN_ED25519,
@@ -225,7 +167,7 @@ func TestNewEncryptedLeaseSetZeroExpires(t *testing.T) {
 
 func TestNewEncryptedLeaseSetEmptyEncryptedData(t *testing.T) {
 	blindedKey := make([]byte, 32)
-	_, signingPriv, _ := ed25519.GenerateEd25519KeyPair()
+	_, signingPriv, _ := goi2ped25519.GenerateEd25519KeyPair()
 
 	_, err := NewEncryptedLeaseSet(
 		key_certificate.KEYCERT_SIGN_ED25519,
@@ -243,7 +185,7 @@ func TestNewEncryptedLeaseSetEmptyEncryptedData(t *testing.T) {
 
 func TestNewEncryptedLeaseSetTooShortEncryptedData(t *testing.T) {
 	blindedKey := make([]byte, 32)
-	_, signingPriv, _ := ed25519.GenerateEd25519KeyPair()
+	_, signingPriv, _ := goi2ped25519.GenerateEd25519KeyPair()
 
 	_, err := NewEncryptedLeaseSet(
 		key_certificate.KEYCERT_SIGN_ED25519,
@@ -298,7 +240,7 @@ func TestNewEncryptedLeaseSetInvalidKeyLength(t *testing.T) {
 func TestNewEncryptedLeaseSetOfflineSignatureFlag(t *testing.T) {
 	blindedKey := make([]byte, 32)
 	encData := make([]byte, ENCRYPTED_LEASESET_MIN_ENCRYPTED_SIZE)
-	_, signingPriv, _ := ed25519.GenerateEd25519KeyPair()
+	_, signingPriv, _ := goi2ped25519.GenerateEd25519KeyPair()
 
 	// Flag set but no offline sig
 	_, err := NewEncryptedLeaseSet(
@@ -315,84 +257,26 @@ func TestNewEncryptedLeaseSetOfflineSignatureFlag(t *testing.T) {
 	assert.Contains(t, err.Error(), "OFFLINE_KEYS flag set but no offline signature provided")
 }
 
-func TestNewEncryptedLeaseSetRoundTrip(t *testing.T) {
-	ls2 := createTestLeaseSet2(t)
-	recipientPub, recipientPriv, err := x25519.GenerateKey(rand.Reader)
+// TestConstructorRejectsReservedFlags verifies finding #9: reserved flag bits
+// must be rejected during construction.
+func TestConstructorRejectsReservedFlags(t *testing.T) {
+	pub, _, err := ed25519.GenerateKey(nil)
 	require.NoError(t, err)
+	encData := make([]byte, 80)
 
-	var cookie [32]byte
-	_, _ = rand.Read(cookie[:])
-	encryptedData, err := EncryptInnerLeaseSet2(ls2, cookie, &recipientPub)
-	require.NoError(t, err)
-
-	_, signingPriv, err := ed25519.GenerateEd25519KeyPair()
-	require.NoError(t, err)
-
-	blindedKey := make([]byte, 32)
-	_, _ = rand.Read(blindedKey)
-
-	original, err := NewEncryptedLeaseSet(
-		key_certificate.KEYCERT_SIGN_ED25519,
-		blindedKey,
-		uint32(time.Now().Unix()),
-		600,
-		0,
-		nil,
-		encryptedData,
-		signingPriv,
-	)
-	require.NoError(t, err)
-
-	serialized, err := original.Bytes()
-	require.NoError(t, err)
-
-	parsed, remainder, err := ReadEncryptedLeaseSet(serialized)
-	require.NoError(t, err)
-	assert.Empty(t, remainder)
-
-	assert.Equal(t, original.SigType(), parsed.SigType())
-	assert.Equal(t, original.BlindedPublicKey(), parsed.BlindedPublicKey())
-	assert.Equal(t, original.Published(), parsed.Published())
-	assert.Equal(t, original.Expires(), parsed.Expires())
-	assert.Equal(t, original.Flags(), parsed.Flags())
-	assert.Equal(t, original.InnerLength(), parsed.InnerLength())
-	assert.Equal(t, original.EncryptedInnerData(), parsed.EncryptedInnerData())
-
-	// Verify decryption still works
-	decrypted, err := parsed.DecryptInnerData(cookie[:], &recipientPriv)
-	require.NoError(t, err)
-	assert.NotNil(t, decrypted)
-	assert.Equal(t, ls2.Published(), decrypted.Published())
-}
-
-func TestEncryptedLeaseSetValidateViaConstructor(t *testing.T) {
-	ls2 := createTestLeaseSet2(t)
-	recipientPub, _, err := x25519.GenerateKey(rand.Reader)
-	require.NoError(t, err)
-
-	var cookie [32]byte
-	_, _ = rand.Read(cookie[:])
-	encryptedData, err := EncryptInnerLeaseSet2(ls2, cookie, &recipientPub)
-	require.NoError(t, err)
-
-	_, signingPriv, err := ed25519.GenerateEd25519KeyPair()
-	require.NoError(t, err)
-
-	blindedKey := make([]byte, 32)
-	_, _ = rand.Read(blindedKey)
-
-	els, err := NewEncryptedLeaseSet(
-		key_certificate.KEYCERT_SIGN_ED25519,
-		blindedKey,
-		uint32(time.Now().Unix()),
-		600,
-		0,
-		nil,
-		encryptedData,
-		signingPriv,
-	)
-	require.NoError(t, err)
-
-	assert.NoError(t, els.Validate())
-	assert.True(t, els.IsValid())
+	reservedFlags := []uint16{0x0004, 0x0008, 0x0010, 0x8000, 0xFFFC}
+	for _, flags := range reservedFlags {
+		_, err := NewEncryptedLeaseSet(
+			uint16(key_certificate.KEYCERT_SIGN_ED25519),
+			pub,
+			uint32(time.Now().Unix()),
+			600,
+			flags,
+			nil,
+			encData,
+			pub, // wrong key type but will fail on flags first
+		)
+		assert.Error(t, err, "flags 0x%04x should be rejected", flags)
+		assert.Contains(t, err.Error(), "reserved flag bits")
+	}
 }
