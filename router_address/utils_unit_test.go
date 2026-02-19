@@ -1,5 +1,4 @@
 package router_address
-package router_address
 
 import (
 	"testing"
