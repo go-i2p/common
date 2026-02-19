@@ -5,7 +5,7 @@ go 1.24.5
 toolchain go1.24.12
 
 require (
-	github.com/go-i2p/crypto v0.1.3
+	github.com/go-i2p/crypto v0.1.4-0.20260218221204-a8834457f3f1
 	github.com/go-i2p/logger v0.1.2
 	github.com/samber/oops v1.21.0
 	github.com/stretchr/testify v1.11.1
@@ -32,6 +32,6 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 
-replace github.com/go-i2p/crypto => ../crypto
+// replace github.com/go-i2p/crypto => ../crypto
 
 // replace github.com/go-i2p/logger => ../logger
