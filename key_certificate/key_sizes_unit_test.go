@@ -173,21 +173,7 @@ func TestGetSignatureSize(t *testing.T) {
 }
 
 func TestSigningKeySizes(t *testing.T) {
-	// Verify that all expected signing types are present in the map
-	expectedTypes := []int{
-		KEYCERT_SIGN_DSA_SHA1,
-		KEYCERT_SIGN_P256,
-		KEYCERT_SIGN_P384,
-		KEYCERT_SIGN_P521,
-		KEYCERT_SIGN_RSA2048,
-		KEYCERT_SIGN_RSA3072,
-		KEYCERT_SIGN_RSA4096,
-		KEYCERT_SIGN_ED25519,
-		KEYCERT_SIGN_ED25519PH,
-		KEYCERT_SIGN_REDDSA_ED25519,
-	}
-
-	for _, sigType := range expectedTypes {
+	for _, sigType := range testAllSigningTypes {
 		info, exists := SigningKeySizes[sigType]
 		assert.True(t, exists, "Signing type %d should exist in map", sigType)
 		assert.Greater(t, info.SignatureSize, 0, "Signature size should be positive")
@@ -197,7 +183,6 @@ func TestSigningKeySizes(t *testing.T) {
 }
 
 func TestCryptoKeySizes(t *testing.T) {
-	// Verify that all expected crypto types are present in the map
 	expectedTypes := []int{
 		KEYCERT_CRYPTO_ELG,
 		KEYCERT_CRYPTO_P256,

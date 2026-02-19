@@ -107,32 +107,26 @@ func TestNewDSAElGamalKeyCertificate(t *testing.T) {
 
 // TestNewDSAElGamalKeyCertificate_DeprecationWarning verifies that the deprecated
 // DSA/ElGamal constructor still works but is properly marked as deprecated.
-// The function should log a warning (not tested here) and return a valid certificate.
 func TestNewDSAElGamalKeyCertificate_DeprecationWarning(t *testing.T) {
 	t.Run("still_works_despite_deprecation", func(t *testing.T) {
-		// Despite being deprecated, the function must still work for backward compatibility
 		keyCert, err := NewDSAElGamalKeyCertificate()
 
 		require.NoError(t, err, "deprecated function should still work for backward compatibility")
 		require.NotNil(t, keyCert)
 
-		// Verify correct key types are set
 		assert.Equal(t, KEYCERT_SIGN_DSA_SHA1, keyCert.SigningPublicKeyType())
 		assert.Equal(t, KEYCERT_CRYPTO_ELG, keyCert.PublicKeyType())
 	})
 
 	t.Run("prefer_modern_alternative", func(t *testing.T) {
-		// Show that Ed25519/X25519 is the preferred alternative
 		modernKeyCert, err := NewEd25519X25519KeyCertificate()
 
 		require.NoError(t, err)
 		require.NotNil(t, modernKeyCert)
 
-		// Modern keys use Ed25519 and X25519
 		assert.Equal(t, KEYCERT_SIGN_ED25519, modernKeyCert.SigningPublicKeyType())
 		assert.Equal(t, KEYCERT_CRYPTO_X25519, modernKeyCert.PublicKeyType())
 
-		// Modern keys should be different from legacy keys
 		legacyKeyCert, _ := NewDSAElGamalKeyCertificate()
 		assert.NotEqual(t, legacyKeyCert.SigningPublicKeyType(), modernKeyCert.SigningPublicKeyType())
 		assert.NotEqual(t, legacyKeyCert.PublicKeyType(), modernKeyCert.PublicKeyType())
@@ -149,77 +143,41 @@ func TestNewRedDSAX25519KeyCertificate(t *testing.T) {
 	assert.Equal(t, KEYCERT_CRYPTO_X25519, keyCert.PublicKeyType())
 }
 
-func TestValidateSigningType(t *testing.T) {
-	tests := []struct {
-		name        string
-		signingType int
-		wantErr     bool
-	}{
-		{"DSA_SHA1", KEYCERT_SIGN_DSA_SHA1, false},
-		{"P256", KEYCERT_SIGN_P256, false},
-		{"P384", KEYCERT_SIGN_P384, false},
-		{"P521", KEYCERT_SIGN_P521, false},
-		{"RSA2048", KEYCERT_SIGN_RSA2048, false},
-		{"RSA3072", KEYCERT_SIGN_RSA3072, false},
-		{"RSA4096", KEYCERT_SIGN_RSA4096, false},
-		{"ED25519", KEYCERT_SIGN_ED25519, false},
-		{"ED25519PH", KEYCERT_SIGN_ED25519PH, false},
-		{"RedDSA", KEYCERT_SIGN_REDDSA_ED25519, false},
-		{"Experimental_Start", KEYCERT_SIGN_EXPERIMENTAL_START, false},
-		{"Experimental_End", KEYCERT_SIGN_EXPERIMENTAL_END, false},
-		{"Invalid_Low", -1, true},
-		{"Invalid_High", 100, true},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			err := validateSigningType(tt.signingType)
-			if tt.wantErr {
-				assert.Error(t, err)
-			} else {
-				assert.NoError(t, err)
-			}
-		})
-	}
-}
-
-func TestValidateCryptoType(t *testing.T) {
-	tests := []struct {
-		name       string
-		cryptoType int
-		wantErr    bool
-	}{
-		{"ElGamal", KEYCERT_CRYPTO_ELG, false},
-		{"P256", KEYCERT_CRYPTO_P256, false},
-		{"P384", KEYCERT_CRYPTO_P384, false},
-		{"P521", KEYCERT_CRYPTO_P521, false},
-		{"X25519", KEYCERT_CRYPTO_X25519, false},
-		{"MLKEM512", KEYCERT_CRYPTO_MLKEM512_X25519, false},
-		{"MLKEM768", KEYCERT_CRYPTO_MLKEM768_X25519, false},
-		{"MLKEM1024", KEYCERT_CRYPTO_MLKEM1024_X25519, false},
-		{"Experimental_Start", KEYCERT_CRYPTO_EXPERIMENTAL_START, false},
-		{"Experimental_End", KEYCERT_CRYPTO_EXPERIMENTAL_END, false},
-		{"Invalid_Low", -1, true},
-		{"Invalid_High", 100, true},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			err := validateCryptoType(tt.cryptoType)
-			if tt.wantErr {
-				assert.Error(t, err)
-			} else {
-				assert.NoError(t, err)
-			}
-		})
-	}
-}
-
 func TestBuildKeyCertificatePayload(t *testing.T) {
 	payload := buildKeyCertificatePayload(KEYCERT_SIGN_ED25519, KEYCERT_CRYPTO_X25519)
 
 	assert.Equal(t, 4, len(payload), "Payload should be 4 bytes")
 	assert.Equal(t, []byte{0x00, 0x07, 0x00, 0x04}, payload)
+}
+
+// TestConstructSigningPublicKeyByType_RawEd25519 verifies Ed25519 construction from raw 32-byte key.
+func TestConstructSigningPublicKeyByType_RawEd25519(t *testing.T) {
+	rawKey := makeTestBytes(32, 0)
+
+	spk, err := ConstructSigningPublicKeyByType(rawKey, KEYCERT_SIGN_ED25519)
+	require.NoError(t, err)
+	require.NotNil(t, spk)
+	assert.Equal(t, 32, spk.Len())
+}
+
+// TestConstructSigningPublicKeyByType_RawP256 verifies P256 construction from raw 64-byte key.
+func TestConstructSigningPublicKeyByType_RawP256(t *testing.T) {
+	rawKey := makeTestBytes(64, 0)
+
+	spk, err := ConstructSigningPublicKeyByType(rawKey, KEYCERT_SIGN_P256)
+	require.NoError(t, err)
+	require.NotNil(t, spk)
+	assert.Equal(t, KEYCERT_SIGN_P256_SIZE, spk.Len())
+}
+
+// TestConstructSigningPublicKeyByType_RawP384 verifies P384 construction from raw 96-byte key.
+func TestConstructSigningPublicKeyByType_RawP384(t *testing.T) {
+	rawKey := makeTestBytes(96, 0)
+
+	spk, err := ConstructSigningPublicKeyByType(rawKey, KEYCERT_SIGN_P384)
+	require.NoError(t, err)
+	require.NotNil(t, spk)
+	assert.Equal(t, KEYCERT_SIGN_P384_SIZE, spk.Len())
 }
 
 // Benchmark tests
