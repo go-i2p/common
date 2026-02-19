@@ -19,8 +19,8 @@ func TestStringMaxSizeConstant(t *testing.T) {
 }
 
 func TestMappingDelimiterConstants(t *testing.T) {
-	assert.Equal(t, byte(0x3d), MAPPING_EQUALS_DELIMITER, "MAPPING_EQUALS_DELIMITER should be 0x3d (=)")
-	assert.Equal(t, byte(0x3b), MAPPING_SEMICOLON_DELIMITER, "MAPPING_SEMICOLON_DELIMITER should be 0x3b (;)")
+	assert.Equal(t, 0x3d, MAPPING_EQUALS_DELIMITER, "MAPPING_EQUALS_DELIMITER should be 0x3d (=)")
+	assert.Equal(t, 0x3b, MAPPING_SEMICOLON_DELIMITER, "MAPPING_SEMICOLON_DELIMITER should be 0x3b (;)")
 }
 
 func TestKeyValIntegerLengthConstant(t *testing.T) {
