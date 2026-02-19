@@ -247,6 +247,34 @@ func TestEncodeIntN_AllSizes(t *testing.T) {
 	}
 }
 
+func TestEncodeIntNSize8(t *testing.T) {
+	t.Run("size 8 with large value", func(t *testing.T) {
+		maxInt := int(^uint(0) >> 1) // math.MaxInt
+		result, err := EncodeIntN(maxInt, 8)
+		require.NoError(t, err)
+		assert.Equal(t, 8, len(result))
+
+		// Verify round-trip
+		decoded, err := DecodeIntN(result)
+		require.NoError(t, err)
+		assert.Equal(t, maxInt, decoded)
+	})
+
+	t.Run("size 8 with zero", func(t *testing.T) {
+		result, err := EncodeIntN(0, 8)
+		require.NoError(t, err)
+		assert.Equal(t, 8, len(result))
+		assert.Equal(t, make([]byte, 8), result)
+	})
+
+	t.Run("size 8 with value 1", func(t *testing.T) {
+		result, err := EncodeIntN(1, 8)
+		require.NoError(t, err)
+		expected := []byte{0, 0, 0, 0, 0, 0, 0, 1}
+		assert.Equal(t, expected, result)
+	})
+}
+
 // Benchmark tests
 func BenchmarkEncodeUint16(b *testing.B) {
 	for i := 0; i < b.N; i++ {

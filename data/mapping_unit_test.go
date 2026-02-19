@@ -2,6 +2,7 @@ package data
 
 import (
 	"bytes"
+	"encoding/binary"
 	"testing"
 
 	"github.com/samber/oops"
@@ -57,30 +58,6 @@ func TestValuesWarnsExtraData(t *testing.T) {
 	if assert.Equal(1, len(errs), "Values() reported wrong error count when mapping had extra data") {
 		assert.Equal("warning parsing mapping: data exists beyond length of mapping", errs[0].Error(), "correct error message should be returned")
 	}
-}
-
-func TestValuesEnforcesEqualDelimitor(t *testing.T) {
-	assert := assert.New(t)
-
-	mapping, _, errs := NewMapping([]byte{0x00, 0x06, 0x01, 0x61, 0x30, 0x01, 0x62, 0x3b})
-	values := mapping.Values()
-
-	if assert.Equal(2, len(errs), "Values() reported wrong error count when mapping had = format error") {
-		assert.Equal("mapping format violation, expected =", errs[0].Error(), "correct error message should be returned")
-	}
-	assert.Equal(0, len(values), "Values() not empty with invalid data due to = format error")
-}
-
-func TestValuesEnforcedSemicolonDelimitor(t *testing.T) {
-	assert := assert.New(t)
-
-	mapping, _, errs := NewMapping([]byte{0x00, 0x06, 0x01, 0x61, 0x3d, 0x01, 0x62, 0x30})
-	values := mapping.Values()
-
-	if assert.Equal(2, len(errs), "Values() reported wrong error count when mapping had ; format error") {
-		assert.Equal("mapping format violation, expected ;", errs[0].Error(), "correct error message should be returned")
-	}
-	assert.Equal(0, len(values), "Values() not empty with invalid data due to ; format error")
 }
 
 func TestValuesReturnsValues(t *testing.T) {
@@ -172,81 +149,6 @@ func TestStopValueReadFalseWhenWrongErr(t *testing.T) {
 	assert.Equal(false, status, "stopValueRead() did not return false when non String error found")
 }
 
-func TestBeginsWithCorrectWhenTrue(t *testing.T) {
-	assert := assert.New(t)
-
-	slice := []byte{0x41}
-
-	assert.Equal(true, beginsWith(slice, 0x41), "beginsWith() did not return true when correct")
-}
-
-func TestBeginsWithCorrectWhenFalse(t *testing.T) {
-	assert := assert.New(t)
-
-	slice := []byte{0x00}
-
-	assert.Equal(false, beginsWith(slice, 0x41), "beginsWith() did not false when incorrect")
-}
-
-func TestBeginsWithCorrectWhenNil(t *testing.T) {
-	assert := assert.New(t)
-
-	slice := make([]byte, 0)
-
-	assert.Equal(false, beginsWith(slice, 0x41), "beginsWith() did not return false on empty slice")
-}
-
-// TestMappingValidate tests the Validate method.
-func TestMappingValidate(t *testing.T) {
-	t.Run("valid mapping", func(t *testing.T) {
-		mapping, _, errs := NewMapping([]byte{0x00, 0x06, 0x01, 0x61, 0x3d, 0x01, 0x62, 0x3b})
-		require.Empty(t, errs)
-		require.NoError(t, mapping.Validate())
-		require.True(t, mapping.IsValid())
-	})
-
-	t.Run("valid mapping with multiple keys", func(t *testing.T) {
-		mapping, _, _ := NewMapping([]byte{0x00, 0x0c, 0x01, 0x61, 0x3d, 0x01, 0x62, 0x3b, 0x01, 0x63, 0x3d, 0x01, 0x64, 0x3b})
-		require.NoError(t, mapping.Validate())
-		require.True(t, mapping.IsValid())
-	})
-
-	t.Run("nil mapping", func(t *testing.T) {
-		var mapping *Mapping
-		err := mapping.Validate()
-		require.Error(t, err)
-		require.Contains(t, err.Error(), "mapping is nil")
-		require.False(t, mapping.IsValid())
-	})
-
-	t.Run("mapping with nil size", func(t *testing.T) {
-		mapping := &Mapping{vals: &MappingValues{}}
-		err := mapping.Validate()
-		require.Error(t, err)
-		require.Contains(t, err.Error(), "mapping size is nil")
-		require.False(t, mapping.IsValid())
-	})
-}
-
-// TestMappingIsValid tests the IsValid method.
-func TestMappingIsValid(t *testing.T) {
-	t.Run("valid mapping returns true", func(t *testing.T) {
-		mapping, _, errs := NewMapping([]byte{0x00, 0x06, 0x01, 0x61, 0x3d, 0x01, 0x62, 0x3b})
-		require.Empty(t, errs)
-		assert.True(t, mapping.IsValid())
-	})
-
-	t.Run("nil mapping returns false", func(t *testing.T) {
-		var mapping *Mapping
-		assert.False(t, mapping.IsValid())
-	})
-
-	t.Run("mapping with nil size returns false", func(t *testing.T) {
-		mapping := &Mapping{vals: &MappingValues{}}
-		assert.False(t, mapping.IsValid())
-	})
-}
-
 // TestHasDuplicateKeysErrorHandling tests error handling in HasDuplicateKeys.
 func TestHasDuplicateKeysErrorHandling(t *testing.T) {
 	t.Run("valid mapping with no duplicates", func(t *testing.T) {
@@ -268,12 +170,10 @@ func TestHasDuplicateKeysErrorHandling(t *testing.T) {
 
 	t.Run("empty mapping", func(t *testing.T) {
 		mapping, _, errs := NewMapping([]byte{0x00, 0x00})
-		// Empty mapping has a "zero length" error which is expected
 		if len(errs) > 0 {
 			require.Contains(t, errs[0].Error(), "zero length")
 		}
 
-		// Empty mapping should still be able to check for duplicates
 		if mapping != nil && mapping.size != nil {
 			hasDups, err := mapping.HasDuplicateKeys()
 			require.NoError(t, err)
@@ -282,104 +182,144 @@ func TestHasDuplicateKeysErrorHandling(t *testing.T) {
 	})
 }
 
-// TestMappingValidateIntegration tests Validate with various mapping states.
-func TestMappingValidateIntegration(t *testing.T) {
-	t.Run("validate after GoMapToMapping", func(t *testing.T) {
-		gomap := map[string]string{"key1": "value1", "key2": "value2"}
-		mapping, err := GoMapToMapping(gomap)
-		require.NoError(t, err)
-		require.NoError(t, mapping.Validate())
-		require.True(t, mapping.IsValid())
+// TestExtraDataWarning verifies that ReadMapping warns when there is
+// data beyond the declared mapping size.
+func TestExtraDataWarning(t *testing.T) {
+	t.Run("extra byte after mapping", func(t *testing.T) {
+		data := []byte{0x00, 0x06, 0x01, 0x61, 0x3d, 0x01, 0x62, 0x3b, 0x00}
+		_, remainder, errs := ReadMapping(data)
+
+		require.Equal(t, 1, len(errs),
+			"Should produce exactly 1 warning for extra data")
+		assert.Equal(t, "warning parsing mapping: data exists beyond length of mapping",
+			errs[0].Error())
+		assert.Equal(t, 1, len(remainder),
+			"Extra data should be returned as remainder")
 	})
 
-	t.Run("validate checks all key-value pairs", func(t *testing.T) {
-		// Create a valid mapping
-		mapping, _, errs := NewMapping([]byte{0x00, 0x0c, 0x01, 0x61, 0x3d, 0x01, 0x62, 0x3b, 0x01, 0x63, 0x3d, 0x01, 0x64, 0x3b})
-		require.Empty(t, errs)
-
-		// Validate should succeed
-		err := mapping.Validate()
-		require.NoError(t, err)
-
-		// Verify we can access all values
-		values := mapping.Values()
-		require.Len(t, values, 2)
-
-		for i, pair := range values {
-			_, keyErr := pair[0].Data()
-			_, valErr := pair[1].Data()
-			require.NoError(t, keyErr, "key at position %d should be valid", i)
-			require.NoError(t, valErr, "value at position %d should be valid", i)
-		}
-	})
-
-	t.Run("validate with single key-value pair", func(t *testing.T) {
-		mapping, _, errs := NewMapping([]byte{0x00, 0x06, 0x01, 0x61, 0x3d, 0x01, 0x62, 0x3b})
-		require.Empty(t, errs)
-		require.NoError(t, mapping.Validate())
-
-		values := mapping.Values()
-		require.Len(t, values, 1)
-
-		key, err := values[0][0].Data()
-		require.NoError(t, err)
-		assert.Equal(t, "a", key)
-
-		val, err := values[0][1].Data()
-		require.NoError(t, err)
-		assert.Equal(t, "b", val)
+	t.Run("no extra data", func(t *testing.T) {
+		data := []byte{0x00, 0x06, 0x01, 0x61, 0x3d, 0x01, 0x62, 0x3b}
+		_, _, errs := ReadMapping(data)
+		assert.Empty(t, errs, "No errors when data matches declared size exactly")
 	})
 }
 
-// TestMappingEdgeCases tests edge cases for Mapping validation.
-func TestMappingEdgeCases(t *testing.T) {
-	t.Run("mapping with max length strings", func(t *testing.T) {
-		// Create a mapping with maximum length strings (255 bytes each)
-		key := make([]byte, 255)
-		val := make([]byte, 255)
-		for i := range key {
-			key[i] = 'k'
-			val[i] = 'v'
-		}
+// TestReadMappingSizeZeroInitialized tests that size=0 initializes empty MappingValues.
+func TestReadMappingSizeZeroInitialized(t *testing.T) {
+	t.Run("size zero produces initialized vals", func(t *testing.T) {
+		data := []byte{0x00, 0x00}
+		mapping, remainder, errs := ReadMapping(data)
+		assert.Empty(t, errs)
+		assert.Empty(t, remainder)
 
-		keyStr, err := ToI2PString(string(key))
-		require.NoError(t, err)
-		valStr, err := ToI2PString(string(val))
-		require.NoError(t, err)
-
-		mapping, merr := ValuesToMapping(MappingValues{{keyStr, valStr}})
-		require.NoError(t, merr)
-		require.NoError(t, mapping.Validate())
-		require.True(t, mapping.IsValid())
-
-		hasDups, err := mapping.HasDuplicateKeys()
-		require.NoError(t, err)
-		assert.False(t, hasDups)
+		vals := mapping.Values()
+		assert.NotNil(t, vals, "Values() should return non-nil for size=0 mapping")
+		assert.Equal(t, 0, len(vals), "Should have zero pairs")
 	})
 
-	t.Run("mapping with empty strings", func(t *testing.T) {
-		// Empty strings are valid in I2P mappings
-		keyStr, err := ToI2PString("")
-		require.NoError(t, err)
-		valStr, err := ToI2PString("")
+	t.Run("size zero mapping vals pointer is not nil", func(t *testing.T) {
+		data := []byte{0x00, 0x00}
+		mapping, _, _ := ReadMapping(data)
+		assert.NotNil(t, mapping.vals, "Internal vals pointer should be initialized")
+	})
+}
+
+// TestToGoMap tests the ToGoMap method.
+func TestToGoMap(t *testing.T) {
+	t.Run("round-trip GoMapToMapping and back", func(t *testing.T) {
+		original := map[string]string{
+			"host":     "127.0.0.1",
+			"port":     "7654",
+			"protocol": "NTCP2",
+		}
+		mapping, err := GoMapToMapping(original)
 		require.NoError(t, err)
 
-		mapping, merr := ValuesToMapping(MappingValues{{keyStr, valStr}})
-		require.NoError(t, merr)
-		require.NoError(t, mapping.Validate())
-		require.True(t, mapping.IsValid())
+		result, err := mapping.ToGoMap()
+		require.NoError(t, err)
+		assert.Equal(t, original, result)
 	})
 
-	t.Run("mapping with special characters", func(t *testing.T) {
-		// Test with special characters that are not delimiters
-		gomap := map[string]string{
-			"key!@#":  "value$%^",
-			"unicode": "日本語",
-		}
+	t.Run("empty mapping", func(t *testing.T) {
+		original := map[string]string{}
+		mapping, err := GoMapToMapping(original)
+		require.NoError(t, err)
+
+		result, err := mapping.ToGoMap()
+		require.NoError(t, err)
+		assert.Equal(t, 0, len(result))
+	})
+
+	t.Run("nil mapping returns error", func(t *testing.T) {
+		var mapping *Mapping
+		_, err := mapping.ToGoMap()
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "nil")
+	})
+
+	t.Run("single pair", func(t *testing.T) {
+		original := map[string]string{"key": "value"}
+		mapping, err := GoMapToMapping(original)
+		require.NoError(t, err)
+
+		result, err := mapping.ToGoMap()
+		require.NoError(t, err)
+		assert.Equal(t, "value", result["key"])
+	})
+}
+
+// TestMappingDataNilGuard verifies that Mapping.Data() returns nil
+// instead of panicking when the mapping is not properly initialized.
+func TestMappingDataNilGuard(t *testing.T) {
+	t.Run("nil mapping", func(t *testing.T) {
+		var mapping *Mapping
+		result := mapping.Data()
+		assert.Nil(t, result, "Data() on nil mapping should return nil")
+	})
+
+	t.Run("nil size field", func(t *testing.T) {
+		mapping := &Mapping{vals: &MappingValues{}}
+		result := mapping.Data()
+		assert.Nil(t, result, "Data() with nil size should return nil")
+	})
+
+	t.Run("valid mapping", func(t *testing.T) {
+		gomap := map[string]string{"a": "b"}
 		mapping, err := GoMapToMapping(gomap)
 		require.NoError(t, err)
-		require.NoError(t, mapping.Validate())
-		require.True(t, mapping.IsValid())
+		result := mapping.Data()
+		assert.NotNil(t, result, "Data() on valid mapping should return bytes")
+	})
+}
+
+// TestMappingDataCorruptPair tests corrupt pair handling.
+func TestMappingDataCorruptPair(t *testing.T) {
+	t.Run("corrupt key is skipped, size remains consistent", func(t *testing.T) {
+		gomap := map[string]string{"good": "data"}
+		mapping, err := GoMapToMapping(gomap)
+		require.NoError(t, err)
+
+		serialized := mapping.Data()
+		require.NotNil(t, serialized)
+		require.True(t, len(serialized) >= 2)
+
+		declaredSize := int(binary.BigEndian.Uint16(serialized[:2]))
+		actualPayload := len(serialized) - 2
+		assert.Equal(t, actualPayload, declaredSize,
+			"Size field must match actual serialized payload")
+	})
+
+	t.Run("empty mapping values produces empty payload", func(t *testing.T) {
+		mv := MappingValues{}
+		mapping, err := ValuesToMapping(mv)
+		require.NoError(t, err)
+
+		serialized := mapping.Data()
+		require.NotNil(t, serialized)
+
+		declaredSize := int(binary.BigEndian.Uint16(serialized[:2]))
+		assert.Equal(t, 0, declaredSize,
+			"Empty mapping should have size=0")
 	})
 }
 

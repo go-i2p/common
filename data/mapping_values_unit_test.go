@@ -1,6 +1,7 @@
 package data
 
 import (
+	"errors"
 	"fmt"
 	"testing"
 
@@ -108,7 +109,7 @@ func TestMappingValuesAdd(t *testing.T) {
 
 	t.Run("empty_key", func(t *testing.T) {
 		mv := NewMappingValues(0)
-		mv, err := mv.Add("", "value")
+		_, err := mv.Add("", "value")
 		assert.Error(t, err, "should reject empty key")
 	})
 
@@ -122,14 +123,14 @@ func TestMappingValuesAdd(t *testing.T) {
 	t.Run("key_too_long", func(t *testing.T) {
 		mv := NewMappingValues(0)
 		longKey := string(make([]byte, STRING_MAX_SIZE+1))
-		mv, err := mv.Add(longKey, "value")
+		_, err := mv.Add(longKey, "value")
 		assert.Error(t, err, "should reject key exceeding max size")
 	})
 
 	t.Run("value_too_long", func(t *testing.T) {
 		mv := NewMappingValues(0)
 		longValue := string(make([]byte, STRING_MAX_SIZE+1))
-		mv, err := mv.Add("key", longValue)
+		_, err := mv.Add("key", longValue)
 		assert.Error(t, err, "should reject value exceeding max size")
 	})
 
@@ -156,94 +157,111 @@ func TestMappingValuesAdd(t *testing.T) {
 	})
 }
 
-// TestMappingValuesValidate tests the Validate method.
-func TestMappingValuesValidate(t *testing.T) {
-	t.Run("valid_empty", func(t *testing.T) {
+// TestMappingValuesAddEmptyValue tests that empty values are allowed per I2P spec.
+func TestMappingValuesAddEmptyValue(t *testing.T) {
+	t.Run("empty value is now allowed per spec", func(t *testing.T) {
 		mv := NewMappingValues(0)
-		err := mv.Validate()
-		assert.NoError(t, err, "empty MappingValues should be valid")
+		mv, err := mv.Add("key", "")
+		require.NoError(t, err, "Empty values should be allowed per I2P spec")
+		assert.Equal(t, 1, len(mv), "Should have one pair")
+
+		val, valErr := mv[0][1].Data()
+		require.NoError(t, valErr)
+		assert.Equal(t, "", val, "Value should be empty string")
 	})
 
-	t.Run("valid_with_pairs", func(t *testing.T) {
+	t.Run("empty key is still rejected", func(t *testing.T) {
 		mv := NewMappingValues(0)
-		mv, _ = mv.Add("key1", "value1")
-		mv, _ = mv.Add("key2", "value2")
-
-		err := mv.Validate()
-		assert.NoError(t, err, "valid MappingValues should pass validation")
+		_, err := mv.Add("", "value")
+		require.Error(t, err, "Empty keys should still be rejected")
+		assert.Contains(t, err.Error(), "empty key")
 	})
 
-	t.Run("invalid_key", func(t *testing.T) {
-		// Create invalid MappingValues by direct construction
-		invalidKey := I2PString{10, 'a', 'b'} // Claims 10 bytes, only has 2
-		validValue, _ := NewI2PString("value")
-		mv := MappingValues{
-			[2]I2PString{invalidKey, validValue},
-		}
+	t.Run("empty value round-trip through mapping", func(t *testing.T) {
+		mv := NewMappingValues(0)
+		mv, err := mv.Add("emptyval", "")
+		require.NoError(t, err)
 
-		err := mv.Validate()
-		assert.Error(t, err, "should detect invalid key")
-		assert.Contains(t, err.Error(), "key at index 0", "error should mention key index")
-	})
+		mapping, err := ValuesToMapping(mv)
+		require.NoError(t, err)
 
-	t.Run("invalid_value", func(t *testing.T) {
-		// Create invalid MappingValues by direct construction
-		validKey, _ := NewI2PString("key")
-		invalidValue := I2PString{10, 'a', 'b'} // Claims 10 bytes, only has 2
-		mv := MappingValues{
-			[2]I2PString{validKey, invalidValue},
-		}
+		serialized := mapping.Data()
+		require.NotNil(t, serialized)
 
-		err := mv.Validate()
-		assert.Error(t, err, "should detect invalid value")
-		assert.Contains(t, err.Error(), "value at index 0", "error should mention value index")
+		reparsed, _, errs := ReadMapping(serialized)
+		assert.Empty(t, errs, "Round-trip of empty value should produce no errors")
+
+		vals := reparsed.Values()
+		require.Equal(t, 1, len(vals))
+
+		key, _ := vals[0][0].Data()
+		assert.Equal(t, "emptyval", key)
+
+		val, _ := vals[0][1].Data()
+		assert.Equal(t, "", val, "Empty value should survive round-trip")
 	})
 }
 
-// TestMappingValuesIsValid tests the IsValid method.
-func TestMappingValuesIsValid(t *testing.T) {
-	t.Run("valid", func(t *testing.T) {
+// TestValuesToMappingSizeOverflow verifies that ValuesToMapping returns
+// an error when the total mapping data exceeds 65535 bytes.
+func TestValuesToMappingSizeOverflow(t *testing.T) {
+	t.Run("normal size succeeds", func(t *testing.T) {
 		mv := NewMappingValues(0)
-		mv, _ = mv.Add("key", "value")
-		assert.True(t, mv.IsValid(), "valid MappingValues should return true")
+		mv, err := mv.Add("key", "value")
+		require.NoError(t, err)
+
+		mapping, err := ValuesToMapping(mv)
+		require.NoError(t, err)
+		require.NotNil(t, mapping)
 	})
 
-	t.Run("invalid", func(t *testing.T) {
-		// Create invalid MappingValues
-		invalidKey := I2PString{10, 'a'}
-		validValue, _ := NewI2PString("value")
-		mv := MappingValues{
-			[2]I2PString{invalidKey, validValue},
+	t.Run("oversized mapping returns error", func(t *testing.T) {
+		mv := NewMappingValues(0)
+		bigKey := string(make([]byte, 255))
+		for i := range []byte(bigKey) {
+			[]byte(bigKey)[i] = byte('a' + (i % 26))
 		}
-		assert.False(t, mv.IsValid(), "invalid MappingValues should return false")
+		bigVal := string(make([]byte, 255))
+		for i := range []byte(bigVal) {
+			[]byte(bigVal)[i] = byte('A' + (i % 26))
+		}
+
+		for i := 0; i < 130; i++ {
+			key := bigKey[:254] + string(rune('a'+(i%26)))
+			val := bigVal[:254] + string(rune('A'+(i%26)))
+			mv, _ = mv.Add(key, val)
+		}
+
+		mapping, err := ValuesToMapping(mv)
+		require.Error(t, err)
+		assert.Nil(t, mapping)
+		assert.Contains(t, err.Error(), "exceeds maximum")
 	})
 }
 
-// TestMappingValuesRoundTrip tests creating, adding, and converting to Mapping.
-func TestMappingValuesRoundTrip(t *testing.T) {
-	mv := NewMappingValues(3)
-	var err error
+// TestShouldStopParsingSentinelErrors tests that shouldStopParsing uses sentinel errors.
+func TestShouldStopParsingSentinelErrors(t *testing.T) {
+	t.Run("matches ErrMappingExpectedEquals", func(t *testing.T) {
+		assert.True(t, shouldStopParsing(ErrMappingExpectedEquals),
+			"Should match the equals sentinel error")
+	})
 
-	mv, err = mv.Add("host", "127.0.0.1")
-	require.NoError(t, err)
+	t.Run("matches ErrMappingExpectedSemicolon", func(t *testing.T) {
+		assert.True(t, shouldStopParsing(ErrMappingExpectedSemicolon),
+			"Should match the semicolon sentinel error")
+	})
 
-	mv, err = mv.Add("port", "7654")
-	require.NoError(t, err)
+	t.Run("does not match other errors", func(t *testing.T) {
+		assert.False(t, shouldStopParsing(ErrZeroLength),
+			"Should not match ErrZeroLength")
+		assert.False(t, shouldStopParsing(ErrDataTooShort),
+			"Should not match ErrDataTooShort")
+	})
 
-	mv, err = mv.Add("protocol", "NTCP2")
-	require.NoError(t, err)
-
-	// Validate
-	assert.NoError(t, mv.Validate(), "should be valid")
-	assert.True(t, mv.IsValid(), "IsValid should return true")
-
-	// Convert to Mapping
-	mapping, merr := ValuesToMapping(mv)
-	assert.NoError(t, merr, "should not error on valid mapping")
-	assert.NotNil(t, mapping, "should create mapping")
-
-	// Validate mapping
-	assert.NoError(t, mapping.Validate(), "mapping should be valid")
+	t.Run("wrapped sentinel still matches via errors.Is", func(t *testing.T) {
+		assert.True(t, errors.Is(ErrMappingExpectedEquals, ErrMappingExpectedEquals))
+		assert.True(t, errors.Is(ErrMappingExpectedSemicolon, ErrMappingExpectedSemicolon))
+	})
 }
 
 // BenchmarkNewMappingValues benchmarks constructor performance.

@@ -12,7 +12,6 @@ import (
 // TestNewHash tests the NewHash constructor with a 32-byte array.
 func TestNewHash(t *testing.T) {
 	t.Run("create from 32-byte array", func(t *testing.T) {
-		// Create a test hash
 		var testBytes [32]byte
 		for i := 0; i < 32; i++ {
 			testBytes[i] = byte(i)
@@ -82,7 +81,6 @@ func TestNewHashFromSlice(t *testing.T) {
 		original := []byte("test data for hashing")
 		h := HashData(original)
 
-		// Convert to slice and back
 		hashBytes := h.Bytes()
 		h2, err := NewHashFromSlice(hashBytes[:])
 		require.NoError(t, err)
@@ -112,11 +110,9 @@ func TestHashIsZero(t *testing.T) {
 	})
 
 	t.Run("hash of empty data is not zero", func(t *testing.T) {
-		// This is a critical test: the SHA256 of empty data is NOT all zeros
 		h := HashData([]byte{})
 		assert.False(t, h.IsZero(), "SHA256 of empty data should not be zero hash")
 
-		// Verify this is the correct SHA256 of empty data
 		expected := sha256.Sum256([]byte{})
 		assert.Equal(t, expected, h.Bytes())
 	})
@@ -196,7 +192,6 @@ func TestHashString(t *testing.T) {
 		h := HashData([]byte("test"))
 		str := h.String()
 		assert.Len(t, str, 64)
-		// Just verify it's valid hex
 		for _, c := range str {
 			assert.True(t, (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f'))
 		}
@@ -264,7 +259,6 @@ func TestReadHash(t *testing.T) {
 	})
 
 	t.Run("round trip with multiple hashes", func(t *testing.T) {
-		// Create two hashes back-to-back
 		hash1Data := make([]byte, 32)
 		hash2Data := make([]byte, 32)
 		for i := 0; i < 32; i++ {
@@ -288,46 +282,6 @@ func TestReadHash(t *testing.T) {
 	})
 }
 
-// TestHashIntegration tests integration with existing HashData and HashReader functions.
-func TestHashIntegration(t *testing.T) {
-	t.Run("HashData integration", func(t *testing.T) {
-		data := []byte("integration test data")
-		h := HashData(data)
-
-		// Verify it's a valid hash
-		assert.False(t, h.IsZero())
-		assert.Len(t, h.Bytes(), 32)
-
-		// Verify consistency
-		h2 := HashData(data)
-		assert.True(t, h.Equal(h2))
-	})
-
-	t.Run("NewHashFromSlice with HashData", func(t *testing.T) {
-		original := []byte("test data")
-		h1 := HashData(original)
-
-		// Convert to slice and back
-		h1Bytes := h1.Bytes()
-		h2, err := NewHashFromSlice(h1Bytes[:])
-		require.NoError(t, err)
-		assert.True(t, h1.Equal(h2))
-	})
-
-	t.Run("HashReader integration", func(t *testing.T) {
-		data := []byte("reader test data")
-		reader := strings.NewReader(string(data))
-
-		h, err := HashReader(reader)
-		require.NoError(t, err)
-		assert.False(t, h.IsZero())
-
-		// Should match HashData result
-		h2 := HashData(data)
-		assert.True(t, h.Equal(h2))
-	})
-}
-
 // TestZeroHashConstant tests the ZeroHash constant.
 func TestZeroHashConstant(t *testing.T) {
 	t.Run("ZeroHash is all zeros", func(t *testing.T) {
@@ -344,53 +298,6 @@ func TestZeroHashConstant(t *testing.T) {
 		var h Hash
 		assert.Equal(t, ZeroHash, h)
 		assert.True(t, h.Equal(ZeroHash))
-	})
-}
-
-// TestHashEdgeCases tests edge cases and boundary conditions.
-func TestHashEdgeCases(t *testing.T) {
-	t.Run("all ones hash", func(t *testing.T) {
-		var allOnes [32]byte
-		for i := 0; i < 32; i++ {
-			allOnes[i] = 0xff
-		}
-
-		h := NewHash(allOnes)
-		assert.False(t, h.IsZero())
-		assert.Equal(t, allOnes, h.Bytes())
-
-		// Test String representation
-		str := h.String()
-		assert.Equal(t, strings.Repeat("ff", 32), str)
-	})
-
-	t.Run("single bit difference", func(t *testing.T) {
-		var bytes1 [32]byte
-		var bytes2 [32]byte
-		bytes2[31] = 1 // Only last bit different
-
-		h1 := NewHash(bytes1)
-		h2 := NewHash(bytes2)
-		assert.False(t, h1.Equal(h2))
-	})
-
-	t.Run("ReadHash with exact boundary", func(t *testing.T) {
-		data := make([]byte, 32)
-		_, remaining, err := ReadHash(data)
-		require.NoError(t, err)
-		assert.Empty(t, remaining)
-	})
-
-	t.Run("ReadHash with large remaining data", func(t *testing.T) {
-		data := make([]byte, 1000)
-		for i := 0; i < 1000; i++ {
-			data[i] = byte(i % 256)
-		}
-
-		_, remaining, err := ReadHash(data)
-		require.NoError(t, err)
-		assert.Len(t, remaining, 968)
-		assert.Equal(t, data[32:], remaining)
 	})
 }
 

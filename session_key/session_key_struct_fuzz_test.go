@@ -1,5 +1,4 @@
 package session_key
-package session_key
 
 import (
 	"bytes"

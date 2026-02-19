@@ -1,9 +1,11 @@
 package data
 
 import (
+	"encoding/binary"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestIntegerBigEndian(t *testing.T) {
@@ -32,14 +34,12 @@ func TestIsZeroWithNoData(t *testing.T) {
 	assert.NotNil(err, "intFromBytes should return error for empty slice")
 	assert.Contains(err.Error(), "empty input slice", "Error should mention empty input slice")
 
-	// Int() method should also return 0 for empty slice
 	assert.Equal(0, integer.Int(), "Integer.Int() should return 0 for empty slice")
 }
 
 func TestNewIntegerFromIntValidValues(t *testing.T) {
 	assert := assert.New(t)
 
-	// Test valid values for different sizes
 	testCases := []struct {
 		value       int
 		size        int
@@ -67,7 +67,6 @@ func TestNewIntegerFromIntValidValues(t *testing.T) {
 func TestNewIntegerFromIntOverflowValidation(t *testing.T) {
 	assert := assert.New(t)
 
-	// Test overflow conditions
 	testCases := []struct {
 		value       int
 		size        int
@@ -116,7 +115,6 @@ func TestNewIntegerFromBytes(t *testing.T) {
 	})
 
 	t.Run("too large", func(t *testing.T) {
-		// Create a slice larger than MAX_INTEGER_SIZE (8 bytes)
 		bytes := make([]byte, MAX_INTEGER_SIZE+1)
 		integer, err := NewIntegerFromBytes(bytes)
 		assert.NotNil(err, "NewIntegerFromBytes should error for oversized input")
@@ -126,7 +124,7 @@ func TestNewIntegerFromBytes(t *testing.T) {
 
 	t.Run("max size allowed", func(t *testing.T) {
 		bytes := make([]byte, MAX_INTEGER_SIZE)
-		bytes[MAX_INTEGER_SIZE-1] = 0x01 // Set last byte to 1
+		bytes[MAX_INTEGER_SIZE-1] = 0x01
 		integer, err := NewIntegerFromBytes(bytes)
 		assert.Nil(err, "NewIntegerFromBytes should not error for max size")
 		assert.NotNil(integer, "NewIntegerFromBytes should return integer for max size")
@@ -144,9 +142,7 @@ func TestNewIntegerFromBytes(t *testing.T) {
 		original := []byte{0x01, 0x02}
 		integer, err := NewIntegerFromBytes(original)
 		assert.Nil(err)
-		// Modify original
 		original[0] = 0xFF
-		// Integer should be unchanged
 		assert.Equal(byte(0x01), integer[0], "NewIntegerFromBytes should create independent copy")
 	})
 }
@@ -172,7 +168,6 @@ func TestIntSafe(t *testing.T) {
 	})
 
 	t.Run("too large integer", func(t *testing.T) {
-		// Create an integer larger than MAX_INTEGER_SIZE
 		bytes := make([]byte, MAX_INTEGER_SIZE+1)
 		integer := Integer(bytes)
 		value, err := integer.IntSafe()
@@ -193,7 +188,6 @@ func TestIntSafe(t *testing.T) {
 	})
 
 	t.Run("large value", func(t *testing.T) {
-		// Test with 8-byte integer (max size)
 		bytes := []byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00}
 		integer := Integer(bytes)
 		value, err := integer.IntSafe()
@@ -202,7 +196,6 @@ func TestIntSafe(t *testing.T) {
 	})
 
 	t.Run("comparison with Int method", func(t *testing.T) {
-		// For valid integers, both should return same value
 		bytes := []byte{0x00, 0xFF}
 		integer := Integer(bytes)
 
@@ -216,11 +209,9 @@ func TestIntSafe(t *testing.T) {
 	t.Run("empty integer unsafe vs safe", func(t *testing.T) {
 		integer := Integer([]byte{})
 
-		// Int() silently returns 0
 		unsafeValue := integer.Int()
 		assert.Equal(0, unsafeValue, "Int() should return 0 for empty")
 
-		// IntSafe() returns error
 		safeValue, err := integer.IntSafe()
 		assert.NotNil(err, "IntSafe() should error for empty")
 		assert.Equal(0, safeValue, "IntSafe() should return 0 on error")
@@ -272,41 +263,103 @@ func TestIsZero(t *testing.T) {
 	})
 }
 
-// TestNewIntegerFromBytesIntegration tests integration between new methods
-func TestNewIntegerFromBytesIntegration(t *testing.T) {
-	assert := assert.New(t)
-
-	t.Run("construct and check zero", func(t *testing.T) {
-		bytes := []byte{0x00, 0x00}
-		integer, err := NewIntegerFromBytes(bytes)
-		assert.Nil(err)
-		assert.True(integer.IsZero(), "Newly created zero integer should return true for IsZero()")
-
-		value, err := integer.IntSafe()
-		assert.Nil(err)
-		assert.Equal(0, value, "Zero integer should convert to 0")
+// TestUintSafe verifies that UintSafe correctly handles unsigned values.
+func TestUintSafe(t *testing.T) {
+	t.Run("small value", func(t *testing.T) {
+		i := Integer([]byte{0x00, 0x01})
+		val, err := i.UintSafe()
+		require.NoError(t, err)
+		assert.Equal(t, uint64(1), val)
 	})
 
-	t.Run("construct and convert non-zero", func(t *testing.T) {
-		bytes := []byte{0x00, 0x00, 0x01, 0x00}
-		integer, err := NewIntegerFromBytes(bytes)
-		assert.Nil(err)
-		assert.False(integer.IsZero(), "Non-zero integer should return false for IsZero()")
-
-		value, err := integer.IntSafe()
-		assert.Nil(err)
-		assert.Equal(256, value, "Integer should convert to correct value")
+	t.Run("max uint16", func(t *testing.T) {
+		i := Integer([]byte{0xFF, 0xFF})
+		val, err := i.UintSafe()
+		require.NoError(t, err)
+		assert.Equal(t, uint64(65535), val)
 	})
 
-	t.Run("round trip NewIntegerFromInt to IntSafe", func(t *testing.T) {
-		testValues := []int{0, 1, 127, 255, 256, 65535}
-		for _, original := range testValues {
-			integer, err := NewIntegerFromInt(original, 4)
-			assert.Nil(err, "NewIntegerFromInt should succeed for value %d", original)
+	t.Run("value above int63 boundary", func(t *testing.T) {
+		i := Integer([]byte{0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00})
 
-			value, err := integer.IntSafe()
-			assert.Nil(err, "IntSafe should succeed for value %d", original)
-			assert.Equal(original, value, "Round trip should preserve value %d", original)
+		intVal := i.Int()
+		assert.True(t, intVal < 0, "Int() should return negative for values >= 2^63")
+
+		uintVal, err := i.UintSafe()
+		require.NoError(t, err)
+		assert.Equal(t, uint64(1)<<63, uintVal,
+			"UintSafe() should correctly return 2^63")
+	})
+
+	t.Run("max uint64", func(t *testing.T) {
+		i := Integer([]byte{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF})
+		val, err := i.UintSafe()
+		require.NoError(t, err)
+		assert.Equal(t, uint64(0xFFFFFFFFFFFFFFFF), val)
+	})
+
+	t.Run("empty integer", func(t *testing.T) {
+		i := Integer([]byte{})
+		_, err := i.UintSafe()
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "empty")
+	})
+
+	t.Run("too large integer", func(t *testing.T) {
+		i := Integer(make([]byte, 9))
+		_, err := i.UintSafe()
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "too large")
+	})
+
+	t.Run("consistency with IntSafe for small values", func(t *testing.T) {
+		testValues := []byte{0, 1, 127, 255}
+		for _, v := range testValues {
+			i := Integer([]byte{v})
+			intVal, intErr := i.IntSafe()
+			uintVal, uintErr := i.UintSafe()
+			require.NoError(t, intErr)
+			require.NoError(t, uintErr)
+			assert.Equal(t, uint64(intVal), uintVal,
+				"IntSafe and UintSafe should agree for value %d", v)
 		}
+	})
+}
+
+// TestMappingDataSizeConsistency verifies that the size field in the
+// serialized output of Mapping.Data() always matches the actual payload.
+func TestMappingDataSizeConsistency(t *testing.T) {
+	t.Run("size matches payload for valid mapping", func(t *testing.T) {
+		gomap := map[string]string{"key": "val"}
+		mapping, err := GoMapToMapping(gomap)
+		require.NoError(t, err)
+
+		serialized := mapping.Data()
+		require.NotNil(t, serialized)
+		require.True(t, len(serialized) >= 2, "Need at least 2 bytes for size field")
+
+		declaredSize := int(binary.BigEndian.Uint16(serialized[:2]))
+		actualPayload := len(serialized) - 2
+
+		assert.Equal(t, actualPayload, declaredSize,
+			"Declared size (%d) must match actual payload (%d)", declaredSize, actualPayload)
+	})
+
+	t.Run("size recalculated after round trip", func(t *testing.T) {
+		gomap := map[string]string{"host": "127.0.0.1", "port": "7654"}
+		mapping, err := GoMapToMapping(gomap)
+		require.NoError(t, err)
+
+		serialized := mapping.Data()
+		require.NotNil(t, serialized)
+
+		declaredSize := int(binary.BigEndian.Uint16(serialized[:2]))
+		actualPayload := len(serialized) - 2
+		assert.Equal(t, actualPayload, declaredSize)
+
+		reparsed, remainder, errs := ReadMapping(serialized)
+		assert.Empty(t, errs)
+		assert.Empty(t, remainder)
+		assert.Equal(t, len(mapping.Values()), len(reparsed.Values()))
 	})
 }
