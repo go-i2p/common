@@ -500,9 +500,10 @@ func shouldStopParsing(err error) bool {
 
 // hasMinimumBytesForKeyValuePair checks if there are enough bytes for another key-value pair.
 func hasMinimumBytesForKeyValuePair(remainder []byte) bool {
-	// Minimum byte length required: 2 bytes for each string length,
-	// at least 1 byte per string, one byte for =, one byte for ;
-	if len(remainder) < 6 {
+	// Minimum byte length required per I2P spec (which allows zero-length strings):
+	// 1 byte key length + 0 bytes key + 1 byte '=' + 1 byte value length + 0 bytes value + 1 byte ';'
+	// = 4 bytes minimum
+	if len(remainder) < 4 {
 		log.WithFields(logger.Fields{
 			"at":     "(Mapping) Values",
 			"reason": "mapping format violation",

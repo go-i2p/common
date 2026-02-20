@@ -28,7 +28,13 @@ func intFromBytes(number []byte) (value int, err error) {
 		copy(paddedNumber[MAX_INTEGER_SIZE-numLen:], number)
 		number = paddedNumber
 	}
-	value = int(binary.BigEndian.Uint64(number))
+	uvalue := binary.BigEndian.Uint64(number)
+	// I2P spec defines Integer as unsigned, but Go's int cannot represent
+	// values >= 2^63. Return error for such values, consistent with DecodeIntN.
+	if uvalue > uint64(^uint(0)>>1) {
+		return 0, oops.Errorf("intFromBytes: value %d exceeds maximum int", uvalue)
+	}
+	value = int(uvalue)
 	return value, nil
 }
 

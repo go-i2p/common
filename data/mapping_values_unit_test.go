@@ -292,3 +292,88 @@ func BenchmarkMappingValuesValidate(b *testing.B) {
 		_ = mv.Validate()
 	}
 }
+
+// TestHasMinimumBytesForKeyValuePair verifies the minimum byte check for KV pairs.
+func TestHasMinimumBytesForKeyValuePair(t *testing.T) {
+	t.Run("4 bytes is minimum valid", func(t *testing.T) {
+		// 4 bytes: key-len(1) + '='(1) + val-len(1) + ';'(1)
+		data := make([]byte, 4)
+		assert.True(t, hasMinimumBytesForKeyValuePair(data),
+			"4 bytes should be sufficient for empty-key/empty-value pair")
+	})
+
+	t.Run("3 bytes is too few", func(t *testing.T) {
+		data := make([]byte, 3)
+		assert.False(t, hasMinimumBytesForKeyValuePair(data),
+			"3 bytes should be insufficient")
+	})
+
+	t.Run("0 bytes is too few", func(t *testing.T) {
+		assert.False(t, hasMinimumBytesForKeyValuePair(nil))
+		assert.False(t, hasMinimumBytesForKeyValuePair([]byte{}))
+	})
+
+	t.Run("5 bytes is sufficient", func(t *testing.T) {
+		data := make([]byte, 5)
+		assert.True(t, hasMinimumBytesForKeyValuePair(data))
+	})
+
+	t.Run("6 bytes is sufficient", func(t *testing.T) {
+		data := make([]byte, 6)
+		assert.True(t, hasMinimumBytesForKeyValuePair(data))
+	})
+}
+
+// TestReadMappingValuesMinimalPairs verifies that the parser correctly handles
+// minimal key-value pairs with empty keys and values (4-byte pairs).
+func TestReadMappingValuesMinimalPairs(t *testing.T) {
+	t.Run("empty key empty value pair parses", func(t *testing.T) {
+		// Construct: len=0 (empty key) + '=' + len=0 (empty value) + ';'
+		wireData := []byte{
+			0x00, // key length = 0 (empty key)
+			0x3d, // '='
+			0x00, // value length = 0 (empty value)
+			0x3b, // ';'
+		}
+		mapLength, _ := NewIntegerFromInt(len(wireData), 2)
+		values, _, errs := ReadMappingValues(wireData, *mapLength)
+
+		// We expect the pair to be parsed (not silently dropped)
+		require.NotNil(t, values, "values should not be nil")
+		assert.GreaterOrEqual(t, len(*values), 1,
+			"should parse at least one pair from 4-byte minimal input")
+
+		// Check for parse errors (some warnings may be present but should not be fatal)
+		for _, err := range errs {
+			assert.NotContains(t, err.Error(), "expected =",
+				"should not fail on delimiter for empty-key pair")
+			assert.NotContains(t, err.Error(), "expected ;",
+				"should not fail on semicolon for empty-value pair")
+		}
+	})
+
+	t.Run("1-byte key empty value pair parses", func(t *testing.T) {
+		// len=1 + 'a' + '=' + len=0 + ';' = 5 bytes
+		wireData := []byte{
+			0x01, // key length = 1
+			0x61, // 'a'
+			0x3d, // '='
+			0x00, // value length = 0
+			0x3b, // ';'
+		}
+		mapLength, _ := NewIntegerFromInt(len(wireData), 2)
+		values, _, errs := ReadMappingValues(wireData, *mapLength)
+		require.NotNil(t, values)
+		assert.Equal(t, 1, len(*values), "should parse one pair")
+
+		key, _ := (*values)[0][0].Data()
+		val, _ := (*values)[0][1].Data()
+		assert.Equal(t, "a", key)
+		assert.Equal(t, "", val)
+
+		for _, err := range errs {
+			assert.NotContains(t, err.Error(), "expected =")
+			assert.NotContains(t, err.Error(), "expected ;")
+		}
+	})
+}

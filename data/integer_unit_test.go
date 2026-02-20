@@ -283,7 +283,11 @@ func TestUintSafe(t *testing.T) {
 		i := Integer([]byte{0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00})
 
 		intVal := i.Int()
-		assert.True(t, intVal < 0, "Int() should return negative for values >= 2^63")
+		assert.Equal(t, 0, intVal, "Int() should return 0 for values >= 2^63 (overflow)")
+
+		_, intSafeErr := i.IntSafe()
+		assert.Error(t, intSafeErr, "IntSafe() should return error for values >= 2^63")
+		assert.Contains(t, intSafeErr.Error(), "exceeds maximum int")
 
 		uintVal, err := i.UintSafe()
 		require.NoError(t, err)
@@ -361,5 +365,113 @@ func TestMappingDataSizeConsistency(t *testing.T) {
 		assert.Empty(t, errs)
 		assert.Empty(t, remainder)
 		assert.Equal(t, len(mapping.Values()), len(reparsed.Values()))
+	})
+}
+
+// TestIntFromBytesOverflowCheck verifies that intFromBytes returns an error
+// for 8-byte values >= 2^63 that cannot be represented as a signed int.
+func TestIntFromBytesOverflowCheck(t *testing.T) {
+	t.Run("value at 2^63 boundary returns error", func(t *testing.T) {
+		// 0x80 00 00 00 00 00 00 00 = 2^63 = 9223372036854775808
+		bytes := []byte{0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}
+		val, err := intFromBytes(bytes)
+		assert.Equal(t, 0, val, "should return 0 for overflow value")
+		require.Error(t, err, "should return error for value >= 2^63")
+		assert.Contains(t, err.Error(), "exceeds maximum int")
+	})
+
+	t.Run("max uint64 returns error", func(t *testing.T) {
+		bytes := []byte{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF}
+		val, err := intFromBytes(bytes)
+		assert.Equal(t, 0, val)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "exceeds maximum int")
+	})
+
+	t.Run("value just below 2^63 succeeds", func(t *testing.T) {
+		// 0x7F FF FF FF FF FF FF FF = 2^63 - 1 = max int64
+		bytes := []byte{0x7F, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF}
+		val, err := intFromBytes(bytes)
+		require.NoError(t, err, "should succeed for max positive int value")
+		assert.Equal(t, int(0x7FFFFFFFFFFFFFFF), val)
+	})
+
+	t.Run("small values work normally", func(t *testing.T) {
+		bytes := []byte{0x00, 0x01}
+		val, err := intFromBytes(bytes)
+		require.NoError(t, err)
+		assert.Equal(t, 1, val)
+	})
+
+	t.Run("Int method returns 0 for overflow", func(t *testing.T) {
+		i := Integer([]byte{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF})
+		assert.Equal(t, 0, i.Int(), "Int() should return 0 for overflow values")
+	})
+
+	t.Run("IntSafe returns error for overflow", func(t *testing.T) {
+		i := Integer([]byte{0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01})
+		val, err := i.IntSafe()
+		assert.Equal(t, 0, val)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "exceeds maximum int")
+	})
+}
+
+// TestReadIntegerInsufficientData verifies that ReadInteger returns nil
+// (not the short input) when the input is shorter than requested size.
+func TestReadIntegerInsufficientData(t *testing.T) {
+	t.Run("request 4 bytes from 2-byte input", func(t *testing.T) {
+		input := []byte{0x01, 0x02}
+		result, remainder := ReadInteger(input, 4)
+		assert.Nil(t, result, "ReadInteger should return nil for insufficient data")
+		assert.Equal(t, input, remainder, "remainder should be the original input")
+	})
+
+	t.Run("request 8 bytes from 3-byte input", func(t *testing.T) {
+		input := []byte{0x01, 0x02, 0x03}
+		result, remainder := ReadInteger(input, 8)
+		assert.Nil(t, result, "ReadInteger should return nil for insufficient data")
+		assert.Equal(t, input, remainder)
+	})
+
+	t.Run("request 1 byte from empty input", func(t *testing.T) {
+		input := []byte{}
+		result, remainder := ReadInteger(input, 1)
+		assert.Nil(t, result, "ReadInteger should return nil for empty input")
+		assert.Equal(t, input, remainder)
+	})
+
+	t.Run("exact size works", func(t *testing.T) {
+		input := []byte{0x01, 0x02, 0x03, 0x04}
+		result, remainder := ReadInteger(input, 4)
+		assert.Equal(t, Integer(input), result)
+		assert.Empty(t, remainder)
+	})
+}
+
+// TestNewIntegerErrorHandling verifies that NewInteger properly reports errors.
+func TestNewIntegerErrorHandling(t *testing.T) {
+	t.Run("invalid size returns error", func(t *testing.T) {
+		integer, remainder, err := NewInteger([]byte{0x01}, 0)
+		assert.Nil(t, integer, "should return nil for invalid size")
+		require.Error(t, err, "should return error for invalid size")
+		assert.Contains(t, err.Error(), "failed to read integer")
+		assert.Equal(t, []byte{0x01}, remainder)
+	})
+
+	t.Run("insufficient data returns error", func(t *testing.T) {
+		integer, remainder, err := NewInteger([]byte{0x01, 0x02}, 4)
+		assert.Nil(t, integer, "should return nil for insufficient data")
+		require.Error(t, err, "should return error for insufficient data")
+		assert.Contains(t, err.Error(), "failed to read integer")
+		assert.Equal(t, []byte{0x01, 0x02}, remainder)
+	})
+
+	t.Run("valid input succeeds", func(t *testing.T) {
+		integer, remainder, err := NewInteger([]byte{0x01, 0x02, 0x03, 0x04}, 2)
+		require.NoError(t, err)
+		require.NotNil(t, integer)
+		assert.Equal(t, Integer([]byte{0x01, 0x02}), *integer)
+		assert.Equal(t, []byte{0x03, 0x04}, remainder)
 	})
 }

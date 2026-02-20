@@ -242,3 +242,113 @@ func BenchmarkDateFromTime(b *testing.B) {
 		_, _ = DateFromTime(t)
 	}
 }
+
+// TestDateFromTimePreEpoch verifies that DateFromTime rejects pre-epoch times.
+func TestDateFromTimePreEpoch(t *testing.T) {
+	t.Run("one second before epoch", func(t *testing.T) {
+		preEpoch := time.Unix(-1, 0)
+		date, err := DateFromTime(preEpoch)
+		require.Error(t, err, "should reject pre-epoch time")
+		assert.Nil(t, date)
+		assert.Contains(t, err.Error(), "before Unix epoch")
+	})
+
+	t.Run("far past date", func(t *testing.T) {
+		farPast := time.Date(1969, 12, 31, 23, 59, 59, 0, time.UTC)
+		date, err := DateFromTime(farPast)
+		require.Error(t, err, "should reject date before 1970")
+		assert.Nil(t, date)
+		assert.Contains(t, err.Error(), "before Unix epoch")
+	})
+
+	t.Run("one nanosecond before epoch", func(t *testing.T) {
+		almostEpoch := time.Unix(0, -1)
+		date, err := DateFromTime(almostEpoch)
+		require.Error(t, err, "should reject time even 1ns before epoch")
+		assert.Nil(t, date)
+	})
+
+	t.Run("exactly at epoch succeeds", func(t *testing.T) {
+		epoch := time.Unix(0, 0)
+		date, err := DateFromTime(epoch)
+		require.NoError(t, err, "epoch itself should be accepted")
+		require.NotNil(t, date)
+		assert.True(t, date.IsZero())
+	})
+
+	t.Run("one millisecond after epoch succeeds", func(t *testing.T) {
+		afterEpoch := time.UnixMilli(1)
+		date, err := DateFromTime(afterEpoch)
+		require.NoError(t, err)
+		require.NotNil(t, date)
+		assert.False(t, date.IsZero())
+	})
+}
+
+// TestDateFromTimeUsesUnixMilli verifies that DateFromTime uses UnixMilli
+// and does not overflow for dates beyond year 2262.
+func TestDateFromTimeUsesUnixMilli(t *testing.T) {
+	t.Run("year 3000 does not overflow", func(t *testing.T) {
+		future := time.Date(3000, 1, 1, 0, 0, 0, 0, time.UTC)
+		date, err := DateFromTime(future)
+		require.NoError(t, err)
+		require.NotNil(t, date)
+
+		recovered := date.Time()
+		diff := future.Sub(recovered).Abs()
+		assert.Less(t, diff, 2*time.Second,
+			"Year 3000 should survive round-trip without overflow, got %v", recovered)
+		assert.True(t, recovered.Year() >= 2999,
+			"Recovered year should be 2999 or 3000, got %d", recovered.Year())
+	})
+
+	t.Run("year 2262 boundary does not overflow", func(t *testing.T) {
+		// This date is near the int64 nanosecond overflow boundary (~April 2262)
+		boundary := time.Date(2262, 4, 12, 0, 0, 0, 0, time.UTC)
+		date, err := DateFromTime(boundary)
+		require.NoError(t, err)
+		require.NotNil(t, date)
+
+		recovered := date.Time()
+		assert.Equal(t, 2262, recovered.Year())
+	})
+
+	t.Run("current time round-trips correctly", func(t *testing.T) {
+		now := time.Now().Truncate(time.Millisecond) // Date has ms precision
+		date, err := DateFromTime(now)
+		require.NoError(t, err)
+
+		recovered := date.Time()
+		diff := now.Sub(recovered).Abs()
+		assert.Less(t, diff, time.Millisecond,
+			"Current time should round-trip within 1ms")
+	})
+}
+
+// TestDateTimeUnsignedDecoding verifies that Date.Time() uses unsigned decoding
+// to handle the full range of I2P Date values.
+func TestDateTimeUnsignedDecoding(t *testing.T) {
+	t.Run("value above signed int64 range returns far future", func(t *testing.T) {
+		// Set high bit: this is > 2^63 milliseconds
+		var date Date
+		date[0] = 0x80
+		result := date.Time()
+		// Should return a far-future time (clamped to MaxInt64 millis), not epoch
+		assert.True(t, result.After(time.Date(2200, 1, 1, 0, 0, 0, 0, time.UTC)),
+			"Date with high bit set should be far future, got %v", result)
+	})
+
+	t.Run("max uint64 value returns max time", func(t *testing.T) {
+		date := Date{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF}
+		result := date.Time()
+		// Should be clamped to MaxInt64 millis, not wrap to epoch
+		assert.True(t, result.After(time.Date(2200, 1, 1, 0, 0, 0, 0, time.UTC)),
+			"Max date should be far future, got %v", result)
+	})
+
+	t.Run("normal values still work", func(t *testing.T) {
+		next_day := Date{0x00, 0x00, 0x00, 0x00, 0x05, 0x26, 0x5c, 0x00}
+		result := next_day.Time()
+		assert.Equal(t, int64(86400), result.Unix())
+	})
+}

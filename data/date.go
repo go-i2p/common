@@ -43,10 +43,17 @@ func (i Date) Int() int {
 
 // Time takes the value stored in date as an 8 byte big-endian integer representing the
 // number of milliseconds since the beginning of unix time and converts it to a Go time.Time
-// struct.
+// struct. Uses unsigned decoding to correctly handle the full range of I2P Date values.
 func (date Date) Time() (date_time time.Time) {
 	millis := Integer(date[:])
-	date_time = time.UnixMilli(int64(millis.Int()))
+	uval, err := millis.UintSafe()
+	if err != nil {
+		return time.Time{}
+	}
+	if uval > uint64(math.MaxInt64) {
+		return time.UnixMilli(math.MaxInt64)
+	}
+	date_time = time.UnixMilli(int64(uval))
 	return
 }
 
@@ -86,13 +93,19 @@ func NewDate(data []byte) (date *Date, remainder []byte, err error) {
 	return
 }
 
-// DateFromTime takes a time.Time and returns a data.Date
+// DateFromTime takes a time.Time and returns a data.Date.
+// Returns error if the time is before the Unix epoch (January 1, 1970).
 func DateFromTime(t time.Time) (date *Date, err error) {
-	// Create a new Date
+	// Reject pre-epoch times for consistency with NewDateFromUnix and NewDateFromMillis
+	if t.Before(time.Unix(0, 0)) {
+		return nil, oops.Errorf("DateFromTime: time is before Unix epoch: %v", t)
+	}
+
 	date = new(Date)
 
-	// Convert time to milliseconds since Unix epoch
-	msec := t.UnixNano() / int64(1000000)
+	// Use UnixMilli() instead of UnixNano()/1000000 to avoid int64 overflow
+	// for dates beyond ~2262-04-11 (Go 1.17+)
+	msec := t.UnixMilli()
 
 	// Convert to big-endian bytes
 	for i := 7; i >= 0; i-- {
@@ -101,8 +114,7 @@ func DateFromTime(t time.Time) (date *Date, err error) {
 	}
 
 	log.WithFields(logger.Fields{
-		"date_value": date.Int(),
-		"time":       t,
+		"time": t,
 	}).Debug("Successfully created Date from time.Time")
 
 	return

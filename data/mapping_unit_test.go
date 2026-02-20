@@ -36,8 +36,11 @@ func TestValuesWarnsMissingData(t *testing.T) {
 
 	_, _, errs := NewMapping([]byte{0x00, 0x06, 0x01, 0x61, 0x3d, 0x01, 0x62})
 
-	if assert.Equal(2, len(errs), "Values() reported wrong error count when mapping had missing data") {
-		assert.Equal(errs[0].Error(), "warning parsing mapping: mapping length exceeds provided data")
+	// Expects 3 errors: (1) mapping length exceeds provided data (from handleInsufficientData),
+	// (2) mapping length exceeds provided data (from validateMappingLength in ReadMappingValues),
+	// (3) missing ';' delimiter (parser now correctly attempts to parse 5-byte truncated pair).
+	if assert.Equal(3, len(errs), "Values() reported wrong error count when mapping had missing data") {
+		assert.Equal("warning parsing mapping: mapping length exceeds provided data", errs[0].Error())
 	}
 }
 

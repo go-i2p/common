@@ -30,6 +30,8 @@ func (i Integer) Bytes() []byte {
 }
 
 // Int returns the Integer as a Go integer. Returns 0 if conversion fails.
+// WARNING: For 8-byte values >= 2^63, this method returns 0 because the unsigned
+// I2P Integer exceeds Go's signed int range. Use UintSafe() for the full unsigned range.
 func (i Integer) Int() int {
 	value, err := intFromBytes(i.Bytes())
 	if err != nil {
@@ -52,7 +54,11 @@ func ReadInteger(bytes []byte, size int) (Integer, []byte) {
 		return nil, bytes
 	}
 	if len(bytes) < size {
-		return bytes, nil
+		log.WithFields(logger.Fields{
+			"available": len(bytes),
+			"requested": size,
+		}).Error("ReadInteger: insufficient data")
+		return nil, bytes
 	}
 	return bytes[:size], bytes[size:]
 }
@@ -62,6 +68,9 @@ func ReadInteger(bytes []byte, size int) (Integer, []byte) {
 // Returns a pointer to Integer unlike ReadInteger.
 func NewInteger(bytes []byte, size int) (integer *Integer, remainder []byte, err error) {
 	i, remainder := ReadInteger(bytes, size)
+	if i == nil {
+		return nil, remainder, oops.Errorf("NewInteger: failed to read integer (invalid size or insufficient data)")
+	}
 	integer = &i
 	return
 }
@@ -147,6 +156,8 @@ func NewIntegerFromBytes(bytes []byte) (Integer, error) {
 // IntSafe returns the Integer as a Go int with error handling.
 // Unlike Int(), this method returns an error instead of defaulting to 0.
 // Use this method when you need to distinguish between actual zero values and errors.
+// WARNING: For 8-byte values >= 2^63, this returns an error because the unsigned
+// I2P Integer exceeds Go's signed int range. Use UintSafe() for the full unsigned range.
 func (i Integer) IntSafe() (int, error) {
 	if len(i) == 0 {
 		return 0, oops.Errorf("cannot convert empty integer")
