@@ -19,4 +19,9 @@ var (
 	// ErrStringTooLarge is returned when a string exceeds MAX_DECODE_SIZE.
 	// This prevents excessive memory allocation and potential DoS attacks during decoding.
 	ErrStringTooLarge = errors.New("string exceeds maximum decodable size")
+
+	// ErrContainsNewline is returned by DecodeStringStrict when the input contains
+	// embedded \r or \n characters. The Java I2P reference implementation (since 0.9.14)
+	// rejects whitespace in base64 strings.
+	ErrContainsNewline = errors.New("base64 string contains embedded newline")
 )

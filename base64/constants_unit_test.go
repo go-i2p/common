@@ -48,6 +48,10 @@ func TestI2PEncodingNotNil(t *testing.T) {
 	assert.NotNil(t, I2PEncoding, "I2PEncoding must be initialized")
 }
 
+func TestI2PEncodingNoPaddingNotNil(t *testing.T) {
+	assert.NotNil(t, I2PEncodingNoPadding, "I2PEncodingNoPadding must be initialized")
+}
+
 func TestMaxEncodeSizeConstant(t *testing.T) {
 	assert.Equal(t, 10*1024*1024, MAX_ENCODE_SIZE, "MAX_ENCODE_SIZE should be 10MB")
 }

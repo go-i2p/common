@@ -30,3 +30,10 @@ const MAX_DECODE_SIZE = ((MAX_ENCODE_SIZE + 2) / 3) * 4
 // required for I2P network compatibility while maintaining standard base64 semantics.
 // The instance is thread-safe and can be used concurrently across goroutines.
 var I2PEncoding *b64.Encoding = b64.NewEncoding(I2PEncodeAlphabet)
+
+// I2PEncodingNoPadding provides a base64 encoder/decoder without padding characters.
+// The Java I2P reference implementation (since 0.9.14) accepts base64 without trailing '='
+// padding. This encoding instance enables interoperability by encoding and decoding
+// unpadded base64 strings. Use this for data whose byte length is not divisible by 3,
+// such as Ed25519 destinations (391 bytes → 522 base64 chars, no padding).
+var I2PEncodingNoPadding *b64.Encoding = b64.NewEncoding(I2PEncodeAlphabet).WithPadding(b64.NoPadding)

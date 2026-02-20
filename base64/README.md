@@ -70,7 +70,7 @@ binary form. This function reverses the encoding process, taking base64 strings
 that use I2P's alphabet and converting them back to the original byte data. It
 validates input characters against the I2P alphabet and handles standard base64
 padding requirements. Returns an error if the input contains invalid characters
-or malformed padding. Example: DecodeString("SGVsbG8-") returns []byte{72, 101,
+or malformed padding. Example: DecodeString("SGVsbG8=") returns []byte{72, 101,
 108, 108, 111}, nil (Hello decoded)
 
 #### func  EncodeToString
@@ -84,7 +84,7 @@ string using I2P's modified base64 alphabet. The output is compatible with I2P
 destination addresses, router identifiers, and other network protocol elements
 that require base64 encoding. The encoding process applies standard base64
 padding rules with '=' characters as needed. Example: EncodeToString([]byte{72,
-101, 108, 108, 111}) returns "SGVsbG8-" (Hello in I2P base64)
+101, 108, 108, 111}) returns "SGVsbG8=" (Hello in I2P base64)
 
 
 
