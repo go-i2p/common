@@ -74,3 +74,31 @@ func TestReadSessionKeyErrorRemainder(t *testing.T) {
 		})
 	}
 }
+
+func TestUnmarshalBinaryErrors(t *testing.T) {
+	t.Run("too short", func(t *testing.T) {
+		var sk SessionKey
+		err := sk.UnmarshalBinary(make([]byte, 31))
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "invalid data length")
+	})
+
+	t.Run("too long", func(t *testing.T) {
+		var sk SessionKey
+		err := sk.UnmarshalBinary(make([]byte, 33))
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "invalid data length")
+	})
+
+	t.Run("nil", func(t *testing.T) {
+		var sk SessionKey
+		err := sk.UnmarshalBinary(nil)
+		assert.Error(t, err)
+	})
+
+	t.Run("empty", func(t *testing.T) {
+		var sk SessionKey
+		err := sk.UnmarshalBinary([]byte{})
+		assert.Error(t, err)
+	})
+}

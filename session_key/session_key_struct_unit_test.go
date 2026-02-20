@@ -2,6 +2,8 @@ package session_key
 
 import (
 	"bytes"
+	"crypto/rand"
+	"encoding"
 	"encoding/hex"
 	"testing"
 
@@ -255,5 +257,180 @@ func TestSessionKeyIsZero(t *testing.T) {
 		var sk SessionKey
 		sk[SESSION_KEY_SIZE-1] = 0x01
 		assert.False(t, sk.IsZero())
+	})
+}
+
+// --- GenerateSessionKey ---
+
+func TestGenerateSessionKey(t *testing.T) {
+	t.Run("returns 32-byte non-zero key", func(t *testing.T) {
+		sk, err := GenerateSessionKey()
+		require.NoError(t, err)
+		assert.False(t, sk.IsZero(), "generated key should not be all zeros")
+	})
+
+	t.Run("two generated keys differ", func(t *testing.T) {
+		sk1, err := GenerateSessionKey()
+		require.NoError(t, err)
+		sk2, err := GenerateSessionKey()
+		require.NoError(t, err)
+		assert.False(t, sk1.Equal(sk2), "two random keys should differ")
+	})
+
+	t.Run("generated key round-trips through ReadSessionKey", func(t *testing.T) {
+		sk, err := GenerateSessionKey()
+		require.NoError(t, err)
+
+		sk2, remainder, err := ReadSessionKey(sk.Bytes())
+		require.NoError(t, err)
+		assert.Equal(t, 0, len(remainder))
+		assert.True(t, sk.Equal(sk2))
+	})
+
+	t.Run("generated key round-trips through MarshalBinary", func(t *testing.T) {
+		sk, err := GenerateSessionKey()
+		require.NoError(t, err)
+
+		data, err := sk.MarshalBinary()
+		require.NoError(t, err)
+
+		var sk2 SessionKey
+		err = sk2.UnmarshalBinary(data)
+		require.NoError(t, err)
+		assert.True(t, sk.Equal(sk2))
+	})
+}
+
+// --- Zeroize ---
+
+func TestSessionKeyZeroize(t *testing.T) {
+	t.Run("zeroize clears key material", func(t *testing.T) {
+		sk, err := GenerateSessionKey()
+		require.NoError(t, err)
+		assert.False(t, sk.IsZero())
+
+		sk.Zeroize()
+		assert.True(t, sk.IsZero(), "key should be all zeros after Zeroize()")
+	})
+
+	t.Run("zeroize on already-zero key is safe", func(t *testing.T) {
+		var sk SessionKey
+		assert.True(t, sk.IsZero())
+		sk.Zeroize()
+		assert.True(t, sk.IsZero())
+	})
+
+	t.Run("zeroize clears all bytes", func(t *testing.T) {
+		var sk SessionKey
+		for i := range sk {
+			sk[i] = 0xFF
+		}
+		sk.Zeroize()
+		for i, b := range sk {
+			assert.Equal(t, byte(0), b, "byte %d should be zero after Zeroize()", i)
+		}
+	})
+}
+
+// --- MarshalBinary / UnmarshalBinary ---
+
+func TestSessionKeyBinaryMarshaler(t *testing.T) {
+	// Verify interface compliance at compile time
+	var _ encoding.BinaryMarshaler = SessionKey{}
+	var _ encoding.BinaryUnmarshaler = &SessionKey{}
+
+	t.Run("marshal returns defensive copy", func(t *testing.T) {
+		var sk SessionKey
+		for i := range sk {
+			sk[i] = byte(i + 1)
+		}
+		data, err := sk.MarshalBinary()
+		require.NoError(t, err)
+		assert.Equal(t, SESSION_KEY_SIZE, len(data))
+		assert.True(t, bytes.Equal(sk[:], data))
+
+		// Mutating marshaled data should not affect original
+		data[0] = 0xFF
+		assert.Equal(t, byte(1), sk[0])
+	})
+
+	t.Run("unmarshal valid data", func(t *testing.T) {
+		data := make([]byte, SESSION_KEY_SIZE)
+		_, err := rand.Read(data)
+		require.NoError(t, err)
+
+		var sk SessionKey
+		err = sk.UnmarshalBinary(data)
+		require.NoError(t, err)
+		assert.True(t, bytes.Equal(sk[:], data))
+	})
+
+	t.Run("round-trip marshal/unmarshal", func(t *testing.T) {
+		sk, err := GenerateSessionKey()
+		require.NoError(t, err)
+
+		data, err := sk.MarshalBinary()
+		require.NoError(t, err)
+
+		var sk2 SessionKey
+		err = sk2.UnmarshalBinary(data)
+		require.NoError(t, err)
+		assert.True(t, sk.Equal(sk2))
+	})
+
+	t.Run("zero key round-trip", func(t *testing.T) {
+		var sk SessionKey
+		data, err := sk.MarshalBinary()
+		require.NoError(t, err)
+		assert.Equal(t, make([]byte, SESSION_KEY_SIZE), data)
+
+		var sk2 SessionKey
+		err = sk2.UnmarshalBinary(data)
+		require.NoError(t, err)
+		assert.True(t, sk.Equal(sk2))
+	})
+}
+
+// --- Bytes() aliasing behavior ---
+
+func TestSessionKeyBytesAliasing(t *testing.T) {
+	t.Run("value receiver returns copy not alias", func(t *testing.T) {
+		var sk SessionKey
+		for i := range sk {
+			sk[i] = byte(i + 1)
+		}
+
+		b := sk.Bytes()
+		original := make([]byte, SESSION_KEY_SIZE)
+		copy(original, sk[:])
+
+		b[0] = 0xFF
+		// Value receiver means sk was copied; b aliases the copy's memory.
+		assert.Equal(t, original[0], sk[0],
+			"Bytes() uses value receiver, so mutations to returned slice should not affect original")
+	})
+
+	t.Run("Bytes returns correct content", func(t *testing.T) {
+		var sk SessionKey
+		for i := range sk {
+			sk[i] = byte(i * 2)
+		}
+		b := sk.Bytes()
+		for i := 0; i < SESSION_KEY_SIZE; i++ {
+			assert.Equal(t, byte(i*2), b[i])
+		}
+	})
+
+	t.Run("pointer receiver still copies via value receiver", func(t *testing.T) {
+		var sk SessionKey
+		for i := range sk {
+			sk[i] = byte(i + 1)
+		}
+
+		ptr := &sk
+		b := ptr.Bytes() // still value receiver, so still a copy
+		b[0] = 0xFF
+		assert.Equal(t, byte(1), sk[0],
+			"value receiver Bytes() should not alias even through pointer")
 	})
 }

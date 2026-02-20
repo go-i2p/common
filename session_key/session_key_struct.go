@@ -1,7 +1,7 @@
-// Package session_key implements the I2P SessionKey common data structure
 package session_key
 
 import (
+	"crypto/rand"
 	"crypto/subtle"
 	"fmt"
 
@@ -101,4 +101,45 @@ func ReadSessionKey(bytes []byte) (sessionKey SessionKey, remainder []byte, err 
 	}).Debug("Successfully read SessionKey from data")
 
 	return
+}
+
+// GenerateSessionKey creates a new SessionKey filled with cryptographically
+// secure random bytes from crypto/rand. This is the recommended way to create
+// new session keys for AES-256 encryption.
+func GenerateSessionKey() (SessionKey, error) {
+	var sk SessionKey
+	_, err := rand.Read(sk[:])
+	if err != nil {
+		return SessionKey{}, oops.Errorf("GenerateSessionKey: failed to read random bytes: %w", err)
+	}
+	log.Debug("Generated new random SessionKey")
+	return sk, nil
+}
+
+// Zeroize overwrites the SessionKey with zeros, erasing key material from
+// memory. Call this when the key is no longer needed to limit exposure of
+// sensitive material. Note: Go's garbage collector may have already copied
+// the value elsewhere; this is a best-effort defense-in-depth measure.
+func (sk *SessionKey) Zeroize() {
+	for i := range sk {
+		sk[i] = 0
+	}
+}
+
+// MarshalBinary implements encoding.BinaryMarshaler.
+// It returns a copy of the SessionKey's bytes.
+func (sk SessionKey) MarshalBinary() ([]byte, error) {
+	b := make([]byte, SESSION_KEY_SIZE)
+	copy(b, sk[:])
+	return b, nil
+}
+
+// UnmarshalBinary implements encoding.BinaryUnmarshaler.
+// The input must be exactly SESSION_KEY_SIZE (32) bytes.
+func (sk *SessionKey) UnmarshalBinary(data []byte) error {
+	if len(data) != SESSION_KEY_SIZE {
+		return oops.Errorf("UnmarshalBinary: invalid data length, expected %d bytes, got %d", SESSION_KEY_SIZE, len(data))
+	}
+	copy(sk[:], data)
+	return nil
 }
