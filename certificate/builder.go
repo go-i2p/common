@@ -15,7 +15,7 @@ import (
 // Example usage:
 //
 //	cert, err := certificate.NewCertificateBuilder().
-//	    WithKeyTypes(certificate.KEYCERT_SIGN_ED25519, certificate.KEYCERT_CRYPTO_X25519).
+//	    WithKeyTypes(7, 4). // Ed25519 signing, X25519 crypto
 //	    Build()
 type CertificateBuilder struct {
 	certType    uint8
@@ -73,6 +73,12 @@ func (cb *CertificateBuilder) WithKeyTypes(signingType, cryptoType int) (*Certif
 	if cryptoType < 0 {
 		return cb, oops.Errorf("crypto type cannot be negative: %d", cryptoType)
 	}
+	if signingType > 65535 {
+		return cb, oops.Errorf("signing type exceeds uint16 range: %d", signingType)
+	}
+	if cryptoType > 65535 {
+		return cb, oops.Errorf("crypto type exceeds uint16 range: %d", cryptoType)
+	}
 	cb.certType = CERT_KEY
 	cb.signingType = &signingType
 	cb.cryptoType = &cryptoType
@@ -88,11 +94,15 @@ func (cb *CertificateBuilder) WithKeyTypes(signingType, cryptoType int) (*Certif
 
 // WithPayload sets custom payload data.
 // This overrides any payload that would be generated from key types.
+// Returns error if the payload exceeds the maximum allowed size.
 //
 // Example:
 //
-//	builder.WithType(certificate.CERT_SIGNED).WithPayload(signatureData)
-func (cb *CertificateBuilder) WithPayload(payload []byte) *CertificateBuilder {
+//	builder, err = builder.WithPayload(signatureData)
+func (cb *CertificateBuilder) WithPayload(payload []byte) (*CertificateBuilder, error) {
+	if len(payload) > CERT_MAX_PAYLOAD_SIZE {
+		return cb, oops.Errorf("payload too long: %d bytes (max %d)", len(payload), CERT_MAX_PAYLOAD_SIZE)
+	}
 	cb.payload = make([]byte, len(payload))
 	copy(cb.payload, payload)
 	cb.payloadSet = true
@@ -101,7 +111,7 @@ func (cb *CertificateBuilder) WithPayload(payload []byte) *CertificateBuilder {
 		"payload_length": len(payload),
 	}).Debug("Certificate builder: custom payload set")
 
-	return cb
+	return cb, nil
 }
 
 // Build creates the certificate with the configured options.

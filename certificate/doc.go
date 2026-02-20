@@ -18,7 +18,7 @@
 //
 //   - CERT_NULL (0): No certificate (legacy)
 //   - CERT_HASHCASH (1): HashCash proof-of-work
-//   - CERT_HIDDEN (2): Hidden service certificate
+//   - CERT_HIDDEN (2): Hidden router certificate (routers may not announce hidden status)
 //   - CERT_SIGNED (3): Signed certificate
 //   - CERT_MULTIPLE (4): Multiple certificates
 //   - CERT_KEY (5): Key certificate with signing/crypto type info

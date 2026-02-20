@@ -6,10 +6,6 @@
 
 Package certificate implements the certificate common-structure of I2P.
 
-Package certificate implements the certificate common-structure of I2P.
-
-Package certificate implements the certificate common-structure of I2P.
-
 ## Usage
 
 ```go

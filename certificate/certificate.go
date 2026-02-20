@@ -71,13 +71,11 @@ func handleShortCertificateData(certificate Certificate, bytes []byte) (Certific
 		certificate.kind = data.Integer([]byte{0})
 	}
 
-	if len(bytes) >= 2 {
-		// We have some length data, use it (even if incomplete)
-		certificate.len = data.Integer(bytes[1:])
-	} else {
-		// Only type byte or less, set 2-byte zero length field per spec
-		certificate.len = data.Integer([]byte{0x00, 0x00})
-	}
+	// Always set a proper 2-byte zero length field per spec.
+	// Even with 2-byte input (1 type + 1 partial length), we use zeros
+	// because a 1-byte length field would be malformed and confuse
+	// downstream logging/debugging.
+	certificate.len = data.Integer([]byte{0x00, 0x00})
 
 	// No payload for short certificates
 	certificate.payload = []byte{}
@@ -163,6 +161,10 @@ func validateTypeSpecificPayload(cert Certificate) error {
 		if payloadLen < CERT_MIN_KEY_PAYLOAD_SIZE {
 			return oops.Errorf("KEY certificate payload too short: %d bytes (minimum %d)", payloadLen, CERT_MIN_KEY_PAYLOAD_SIZE)
 		}
+	default:
+		if certType > CERT_KEY {
+			return oops.Errorf("unknown certificate type %d (max known: %d)", certType, CERT_KEY)
+		}
 	}
 	return nil
 }
@@ -191,13 +193,13 @@ func GetSignatureTypeFromCertificate(cert Certificate) (int, error) {
 	kind, err := cert.Type()
 	if err != nil {
 		log.WithFields(logger.Fields{"at": "GetSignatureTypeFromCertificate", "reason": "invalid certificate type"}).Error(err.Error())
-		return CERT_EMPTY_PAYLOAD_SIZE, err
+		return -1, err
 	}
 	if kind != CERT_KEY {
-		return CERT_EMPTY_PAYLOAD_SIZE, oops.Errorf("unexpected certificate type: %d", kind)
+		return -1, oops.Errorf("unexpected certificate type: %d", kind)
 	}
 	if len(cert.payload) < CERT_MIN_KEY_PAYLOAD_SIZE {
-		return CERT_EMPTY_PAYLOAD_SIZE, oops.Errorf("certificate payload too short to contain signature type")
+		return -1, oops.Errorf("certificate payload too short to contain signature type")
 	}
 	sigType := int(binary.BigEndian.Uint16(cert.payload[CERT_KEY_SIG_TYPE_OFFSET : CERT_KEY_SIG_TYPE_OFFSET+CERT_SIGNING_KEY_TYPE_SIZE])) // Read signing public key type from correct offset
 	return sigType, nil

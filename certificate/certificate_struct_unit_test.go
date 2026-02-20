@@ -3,6 +3,7 @@ package certificate
 import (
 	"bytes"
 	"encoding/binary"
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -207,7 +208,7 @@ func TestCertificateIsValid(t *testing.T) {
 	})
 
 	t.Run("valid certificate with payload", func(t *testing.T) {
-		cert, _ := NewCertificateWithType(CERT_KEY, []byte{0x01, 0x02, 0x03})
+		cert, _ := NewCertificateWithType(CERT_KEY, []byte{0x01, 0x02, 0x03, 0x04})
 		assert.True(t, cert.IsValid())
 	})
 }
@@ -526,11 +527,156 @@ func TestGetSignatureTypeErrorSentinel(t *testing.T) {
 
 	sigType, err := GetSignatureTypeFromCertificate(*cert)
 	require.Error(t, err)
-	assert.Equal(t, CERT_EMPTY_PAYLOAD_SIZE, sigType)
+	assert.Equal(t, -1, sigType, "error sentinel should be -1 to avoid collision with DSA_SHA1 type 0")
 
 	cryptoType, err := GetCryptoTypeFromCertificate(*cert)
 	require.Error(t, err)
 	assert.Equal(t, 0, cryptoType)
+}
+
+func TestNewCertificateWithType_KeyCertMinPayload(t *testing.T) {
+	t.Run("CERT_KEY with 0-byte payload rejected", func(t *testing.T) {
+		_, err := NewCertificateWithType(CERT_KEY, []byte{})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "KEY certificates require at least")
+	})
+
+	t.Run("CERT_KEY with 1-byte payload rejected", func(t *testing.T) {
+		_, err := NewCertificateWithType(CERT_KEY, []byte{0x01})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "KEY certificates require at least")
+	})
+
+	t.Run("CERT_KEY with 2-byte payload rejected", func(t *testing.T) {
+		_, err := NewCertificateWithType(CERT_KEY, []byte{0x01, 0x02})
+		require.Error(t, err)
+	})
+
+	t.Run("CERT_KEY with 3-byte payload rejected", func(t *testing.T) {
+		_, err := NewCertificateWithType(CERT_KEY, []byte{0x01, 0x02, 0x03})
+		require.Error(t, err)
+	})
+
+	t.Run("CERT_KEY with exactly 4-byte payload accepted", func(t *testing.T) {
+		cert, err := NewCertificateWithType(CERT_KEY, []byte{0x00, 0x07, 0x00, 0x04})
+		require.NoError(t, err)
+		require.NotNil(t, cert)
+	})
+
+	t.Run("CERT_KEY with 5-byte payload accepted", func(t *testing.T) {
+		cert, err := NewCertificateWithType(CERT_KEY, []byte{0x00, 0x07, 0x00, 0x04, 0x00})
+		require.NoError(t, err)
+		require.NotNil(t, cert)
+	})
+
+	t.Run("usable for GetSignatureType after construction", func(t *testing.T) {
+		cert, err := NewCertificateWithType(CERT_KEY, []byte{0x00, 0x07, 0x00, 0x04})
+		require.NoError(t, err)
+		sigType, err := GetSignatureTypeFromCertificate(*cert)
+		require.NoError(t, err)
+		assert.Equal(t, 7, sigType)
+	})
+}
+
+func TestExcessBytes_ExactMatch_ReturnsNil(t *testing.T) {
+	t.Run("payload exactly matches declared length returns nil", func(t *testing.T) {
+		payload := []byte{0x00, 0x07, 0x00, 0x04}
+		cert, _ := NewCertificateWithType(CERT_KEY, payload)
+		excess := cert.ExcessBytes()
+		assert.Nil(t, excess,
+			"ExcessBytes should return nil (not empty slice) when payload matches declared length")
+	})
+
+	t.Run("NULL cert with no payload returns nil", func(t *testing.T) {
+		cert := NewCertificate()
+		excess := cert.ExcessBytes()
+		assert.Nil(t, excess)
+	})
+
+	t.Run("cert with actual excess bytes returns non-nil", func(t *testing.T) {
+		wireData := []byte{CERT_KEY, 0x00, 0x02, 0x00, 0x07, 0x00, 0x04}
+		cert, _, err := ReadCertificate(wireData)
+		require.NoError(t, err)
+		excess := cert.ExcessBytes()
+		assert.NotNil(t, excess)
+		assert.Equal(t, []byte{0x00, 0x04}, excess)
+	})
+}
+
+func TestCertificate_String(t *testing.T) {
+	t.Run("NULL certificate", func(t *testing.T) {
+		cert := NewCertificate()
+		s := cert.String()
+		assert.Contains(t, s, "NULL")
+		assert.Contains(t, s, "length: 0")
+	})
+
+	t.Run("KEY certificate", func(t *testing.T) {
+		cert, _ := NewCertificateWithType(CERT_KEY, []byte{0x00, 0x07, 0x00, 0x04})
+		s := cert.String()
+		assert.Contains(t, s, "KEY")
+		assert.Contains(t, s, "length: 4")
+	})
+
+	t.Run("nil certificate", func(t *testing.T) {
+		var cert *Certificate
+		s := cert.String()
+		assert.Equal(t, "Certificate{invalid}", s)
+	})
+
+	t.Run("zero value certificate", func(t *testing.T) {
+		var cert Certificate
+		s := cert.String()
+		assert.Equal(t, "Certificate{invalid}", s)
+	})
+
+	t.Run("all known types have names", func(t *testing.T) {
+		types := map[uint8]string{
+			CERT_NULL:     "NULL",
+			CERT_HASHCASH: "HASHCASH",
+			CERT_HIDDEN:   "HIDDEN",
+			CERT_SIGNED:   "SIGNED",
+			CERT_MULTIPLE: "MULTIPLE",
+			CERT_KEY:      "KEY",
+		}
+		for certType, name := range types {
+			t.Run(name, func(t *testing.T) {
+				assert.Contains(t, certTypeName(int(certType)), name)
+			})
+		}
+	})
+
+	t.Run("unknown type shows UNKNOWN", func(t *testing.T) {
+		assert.Contains(t, certTypeName(99), "UNKNOWN")
+	})
+}
+
+func TestCertificate_GoString(t *testing.T) {
+	t.Run("KEY certificate includes package prefix", func(t *testing.T) {
+		cert, _ := NewCertificateWithType(CERT_KEY, []byte{0x00, 0x07, 0x00, 0x04})
+		s := cert.GoString()
+		assert.Contains(t, s, "certificate.Certificate")
+		assert.Contains(t, s, "KEY")
+		assert.Contains(t, s, "4 bytes")
+	})
+
+	t.Run("nil certificate", func(t *testing.T) {
+		var cert *Certificate
+		s := cert.GoString()
+		assert.Contains(t, s, "invalid")
+	})
+}
+
+func TestCertificate_Stringer_Interface(t *testing.T) {
+	cert := NewCertificate()
+	s := fmt.Sprintf("%s", cert)
+	assert.Contains(t, s, "NULL")
+}
+
+func TestCertificate_GoStringer_Interface(t *testing.T) {
+	cert := NewCertificate()
+	s := fmt.Sprintf("%#v", cert)
+	assert.Contains(t, s, "certificate.Certificate")
 }
 
 func TestSliceIndexCorrectness(t *testing.T) {

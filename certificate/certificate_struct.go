@@ -2,6 +2,8 @@
 package certificate
 
 import (
+	"fmt"
+
 	"github.com/go-i2p/logger"
 	"github.com/samber/oops"
 
@@ -100,6 +102,10 @@ func validateCertPayload(certType uint8, payload []byte) error {
 		return oops.Errorf("SIGNED certificates must have payload of %d or %d bytes, got %d",
 			CERT_SIGNED_PAYLOAD_SHORT, CERT_SIGNED_PAYLOAD_LONG, len(payload))
 	}
+	if certType == CERT_KEY && len(payload) < CERT_MIN_KEY_PAYLOAD_SIZE {
+		return oops.Errorf("KEY certificates require at least %d bytes payload, got %d",
+			CERT_MIN_KEY_PAYLOAD_SIZE, len(payload))
+	}
 	return nil
 }
 
@@ -144,7 +150,7 @@ func (c *Certificate) ExcessBytes() []byte {
 	if !c.IsValid() {
 		return nil
 	}
-	if len(c.payload) >= c.len.Int() {
+	if len(c.payload) > c.len.Int() {
 		excess := c.payload[c.len.Int():]
 		log.WithFields(logger.Fields{
 			"excess_bytes_length": len(excess),
@@ -270,4 +276,47 @@ func (c *Certificate) IsValid() bool {
 	}
 	// payload can be empty for NULL certificates
 	return true
+}
+
+// certTypeName returns the human-readable name for a certificate type code.
+func certTypeName(certType int) string {
+	switch certType {
+	case CERT_NULL:
+		return "NULL"
+	case CERT_HASHCASH:
+		return "HASHCASH"
+	case CERT_HIDDEN:
+		return "HIDDEN"
+	case CERT_SIGNED:
+		return "SIGNED"
+	case CERT_MULTIPLE:
+		return "MULTIPLE"
+	case CERT_KEY:
+		return "KEY"
+	default:
+		return fmt.Sprintf("UNKNOWN(%d)", certType)
+	}
+}
+
+// String returns a human-readable representation of the Certificate.
+// Returns "Certificate{invalid}" for nil or uninitialized certificates.
+func (c *Certificate) String() string {
+	if !c.IsValid() {
+		return "Certificate{invalid}"
+	}
+	certType, _ := c.Type()
+	length, _ := c.Length()
+	return fmt.Sprintf("Certificate{type: %s, length: %d}", certTypeName(certType), length)
+}
+
+// GoString returns a Go-syntax representation of the Certificate for debugging.
+// Implements the fmt.GoStringer interface.
+func (c *Certificate) GoString() string {
+	if !c.IsValid() {
+		return "certificate.Certificate{invalid}"
+	}
+	certType, _ := c.Type()
+	length, _ := c.Length()
+	return fmt.Sprintf("certificate.Certificate{type: %s(%d), length: %d, payload: %d bytes}",
+		certTypeName(certType), certType, length, len(c.payload))
 }

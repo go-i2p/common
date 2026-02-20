@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // Validation tests for builder.go — input validation, error paths
@@ -35,7 +36,7 @@ func TestCertificateBuilder_Validate(t *testing.T) {
 	t.Run("valid key certificate with payload", func(t *testing.T) {
 		builder := NewCertificateBuilder()
 		builder, _ = builder.WithType(CERT_KEY)
-		builder = builder.WithPayload([]byte{0x00, 0x07, 0x00, 0x04})
+		builder, _ = builder.WithPayload([]byte{0x00, 0x07, 0x00, 0x04})
 		assert.NoError(t, builder.Validate())
 	})
 
@@ -159,5 +160,87 @@ func TestCertificateBuilder_EarlyValidation(t *testing.T) {
 		builder := NewCertificateBuilder()
 		_, err := builder.WithKeyTypes(-1, 4)
 		assert.Error(t, err)
+	})
+}
+
+func TestWithKeyTypes_UpperBoundValidation(t *testing.T) {
+	t.Run("signing type 65536 rejected", func(t *testing.T) {
+		builder := NewCertificateBuilder()
+		_, err := builder.WithKeyTypes(65536, 4)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "exceeds uint16 range")
+	})
+
+	t.Run("crypto type 65536 rejected", func(t *testing.T) {
+		builder := NewCertificateBuilder()
+		_, err := builder.WithKeyTypes(7, 65536)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "exceeds uint16 range")
+	})
+
+	t.Run("both types 65536 rejected", func(t *testing.T) {
+		builder := NewCertificateBuilder()
+		_, err := builder.WithKeyTypes(65536, 65536)
+		require.Error(t, err)
+	})
+
+	t.Run("signing type max uint16 (65535) accepted", func(t *testing.T) {
+		builder := NewCertificateBuilder()
+		_, err := builder.WithKeyTypes(65535, 4)
+		require.NoError(t, err)
+	})
+
+	t.Run("crypto type max uint16 (65535) accepted", func(t *testing.T) {
+		builder := NewCertificateBuilder()
+		_, err := builder.WithKeyTypes(7, 65535)
+		require.NoError(t, err)
+	})
+
+	t.Run("large overflow value rejected", func(t *testing.T) {
+		builder := NewCertificateBuilder()
+		_, err := builder.WithKeyTypes(100000, 4)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "exceeds uint16 range")
+	})
+
+	t.Run("WithKeyTypes matches BuildKeyTypePayload validation", func(t *testing.T) {
+		builder := NewCertificateBuilder()
+		_, builderErr := builder.WithKeyTypes(65536, 4)
+		_, funcErr := BuildKeyTypePayload(65536, 4)
+		assert.Error(t, builderErr)
+		assert.Error(t, funcErr)
+
+		builder2 := NewCertificateBuilder()
+		_, builderErr2 := builder2.WithKeyTypes(65535, 65535)
+		_, funcErr2 := BuildKeyTypePayload(65535, 65535)
+		assert.NoError(t, builderErr2)
+		assert.NoError(t, funcErr2)
+	})
+}
+
+func TestWithPayload_ReturnsError(t *testing.T) {
+	t.Run("oversized payload rejected", func(t *testing.T) {
+		builder := NewCertificateBuilder()
+		_, err := builder.WithPayload(make([]byte, CERT_MAX_PAYLOAD_SIZE+1))
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "payload too long")
+	})
+
+	t.Run("max size payload accepted", func(t *testing.T) {
+		builder := NewCertificateBuilder()
+		_, err := builder.WithPayload(make([]byte, CERT_MAX_PAYLOAD_SIZE))
+		require.NoError(t, err)
+	})
+
+	t.Run("nil payload accepted", func(t *testing.T) {
+		builder := NewCertificateBuilder()
+		_, err := builder.WithPayload(nil)
+		require.NoError(t, err)
+	})
+
+	t.Run("empty payload accepted", func(t *testing.T) {
+		builder := NewCertificateBuilder()
+		_, err := builder.WithPayload([]byte{})
+		require.NoError(t, err)
 	})
 }

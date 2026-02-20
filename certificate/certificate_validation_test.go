@@ -368,6 +368,94 @@ func FuzzReadCertificate(f *testing.F) {
 
 // Benchmarks
 
+func TestGetSignatureType_ErrorSentinelIsNegativeOne(t *testing.T) {
+	t.Run("error sentinel is -1 not 0", func(t *testing.T) {
+		cert, _ := NewCertificateWithType(CERT_NULL, []byte{})
+		sigType, err := GetSignatureTypeFromCertificate(*cert)
+		require.Error(t, err)
+		assert.Equal(t, -1, sigType,
+			"error sentinel must be -1 to not collide with DSA_SHA1 type code 0")
+	})
+
+	t.Run("valid DSA_SHA1 type 0 is distinguishable from error", func(t *testing.T) {
+		payload := []byte{0x00, 0x00, 0x00, 0x00}
+		cert, _ := NewCertificateWithType(CERT_KEY, payload)
+		sigType, err := GetSignatureTypeFromCertificate(*cert)
+		require.NoError(t, err)
+		assert.Equal(t, 0, sigType, "DSA_SHA1 type 0 should be returned on success")
+	})
+
+	t.Run("uninitialized cert returns -1", func(t *testing.T) {
+		var cert Certificate
+		sigType, err := GetSignatureTypeFromCertificate(cert)
+		require.Error(t, err)
+		assert.Equal(t, -1, sigType)
+	})
+
+	t.Run("short payload returns -1", func(t *testing.T) {
+		cert, _, err := ReadCertificate([]byte{CERT_KEY, 0x00, 0x02, 0x00, 0x07})
+		require.NoError(t, err)
+		sigType, err := GetSignatureTypeFromCertificate(*cert)
+		require.Error(t, err)
+		assert.Equal(t, -1, sigType)
+	})
+}
+
+func TestHandleShortCertificateData_LenFieldAlways2Bytes(t *testing.T) {
+	t.Run("2-byte input produces proper 2-byte len field", func(t *testing.T) {
+		cert, _, err := ReadCertificate([]byte{CERT_KEY, 0xFF})
+		require.Error(t, err)
+		assert.Nil(t, cert)
+		assert.Contains(t, err.Error(), "too short")
+	})
+
+	t.Run("1-byte input produces proper 2-byte len field", func(t *testing.T) {
+		cert, _, err := ReadCertificate([]byte{0x05})
+		require.Error(t, err)
+		assert.Nil(t, cert)
+	})
+}
+
+func TestReadCertificate_UnknownType_WarningLogged(t *testing.T) {
+	t.Run("type 6 accepted from wire with warning", func(t *testing.T) {
+		cert, _, err := ReadCertificate([]byte{6, 0x00, 0x00})
+		require.NoError(t, err)
+		certType, _ := cert.Type()
+		assert.Equal(t, 6, certType)
+	})
+
+	t.Run("type 100 accepted from wire", func(t *testing.T) {
+		cert, _, err := ReadCertificate([]byte{100, 0x00, 0x00})
+		require.NoError(t, err)
+		certType, _ := cert.Type()
+		assert.Equal(t, 100, certType)
+	})
+
+	t.Run("type 255 accepted from wire", func(t *testing.T) {
+		cert, _, err := ReadCertificate([]byte{255, 0x00, 0x00})
+		require.NoError(t, err)
+		certType, _ := cert.Type()
+		assert.Equal(t, 255, certType)
+	})
+
+	t.Run("unknown type with payload still works", func(t *testing.T) {
+		cert, _, err := ReadCertificate([]byte{42, 0x00, 0x03, 0xAA, 0xBB, 0xCC})
+		require.NoError(t, err)
+		certType, _ := cert.Type()
+		assert.Equal(t, 42, certType)
+		data, _ := cert.Data()
+		assert.Equal(t, []byte{0xAA, 0xBB, 0xCC}, data)
+	})
+}
+
+func TestHandleShortCertificateData_InternalConsistency(t *testing.T) {
+	t.Run("2-byte input certificate has 2-byte len field", func(t *testing.T) {
+		_, remainder, err := ReadCertificate([]byte{CERT_KEY, 0xFF})
+		require.Error(t, err)
+		assert.Equal(t, []byte{CERT_KEY, 0xFF}, remainder)
+	})
+}
+
 func BenchmarkReadCertificate(b *testing.B) {
 	b.Run("NULL_certificate", func(b *testing.B) {
 		data := []byte{CERT_NULL, 0x00, 0x00}

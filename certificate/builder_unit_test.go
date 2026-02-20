@@ -43,7 +43,8 @@ func TestCertificateBuilder_WithCustomPayload(t *testing.T) {
 
 	builder := NewCertificateBuilder()
 	builder, _ = builder.WithType(CERT_HASHCASH)
-	builder = builder.WithPayload(customPayload)
+	builder, err := builder.WithPayload(customPayload)
+	require.NoError(t, err)
 
 	cert, err := builder.Build()
 	require.NoError(t, err)
@@ -66,7 +67,8 @@ func TestCertificateBuilder_FluentInterface(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, builder, builder3)
 
-	builder4 := builder.WithPayload([]byte{0x01})
+	builder4, err := builder.WithPayload([]byte{0x01})
+	assert.NoError(t, err)
 	assert.Equal(t, builder, builder4)
 }
 
@@ -123,12 +125,14 @@ func TestCertificateBuilder_AllTypes(t *testing.T) {
 			} else if certType == CERT_SIGNED {
 				builder, err = builder.WithType(certType)
 				require.NoError(t, err)
-				builder = builder.WithPayload(make([]byte, CERT_SIGNED_PAYLOAD_SHORT))
+				builder, err = builder.WithPayload(make([]byte, CERT_SIGNED_PAYLOAD_SHORT))
+				require.NoError(t, err)
 				cert, err = builder.Build()
 			} else {
 				builder, err = builder.WithType(certType)
 				require.NoError(t, err)
-				builder = builder.WithPayload([]byte{0x01})
+				builder, err = builder.WithPayload([]byte{0x01})
+				require.NoError(t, err)
 				cert, err = builder.Build()
 			}
 
@@ -142,19 +146,19 @@ func TestCertificateBuilder_AllTypes(t *testing.T) {
 func TestCertificateBuilder_KeyTypeOverridesPayload(t *testing.T) {
 	builder := NewCertificateBuilder()
 	builder, _ = builder.WithKeyTypes(7, 4)
-	builder = builder.WithPayload([]byte{0x01, 0x02})
+	builder, _ = builder.WithPayload([]byte{0x01, 0x02, 0x03, 0x04})
 
 	cert, err := builder.Build()
 	require.NoError(t, err)
 
 	payload, _ := cert.Data()
-	assert.Equal(t, []byte{0x01, 0x02}, payload)
+	assert.Equal(t, []byte{0x01, 0x02, 0x03, 0x04}, payload)
 }
 
 func TestCertificateBuilder_PayloadPrecedence(t *testing.T) {
 	builder := NewCertificateBuilder()
 	builder, _ = builder.WithKeyTypes(7, 4)
-	builder = builder.WithPayload([]byte{0xAA, 0xBB, 0xCC, 0xDD})
+	builder, _ = builder.WithPayload([]byte{0xAA, 0xBB, 0xCC, 0xDD})
 
 	cert, err := builder.Build()
 	require.NoError(t, err)
