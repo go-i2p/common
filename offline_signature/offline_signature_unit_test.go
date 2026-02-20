@@ -405,3 +405,80 @@ func TestOfflineSignatureBytesIdentical(t *testing.T) {
 	assert.True(t, bytes.Equal(bytes1, bytes2), "first and second serialization should be identical")
 	assert.True(t, bytes.Equal(bytes2, bytes3), "second and third serialization should be identical")
 }
+
+func TestMaxSizeOfflineSignature(t *testing.T) {
+	t.Run("rsa4096_transient_rsa4096_destination", func(t *testing.T) {
+		expires := uint32(time.Now().UTC().Add(24 * time.Hour).Unix())
+		transientKeySize := key_certificate.KEYCERT_SIGN_RSA4096_SIZE // 512 bytes
+		sigSize := signature.RSA_SHA512_4096_SIZE                     // 512 bytes
+
+		transientKey := make([]byte, transientKeySize)
+		sig := make([]byte, sigSize)
+		for i := range transientKey {
+			transientKey[i] = byte(i)
+		}
+		for i := range sig {
+			sig[i] = byte(0xFF - i)
+		}
+
+		offlineSig, err := NewOfflineSignature(
+			expires,
+			key_certificate.KEYCERT_SIGN_RSA4096,
+			transientKey, sig,
+			signature.SIGNATURE_TYPE_RSA_SHA512_4096,
+		)
+		require.NoError(t, err)
+
+		expectedSize := EXPIRES_SIZE + SIGTYPE_SIZE + transientKeySize + sigSize
+		assert.Equal(t, 1030, expectedSize, "RSA4096+RSA4096 should be 4+2+512+512=1030 bytes")
+		assert.Equal(t, expectedSize, offlineSig.Len(), "Len() should match calculated size")
+		assert.Equal(t, expectedSize, len(offlineSig.Bytes()), "Bytes() length should match")
+	})
+
+	t.Run("rsa4096_round_trip", func(t *testing.T) {
+		expires := uint32(1735689600)
+		transientKey := make([]byte, key_certificate.KEYCERT_SIGN_RSA4096_SIZE)
+		sig := make([]byte, signature.RSA_SHA512_4096_SIZE)
+		for i := range transientKey {
+			transientKey[i] = byte(i)
+		}
+		for i := range sig {
+			sig[i] = byte(0xAB ^ byte(i))
+		}
+
+		original, err := NewOfflineSignature(
+			expires,
+			key_certificate.KEYCERT_SIGN_RSA4096,
+			transientKey, sig,
+			signature.SIGNATURE_TYPE_RSA_SHA512_4096,
+		)
+		require.NoError(t, err)
+
+		serialized := original.Bytes()
+		parsed, remainder, err := ReadOfflineSignature(serialized, signature.SIGNATURE_TYPE_RSA_SHA512_4096)
+		require.NoError(t, err)
+		assert.Empty(t, remainder)
+
+		assert.Equal(t, original.Expires(), parsed.Expires())
+		assert.Equal(t, original.TransientSigType(), parsed.TransientSigType())
+		assert.Equal(t, original.TransientPublicKey(), parsed.TransientPublicKey())
+		assert.Equal(t, original.Signature(), parsed.Signature())
+		assert.Equal(t, original.DestinationSigType(), parsed.DestinationSigType())
+		assert.Equal(t, original.Len(), parsed.Len())
+	})
+
+	t.Run("rsa4096_validates_structure", func(t *testing.T) {
+		expires := uint32(time.Now().UTC().Add(24 * time.Hour).Unix())
+		transientKey := make([]byte, key_certificate.KEYCERT_SIGN_RSA4096_SIZE)
+		sig := make([]byte, signature.RSA_SHA512_4096_SIZE)
+
+		offlineSig, err := NewOfflineSignature(
+			expires,
+			key_certificate.KEYCERT_SIGN_RSA4096,
+			transientKey, sig,
+			signature.SIGNATURE_TYPE_RSA_SHA512_4096,
+		)
+		require.NoError(t, err)
+		assert.NoError(t, offlineSig.ValidateStructure(), "RSA4096 OfflineSignature should pass structural validation")
+	})
+}

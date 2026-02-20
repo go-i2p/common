@@ -359,3 +359,388 @@ func BenchmarkOfflineSignatureBytes(b *testing.B) {
 		_ = offlineSig.Bytes()
 	}
 }
+
+// =========================================================================
+// Ed25519ph round-trip test (CreateOfflineSignature → VerifySignature)
+// Validates the SHA-512 pre-hashing for both sign and verify paths
+// =========================================================================
+
+func TestCreateAndVerifyOfflineSignatureEd25519ph(t *testing.T) {
+	pubKey, privKey, err := ed25519.GenerateKey(nil)
+	require.NoError(t, err)
+
+	expires := uint32(time.Now().UTC().Add(24 * time.Hour).Unix())
+	transientKey := make([]byte, key_certificate.KEYCERT_SIGN_ED25519_SIZE)
+	for i := range transientKey {
+		transientKey[i] = byte(i + 1)
+	}
+
+	t.Run("create_and_verify_ed25519ph", func(t *testing.T) {
+		offlineSig, err := CreateOfflineSignature(
+			expires,
+			key_certificate.KEYCERT_SIGN_ED25519,
+			transientKey,
+			privKey,
+			signature.SIGNATURE_TYPE_EDDSA_SHA512_ED25519PH,
+		)
+		require.NoError(t, err)
+
+		assert.Equal(t, expires, offlineSig.Expires())
+		assert.Equal(t, uint16(key_certificate.KEYCERT_SIGN_ED25519), offlineSig.TransientSigType())
+		assert.Equal(t, uint16(signature.SIGNATURE_TYPE_EDDSA_SHA512_ED25519PH), offlineSig.DestinationSigType())
+
+		valid, err := offlineSig.VerifySignature(pubKey)
+		assert.NoError(t, err)
+		assert.True(t, valid, "Ed25519ph signature should verify with correct public key")
+	})
+
+	t.Run("ed25519ph_wrong_key_fails", func(t *testing.T) {
+		offlineSig, err := CreateOfflineSignature(
+			expires,
+			key_certificate.KEYCERT_SIGN_ED25519,
+			transientKey,
+			privKey,
+			signature.SIGNATURE_TYPE_EDDSA_SHA512_ED25519PH,
+		)
+		require.NoError(t, err)
+
+		otherPub, _, _ := ed25519.GenerateKey(nil)
+		valid, err := offlineSig.VerifySignature(otherPub)
+		assert.NoError(t, err)
+		assert.False(t, valid, "Ed25519ph signature should not verify with wrong public key")
+	})
+
+	t.Run("ed25519ph_round_trip_serialization", func(t *testing.T) {
+		offlineSig, err := CreateOfflineSignature(
+			expires,
+			key_certificate.KEYCERT_SIGN_ED25519,
+			transientKey,
+			privKey,
+			signature.SIGNATURE_TYPE_EDDSA_SHA512_ED25519PH,
+		)
+		require.NoError(t, err)
+
+		// Serialize and re-parse
+		serialized := offlineSig.Bytes()
+		parsed, rem, err := ReadOfflineSignature(serialized, signature.SIGNATURE_TYPE_EDDSA_SHA512_ED25519PH)
+		require.NoError(t, err)
+		assert.Empty(t, rem)
+
+		// Verify the re-parsed signature
+		valid, err := parsed.VerifySignature(pubKey)
+		assert.NoError(t, err)
+		assert.True(t, valid, "round-tripped Ed25519ph signature should still verify")
+	})
+
+	t.Run("ed25519ph_transient_ed25519ph_dest", func(t *testing.T) {
+		// Ed25519ph transient key + Ed25519ph destination
+		phTransientKey := make([]byte, key_certificate.KEYCERT_SIGN_ED25519PH_SIZE)
+		for i := range phTransientKey {
+			phTransientKey[i] = byte(0xAA ^ byte(i))
+		}
+		offlineSig, err := CreateOfflineSignature(
+			expires,
+			key_certificate.KEYCERT_SIGN_ED25519PH,
+			phTransientKey,
+			privKey,
+			signature.SIGNATURE_TYPE_EDDSA_SHA512_ED25519PH,
+		)
+		require.NoError(t, err)
+
+		valid, err := offlineSig.VerifySignature(pubKey)
+		assert.NoError(t, err)
+		assert.True(t, valid, "Ed25519ph transient + Ed25519ph destination should verify")
+	})
+}
+
+// =========================================================================
+// VerifySignature with tampered fields
+// Confirms that SignedData() correctly covers all fields
+// =========================================================================
+
+func TestVerifySignatureTamperedFields(t *testing.T) {
+	pubKey, privKey, err := ed25519.GenerateKey(nil)
+	require.NoError(t, err)
+
+	expires := uint32(time.Now().UTC().Add(24 * time.Hour).Unix())
+	transientKey := make([]byte, key_certificate.KEYCERT_SIGN_ED25519_SIZE)
+	for i := range transientKey {
+		transientKey[i] = byte(i + 1)
+	}
+
+	// Create a valid signature
+	offlineSig, err := CreateOfflineSignature(
+		expires,
+		key_certificate.KEYCERT_SIGN_ED25519,
+		transientKey,
+		privKey,
+		signature.SIGNATURE_TYPE_EDDSA_SHA512_ED25519,
+	)
+	require.NoError(t, err)
+
+	// Verify original is valid
+	valid, err := offlineSig.VerifySignature(pubKey)
+	require.NoError(t, err)
+	require.True(t, valid, "original signature should be valid")
+
+	t.Run("tampered_expires", func(t *testing.T) {
+		tampered := OfflineSignature{
+			expires:            offlineSig.expires + 1,
+			sigtype:            offlineSig.sigtype,
+			transientPublicKey: offlineSig.TransientPublicKey(),
+			signature:          offlineSig.Signature(),
+			destinationSigType: offlineSig.destinationSigType,
+		}
+		valid, err := tampered.VerifySignature(pubKey)
+		assert.NoError(t, err)
+		assert.False(t, valid, "modified expires should invalidate signature")
+	})
+
+	t.Run("tampered_sigtype", func(t *testing.T) {
+		// Change sigtype to Ed25519ph (same key size, so structural validation passes)
+		tampered := OfflineSignature{
+			expires:            offlineSig.expires,
+			sigtype:            key_certificate.KEYCERT_SIGN_ED25519PH,
+			transientPublicKey: offlineSig.TransientPublicKey(),
+			signature:          offlineSig.Signature(),
+			destinationSigType: offlineSig.destinationSigType,
+		}
+		valid, err := tampered.VerifySignature(pubKey)
+		assert.NoError(t, err)
+		assert.False(t, valid, "modified sigtype should invalidate signature")
+	})
+
+	t.Run("tampered_transient_key", func(t *testing.T) {
+		tamperedKey := offlineSig.TransientPublicKey()
+		tamperedKey[0] ^= 0xFF // Flip bits in first byte
+		tampered := OfflineSignature{
+			expires:            offlineSig.expires,
+			sigtype:            offlineSig.sigtype,
+			transientPublicKey: tamperedKey,
+			signature:          offlineSig.Signature(),
+			destinationSigType: offlineSig.destinationSigType,
+		}
+		valid, err := tampered.VerifySignature(pubKey)
+		assert.NoError(t, err)
+		assert.False(t, valid, "modified transient key should invalidate signature")
+	})
+
+	t.Run("tampered_signature_bytes", func(t *testing.T) {
+		tamperedSig := offlineSig.Signature()
+		tamperedSig[0] ^= 0xFF // Flip bits in first byte
+		tampered := OfflineSignature{
+			expires:            offlineSig.expires,
+			sigtype:            offlineSig.sigtype,
+			transientPublicKey: offlineSig.TransientPublicKey(),
+			signature:          tamperedSig,
+			destinationSigType: offlineSig.destinationSigType,
+		}
+		valid, err := tampered.VerifySignature(pubKey)
+		assert.NoError(t, err)
+		assert.False(t, valid, "tampered signature bytes should not verify")
+	})
+}
+
+// =========================================================================
+// RedDSA signing produces Ed25519 signatures (documented limitation)
+// =========================================================================
+
+func TestRedDSASigningDocumentedLimitation(t *testing.T) {
+	pubKey, privKey, err := ed25519.GenerateKey(nil)
+	require.NoError(t, err)
+
+	expires := uint32(time.Now().UTC().Add(24 * time.Hour).Unix())
+	transientKey := make([]byte, key_certificate.KEYCERT_SIGN_ED25519_SIZE)
+	for i := range transientKey {
+		transientKey[i] = byte(i)
+	}
+
+	t.Run("reddsa_creates_verifiable_signature", func(t *testing.T) {
+		// RedDSA signing uses ed25519.Sign (standard Ed25519)
+		// Verification is identical to Ed25519 on the curve level
+		offlineSig, err := CreateOfflineSignature(
+			expires,
+			key_certificate.KEYCERT_SIGN_REDDSA_ED25519,
+			transientKey,
+			privKey,
+			signature.SIGNATURE_TYPE_REDDSA_SHA512_ED25519,
+		)
+		require.NoError(t, err)
+
+		valid, err := offlineSig.VerifySignature(pubKey)
+		assert.NoError(t, err)
+		assert.True(t, valid, "RedDSA signature should verify (uses same curve as Ed25519)")
+	})
+
+	t.Run("reddsa_signature_is_deterministic_ed25519", func(t *testing.T) {
+		// Standard Ed25519 is deterministic — signing the same message twice
+		// produces identical signatures. This confirms we're using Ed25519 signing.
+		sig1, err := CreateOfflineSignature(
+			expires,
+			key_certificate.KEYCERT_SIGN_REDDSA_ED25519,
+			transientKey,
+			privKey,
+			signature.SIGNATURE_TYPE_REDDSA_SHA512_ED25519,
+		)
+		require.NoError(t, err)
+
+		sig2, err := CreateOfflineSignature(
+			expires,
+			key_certificate.KEYCERT_SIGN_REDDSA_ED25519,
+			transientKey,
+			privKey,
+			signature.SIGNATURE_TYPE_REDDSA_SHA512_ED25519,
+		)
+		require.NoError(t, err)
+
+		assert.Equal(t, sig1.Signature(), sig2.Signature(),
+			"RedDSA signing is deterministic (standard Ed25519), confirming documented limitation")
+	})
+}
+
+// =========================================================================
+// VerifySignature unsupported type coverage (modern crypto only)
+// Per project constraint: "Modern crypto only. Ed25519, X25519, AES-256 are the targets"
+// =========================================================================
+
+func TestVerifySignatureUnsupportedTypesDocumented(t *testing.T) {
+	// Per "modern crypto only" constraint, only Ed25519-family verification is implemented.
+	// Non-Ed25519 types return clear "not implemented" errors.
+	unsupportedTypes := []struct {
+		name    string
+		sigType uint16
+		keySize int
+		sigSize int
+	}{
+		{"DSA_SHA1", signature.SIGNATURE_TYPE_DSA_SHA1, 128, signature.DSA_SHA1_SIZE},
+		{"ECDSA_P256", signature.SIGNATURE_TYPE_ECDSA_SHA256_P256, 64, signature.ECDSA_SHA256_P256_SIZE},
+		{"ECDSA_P384", signature.SIGNATURE_TYPE_ECDSA_SHA384_P384, 96, signature.ECDSA_SHA384_P384_SIZE},
+		{"ECDSA_P521", signature.SIGNATURE_TYPE_ECDSA_SHA512_P521, 132, signature.ECDSA_SHA512_P521_SIZE},
+		{"RSA_2048", signature.SIGNATURE_TYPE_RSA_SHA256_2048, 256, signature.RSA_SHA256_2048_SIZE},
+		{"RSA_3072", signature.SIGNATURE_TYPE_RSA_SHA384_3072, 384, signature.RSA_SHA384_3072_SIZE},
+		{"RSA_4096", signature.SIGNATURE_TYPE_RSA_SHA512_4096, 512, signature.RSA_SHA512_4096_SIZE},
+	}
+
+	for _, tc := range unsupportedTypes {
+		t.Run(tc.name, func(t *testing.T) {
+			key := make([]byte, tc.keySize)
+			sig := make([]byte, tc.sigSize)
+
+			offlineSig, err := NewOfflineSignature(
+				uint32(time.Now().UTC().Add(24*time.Hour).Unix()),
+				key_certificate.KEYCERT_SIGN_DSA_SHA1,
+				make([]byte, key_certificate.KEYCERT_SIGN_DSA_SHA1_SIZE),
+				sig,
+				tc.sigType,
+			)
+			require.NoError(t, err)
+
+			_, err = offlineSig.VerifySignature(key)
+			assert.Error(t, err, "unsupported type %d should return error", tc.sigType)
+			assert.Contains(t, err.Error(), "not implemented",
+				"error for unsupported type %d should mention 'not implemented'", tc.sigType)
+		})
+	}
+}
+
+func TestCreateOfflineSignatureUnsupportedDestTypes(t *testing.T) {
+	_, privKey, _ := ed25519.GenerateKey(nil)
+	transientKey := make([]byte, key_certificate.KEYCERT_SIGN_DSA_SHA1_SIZE)
+	expires := uint32(time.Now().UTC().Add(24 * time.Hour).Unix())
+
+	unsupportedTypes := []uint16{
+		signature.SIGNATURE_TYPE_DSA_SHA1,
+		signature.SIGNATURE_TYPE_ECDSA_SHA256_P256,
+		signature.SIGNATURE_TYPE_ECDSA_SHA384_P384,
+		signature.SIGNATURE_TYPE_ECDSA_SHA512_P521,
+		signature.SIGNATURE_TYPE_RSA_SHA256_2048,
+		signature.SIGNATURE_TYPE_RSA_SHA384_3072,
+		signature.SIGNATURE_TYPE_RSA_SHA512_4096,
+	}
+
+	for _, destType := range unsupportedTypes {
+		t.Run("dest_type_"+string(rune('0'+destType)), func(t *testing.T) {
+			_, err := CreateOfflineSignature(
+				expires,
+				key_certificate.KEYCERT_SIGN_DSA_SHA1,
+				transientKey,
+				privKey,
+				destType,
+			)
+			assert.Error(t, err, "unsupported destination type %d should return error", destType)
+			assert.Contains(t, err.Error(), "not implemented")
+		})
+	}
+}
+
+// =========================================================================
+// Ed25519ph is distinct from Ed25519 signing
+// Verifies the SHA-512 pre-hashing produces different signatures
+// =========================================================================
+
+func TestEd25519phProducesDifferentSignature(t *testing.T) {
+	_, privKey, err := ed25519.GenerateKey(nil)
+	require.NoError(t, err)
+
+	expires := uint32(time.Now().UTC().Add(24 * time.Hour).Unix())
+	transientKey := make([]byte, key_certificate.KEYCERT_SIGN_ED25519_SIZE)
+	for i := range transientKey {
+		transientKey[i] = byte(i + 1)
+	}
+
+	// Create with Ed25519 (type 7)
+	ed25519Sig, err := CreateOfflineSignature(
+		expires,
+		key_certificate.KEYCERT_SIGN_ED25519,
+		transientKey,
+		privKey,
+		signature.SIGNATURE_TYPE_EDDSA_SHA512_ED25519,
+	)
+	require.NoError(t, err)
+
+	// Create with Ed25519ph (type 8) — same message, same key
+	ed25519phSig, err := CreateOfflineSignature(
+		expires,
+		key_certificate.KEYCERT_SIGN_ED25519,
+		transientKey,
+		privKey,
+		signature.SIGNATURE_TYPE_EDDSA_SHA512_ED25519PH,
+	)
+	require.NoError(t, err)
+
+	assert.NotEqual(t, ed25519Sig.Signature(), ed25519phSig.Signature(),
+		"Ed25519 and Ed25519ph should produce different signatures for the same message "+
+			"(Ed25519ph applies SHA-512 pre-hashing)")
+}
+
+// =========================================================================
+// Cross-verification must fail: Ed25519 signature must not verify as Ed25519ph
+// =========================================================================
+
+func TestEd25519AndEd25519phNotInterchangeable(t *testing.T) {
+	pubKey, privKey, err := ed25519.GenerateKey(nil)
+	require.NoError(t, err)
+
+	expires := uint32(time.Now().UTC().Add(24 * time.Hour).Unix())
+	transientKey := make([]byte, key_certificate.KEYCERT_SIGN_ED25519_SIZE)
+
+	// Create Ed25519 signature
+	ed25519OffSig, err := CreateOfflineSignature(
+		expires, key_certificate.KEYCERT_SIGN_ED25519, transientKey,
+		privKey, signature.SIGNATURE_TYPE_EDDSA_SHA512_ED25519,
+	)
+	require.NoError(t, err)
+
+	// Try to verify Ed25519 signature as Ed25519ph — must fail
+	// Build a fake OfflineSignature with Ed25519ph dest type but Ed25519 signature bytes
+	fakePhSig := OfflineSignature{
+		expires:            ed25519OffSig.expires,
+		sigtype:            ed25519OffSig.sigtype,
+		transientPublicKey: ed25519OffSig.TransientPublicKey(),
+		signature:          ed25519OffSig.Signature(),
+		destinationSigType: signature.SIGNATURE_TYPE_EDDSA_SHA512_ED25519PH,
+	}
+	valid, err := fakePhSig.VerifySignature(pubKey)
+	assert.NoError(t, err)
+	assert.False(t, valid, "Ed25519 signature must not verify when treated as Ed25519ph")
+}

@@ -1,6 +1,7 @@
 package offline_signature
 
 import (
+	"encoding/binary"
 	"testing"
 
 	"github.com/go-i2p/common/key_certificate"
@@ -56,4 +57,51 @@ func TestExpiresSizeConstant(t *testing.T) {
 
 func TestSigtypeSizeConstant(t *testing.T) {
 	assert.Equal(t, 2, SIGTYPE_SIZE)
+}
+
+func TestOfflineSignatureHeaderSize(t *testing.T) {
+	t.Run("header_size_value", func(t *testing.T) {
+		assert.Equal(t, 6, OFFLINE_SIGNATURE_HEADER_SIZE,
+			"OFFLINE_SIGNATURE_HEADER_SIZE should be EXPIRES_SIZE(4) + SIGTYPE_SIZE(2) = 6")
+	})
+
+	t.Run("header_size_is_true_minimum_parseable", func(t *testing.T) {
+		// Anything less than OFFLINE_SIGNATURE_HEADER_SIZE cannot even parse the header
+		data := make([]byte, OFFLINE_SIGNATURE_HEADER_SIZE-1)
+		_, _, err := ReadOfflineSignature(data, signature.SIGNATURE_TYPE_EDDSA_SHA512_ED25519)
+		assert.Error(t, err, "data shorter than header size should fail to parse")
+	})
+
+	t.Run("smallest_valid_offline_signature", func(t *testing.T) {
+		// Ed25519 transient (32 bytes) + DSA_SHA1 destination signature (40 bytes) = 78 bytes total
+		smallestSize := OFFLINE_SIGNATURE_HEADER_SIZE + key_certificate.KEYCERT_SIGN_ED25519_SIZE + signature.DSA_SHA1_SIZE
+		assert.Equal(t, 78, smallestSize,
+			"smallest valid OfflineSignature = 6 + 32 + 40 = 78 bytes")
+		assert.Less(t, smallestSize, OFFLINE_SIGNATURE_MIN_SIZE,
+			"smallest valid OfflineSignature is less than the deprecated OFFLINE_SIGNATURE_MIN_SIZE constant")
+	})
+}
+
+func TestGOSTTypesReturnZeroSize(t *testing.T) {
+	// GOST types 9 and 10 are reserved in the I2P spec but not implemented.
+	// SigningPublicKeySize and SignatureSize correctly return 0 for unknown types,
+	// which causes ReadOfflineSignature to reject them via ErrUnknownSignatureType.
+	t.Run("gost_signing_key_size", func(t *testing.T) {
+		assert.Equal(t, 0, SigningPublicKeySize(9), "GOST type 9 should return 0 key size")
+		assert.Equal(t, 0, SigningPublicKeySize(10), "GOST type 10 should return 0 key size")
+	})
+
+	t.Run("gost_signature_size", func(t *testing.T) {
+		assert.Equal(t, 0, SignatureSize(9), "GOST type 9 should return 0 signature size")
+		assert.Equal(t, 0, SignatureSize(10), "GOST type 10 should return 0 signature size")
+	})
+
+	t.Run("gost_transient_type_rejected", func(t *testing.T) {
+		data := make([]byte, 200)
+		binary.BigEndian.PutUint32(data[0:4], 1735689600)
+		binary.BigEndian.PutUint16(data[4:6], 9) // GOST type 9
+		_, _, err := ReadOfflineSignature(data, signature.SIGNATURE_TYPE_EDDSA_SHA512_ED25519)
+		assert.Error(t, err)
+		assert.ErrorIs(t, err, ErrUnknownSignatureType)
+	})
 }

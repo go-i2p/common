@@ -16,9 +16,7 @@
 package offline_signature
 
 import (
-	"crypto"
 	"crypto/ed25519"
-	"crypto/rand"
 	"encoding/binary"
 	"errors"
 	"fmt"
@@ -26,12 +24,10 @@ import (
 
 	"github.com/go-i2p/common/data"
 	"github.com/go-i2p/common/signature"
+	"github.com/go-i2p/crypto/ed25519ph"
 )
 
 var (
-	// ErrInvalidOfflineSignatureData indicates that the provided data cannot be parsed as an OfflineSignature.
-	ErrInvalidOfflineSignatureData = errors.New("invalid offline signature data")
-
 	// ErrInsufficientData indicates that there is not enough data to parse the complete OfflineSignature.
 	ErrInsufficientData = errors.New("insufficient data for offline signature")
 
@@ -488,15 +484,19 @@ func verifyEd25519(pubKey, message, sig []byte) (bool, error) {
 }
 
 // verifyEd25519ph performs prehashed Ed25519 (Ed25519ph) signature verification.
+// Per RFC 8032 Section 5.1, Ed25519ph requires the message to be hashed with SHA-512
+// before signing/verification. This delegates to the go-i2p/crypto/ed25519ph package
+// which handles the pre-hashing and domain separation internally.
 func verifyEd25519ph(pubKey, message, sig []byte) (bool, error) {
-	if len(pubKey) != ed25519.PublicKeySize {
-		return false, fmt.Errorf("invalid Ed25519 public key size: expected %d, got %d",
-			ed25519.PublicKeySize, len(pubKey))
+	pk, err := ed25519ph.NewEd25519phPublicKey(pubKey)
+	if err != nil {
+		return false, fmt.Errorf("invalid Ed25519ph public key: %w", err)
 	}
-	err := ed25519.VerifyWithOptions(
-		ed25519.PublicKey(pubKey), message, sig,
-		&ed25519.Options{Hash: crypto.SHA512},
-	)
+	verifier, err := pk.NewVerifier()
+	if err != nil {
+		return false, fmt.Errorf("failed to create Ed25519ph verifier: %w", err)
+	}
+	err = verifier.Verify(message, sig)
 	return err == nil, nil
 }
 
@@ -560,13 +560,26 @@ func buildSignedData(expires uint32, sigtype uint16, transientPublicKey []byte) 
 }
 
 // signWithDestinationType signs the data using the appropriate algorithm for the destination type.
+// For Ed25519ph (type 8), the message is pre-hashed with SHA-512 per RFC 8032 Section 5.1.
+// This delegates to the go-i2p/crypto/ed25519ph package which handles pre-hashing internally.
+// For RedDSA (type 11), standard Ed25519 signing is used. RedDSA verification is identical
+// to Ed25519; however, the produced signatures lack the nonce randomization that a full
+// RedDSA implementation would provide. This is documented as a known limitation.
 func signWithDestinationType(destSigType uint16, privKey ed25519.PrivateKey, message []byte) ([]byte, error) {
 	switch destSigType {
 	case signature.SIGNATURE_TYPE_EDDSA_SHA512_ED25519,
 		signature.SIGNATURE_TYPE_REDDSA_SHA512_ED25519:
 		return ed25519.Sign(privKey, message), nil
 	case signature.SIGNATURE_TYPE_EDDSA_SHA512_ED25519PH:
-		return privKey.Sign(rand.Reader, message, &ed25519.Options{Hash: crypto.SHA512})
+		pk, err := ed25519ph.NewEd25519phPrivateKey([]byte(privKey))
+		if err != nil {
+			return nil, fmt.Errorf("invalid Ed25519ph private key: %w", err)
+		}
+		signer, err := pk.NewSigner()
+		if err != nil {
+			return nil, fmt.Errorf("failed to create Ed25519ph signer: %w", err)
+		}
+		return signer.Sign(message)
 	default:
 		return nil, fmt.Errorf("signing not implemented for destination type %d", destSigType)
 	}

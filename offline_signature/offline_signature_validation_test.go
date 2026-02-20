@@ -433,3 +433,29 @@ func TestValidateAllSignatureTypes(t *testing.T) {
 		})
 	}
 }
+
+func TestRemovedErrInvalidOfflineSignatureData(t *testing.T) {
+	// Verify that the remaining error sentinels still work correctly
+	t.Run("ErrInsufficientData_still_works", func(t *testing.T) {
+		_, _, err := ReadOfflineSignature([]byte{}, signature.SIGNATURE_TYPE_EDDSA_SHA512_ED25519)
+		assert.Error(t, err)
+		assert.ErrorIs(t, err, ErrInsufficientData)
+	})
+
+	t.Run("ErrUnknownSignatureType_still_works", func(t *testing.T) {
+		data := make([]byte, 200)
+		binary.BigEndian.PutUint16(data[4:6], 999)
+		_, _, err := ReadOfflineSignature(data, signature.SIGNATURE_TYPE_EDDSA_SHA512_ED25519)
+		assert.Error(t, err)
+		assert.ErrorIs(t, err, ErrUnknownSignatureType)
+	})
+
+	t.Run("ErrExpiredOfflineSignature_still_works", func(t *testing.T) {
+		pastExpires := uint32(time.Now().UTC().Add(-1 * time.Hour).Unix())
+		transientKey := make([]byte, key_certificate.KEYCERT_SIGN_ED25519_SIZE)
+		sig := make([]byte, signature.EdDSA_SHA512_Ed25519_SIZE)
+		offlineSig, err := NewOfflineSignature(pastExpires, key_certificate.KEYCERT_SIGN_ED25519, transientKey, sig, signature.SIGNATURE_TYPE_EDDSA_SHA512_ED25519)
+		require.NoError(t, err)
+		assert.ErrorIs(t, offlineSig.Validate(), ErrExpiredOfflineSignature)
+	})
+}
