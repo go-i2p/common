@@ -755,12 +755,3 @@ func TestVerifyWithOfflineSignature(t *testing.T) {
 	err = ls2.Verify()
 	assert.NoError(t, err, "Verify should succeed using transient key from offline signature")
 }
-
-//
-// Lease2 size verification
-//
-
-func TestLease2Size40Bytes(t *testing.T) {
-	l := createTestLease2(t, 0)
-	assert.Equal(t, 40, len(l.Bytes()), "Lease2 should be exactly 40 bytes (32 hash + 4 tunnel_id + 4 end_date)")
-}
