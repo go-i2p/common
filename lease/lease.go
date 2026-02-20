@@ -51,8 +51,17 @@ func NewLease(tunnelGateway data.Hash, tunnelID uint32, expirationTime time.Time
 	// Convert tunnel ID to big-endian format
 	binary.BigEndian.PutUint32(lease[LEASE_TUNNEL_GW_SIZE:LEASE_TUNNEL_GW_SIZE+LEASE_TUNNEL_ID_SIZE], tunnelID)
 
-	// Convert expiration time to I2P Date format (milliseconds since Unix epoch)
+	// Validate that the expiration time is not before the Unix epoch.
+	// Pre-epoch times produce negative millis which wrap to very large unsigned values
+	// on the wire, causing other I2P implementations to interpret them as far-future dates.
 	millis := expirationTime.UnixMilli()
+	if millis < 0 {
+		return nil, oops.Wrapf(ErrPreEpochTimestamp,
+			"expiration time %v (millis=%d) is before Unix epoch",
+			expirationTime, millis)
+	}
+
+	// Convert expiration time to I2P Date format (milliseconds since Unix epoch)
 	binary.BigEndian.PutUint64(lease[LEASE_TUNNEL_GW_SIZE+LEASE_TUNNEL_ID_SIZE:], uint64(millis))
 
 	log.WithFields(logger.Fields{

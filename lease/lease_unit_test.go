@@ -276,6 +276,65 @@ func TestLeaseReferenceVector(t *testing.T) {
 	assert.Equal(t, expTime.UnixMilli(), lease.Time().UnixMilli())
 }
 
+// TestLeaseTimeDateDivergenceLargeTimestamp verifies that Lease.Time() correctly
+// handles timestamps where Date().Time() might produce incorrect results due to
+// signed integer truncation in data.Integer.Int().
+func TestLeaseTimeDateDivergenceLargeTimestamp(t *testing.T) {
+	gateway := createTestHash(t, "divergence_gw_hash______32_bytes")
+
+	// A known-good current timestamp: methods should agree
+	t.Run("current_timestamp_agreement", func(t *testing.T) {
+		lease, err := NewLease(gateway, 1, time.Now().Add(1*time.Hour))
+		require.NoError(t, err)
+		assert.Equal(t, lease.Time().UnixMilli(), lease.Date().Time().UnixMilli(),
+			"Time() and Date().Time() should agree for normal timestamps")
+	})
+
+	// Year 2262 boundary: millis value near 2^63.
+	t.Run("year_2262_boundary", func(t *testing.T) {
+		maxSignedMillis := uint64(1<<63 - 1)
+		var lease Lease
+		copy(lease[:LEASE_TUNNEL_GW_SIZE], gateway[:])
+		binary.BigEndian.PutUint32(lease[LEASE_TUNNEL_GW_SIZE:], 1)
+		binary.BigEndian.PutUint64(lease[LEASE_TUNNEL_GW_SIZE+LEASE_TUNNEL_ID_SIZE:], maxSignedMillis)
+
+		directTime := lease.Time()
+		assert.True(t, directTime.Year() > 2200,
+			"Time() should decode max signed int64 millis to a far-future date, got year %d", directTime.Year())
+	})
+
+	// Beyond 2^63: unsigned millis that would be negative if treated as signed.
+	t.Run("beyond_signed_int64_range", func(t *testing.T) {
+		overflowMillis := uint64(1<<63 + 1000)
+		var lease Lease
+		copy(lease[:LEASE_TUNNEL_GW_SIZE], gateway[:])
+		binary.BigEndian.PutUint32(lease[LEASE_TUNNEL_GW_SIZE:], 1)
+		binary.BigEndian.PutUint64(lease[LEASE_TUNNEL_GW_SIZE+LEASE_TUNNEL_ID_SIZE:], overflowMillis)
+
+		directTime := lease.Time()
+		dateTime := lease.Date().Time()
+
+		t.Logf("millis=0x%X: Time()=%v, Date().Time()=%v",
+			overflowMillis, directTime, dateTime)
+
+		assert.NotZero(t, directTime,
+			"Time() should not produce zero time for any millis value")
+	})
+
+	// Max uint64: extreme case
+	t.Run("max_uint64_millis", func(t *testing.T) {
+		var lease Lease
+		copy(lease[:LEASE_TUNNEL_GW_SIZE], gateway[:])
+		binary.BigEndian.PutUint32(lease[LEASE_TUNNEL_GW_SIZE:], 1)
+		binary.BigEndian.PutUint64(lease[LEASE_TUNNEL_GW_SIZE+LEASE_TUNNEL_ID_SIZE:], ^uint64(0))
+
+		assert.NotPanics(t, func() { _ = lease.Time() },
+			"Time() must not panic even for max uint64 millis")
+		assert.NotPanics(t, func() { _ = lease.Date().Time() },
+			"Date().Time() must not panic even for max uint64 millis")
+	})
+}
+
 func BenchmarkReadLease(b *testing.B) {
 	var leaseBytes [LEASE_SIZE]byte
 	for i := range leaseBytes {

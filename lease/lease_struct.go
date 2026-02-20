@@ -2,6 +2,7 @@ package lease
 
 import (
 	"encoding/binary"
+	"errors"
 	"time"
 
 	"github.com/go-i2p/common/data"
@@ -95,17 +96,23 @@ func (lease Lease) Equal(other Lease) bool {
 }
 
 // Validate performs semantic validation on the lease.
-// Returns an error if the lease has expired or has a zero gateway hash.
+// Returns a combined error (via errors.Join) if multiple issues are found:
+// zero gateway hash, zero tunnel ID (advisory per spec), or expired lease.
+// Use errors.Is to check for specific error conditions.
 // This is separate from construction to allow representing arbitrary wire-format data.
 func (lease Lease) Validate() error {
+	var errs []error
 	gw := lease.TunnelGateway()
 	if gw.IsZero() {
-		return ErrZeroGatewayHash
+		errs = append(errs, ErrZeroGatewayHash)
+	}
+	if lease.TunnelID() == 0 {
+		errs = append(errs, ErrZeroTunnelID)
 	}
 	if lease.IsExpired() {
-		return ErrExpiredLease
+		errs = append(errs, ErrExpiredLease)
 	}
-	return nil
+	return errors.Join(errs...)
 }
 
 // Bytes returns the complete Lease structure as a byte slice.

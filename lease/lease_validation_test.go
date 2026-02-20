@@ -1,6 +1,8 @@
 package lease
 
 import (
+	"encoding/binary"
+	"errors"
 	"testing"
 	"time"
 
@@ -91,4 +93,107 @@ func TestReadLeaseErrorMessageFormat(t *testing.T) {
 	errMsg := err.Error()
 	assert.Contains(t, errMsg, "expected 44")
 	assert.Contains(t, errMsg, "got 10")
+}
+
+// TestNewLeasePreEpochTimestamp verifies that NewLease rejects pre-epoch times.
+func TestNewLeasePreEpochTimestamp(t *testing.T) {
+	gateway := createTestHash(t, "pre_epoch_gw_hash_______32_bytes")
+
+	tests := []struct {
+		name string
+		time time.Time
+	}{
+		{"just_before_epoch", time.Unix(-1, 0)},
+		{"year_1969", time.Date(1969, 1, 1, 0, 0, 0, 0, time.UTC)},
+		{"far_past", time.Date(1900, 6, 15, 12, 0, 0, 0, time.UTC)},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			lease, err := NewLease(gateway, 1, tt.time)
+			assert.Error(t, err, "NewLease should reject pre-epoch time %v", tt.time)
+			assert.ErrorIs(t, err, ErrPreEpochTimestamp)
+			assert.Nil(t, lease)
+		})
+	}
+}
+
+// TestNewLeasePreEpochSymmetryWithLease2 verifies both constructors reject
+// pre-epoch times consistently.
+func TestNewLeasePreEpochSymmetryWithLease2(t *testing.T) {
+	gateway := createTestHash(t, "symmetry_gw_hash________32_bytes")
+	preEpoch := time.Date(1969, 6, 15, 0, 0, 0, 0, time.UTC)
+
+	_, err1 := NewLease(gateway, 1, preEpoch)
+	assert.ErrorIs(t, err1, ErrPreEpochTimestamp,
+		"NewLease should reject pre-epoch with ErrPreEpochTimestamp")
+
+	_, err2 := NewLease2(gateway, 1, preEpoch)
+	assert.Error(t, err2,
+		"NewLease2 should also reject pre-epoch time")
+}
+
+// TestNewLeaseAcceptsEpochExact verifies that time exactly at epoch is accepted.
+func TestNewLeaseAcceptsEpochExact(t *testing.T) {
+	gateway := createTestHash(t, "epoch_exact_gw_hash_____32_bytes")
+	epochTime := time.Unix(0, 0).UTC()
+
+	lease, err := NewLease(gateway, 1, epochTime)
+	require.NoError(t, err, "NewLease should accept time exactly at epoch")
+	require.NotNil(t, lease)
+	assert.Equal(t, uint64(0),
+		binary.BigEndian.Uint64(lease[LEASE_TUNNEL_GW_SIZE+LEASE_TUNNEL_ID_SIZE:]))
+}
+
+// TestLeaseValidateZeroTunnelID verifies Validate() reports zero tunnel ID.
+func TestLeaseValidateZeroTunnelID(t *testing.T) {
+	gateway := createTestHash(t, "zero_tid_validate_gw____32_bytes")
+	lease, err := NewLease(gateway, 0, time.Now().Add(1*time.Hour))
+	require.NoError(t, err)
+
+	err = lease.Validate()
+	assert.Error(t, err)
+	assert.ErrorIs(t, err, ErrZeroTunnelID)
+	assert.False(t, errors.Is(err, ErrZeroGatewayHash))
+	assert.False(t, errors.Is(err, ErrExpiredLease))
+}
+
+// TestLeaseValidateNonZeroTunnelID verifies valid lease passes with non-zero tunnel ID.
+func TestLeaseValidateNonZeroTunnelID(t *testing.T) {
+	gateway := createTestHash(t, "nonzero_tid_val_gw_hash_32_bytes")
+	lease, err := NewLease(gateway, 42, time.Now().Add(1*time.Hour))
+	require.NoError(t, err)
+	assert.NoError(t, lease.Validate())
+}
+
+// TestLeaseValidateMultipleErrors verifies Validate() returns all applicable errors.
+func TestLeaseValidateMultipleErrors(t *testing.T) {
+	lease, err := NewLease(data.Hash{}, 0, time.Now().Add(-1*time.Hour))
+	require.NoError(t, err)
+
+	err = lease.Validate()
+	require.Error(t, err)
+	assert.ErrorIs(t, err, ErrZeroGatewayHash, "should contain ErrZeroGatewayHash")
+	assert.ErrorIs(t, err, ErrZeroTunnelID, "should contain ErrZeroTunnelID")
+	assert.ErrorIs(t, err, ErrExpiredLease, "should contain ErrExpiredLease")
+}
+
+// TestLeaseValidateNoErrors verifies Validate() returns nil when all is valid.
+func TestLeaseValidateNoErrors(t *testing.T) {
+	gateway := createTestHash(t, "all_valid_gw_hash_______32_bytes")
+	lease, err := NewLease(gateway, 1, time.Now().Add(1*time.Hour))
+	require.NoError(t, err)
+	assert.NoError(t, lease.Validate())
+}
+
+// TestLeaseValidateTwoErrors verifies exactly two errors are reported.
+func TestLeaseValidateTwoErrors(t *testing.T) {
+	lease, err := NewLease(data.Hash{}, 1, time.Now().Add(-1*time.Hour))
+	require.NoError(t, err)
+
+	err = lease.Validate()
+	require.Error(t, err)
+	assert.ErrorIs(t, err, ErrZeroGatewayHash)
+	assert.ErrorIs(t, err, ErrExpiredLease)
+	assert.False(t, errors.Is(err, ErrZeroTunnelID))
 }

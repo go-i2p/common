@@ -15,6 +15,17 @@ var (
 	// ErrTimestampOverflow indicates a Lease2 expiration time exceeds the uint32 second range.
 	// Lease2 uses 4-byte timestamps which overflow after 2106-02-07T06:28:15 UTC.
 	ErrTimestampOverflow = errors.New("timestamp exceeds Lease2 uint32 range")
+
+	// ErrPreEpochTimestamp indicates an expiration time before the Unix epoch (1970-01-01).
+	// I2P timestamps are unsigned milliseconds/seconds since epoch; pre-epoch values
+	// would wrap to extremely large unsigned values on the wire.
+	ErrPreEpochTimestamp = errors.New("expiration time is before Unix epoch")
+
+	// ErrZeroTunnelID indicates a lease with tunnel ID 0.
+	// The I2P spec states: "A Tunnel ID is generally greater than zero;
+	// do not use a value of zero except in special cases."
+	// Returned as an advisory by Validate().
+	ErrZeroTunnelID = errors.New("tunnel ID is zero (spec recommends non-zero except in special cases)")
 )
 
 // Sizes in bytes of various components of a Lease according to I2P specification version 0.9.67
@@ -33,6 +44,11 @@ const (
 	// The tunnel ID is a 32-bit unsigned integer that uniquely identifies a specific tunnel
 	// within the context of the gateway router for message forwarding.
 	LEASE_TUNNEL_ID_SIZE = 4
+
+	// LEASE_END_DATE_SIZE defines the size of the end date field in legacy Lease structures.
+	// Legacy Lease uses 8-byte millisecond timestamps (I2P Date format) for expiration,
+	// providing nanosecond-resolution dates at the cost of 4 extra bytes compared to Lease2.
+	LEASE_END_DATE_SIZE = 8
 
 	// LEASE2_SIZE defines the total size of a complete I2P Lease2 structure in bytes.
 	// A Lease2 is a more compact version introduced in I2P specification 0.9.38 for LeaseSet2.

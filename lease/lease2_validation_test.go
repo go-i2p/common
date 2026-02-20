@@ -2,6 +2,7 @@ package lease
 
 import (
 	"encoding/binary"
+	"errors"
 	"testing"
 	"time"
 
@@ -153,4 +154,58 @@ func TestNewLease2FromBytesInsufficientData(t *testing.T) {
 	shortData := make([]byte, LEASE2_SIZE-1)
 	_, _, err := NewLease2FromBytes(shortData)
 	assert.Error(t, err)
+}
+
+// TestLease2ValidateZeroTunnelID verifies Validate() reports zero tunnel ID for Lease2.
+func TestLease2ValidateZeroTunnelID(t *testing.T) {
+	gateway := createTestHash(t, "l2_zero_tid_validate_gw_32_bytes")
+	lease2, err := NewLease2(gateway, 0, time.Now().Add(1*time.Hour))
+	require.NoError(t, err)
+
+	err = lease2.Validate()
+	assert.Error(t, err)
+	assert.ErrorIs(t, err, ErrZeroTunnelID)
+	assert.False(t, errors.Is(err, ErrZeroGatewayHash))
+	assert.False(t, errors.Is(err, ErrExpiredLease))
+}
+
+// TestLease2ValidateMultipleErrors verifies Validate() returns all applicable errors.
+func TestLease2ValidateMultipleErrors(t *testing.T) {
+	lease2, err := NewLease2(data.Hash{}, 0, time.Now().Add(-1*time.Hour))
+	require.NoError(t, err)
+
+	err = lease2.Validate()
+	require.Error(t, err)
+	assert.ErrorIs(t, err, ErrZeroGatewayHash, "should contain ErrZeroGatewayHash")
+	assert.ErrorIs(t, err, ErrZeroTunnelID, "should contain ErrZeroTunnelID")
+	assert.ErrorIs(t, err, ErrExpiredLease, "should contain ErrExpiredLease")
+}
+
+// TestReadLease2ErrorMessageFormat verifies error messages include expected/actual byte counts.
+// Mirrors TestReadLeaseErrorMessageFormat for API consistency.
+func TestReadLease2ErrorMessageFormat(t *testing.T) {
+	tests := []struct {
+		name         string
+		inputSize    int
+		expectedGot  string
+		expectedWant string
+	}{
+		{"10_bytes", 10, "got 10", "expected 40"},
+		{"0_bytes", 0, "got 0", "expected 40"},
+		{"39_bytes", 39, "got 39", "expected 40"},
+		{"1_byte", 1, "got 1", "expected 40"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			shortData := make([]byte, tt.inputSize)
+			_, _, err := ReadLease2(shortData)
+			require.Error(t, err)
+			errMsg := err.Error()
+			assert.Contains(t, errMsg, tt.expectedWant,
+				"error message should contain expected byte count")
+			assert.Contains(t, errMsg, tt.expectedGot,
+				"error message should contain actual byte count")
+		})
+	}
 }
