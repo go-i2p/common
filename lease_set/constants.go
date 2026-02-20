@@ -33,4 +33,18 @@ var (
 	// ErrNoLeases is returned when a LeaseSet has no leases and an
 	// expiration-related operation is called.
 	ErrNoLeases = oops.Errorf("lease set has no leases")
+
+	// ErrTrailingData is returned when a LeaseSet has trailing bytes after the
+	// signature. The I2P spec prohibits excess data in structures.
+	ErrTrailingData = oops.Errorf("LeaseSet has trailing data after signature")
+
+	// ErrNonElGamalEncryptionKey is returned when a LeaseSet v1 is constructed
+	// with an encryption key that is not an ElGamal public key. LeaseSet v1
+	// mandates ElGamal encryption; non-ElGamal crypto types are only valid in
+	// LeaseSet2.
+	ErrNonElGamalEncryptionKey = oops.Errorf("LeaseSet v1 requires ElGamal encryption key")
+
+	// ErrAllZeroEncryptionKey is returned when a LeaseSet's encryption key is
+	// all zero bytes, which is cryptographically invalid.
+	ErrAllZeroEncryptionKey = oops.Errorf("encryption key is all zeros (cryptographically invalid)")
 )

@@ -51,9 +51,16 @@ func validateLeaseSetKeys(ls *LeaseSet) error {
 	if ls.encryptionKey == nil {
 		return oops.Errorf("encryption key is required")
 	}
-	if len(ls.encryptionKey.Bytes()) != LEASE_SET_PUBKEY_SIZE {
+	encBytes := ls.encryptionKey.Bytes()
+	if len(encBytes) != LEASE_SET_PUBKEY_SIZE {
 		return oops.Errorf("invalid encryption key size: got %d, expected %d",
-			len(ls.encryptionKey.Bytes()), LEASE_SET_PUBKEY_SIZE)
+			len(encBytes), LEASE_SET_PUBKEY_SIZE)
+	}
+	// Check for all-zero encryption key (cryptographically invalid).
+	// This also catches the case where parseEncryptionKey produced a value-type
+	// ElgPublicKey from all-zero data — the interface is non-nil but the key is useless.
+	if isAllZero(encBytes) {
+		return ErrAllZeroEncryptionKey
 	}
 	if ls.signingKey == nil {
 		return oops.Errorf("signing key is required")
@@ -125,6 +132,12 @@ func validateLeaseSetInputs(dest destination.Destination, encryptionKey types.Re
 	// Validate encryption key size
 	if len(encryptionKey.Bytes()) != LEASE_SET_PUBKEY_SIZE {
 		return oops.Errorf("invalid encryption key size")
+	}
+
+	// Validate encryption key is ElGamal — LeaseSet v1 requires ElGamal.
+	// Non-ElGamal crypto types are only valid in LeaseSet2.
+	if !isElGamalKey(encryptionKey) {
+		return oops.Errorf("%w: got %T", ErrNonElGamalEncryptionKey, encryptionKey)
 	}
 
 	// Validate lease count
@@ -269,6 +282,28 @@ func logLeaseSetCreationSuccess(leaseSet LeaseSet) {
 		"signing_key_length":    len(leaseSet.signingKey.Bytes()),
 		"lease_count":           leaseSet.leaseCount,
 	}).Debug("Successfully created new LeaseSet")
+}
+
+// isElGamalKey returns true if the key is an ElGamal public key type.
+func isElGamalKey(key types.ReceivingPublicKey) bool {
+	switch key.(type) {
+	case elgamal.ElgPublicKey:
+		return true
+	case *elgamal.ElgPublicKey:
+		return true
+	default:
+		return false
+	}
+}
+
+// isAllZero returns true if every byte in the slice is zero.
+func isAllZero(b []byte) bool {
+	for _, v := range b {
+		if v != 0 {
+			return false
+		}
+	}
+	return len(b) > 0 && true
 }
 
 // getSignatureType determines the signature type from a certificate

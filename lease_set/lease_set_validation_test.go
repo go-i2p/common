@@ -1,9 +1,11 @@
 package lease_set
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/go-i2p/common/lease"
+	elgamal "github.com/go-i2p/crypto/elg"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -148,8 +150,131 @@ func TestValidation_ParseSignatureTrailingData(t *testing.T) {
 	// Add trailing data
 	withTrailing := append(lsBytes, []byte{0xDE, 0xAD, 0xBE, 0xEF}...)
 
-	// ReadLeaseSet should still succeed (trailing data warning only)
-	parsed, err := ReadLeaseSet(withTrailing)
+	// ReadLeaseSet should reject trailing data per spec
+	_, err = ReadLeaseSet(withTrailing)
+	assert.Error(t, err)
+	assert.ErrorIs(t, err, ErrTrailingData)
+}
+
+// --- Trailing data rejection (subtests) ---
+
+func TestValidation_TrailingDataRejected(t *testing.T) {
+	routerInfo, _, _, _, _, err := generateTestRouterInfo(t)
+	require.NoError(t, err)
+
+	leaseSet, err := createTestLeaseSet(t, routerInfo, 1)
+	require.NoError(t, err)
+
+	lsBytes, err := leaseSet.Bytes()
+	require.NoError(t, err)
+
+	t.Run("single trailing byte rejected", func(t *testing.T) {
+		withTrailing := append(append([]byte{}, lsBytes...), 0x00)
+		_, err := ReadLeaseSet(withTrailing)
+		assert.Error(t, err)
+		assert.True(t, errors.Is(err, ErrTrailingData), "expected ErrTrailingData, got: %v", err)
+	})
+
+	t.Run("multiple trailing bytes rejected", func(t *testing.T) {
+		withTrailing := append(append([]byte{}, lsBytes...), 0xDE, 0xAD, 0xBE, 0xEF)
+		_, err := ReadLeaseSet(withTrailing)
+		assert.Error(t, err)
+		assert.True(t, errors.Is(err, ErrTrailingData), "expected ErrTrailingData, got: %v", err)
+	})
+
+	t.Run("exact bytes accepted", func(t *testing.T) {
+		parsed, err := ReadLeaseSet(lsBytes)
+		assert.NoError(t, err)
+		assert.Equal(t, leaseSet.LeaseCount(), parsed.LeaseCount())
+	})
+}
+
+func TestValidation_TrailingDataWithMultipleLeases(t *testing.T) {
+	routerInfo, _, _, _, _, err := generateTestRouterInfo(t)
+	require.NoError(t, err)
+
+	leaseSet, err := createTestLeaseSet(t, routerInfo, 3)
+	require.NoError(t, err)
+
+	lsBytes, err := leaseSet.Bytes()
+	require.NoError(t, err)
+
+	withTrailing := append(append([]byte{}, lsBytes...), 0xFF)
+	_, err = ReadLeaseSet(withTrailing)
+	assert.Error(t, err)
+	assert.True(t, errors.Is(err, ErrTrailingData))
+}
+
+// --- Validate detects all-zero encryption key ---
+
+func TestValidation_ValidateRejectsAllZeroEncryptionKey(t *testing.T) {
+	routerInfo, _, _, _, _, err := generateTestRouterInfo(t)
+	require.NoError(t, err)
+
+	leaseSet, err := createTestLeaseSet(t, routerInfo, 1)
+	require.NoError(t, err)
+
+	var zeroKey elgamal.ElgPublicKey // all zeros
+	manualLS := &LeaseSet{
+		dest:          leaseSet.dest,
+		encryptionKey: zeroKey,
+		signingKey:    leaseSet.signingKey,
+		leaseCount:    0,
+		leases:        []lease.Lease{},
+	}
+
+	err = manualLS.Validate()
+	assert.Error(t, err)
+	assert.True(t, errors.Is(err, ErrAllZeroEncryptionKey),
+		"expected ErrAllZeroEncryptionKey, got: %v", err)
+}
+
+func TestValidation_ValidateAcceptsNonZeroEncryptionKey(t *testing.T) {
+	routerInfo, _, _, _, _, err := generateTestRouterInfo(t)
+	require.NoError(t, err)
+
+	leaseSet, err := createTestLeaseSet(t, routerInfo, 1)
+	require.NoError(t, err)
+
+	err = leaseSet.Validate()
 	assert.NoError(t, err)
-	assert.NotNil(t, parsed)
+}
+
+func TestValidation_ReadLeaseSetAllZeroEncryptionKeyFailsValidation(t *testing.T) {
+	routerInfo, _, _, _, _, err := generateTestRouterInfo(t)
+	require.NoError(t, err)
+
+	leaseSet, err := createTestLeaseSet(t, routerInfo, 1)
+	require.NoError(t, err)
+
+	lsBytes, err := leaseSet.Bytes()
+	require.NoError(t, err)
+
+	dest := leaseSet.Destination()
+	destBytes, err := dest.KeysAndCert.Bytes()
+	require.NoError(t, err)
+	destLen := len(destBytes)
+
+	tampered := make([]byte, len(lsBytes))
+	copy(tampered, lsBytes)
+	for i := destLen; i < destLen+LEASE_SET_PUBKEY_SIZE; i++ {
+		tampered[i] = 0x00
+	}
+
+	// ReadLeaseSet rejects all-zero ElGamal key at parse time
+	_, err = ReadLeaseSet(tampered)
+	assert.Error(t, err, "ReadLeaseSet should reject all-zero ElGamal key")
+
+	// Also test Validate() on a directly-constructed LeaseSet with zero key
+	var zeroKey elgamal.ElgPublicKey
+	manualLS := &LeaseSet{
+		dest:          leaseSet.dest,
+		encryptionKey: zeroKey,
+		signingKey:    leaseSet.signingKey,
+		leaseCount:    0,
+		leases:        []lease.Lease{},
+	}
+	err = manualLS.Validate()
+	assert.Error(t, err)
+	assert.True(t, errors.Is(err, ErrAllZeroEncryptionKey))
 }

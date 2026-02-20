@@ -22,6 +22,16 @@ import (
 	"github.com/samber/oops"
 )
 
+// mockNonElGamalKey is a 256-byte key that implements ReceivingPublicKey but is not ElGamal.
+type mockNonElGamalKey [256]byte
+
+func (k mockNonElGamalKey) Bytes() []byte                          { return k[:] }
+func (k mockNonElGamalKey) Len() int                               { return 256 }
+func (k mockNonElGamalKey) NewEncrypter() (types.Encrypter, error) { return nil, nil }
+
+// Ensure mockNonElGamalKey satisfies ReceivingPublicKey at compile time.
+var _ types.ReceivingPublicKey = mockNonElGamalKey{}
+
 // generateTestRouterInfo creates a full RouterInfo with Ed25519 signing keys
 // and ElGamal encryption keys, returning all key material needed for LeaseSet tests.
 func generateTestRouterInfo(t *testing.T) (*router_info.RouterInfo, types.ReceivingPublicKey, types.SigningPublicKey, types.SigningPublicKey, types.SigningPublicKey, error) {

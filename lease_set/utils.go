@@ -129,6 +129,12 @@ func ReadDestinationFromLeaseSet(data []byte) (dest destination.Destination, rem
 // The cryptographic signature is NOT verified during parsing; call Verify()
 // on the returned LeaseSet to validate the signature against the Destination's
 // signing public key.
+//
+// Unlike sibling Read functions (ReadCertificate, ReadLease), ReadLeaseSet does
+// not return remainder bytes. The I2P spec prohibits excess data after the
+// signature, so any trailing bytes are rejected as an error. LeaseSets are
+// stored as complete structures in the network database and are not embedded
+// within larger wire messages.
 func ReadLeaseSet(data []byte) (LeaseSet, error) {
 	log.Debug("Reading LeaseSet")
 
@@ -154,6 +160,11 @@ func parseLeaseSetComponents(data []byte) (LeaseSet, error) {
 
 	signingKey, remainder, err := parseSigningKey(remainder, dest)
 	if err != nil {
+		return LeaseSet{}, err
+	}
+
+	// Validate signing key type matches destination's signing key type (spec: 0.9.26+)
+	if err := validateParsedSigningKeyType(signingKey, dest); err != nil {
 		return LeaseSet{}, err
 	}
 
@@ -307,6 +318,10 @@ func parseSignature(data []byte, dest destination.Destination) (sig.Signature, [
 		log.WithFields(logger.Fields{
 			"trailing_bytes": len(remainder),
 		}).Warn("LeaseSet has trailing data after signature")
+		return sig.Signature{}, data, oops.Errorf(
+			"LeaseSet has %d trailing bytes after signature; excess data is prohibited per spec: %w",
+			len(remainder), ErrTrailingData,
+		)
 	}
 
 	sigType := determineSignatureType(cert, kind)
@@ -339,7 +354,33 @@ func determineSignatureType(cert *certificate.Certificate, kind int) int {
 	return sig.SIGNATURE_TYPE_DSA_SHA1
 }
 
+// validateParsedSigningKeyType verifies that the signing key constructed during
+// parsing has a byte length consistent with the destination's certificate.
+// Per the I2P spec (0.9.26+), the signing key type in the LeaseSet must match
+// the destination's signing key type.
+func validateParsedSigningKeyType(signingKey types.SigningPublicKey, dest destination.Destination) error {
+	cert := dest.Certificate()
+	kind, err := cert.Type()
+	if err != nil {
+		return nil // Cannot validate without cert type; other checks will catch issues
+	}
+
+	expectedSize := determineSigningKeySize(cert, kind)
+	actualSize := len(signingKey.Bytes())
+	if actualSize != expectedSize {
+		return oops.Errorf(
+			"parsed signing key size %d does not match expected size %d from destination certificate",
+			actualSize, expectedSize,
+		)
+	}
+	return nil
+}
+
 // assembleLeaseSetFromParsedData creates the final LeaseSet structure from parsed components.
+// The encryptionKey parameter is elgamal.ElgPublicKey (concrete type) because
+// LeaseSet v1 always uses ElGamal encryption. This matches the parsing path's
+// type and ensures consistency. The construction path (assembleLeaseSet) also
+// enforces ElGamal via validateLeaseSetInputs.
 func assembleLeaseSetFromParsedData(dest destination.Destination, encryptionKey elgamal.ElgPublicKey, signingKey types.SigningPublicKey, leaseCount int, leases []lease.Lease, signature sig.Signature) LeaseSet {
 	return LeaseSet{
 		dest:          dest,

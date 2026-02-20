@@ -1,10 +1,14 @@
 package lease_set
 
 import (
+	"crypto/rand"
+	"errors"
 	"testing"
 
+	"github.com/go-i2p/common/certificate"
 	"github.com/go-i2p/common/data"
 	"github.com/go-i2p/common/lease"
+	elgamal "github.com/go-i2p/crypto/elg"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -394,4 +398,147 @@ func TestUnit_DetermineSigningKeySizeUsesCorrectAPI(t *testing.T) {
 
 	sigKeySize := determineSigningKeySize(cert, kind)
 	assert.Equal(t, 32, sigKeySize, "Ed25519 signing key should be 32 bytes")
+}
+
+// --- NewLeaseSet rejects non-ElGamal encryption keys ---
+
+func TestUnit_NewLeaseSetRejectsNonElGamalKey(t *testing.T) {
+	dest, _, sigKey, sigPrivKey, err := generateTestDestination(t)
+	require.NoError(t, err)
+
+	var fakeKey mockNonElGamalKey
+	_, err = rand.Read(fakeKey[:])
+	require.NoError(t, err)
+
+	_, err = NewLeaseSet(*dest, fakeKey, sigKey, []lease.Lease{}, sigPrivKey)
+	assert.Error(t, err)
+	assert.True(t, errors.Is(err, ErrNonElGamalEncryptionKey),
+		"expected ErrNonElGamalEncryptionKey, got: %v", err)
+}
+
+func TestUnit_NewLeaseSetAcceptsElGamalKey(t *testing.T) {
+	dest, encKey, sigKey, sigPrivKey, err := generateTestDestination(t)
+	require.NoError(t, err)
+
+	leaseSet, err := NewLeaseSet(*dest, encKey, sigKey, []lease.Lease{}, sigPrivKey)
+	assert.NoError(t, err)
+	assert.NotNil(t, leaseSet)
+}
+
+func TestUnit_NewLeaseSetAcceptsElGamalPointerKey(t *testing.T) {
+	dest, _, sigKey, sigPrivKey, err := generateTestDestination(t)
+	require.NoError(t, err)
+
+	var elgKey elgamal.ElgPublicKey
+	_, err = rand.Read(elgKey[:])
+	require.NoError(t, err)
+
+	leaseSet, err := NewLeaseSet(*dest, &elgKey, sigKey, []lease.Lease{}, sigPrivKey)
+	assert.NoError(t, err)
+	assert.NotNil(t, leaseSet)
+}
+
+func TestUnit_NewLeaseSetRejects256ByteNonElGamalKey(t *testing.T) {
+	dest, _, sigKey, sigPrivKey, err := generateTestDestination(t)
+	require.NoError(t, err)
+
+	var fakeKey mockNonElGamalKey
+	_, err = rand.Read(fakeKey[:])
+	require.NoError(t, err)
+
+	_, err = NewLeaseSet(*dest, fakeKey, sigKey, []lease.Lease{}, sigPrivKey)
+	assert.Error(t, err, "should reject 256-byte non-ElGamal key")
+	assert.True(t, errors.Is(err, ErrNonElGamalEncryptionKey))
+}
+
+// --- isAllZero helper ---
+
+func TestUnit_IsAllZero(t *testing.T) {
+	t.Run("all zeros", func(t *testing.T) {
+		assert.True(t, isAllZero(make([]byte, 256)))
+	})
+
+	t.Run("not all zeros", func(t *testing.T) {
+		b := make([]byte, 256)
+		b[128] = 1
+		assert.False(t, isAllZero(b))
+	})
+
+	t.Run("single non-zero byte", func(t *testing.T) {
+		b := make([]byte, 256)
+		b[255] = 0xFF
+		assert.False(t, isAllZero(b))
+	})
+
+	t.Run("empty slice", func(t *testing.T) {
+		assert.False(t, isAllZero([]byte{}))
+	})
+}
+
+// --- isElGamalKey helper ---
+
+func TestUnit_IsElGamalKey(t *testing.T) {
+	t.Run("ElgPublicKey value", func(t *testing.T) {
+		var key elgamal.ElgPublicKey
+		assert.True(t, isElGamalKey(key))
+	})
+
+	t.Run("ElgPublicKey pointer", func(t *testing.T) {
+		var key elgamal.ElgPublicKey
+		assert.True(t, isElGamalKey(&key))
+	})
+
+	t.Run("non-ElGamal key", func(t *testing.T) {
+		var key mockNonElGamalKey
+		assert.False(t, isElGamalKey(key))
+	})
+}
+
+// --- NULL/DSA certificate component tests ---
+
+func TestUnit_DetermineSigningKeySizeNullCert(t *testing.T) {
+	cert, err := certificate.NewCertificateWithType(certificate.CERT_NULL, nil)
+	require.NoError(t, err)
+
+	size := determineSigningKeySize(cert, certificate.CERT_NULL)
+	assert.Equal(t, LEASE_SET_SPK_SIZE, size,
+		"NULL cert should use default 128-byte signing key size")
+}
+
+func TestUnit_DetermineSignatureSizeNullCert(t *testing.T) {
+	cert, err := certificate.NewCertificateWithType(certificate.CERT_NULL, nil)
+	require.NoError(t, err)
+
+	size := determineSignatureSize(cert, certificate.CERT_NULL)
+	assert.Equal(t, LEASE_SET_SIG_SIZE, size,
+		"NULL cert should use default 40-byte signature size")
+}
+
+func TestUnit_DetermineSignatureTypeNullCert(t *testing.T) {
+	cert, err := certificate.NewCertificateWithType(certificate.CERT_NULL, nil)
+	require.NoError(t, err)
+
+	sigType := determineSignatureType(cert, certificate.CERT_NULL)
+	assert.Equal(t, 0, sigType,
+		"NULL cert should use DSA_SHA1 signature type (0)")
+}
+
+func TestUnit_ConstructSigningKeyNullCert(t *testing.T) {
+	cert, err := certificate.NewCertificateWithType(certificate.CERT_NULL, nil)
+	require.NoError(t, err)
+
+	keyData := make([]byte, 128)
+	_, err = rand.Read(keyData)
+	require.NoError(t, err)
+
+	sigKey, err := constructSigningKey(keyData, cert, certificate.CERT_NULL)
+	if err != nil {
+		// DSA library may reject random bytes that don't satisfy p constraint.
+		assert.Contains(t, err.Error(), "DSA",
+			"error should mention DSA for NULL cert path")
+	} else {
+		assert.NotNil(t, sigKey)
+		assert.Equal(t, 128, len(sigKey.Bytes()),
+			"DSA signing key should be 128 bytes")
+	}
 }

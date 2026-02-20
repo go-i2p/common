@@ -39,3 +39,20 @@ func TestConstants_ErrNoLeasesNotNil(t *testing.T) {
 func TestConstants_ErrNoLeasesMessage(t *testing.T) {
 	assert.Contains(t, ErrNoLeases.Error(), "no leases")
 }
+
+// --- Sentinel errors for audit findings ---
+
+func TestConstants_ErrTrailingDataNotNil(t *testing.T) {
+	assert.NotNil(t, ErrTrailingData)
+	assert.Contains(t, ErrTrailingData.Error(), "trailing data")
+}
+
+func TestConstants_ErrNonElGamalEncryptionKeyNotNil(t *testing.T) {
+	assert.NotNil(t, ErrNonElGamalEncryptionKey)
+	assert.Contains(t, ErrNonElGamalEncryptionKey.Error(), "ElGamal")
+}
+
+func TestConstants_ErrAllZeroEncryptionKeyNotNil(t *testing.T) {
+	assert.NotNil(t, ErrAllZeroEncryptionKey)
+	assert.Contains(t, ErrAllZeroEncryptionKey.Error(), "all zeros")
+}
