@@ -61,7 +61,7 @@ func NewRouterAddress(cost uint8, expiration time.Time, transportType string, op
 // Validate checks if the RouterAddress is properly initialized.
 func (ra *RouterAddress) Validate() error {
 	if ra == nil {
-		return oops.Errorf("router address is nil")
+		return ErrNilRouterAddress
 	}
 	if err := validateRouterAddressFields(ra); err != nil {
 		return err
@@ -76,16 +76,16 @@ func (ra *RouterAddress) Validate() error {
 // are non-nil and non-empty.
 func validateRouterAddressFields(ra *RouterAddress) error {
 	if ra.TransportCost == nil {
-		return oops.Errorf("transport cost is required")
+		return ErrMissingTransportCost
 	}
 	if ra.ExpirationDate == nil {
-		return oops.Errorf("expiration date is required")
+		return ErrMissingExpirationDate
 	}
 	if ra.TransportType == nil || len(ra.TransportType) == 0 {
-		return oops.Errorf("transport type is required")
+		return ErrMissingTransportType
 	}
 	if ra.TransportOptions == nil {
-		return oops.Errorf("transport options are required")
+		return ErrMissingTransportOptions
 	}
 	return nil
 }
@@ -107,10 +107,11 @@ func createTransportCost(cost uint8) (*data.Integer, error) {
 }
 
 // createExpirationDate creates the ExpirationDate field as a Date.
-// Per I2P spec, the expiration MUST always be all zeros.
-// The expiration parameter is accepted for API compatibility but is always ignored.
-// Deprecated: The expiration parameter has no effect. Consider using a parameterless variant.
+// Per I2P spec (0.9.12+), the expiration MUST always be all zeros.
+// The expiration parameter is accepted for API compatibility but is always ignored;
+// the resulting Date is always all-zeros regardless of the value passed.
 func createExpirationDate(expiration time.Time) (*data.Date, error) {
+	_ = expiration                            // explicitly ignored per I2P spec — expiration is always all zeros
 	dateBytes := make([]byte, data.DATE_SIZE) // all zeros per spec
 	expirationDate, _, err := data.NewDate(dateBytes)
 	if err != nil {

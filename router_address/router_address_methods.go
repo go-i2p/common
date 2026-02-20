@@ -9,6 +9,7 @@ import (
 
 	"github.com/samber/oops"
 
+	i2pbase64 "github.com/go-i2p/common/base64"
 	"github.com/go-i2p/common/data"
 )
 
@@ -72,6 +73,7 @@ func (ra *RouterAddress) ipVersionFromHost() string {
 
 // ipVersionFromCaps determines IP version from the caps option suffix.
 // This is a Java router convention, not mandated by the I2P spec.
+// Returns "" if the caps string is empty or unrecognized.
 func (ra *RouterAddress) ipVersionFromCaps() string {
 	caps := ra.CapsString()
 	if caps == nil {
@@ -79,6 +81,9 @@ func (ra *RouterAddress) ipVersionFromCaps() string {
 	}
 	str, err := caps.Data()
 	if err != nil {
+		return ""
+	}
+	if len(str) == 0 {
 		return ""
 	}
 	if strings.HasSuffix(str, IPV6_SUFFIX) {
@@ -131,10 +136,10 @@ func (ra *RouterAddress) String() string {
 }
 
 // Bytes returns the router address as a []byte.
-// Returns nil if any required field is nil.
+// Returns nil if any required field is nil or empty.
 func (ra RouterAddress) Bytes() []byte {
 	log.Debug("Converting RouterAddress to bytes")
-	if ra.TransportCost == nil || ra.ExpirationDate == nil || ra.TransportOptions == nil {
+	if ra.TransportCost == nil || ra.ExpirationDate == nil || ra.TransportType == nil || len(ra.TransportType) == 0 || ra.TransportOptions == nil {
 		log.Warn("Cannot serialize RouterAddress with nil fields")
 		return nil
 	}
@@ -392,19 +397,21 @@ func (ra RouterAddress) HasValidPort() bool {
 }
 
 // StaticKey returns the static key as a 32-byte array.
-// Uses I2PString.Data() to extract content without the length prefix.
+// Per the NTCP2 specification, the "s" option value is base64-encoded.
+// This method attempts base64 decode first (I2P alphabet), then falls back
+// to treating the value as raw bytes for backward compatibility.
 func (ra RouterAddress) StaticKey() ([32]byte, error) {
 	sk := ra.StaticKeyString()
 	if sk == nil {
-		return [32]byte{}, oops.Errorf("error: static key not found")
+		return [32]byte{}, oops.Errorf("%w", ErrMissingStaticKey)
 	}
 	skData, err := sk.Data()
 	if err != nil {
-		return [32]byte{}, oops.Errorf("error: failed to read static key data: %v", err)
+		return [32]byte{}, oops.Errorf("failed to read static key data: %w", err)
 	}
-	skBytes := []byte(skData)
-	if len(skBytes) != STATIC_KEY_SIZE {
-		return [32]byte{}, oops.Errorf("error: invalid static key length: %d, expected %d", len(skBytes), STATIC_KEY_SIZE)
+	skBytes, err := decodeOptionValue(skData, STATIC_KEY_SIZE)
+	if err != nil {
+		return [32]byte{}, oops.Errorf("%w: got %d bytes, expected %d", ErrInvalidStaticKey, len(skBytes), STATIC_KEY_SIZE)
 	}
 	var result [32]byte
 	copy(result[:], skBytes)
@@ -412,19 +419,21 @@ func (ra RouterAddress) StaticKey() ([32]byte, error) {
 }
 
 // InitializationVector returns the initialization vector as a 16-byte array.
-// Uses I2PString.Data() to extract content without the length prefix.
+// Per the NTCP2 specification, the "i" option value is base64-encoded.
+// This method attempts base64 decode first (I2P alphabet), then falls back
+// to treating the value as raw bytes for backward compatibility.
 func (ra RouterAddress) InitializationVector() ([16]byte, error) {
 	iv := ra.InitializationVectorString()
 	if iv == nil {
-		return [16]byte{}, oops.Errorf("error: initialization vector not found")
+		return [16]byte{}, oops.Errorf("%w", ErrMissingInitializationVector)
 	}
 	ivData, err := iv.Data()
 	if err != nil {
-		return [16]byte{}, oops.Errorf("error: failed to read IV data: %v", err)
+		return [16]byte{}, oops.Errorf("failed to read IV data: %w", err)
 	}
-	ivBytes := []byte(ivData)
-	if len(ivBytes) != INITIALIZATION_VECTOR_SIZE {
-		return [16]byte{}, oops.Errorf("error: invalid IV length: %d, expected %d", len(ivBytes), INITIALIZATION_VECTOR_SIZE)
+	ivBytes, err := decodeOptionValue(ivData, INITIALIZATION_VECTOR_SIZE)
+	if err != nil {
+		return [16]byte{}, oops.Errorf("%w: got %d bytes, expected %d", ErrInvalidInitializationVector, len(ivBytes), INITIALIZATION_VECTOR_SIZE)
 	}
 	var result [16]byte
 	copy(result[:], ivBytes)
@@ -475,4 +484,39 @@ func compareBytesContent(a, b []byte) bool {
 		return a == nil && b == nil
 	}
 	return bytes.Equal(a, b)
+}
+
+// decodeOptionValue attempts to decode a string option value as I2P base64.
+// If the base64-decoded result has the expected length, it is returned.
+// Otherwise, the raw bytes of the string are checked for the expected length.
+// This provides backward compatibility for callers that store raw bytes.
+func decodeOptionValue(val string, expectedLen int) ([]byte, error) {
+	// If raw bytes already match expected length, use them directly.
+	rawBytes := []byte(val)
+	if len(rawBytes) == expectedLen {
+		return rawBytes, nil
+	}
+	// Try I2P base64 decode.
+	decoded, err := i2pbase64.I2PEncoding.DecodeString(val)
+	if err == nil && len(decoded) == expectedLen {
+		return decoded, nil
+	}
+	// Neither raw nor base64 matched the expected length.
+	return rawBytes, oops.Errorf("option value has wrong length: %d (raw) or decode failed", len(rawBytes))
+}
+
+// HasNonZeroExpiration returns true if the ExpirationDate field contains
+// a non-zero value. Per the I2P spec (0.9.12+), routers MUST set the
+// expiration field to all zeros. A non-zero value indicates the remote
+// router is not following the spec.
+func (ra RouterAddress) HasNonZeroExpiration() bool {
+	if ra.ExpirationDate == nil {
+		return false
+	}
+	for _, b := range ra.ExpirationDate {
+		if b != 0 {
+			return true
+		}
+	}
+	return false
 }

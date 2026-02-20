@@ -42,7 +42,7 @@ func ReadRouterAddress(routerAddressData []byte) (ra RouterAddress, remainder []
 func validateRouterAddressData(data []byte) error {
 	if len(data) == 0 {
 		log.WithField("at", "(RouterAddress) validateRouterAddressData").Error("error parsing RouterAddress: no data")
-		return oops.Errorf("error parsing RouterAddress: no data")
+		return oops.Errorf("%w", ErrNoData)
 	}
 	if len(data) < ROUTER_ADDRESS_MIN_SIZE {
 		log.WithFields(logger.Fields{
@@ -50,7 +50,7 @@ func validateRouterAddressData(data []byte) error {
 			"expected": ROUTER_ADDRESS_MIN_SIZE,
 			"got":      len(data),
 		}).Error("error parsing RouterAddress: data too small")
-		return oops.Errorf("error parsing RouterAddress: not enough data (expected at least %d bytes, got %d bytes)", ROUTER_ADDRESS_MIN_SIZE, len(data))
+		return oops.Errorf("%w: expected at least %d bytes, got %d", ErrDataTooSmall, ROUTER_ADDRESS_MIN_SIZE, len(data))
 	}
 	return nil
 }
@@ -101,6 +101,7 @@ func isAllZeros(b []byte) bool {
 
 // parseTransportType parses the transport type field from data.
 // Returns remaining data after parsing and any error encountered.
+// Rejects zero-length transport style strings as invalid per spec.
 func parseTransportType(ra *RouterAddress, routerData []byte) ([]byte, error) {
 	transportType, remainder, err := data.ReadI2PString(routerData)
 	if err != nil {
@@ -109,6 +110,11 @@ func parseTransportType(ra *RouterAddress, routerData []byte) ([]byte, error) {
 			"reason": "error parsing transport_style",
 		}).Error("error parsing RouterAddress")
 		return remainder, err
+	}
+	content, contentErr := transportType.Data()
+	if contentErr == nil && len(content) == 0 {
+		log.WithField("at", "(RouterAddress) parseTransportType").Error("transport_style is empty")
+		return remainder, oops.Errorf("%w", ErrEmptyTransportStyle)
 	}
 	ra.TransportType = transportType
 	return remainder, nil

@@ -1,6 +1,7 @@
 package router_address
 
 import (
+	"errors"
 	"testing"
 	"time"
 
@@ -48,8 +49,10 @@ func TestReadRouterAddressNonZeroExpiration(t *testing.T) {
 	t.Run("non-zero expiration parsed with warning but not rejected", func(t *testing.T) {
 		buf := []byte{0x05}
 		buf = append(buf, 0x00, 0x00, 0x01, 0x8F, 0x5C, 0xE4, 0x00, 0x00)
-		buf = append(buf, 0x00)
-		buf = append(buf, 0x00, 0x00)
+		transportStr, _ := data.ToI2PString("NTCP2")
+		buf = append(buf, transportStr...)
+		mapping, _ := data.GoMapToMapping(map[string]string{})
+		buf = append(buf, mapping.Data()...)
 
 		ra, _, err := ReadRouterAddress(buf)
 		assert.NoError(t, err, "ReadRouterAddress should accept non-zero expiration with warning")
@@ -61,8 +64,10 @@ func TestReadRouterAddressNonZeroExpiration(t *testing.T) {
 	t.Run("zero expiration accepted cleanly", func(t *testing.T) {
 		buf := []byte{0x05}
 		buf = append(buf, make([]byte, 8)...)
-		buf = append(buf, 0x00)
-		buf = append(buf, 0x00, 0x00)
+		transportStr, _ := data.ToI2PString("NTCP2")
+		buf = append(buf, transportStr...)
+		mapping, _ := data.GoMapToMapping(map[string]string{})
+		buf = append(buf, mapping.Data()...)
 
 		ra, _, err := ReadRouterAddress(buf)
 		assert.NoError(t, err)
@@ -102,7 +107,8 @@ func TestReadRouterAddressMalformedMapping(t *testing.T) {
 func TestReadRouterAddressEmptyMappingNoPanic(t *testing.T) {
 	buf := []byte{0x05}
 	buf = append(buf, make([]byte, 8)...)
-	buf = append(buf, 0x00)
+	transportStr, _ := data.ToI2PString("X")
+	buf = append(buf, transportStr...)
 	buf = append(buf, 0x00, 0x00)
 
 	ra, _, err := ReadRouterAddress(buf)
@@ -124,18 +130,75 @@ func TestValidateRouterAddressDataMinSize(t *testing.T) {
 	t.Run("1 byte input", func(t *testing.T) {
 		_, _, err := ReadRouterAddress([]byte{0x01})
 		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "not enough data")
+		assert.Contains(t, err.Error(), "data too small")
 	})
 
 	t.Run("11 bytes input (under minimum)", func(t *testing.T) {
 		_, _, err := ReadRouterAddress(make([]byte, 11))
 		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "not enough data")
+		assert.Contains(t, err.Error(), "data too small")
 	})
 
-	t.Run("12 bytes input (exact minimum)", func(t *testing.T) {
-		buf := make([]byte, 12)
+	t.Run("12 bytes input with valid transport (exact minimum)", func(t *testing.T) {
+		// 1 (cost) + 8 (expiration) + 1 (transport length "X") + 1 ("X") + 2 (mapping size) = 13
+		// With a single char transport, we need at least 13 bytes.
+		// But 12 is the minimum with a 0-length transport string (now rejected).
+		// Test that a minimal valid wire packet (with 1-char transport) works:
+		buf := []byte{0x05}                      // cost
+		buf = append(buf, make([]byte, 8)...)    // expiration
+		transportStr, _ := data.ToI2PString("X") // 2 bytes: length + "X"
+		buf = append(buf, transportStr...)
+		buf = append(buf, 0x00, 0x00) // mapping size = 0
+
 		_, _, err := ReadRouterAddress(buf)
-		assert.NoError(t, err, "12 bytes should be accepted as minimum valid")
+		assert.NoError(t, err, "minimal valid data should be accepted")
+	})
+}
+
+// =========================================================================
+// Empty transport_style validation
+// =========================================================================
+
+func TestReadRouterAddress_EmptyTransportStyle(t *testing.T) {
+	t.Run("zero-length transport_style rejected", func(t *testing.T) {
+		wireData := make([]byte, 0, 20)
+		wireData = append(wireData, 0x05)               // cost
+		wireData = append(wireData, make([]byte, 8)...) // expiration (all zeros)
+		wireData = append(wireData, 0x00)               // I2PString length byte = 0 (empty string)
+		wireData = append(wireData, 0x00, 0x00)         // mapping size = 0
+
+		_, _, err := ReadRouterAddress(wireData)
+		assert.Error(t, err, "ReadRouterAddress should reject empty transport_style")
+		assert.True(t, errors.Is(err, ErrEmptyTransportStyle), "error should be ErrEmptyTransportStyle, got: %v", err)
+	})
+
+	t.Run("non-empty transport_style accepted", func(t *testing.T) {
+		ra, err := NewRouterAddress(5, time.Time{}, "NTCP2", map[string]string{})
+		require.NoError(t, err)
+		serialized := ra.Bytes()
+		require.NotNil(t, serialized)
+
+		parsed, _, err := ReadRouterAddress(serialized)
+		assert.NoError(t, err)
+		style, _ := parsed.TransportStyle().Data()
+		assert.Equal(t, "NTCP2", style)
+	})
+}
+
+// =========================================================================
+// ReadRouterAddress sentinel errors
+// =========================================================================
+
+func TestReadRouterAddress_SentinelErrors(t *testing.T) {
+	t.Run("ErrNoData from ReadRouterAddress", func(t *testing.T) {
+		_, _, err := ReadRouterAddress([]byte{})
+		assert.Error(t, err)
+		assert.True(t, errors.Is(err, ErrNoData), "Should be ErrNoData, got: %v", err)
+	})
+
+	t.Run("ErrDataTooSmall from ReadRouterAddress", func(t *testing.T) {
+		_, _, err := ReadRouterAddress([]byte{0x05, 0x00, 0x00})
+		assert.Error(t, err)
+		assert.True(t, errors.Is(err, ErrDataTooSmall), "Should be ErrDataTooSmall, got: %v", err)
 	})
 }

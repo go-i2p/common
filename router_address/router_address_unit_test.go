@@ -2,6 +2,7 @@ package router_address
 
 import (
 	"bytes"
+	"errors"
 	"testing"
 	"time"
 
@@ -381,7 +382,14 @@ func TestCheckRouterAddressValidNoErrWithValidData(t *testing.T) {
 func TestRouterAddressCostReturnsFirstByte(t *testing.T) {
 	assert := assert.New(t)
 
-	router_address, _, err := ReadRouterAddress([]byte{0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00})
+	// Build wire data: cost=6, 8-byte expiration, I2PString "X", mapping size=0
+	buf := []byte{0x06}
+	buf = append(buf, make([]byte, 8)...)
+	ts, _ := data.ToI2PString("X")
+	buf = append(buf, ts...)
+	buf = append(buf, 0x00, 0x00)
+
+	router_address, _, err := ReadRouterAddress(buf)
 	cost := router_address.Cost()
 
 	assert.Nil(err, "Cost() returned error with valid data")
@@ -391,7 +399,14 @@ func TestRouterAddressCostReturnsFirstByte(t *testing.T) {
 func TestRouterAddressExpirationReturnsCorrectData(t *testing.T) {
 	assert := assert.New(t)
 
-	router_address, _, err := ReadRouterAddress([]byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00})
+	// Build wire data: cost=0, 8-byte expiration (all zeros), I2PString "X", mapping size=0
+	buf := []byte{0x00}
+	buf = append(buf, make([]byte, 8)...)
+	ts, _ := data.ToI2PString("X")
+	buf = append(buf, ts...)
+	buf = append(buf, 0x00, 0x00)
+
+	router_address, _, err := ReadRouterAddress(buf)
 	expiration := router_address.Expiration()
 
 	assert.Nil(err, "Expiration() returned error with valid data")
@@ -450,4 +465,101 @@ func TestReceiverNamingConsistency(t *testing.T) {
 	_ = ra.IPVersion()
 	_ = ra.UDP()
 	_ = ra.String()
+}
+
+// =========================================================================
+// Validate() sentinel errors
+// =========================================================================
+
+func TestSentinelErrors_ProgrammaticHandling(t *testing.T) {
+	t.Run("ErrNilRouterAddress from Validate", func(t *testing.T) {
+		var ra *RouterAddress
+		err := ra.Validate()
+		assert.Error(t, err)
+		assert.True(t, errors.Is(err, ErrNilRouterAddress), "Should be ErrNilRouterAddress, got: %v", err)
+	})
+
+	t.Run("ErrMissingTransportType from Validate", func(t *testing.T) {
+		cost, _ := data.NewIntegerFromInt(5, 1)
+		dateBytes := make([]byte, data.DATE_SIZE)
+		expDate, _, _ := data.NewDate(dateBytes)
+		opts, _ := data.GoMapToMapping(map[string]string{})
+		ra := &RouterAddress{
+			TransportCost:    cost,
+			ExpirationDate:   expDate,
+			TransportType:    nil,
+			TransportOptions: opts,
+		}
+		err := ra.Validate()
+		assert.True(t, errors.Is(err, ErrMissingTransportType), "Should be ErrMissingTransportType, got: %v", err)
+	})
+
+	t.Run("ErrMissingStaticKey from StaticKey", func(t *testing.T) {
+		ra, err := NewRouterAddress(5, time.Time{}, "NTCP2", map[string]string{"host": "127.0.0.1"})
+		require.NoError(t, err)
+		_, skErr := ra.StaticKey()
+		assert.True(t, errors.Is(skErr, ErrMissingStaticKey))
+	})
+
+	t.Run("ErrMissingInitializationVector from InitializationVector", func(t *testing.T) {
+		ra, err := NewRouterAddress(5, time.Time{}, "NTCP2", map[string]string{"host": "127.0.0.1"})
+		require.NoError(t, err)
+		_, ivErr := ra.InitializationVector()
+		assert.True(t, errors.Is(ivErr, ErrMissingInitializationVector))
+	})
+}
+
+// =========================================================================
+// NewRouterAddress option validation behavior
+// =========================================================================
+
+func TestNewRouterAddress_OptionValidation(t *testing.T) {
+	t.Run("invalid host accepted at construction, rejected at accessor", func(t *testing.T) {
+		ra, err := NewRouterAddress(5, time.Time{}, "NTCP2", map[string]string{
+			"host": "not-an-ip",
+		})
+		require.NoError(t, err, "Construction should succeed")
+		_, hostErr := ra.Host()
+		assert.Error(t, hostErr, "Host() should reject invalid IP")
+	})
+
+	t.Run("invalid port accepted at construction, rejected at accessor", func(t *testing.T) {
+		ra, err := NewRouterAddress(5, time.Time{}, "NTCP2", map[string]string{
+			"host": "127.0.0.1",
+			"port": "abc",
+		})
+		require.NoError(t, err, "Construction should succeed")
+		_, portErr := ra.Port()
+		assert.Error(t, portErr, "Port() should reject non-numeric port")
+	})
+
+	t.Run("port out of range rejected at accessor", func(t *testing.T) {
+		ra, err := NewRouterAddress(5, time.Time{}, "NTCP2", map[string]string{
+			"host": "127.0.0.1",
+			"port": "70000",
+		})
+		require.NoError(t, err, "Construction should succeed")
+		_, portErr := ra.Port()
+		assert.Error(t, portErr, "Port() should reject port > 65535")
+	})
+}
+
+// =========================================================================
+// createExpirationDate ignores parameter
+// =========================================================================
+
+func TestCreateExpirationDate_IgnoresParameter(t *testing.T) {
+	t.Run("future time produces all-zero date", func(t *testing.T) {
+		futureTime := time.Date(2030, 6, 15, 12, 0, 0, 0, time.UTC)
+		ra, err := NewRouterAddress(5, futureTime, "NTCP2", map[string]string{})
+		require.NoError(t, err)
+		assert.False(t, ra.HasNonZeroExpiration(), "Expiration should be all zeros regardless of input time")
+	})
+
+	t.Run("past time produces all-zero date", func(t *testing.T) {
+		pastTime := time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC)
+		ra, err := NewRouterAddress(5, pastTime, "NTCP2", map[string]string{})
+		require.NoError(t, err)
+		assert.False(t, ra.HasNonZeroExpiration())
+	})
 }

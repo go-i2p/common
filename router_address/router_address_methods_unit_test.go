@@ -2,10 +2,13 @@ package router_address
 
 import (
 	"encoding/base64"
+	"errors"
 	"net"
+	"strings"
 	"testing"
 	"time"
 
+	i2pbase64 "github.com/go-i2p/common/base64"
 	"github.com/go-i2p/common/data"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -460,22 +463,38 @@ func TestPort_ValidPort(t *testing.T) {
 // =========================================================================
 
 func TestStaticKeyExcludesLengthPrefix(t *testing.T) {
-	keyData := make([]byte, 32)
-	for i := range keyData {
-		keyData[i] = byte(i)
-	}
-	keyStr := base64.StdEncoding.EncodeToString(keyData)
+	t.Run("base64-encoded 32-byte key succeeds after decode", func(t *testing.T) {
+		keyData := make([]byte, 32)
+		for i := range keyData {
+			keyData[i] = byte(i)
+		}
+		keyStr := base64.StdEncoding.EncodeToString(keyData)
 
-	options := map[string]string{
-		"host": "127.0.0.1",
-		"port": "9150",
-		"s":    keyStr,
-	}
-	ra, err := NewRouterAddress(5, time.Time{}, "NTCP2", options)
-	require.NoError(t, err)
+		options := map[string]string{
+			"host": "127.0.0.1",
+			"port": "9150",
+			"s":    keyStr,
+		}
+		ra, err := NewRouterAddress(5, time.Time{}, "NTCP2", options)
+		require.NoError(t, err)
 
-	_, err = ra.StaticKey()
-	assert.Error(t, err, "StaticKey should fail for non-32-byte data")
+		result, err := ra.StaticKey()
+		assert.NoError(t, err, "StaticKey should succeed for base64-encoded 32-byte data")
+		assert.Equal(t, keyData, result[:], "Decoded key should match original")
+	})
+
+	t.Run("wrong-length raw value returns error", func(t *testing.T) {
+		options := map[string]string{
+			"host": "127.0.0.1",
+			"port": "9150",
+			"s":    "short",
+		}
+		ra, err := NewRouterAddress(5, time.Time{}, "NTCP2", options)
+		require.NoError(t, err)
+
+		_, err = ra.StaticKey()
+		assert.Error(t, err, "StaticKey should fail for wrong-length data")
+	})
 }
 
 func TestStaticKeyNotFound(t *testing.T) {
@@ -505,7 +524,7 @@ func TestInitializationVectorInvalidSize(t *testing.T) {
 
 	_, err = ra.InitializationVector()
 	assert.Error(t, err, "InitializationVector should fail for wrong-size data")
-	assert.Contains(t, err.Error(), "invalid IV length")
+	assert.Contains(t, err.Error(), "invalid initialization vector length")
 }
 
 func TestProtocolVersion(t *testing.T) {
@@ -663,4 +682,359 @@ func TestNetAddrInterface(t *testing.T) {
 	var addr net.Addr = ra
 	assert.NotEmpty(t, addr.Network())
 	assert.NotEmpty(t, addr.String())
+}
+
+// =========================================================================
+// Bytes() nil TransportType guard
+// =========================================================================
+
+func TestBytes_NilTransportType(t *testing.T) {
+	t.Run("nil TransportType returns nil", func(t *testing.T) {
+		cost, _ := data.NewIntegerFromInt(5, 1)
+		dateBytes := make([]byte, data.DATE_SIZE)
+		expDate, _, _ := data.NewDate(dateBytes)
+		opts, _ := data.GoMapToMapping(map[string]string{})
+		ra := RouterAddress{
+			TransportCost:    cost,
+			ExpirationDate:   expDate,
+			TransportType:    nil,
+			TransportOptions: opts,
+		}
+		assert.Nil(t, ra.Bytes(), "Bytes() should return nil when TransportType is nil")
+	})
+
+	t.Run("empty TransportType returns nil", func(t *testing.T) {
+		cost, _ := data.NewIntegerFromInt(5, 1)
+		dateBytes := make([]byte, data.DATE_SIZE)
+		expDate, _, _ := data.NewDate(dateBytes)
+		opts, _ := data.GoMapToMapping(map[string]string{})
+		ra := RouterAddress{
+			TransportCost:    cost,
+			ExpirationDate:   expDate,
+			TransportType:    data.I2PString{},
+			TransportOptions: opts,
+		}
+		assert.Nil(t, ra.Bytes(), "Bytes() should return nil when TransportType is empty")
+	})
+
+	t.Run("valid TransportType produces non-nil bytes", func(t *testing.T) {
+		ra, err := NewRouterAddress(5, time.Time{}, "NTCP2", map[string]string{"host": "127.0.0.1"})
+		require.NoError(t, err)
+		b := ra.Bytes()
+		assert.NotNil(t, b, "Bytes() should produce non-nil output for valid address")
+	})
+
+	t.Run("nil TransportType cannot round-trip", func(t *testing.T) {
+		cost, _ := data.NewIntegerFromInt(5, 1)
+		dateBytes := make([]byte, data.DATE_SIZE)
+		expDate, _, _ := data.NewDate(dateBytes)
+		opts, _ := data.GoMapToMapping(map[string]string{})
+		ra := RouterAddress{
+			TransportCost:    cost,
+			ExpirationDate:   expDate,
+			TransportType:    nil,
+			TransportOptions: opts,
+		}
+		serialized := ra.Bytes()
+		assert.Nil(t, serialized, "Bytes() should return nil, not produce malformed data")
+	})
+}
+
+// =========================================================================
+// StaticKey() base64 decode
+// =========================================================================
+
+func TestStaticKey_Base64Decode(t *testing.T) {
+	t.Run("base64-encoded 32-byte key", func(t *testing.T) {
+		keyBytes := make([]byte, STATIC_KEY_SIZE)
+		for i := range keyBytes {
+			keyBytes[i] = byte(i)
+		}
+		encoded := i2pbase64.I2PEncoding.EncodeToString(keyBytes)
+		require.Equal(t, 44, len(encoded), "base64 of 32 bytes should be 44 chars")
+
+		ra, err := NewRouterAddress(5, time.Time{}, "NTCP2", map[string]string{
+			"host": "127.0.0.1",
+			"s":    encoded,
+		})
+		require.NoError(t, err)
+
+		result, err := ra.StaticKey()
+		assert.NoError(t, err, "StaticKey() should decode base64-encoded key")
+		assert.Equal(t, keyBytes, result[:], "Decoded key should match original")
+	})
+
+	t.Run("raw 32-byte key still works", func(t *testing.T) {
+		rawKey := strings.Repeat("A", STATIC_KEY_SIZE)
+		ra, err := NewRouterAddress(5, time.Time{}, "NTCP2", map[string]string{
+			"host": "127.0.0.1",
+			"s":    rawKey,
+		})
+		require.NoError(t, err)
+
+		result, err := ra.StaticKey()
+		assert.NoError(t, err, "StaticKey() should accept raw 32-byte key")
+		assert.Equal(t, []byte(rawKey), result[:])
+	})
+
+	t.Run("missing key returns error", func(t *testing.T) {
+		ra, err := NewRouterAddress(5, time.Time{}, "NTCP2", map[string]string{
+			"host": "127.0.0.1",
+		})
+		require.NoError(t, err)
+
+		_, err = ra.StaticKey()
+		assert.Error(t, err)
+		assert.True(t, errors.Is(err, ErrMissingStaticKey), "error should wrap ErrMissingStaticKey")
+	})
+
+	t.Run("wrong length returns error", func(t *testing.T) {
+		ra, err := NewRouterAddress(5, time.Time{}, "NTCP2", map[string]string{
+			"host": "127.0.0.1",
+			"s":    "tooshort",
+		})
+		require.NoError(t, err)
+
+		_, err = ra.StaticKey()
+		assert.Error(t, err)
+		assert.True(t, errors.Is(err, ErrInvalidStaticKey), "error should wrap ErrInvalidStaticKey")
+	})
+
+	t.Run("standard base64 encoded key (non-I2P alphabet)", func(t *testing.T) {
+		keyBytes := make([]byte, STATIC_KEY_SIZE)
+		keyBytes[0] = 0xFF
+		keyBytes[1] = 0xFE
+		encoded := i2pbase64.I2PEncoding.EncodeToString(keyBytes)
+
+		ra, err := NewRouterAddress(5, time.Time{}, "NTCP2", map[string]string{
+			"host": "127.0.0.1",
+			"s":    encoded,
+		})
+		require.NoError(t, err)
+
+		result, err := ra.StaticKey()
+		assert.NoError(t, err)
+		assert.Equal(t, keyBytes, result[:])
+	})
+}
+
+// =========================================================================
+// InitializationVector() base64 decode
+// =========================================================================
+
+func TestInitializationVector_Base64Decode(t *testing.T) {
+	t.Run("base64-encoded 16-byte IV", func(t *testing.T) {
+		ivBytes := make([]byte, INITIALIZATION_VECTOR_SIZE)
+		for i := range ivBytes {
+			ivBytes[i] = byte(i + 0x10)
+		}
+		encoded := i2pbase64.I2PEncoding.EncodeToString(ivBytes)
+
+		ra, err := NewRouterAddress(5, time.Time{}, "NTCP2", map[string]string{
+			"host": "127.0.0.1",
+			"i":    encoded,
+		})
+		require.NoError(t, err)
+
+		result, err := ra.InitializationVector()
+		assert.NoError(t, err, "InitializationVector() should decode base64-encoded IV")
+		assert.Equal(t, ivBytes, result[:], "Decoded IV should match original")
+	})
+
+	t.Run("raw 16-byte IV still works", func(t *testing.T) {
+		rawIV := strings.Repeat("B", INITIALIZATION_VECTOR_SIZE)
+		ra, err := NewRouterAddress(5, time.Time{}, "NTCP2", map[string]string{
+			"host": "127.0.0.1",
+			"i":    rawIV,
+		})
+		require.NoError(t, err)
+
+		result, err := ra.InitializationVector()
+		assert.NoError(t, err, "InitializationVector() should accept raw 16-byte IV")
+		assert.Equal(t, []byte(rawIV), result[:])
+	})
+
+	t.Run("missing IV returns error", func(t *testing.T) {
+		ra, err := NewRouterAddress(5, time.Time{}, "NTCP2", map[string]string{
+			"host": "127.0.0.1",
+		})
+		require.NoError(t, err)
+
+		_, err = ra.InitializationVector()
+		assert.Error(t, err)
+		assert.True(t, errors.Is(err, ErrMissingInitializationVector))
+	})
+
+	t.Run("wrong length returns error", func(t *testing.T) {
+		ra, err := NewRouterAddress(5, time.Time{}, "NTCP2", map[string]string{
+			"host": "127.0.0.1",
+			"i":    "tooshort",
+		})
+		require.NoError(t, err)
+
+		_, err = ra.InitializationVector()
+		assert.Error(t, err)
+		assert.True(t, errors.Is(err, ErrInvalidInitializationVector))
+	})
+}
+
+// =========================================================================
+// ipVersionFromCaps() empty and unrecognized values
+// =========================================================================
+
+func TestIPVersionFromCaps_EmptyAndUnrecognized(t *testing.T) {
+	t.Run("empty caps returns empty string", func(t *testing.T) {
+		ra, err := NewRouterAddress(5, time.Time{}, "NTCP2", map[string]string{
+			"caps": "",
+		})
+		require.NoError(t, err)
+		assert.Equal(t, "", ra.ipVersionFromCaps(), "Empty caps should return empty string, not '4'")
+	})
+
+	t.Run("no caps option returns empty string", func(t *testing.T) {
+		ra, err := NewRouterAddress(5, time.Time{}, "NTCP2", map[string]string{})
+		require.NoError(t, err)
+		assert.Equal(t, "", ra.ipVersionFromCaps())
+	})
+
+	t.Run("caps with 6 suffix returns IPv6", func(t *testing.T) {
+		ra, err := NewRouterAddress(5, time.Time{}, "NTCP2", map[string]string{
+			"caps": "BC6",
+		})
+		require.NoError(t, err)
+		assert.Equal(t, IPV6_VERSION_STRING, ra.ipVersionFromCaps())
+	})
+
+	t.Run("caps without 6 suffix returns IPv4", func(t *testing.T) {
+		ra, err := NewRouterAddress(5, time.Time{}, "NTCP2", map[string]string{
+			"caps": "BC",
+		})
+		require.NoError(t, err)
+		assert.Equal(t, IPV4_VERSION_STRING, ra.ipVersionFromCaps())
+	})
+}
+
+// =========================================================================
+// HasNonZeroExpiration()
+// =========================================================================
+
+func TestHasNonZeroExpiration(t *testing.T) {
+	t.Run("all-zero expiration returns false", func(t *testing.T) {
+		ra, err := NewRouterAddress(5, time.Time{}, "NTCP2", map[string]string{})
+		require.NoError(t, err)
+		assert.False(t, ra.HasNonZeroExpiration(), "Standard address should have zero expiration")
+	})
+
+	t.Run("non-zero expiration returns true", func(t *testing.T) {
+		ra, err := NewRouterAddress(5, time.Time{}, "NTCP2", map[string]string{})
+		require.NoError(t, err)
+		ra.ExpirationDate[3] = 0x01
+		assert.True(t, ra.HasNonZeroExpiration(), "Modified address should have non-zero expiration")
+	})
+
+	t.Run("nil expiration returns false", func(t *testing.T) {
+		ra := &RouterAddress{}
+		assert.False(t, ra.HasNonZeroExpiration())
+	})
+}
+
+// =========================================================================
+// Equals() asymmetric nil fields
+// =========================================================================
+
+func TestEquals_AsymmetricNilFields(t *testing.T) {
+	t.Run("one nil bytes, one non-nil", func(t *testing.T) {
+		ra1, err := NewRouterAddress(5, time.Time{}, "NTCP2", map[string]string{"host": "127.0.0.1"})
+		require.NoError(t, err)
+
+		ra2 := RouterAddress{}
+		assert.Nil(t, ra2.Bytes())
+		assert.NotNil(t, ra1.Bytes())
+		assert.False(t, ra1.Equals(ra2), "Address with nil bytes should not equal valid address")
+	})
+
+	t.Run("both nil bytes are equal", func(t *testing.T) {
+		ra1 := RouterAddress{}
+		ra2 := RouterAddress{}
+		assert.True(t, ra1.Equals(ra2), "Two addresses with nil bytes should be equal")
+	})
+
+	t.Run("same address is equal", func(t *testing.T) {
+		ra, err := NewRouterAddress(5, time.Time{}, "NTCP2", map[string]string{"host": "127.0.0.1"})
+		require.NoError(t, err)
+		assert.True(t, ra.Equals(*ra))
+	})
+}
+
+// =========================================================================
+// StaticKey and InitializationVector successful roundtrip
+// =========================================================================
+
+func TestStaticKey_SuccessfulRoundtrip(t *testing.T) {
+	keyBytes := make([]byte, STATIC_KEY_SIZE)
+	for i := range keyBytes {
+		keyBytes[i] = byte(i * 3)
+	}
+	encoded := i2pbase64.I2PEncoding.EncodeToString(keyBytes)
+
+	ra, err := NewRouterAddress(5, time.Time{}, "NTCP2", map[string]string{
+		"host": "127.0.0.1",
+		"s":    encoded,
+	})
+	require.NoError(t, err)
+
+	result, err := ra.StaticKey()
+	assert.NoError(t, err)
+
+	for i := 0; i < STATIC_KEY_SIZE; i++ {
+		assert.Equal(t, keyBytes[i], result[i], "Byte %d mismatch", i)
+	}
+}
+
+func TestInitializationVector_SuccessfulRoundtrip(t *testing.T) {
+	ivBytes := make([]byte, INITIALIZATION_VECTOR_SIZE)
+	for i := range ivBytes {
+		ivBytes[i] = byte(i * 7)
+	}
+	encoded := i2pbase64.I2PEncoding.EncodeToString(ivBytes)
+
+	ra, err := NewRouterAddress(5, time.Time{}, "NTCP2", map[string]string{
+		"host": "127.0.0.1",
+		"i":    encoded,
+	})
+	require.NoError(t, err)
+
+	result, err := ra.InitializationVector()
+	assert.NoError(t, err)
+
+	for i := 0; i < INITIALIZATION_VECTOR_SIZE; i++ {
+		assert.Equal(t, ivBytes[i], result[i], "Byte %d mismatch", i)
+	}
+}
+
+// =========================================================================
+// StaticKey with I2P base64 from Java router format
+// =========================================================================
+
+func TestStaticKey_JavaRouterFormat(t *testing.T) {
+	keyBytes := make([]byte, 32)
+	for i := range keyBytes {
+		keyBytes[i] = byte(0xAA ^ byte(i))
+	}
+
+	i2pEncoded := i2pbase64.I2PEncoding.EncodeToString(keyBytes)
+	stdEncoded := base64.StdEncoding.EncodeToString(keyBytes)
+
+	t.Logf("I2P encoded: %s", i2pEncoded)
+	t.Logf("Std encoded: %s", stdEncoded)
+
+	ra, err := NewRouterAddress(5, time.Time{}, "NTCP2", map[string]string{
+		"host": "127.0.0.1",
+		"s":    i2pEncoded,
+	})
+	require.NoError(t, err)
+
+	result, err := ra.StaticKey()
+	assert.NoError(t, err, "StaticKey() should handle I2P base64-encoded key")
+	assert.Equal(t, keyBytes, result[:], "Decoded key should match original bytes")
 }
