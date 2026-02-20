@@ -76,30 +76,28 @@ func NewECIESSessionTagFromArray(data [ECIESSessionTagSize]byte) ECIESSessionTag
 
 // ReadECIESSessionTag reads an ECIESSessionTag from a byte slice.
 // Returns the ECIESSessionTag, the remaining bytes, and any error.
-func ReadECIESSessionTag(data []byte) (ECIESSessionTag, []byte, error) {
+func ReadECIESSessionTag(data []byte) (info ECIESSessionTag, remainder []byte, err error) {
 	if len(data) < ECIESSessionTagSize {
 		log.WithFields(logger.Fields{
 			"at":          "(ECIESSessionTag) ReadECIESSessionTag",
 			"data_length": len(data),
 			"required":    ECIESSessionTagSize,
 		}).Error("data too short for ECIESSessionTag")
-		return ECIESSessionTag{}, nil, oops.Errorf(
+		err = oops.Errorf(
 			"data too short: need %d bytes, got %d",
 			ECIESSessionTagSize, len(data),
 		)
+		return
 	}
 
-	st, err := NewECIESSessionTagFromBytes(data[:ECIESSessionTagSize])
-	if err != nil {
-		log.WithError(err).Error("Failed to create ECIESSessionTag from bytes")
-		return ECIESSessionTag{}, nil, err
-	}
+	copy(info.value[:], data[:ECIESSessionTagSize])
+	remainder = data[ECIESSessionTagSize:]
 
 	log.WithFields(logger.Fields{
-		"remainder_length": len(data[ECIESSessionTagSize:]),
+		"remainder_length": len(remainder),
 	}).Debug("Successfully read ECIESSessionTag from data")
 
-	return st, data[ECIESSessionTagSize:], nil
+	return
 }
 
 // NewECIESSessionTag creates a new ECIESSessionTag from a byte slice.

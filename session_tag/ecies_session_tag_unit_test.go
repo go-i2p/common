@@ -170,3 +170,18 @@ func TestECIESSessionTag_IsZero(t *testing.T) {
 	assert.NoError(t, err)
 	assert.True(t, st2.IsZero())
 }
+
+func TestECIESSessionTag_BytesMutationIsolation(t *testing.T) {
+	data := []byte{0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08}
+
+	tag, err := NewECIESSessionTagFromBytes(data)
+	assert.NoError(t, err)
+
+	b := tag.Bytes()
+	original := make([]byte, ECIESSessionTagSize)
+	copy(original, b)
+	b[0] = 0xFF
+
+	assert.True(t, bytes.Equal(original, tag.Bytes()),
+		"mutating Bytes() return value must not affect the original (value receiver)")
+}

@@ -120,3 +120,24 @@ func TestSessionTag_IsZero(t *testing.T) {
 	assert.NoError(t, err)
 	assert.True(t, st2.IsZero())
 }
+
+func TestSessionTag_BytesMutationIsolation(t *testing.T) {
+	data := make([]byte, SessionTagSize)
+	for i := range data {
+		data[i] = byte(i + 1)
+	}
+
+	tag, err := NewSessionTagFromBytes(data)
+	assert.NoError(t, err)
+
+	// Get bytes and mutate the returned slice.
+	b := tag.Bytes()
+	original := make([]byte, SessionTagSize)
+	copy(original, b)
+	b[0] = 0xFF
+
+	// Since Bytes() uses a value receiver, the underlying tag is a copy.
+	// The mutation should NOT propagate back to the original tag variable.
+	assert.True(t, bytes.Equal(original, tag.Bytes()),
+		"mutating Bytes() return value must not affect the original (value receiver)")
+}
