@@ -1,6 +1,7 @@
 package destination
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/go-i2p/common/keys_and_cert"
@@ -224,5 +225,99 @@ func TestEqualsMethod(t *testing.T) {
 		dest1 := &Destination{KeysAndCert: nil}
 		dest2 := &Destination{KeysAndCert: nil}
 		assert.False(t, dest1.Equals(dest2))
+	})
+
+	t.Run("different key data produces non-equal destinations", func(t *testing.T) {
+		data1 := createValidDestinationBytes(t)
+		dest1, _, err := ReadDestination(data1)
+		require.NoError(t, err)
+
+		data2 := createEd25519X25519DestinationBytes(t)
+		dest2, _, err := ReadDestination(data2)
+		require.NoError(t, err)
+
+		assert.False(t, (&dest1).Equals(&dest2),
+			"Destinations with different key data should not be equal")
+		assert.False(t, (&dest2).Equals(&dest1),
+			"Equals should be symmetric")
+	})
+
+	t.Run("same type but different random keys produces non-equal", func(t *testing.T) {
+		data1 := createEd25519X25519DestinationBytes(t)
+		dest1, _, err := ReadDestination(data1)
+		require.NoError(t, err)
+
+		data2 := createEd25519X25519DestinationBytes(t)
+		dest2, _, err := ReadDestination(data2)
+		require.NoError(t, err)
+
+		assert.False(t, (&dest1).Equals(&dest2),
+			"Destinations with different random keys should not be equal")
+	})
+
+	t.Run("different hashes for different destinations", func(t *testing.T) {
+		data1 := createEd25519X25519DestinationBytes(t)
+		dest1, _, err := ReadDestination(data1)
+		require.NoError(t, err)
+
+		data2 := createEd25519X25519DestinationBytes(t)
+		dest2, _, err := ReadDestination(data2)
+		require.NoError(t, err)
+
+		hash1, err := (&dest1).Hash()
+		require.NoError(t, err)
+		hash2, err := (&dest2).Hash()
+		require.NoError(t, err)
+
+		assert.NotEqual(t, hash1, hash2,
+			"Different destinations should produce different hashes")
+	})
+}
+
+// ============================================================================
+// String (fmt.Stringer)
+// ============================================================================
+
+func TestDestinationString(t *testing.T) {
+	t.Run("valid destination returns base32 address", func(t *testing.T) {
+		data := createValidDestinationBytes(t)
+		dest, _, err := ReadDestination(data)
+		require.NoError(t, err)
+
+		str := dest.String()
+		assert.Contains(t, str, ".b32.i2p",
+			"String() should return a .b32.i2p address")
+		assert.Len(t, str, testBase32AddressLength,
+			"String() should return a 60-char base32 address")
+
+		addr, err := dest.Base32Address()
+		require.NoError(t, err)
+		assert.Equal(t, addr, str,
+			"String() should return the same value as Base32Address()")
+	})
+
+	t.Run("nil KeysAndCert returns sentinel string", func(t *testing.T) {
+		dest := Destination{KeysAndCert: nil}
+		str := dest.String()
+		assert.Equal(t, "<nil Destination>", str)
+	})
+
+	t.Run("implements fmt.Stringer", func(t *testing.T) {
+		data := createValidDestinationBytes(t)
+		dest, _, err := ReadDestination(data)
+		require.NoError(t, err)
+
+		formatted := fmt.Sprintf("%s", dest)
+		assert.Contains(t, formatted, ".b32.i2p")
+	})
+
+	t.Run("consistent with Base32Address", func(t *testing.T) {
+		data := createEd25519X25519DestinationBytes(t)
+		dest, _, err := ReadDestination(data)
+		require.NoError(t, err)
+
+		addr, err := dest.Base32Address()
+		require.NoError(t, err)
+		assert.Equal(t, addr, dest.String())
 	})
 }

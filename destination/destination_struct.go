@@ -2,6 +2,7 @@
 package destination
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/go-i2p/logger"
@@ -123,4 +124,19 @@ func (d Destination) Base64() (string, error) {
 	log.Debug("Generated Base64 address for Destination")
 
 	return base64Address, nil
+}
+
+// String returns the I2P base32 address as the default string representation.
+// Implements the fmt.Stringer interface for convenient logging and debugging.
+// Returns "<nil Destination>" if the destination is not properly initialized,
+// or "<invalid Destination>" if address generation fails.
+func (d Destination) String() string {
+	if d.KeysAndCert == nil {
+		return "<nil Destination>"
+	}
+	addr, err := d.Base32Address()
+	if err != nil {
+		return fmt.Sprintf("<invalid Destination: %s>", err.Error())
+	}
+	return addr
 }

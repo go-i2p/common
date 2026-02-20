@@ -41,8 +41,9 @@ func NewDestinationFromBytes(data []byte) (*Destination, []byte, error) {
 	return &dest, remainder, nil
 }
 
-// Validate checks if the Destination is properly initialized.
-// Returns an error if the destination or its components are invalid.
+// Validate checks if the Destination is properly initialized and uses permitted key types.
+// Returns an error if the destination or its components are invalid, or if prohibited
+// key types (MLKEM crypto, RSA/Ed25519ph signing) are present.
 func (d *Destination) Validate() error {
 	if d == nil {
 		return oops.Errorf("destination is nil")
@@ -50,7 +51,10 @@ func (d *Destination) Validate() error {
 	if d.KeysAndCert == nil {
 		return oops.Errorf("destination KeysAndCert is nil")
 	}
-	return d.KeysAndCert.Validate()
+	if err := d.KeysAndCert.Validate(); err != nil {
+		return err
+	}
+	return validateDestinationKeyTypes(d.KeysAndCert)
 }
 
 // IsValid returns true if the Destination is properly initialized.
