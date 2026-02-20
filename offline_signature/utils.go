@@ -40,34 +40,15 @@ func SigningPublicKeySize(sigtype uint16) int {
 }
 
 // SignatureSize returns the byte length of a signature for the given signature type.
-// This function maps I2P signature type identifiers to their corresponding signature sizes.
-// Returns 0 for unknown or unsupported signature types.
+// This function delegates to signature.SignatureSize(), which is the single source of
+// truth for the type→size mapping. Returns 0 for unknown or unsupported signature types.
 //
 // Signature sizes are defined in I2P specification 0.9.67.
 // Reference: https://geti2p.net/spec/common-structures#signature
 func SignatureSize(sigtype uint16) int {
-	switch sigtype {
-	case signature.SIGNATURE_TYPE_DSA_SHA1:
-		return signature.DSA_SHA1_SIZE
-	case signature.SIGNATURE_TYPE_ECDSA_SHA256_P256:
-		return signature.ECDSA_SHA256_P256_SIZE
-	case signature.SIGNATURE_TYPE_ECDSA_SHA384_P384:
-		return signature.ECDSA_SHA384_P384_SIZE
-	case signature.SIGNATURE_TYPE_ECDSA_SHA512_P521:
-		return signature.ECDSA_SHA512_P521_SIZE
-	case signature.SIGNATURE_TYPE_RSA_SHA256_2048:
-		return signature.RSA_SHA256_2048_SIZE
-	case signature.SIGNATURE_TYPE_RSA_SHA384_3072:
-		return signature.RSA_SHA384_3072_SIZE
-	case signature.SIGNATURE_TYPE_RSA_SHA512_4096:
-		return signature.RSA_SHA512_4096_SIZE
-	case signature.SIGNATURE_TYPE_EDDSA_SHA512_ED25519:
-		return signature.EdDSA_SHA512_Ed25519_SIZE
-	case signature.SIGNATURE_TYPE_EDDSA_SHA512_ED25519PH:
-		return signature.EdDSA_SHA512_Ed25519ph_SIZE
-	case signature.SIGNATURE_TYPE_REDDSA_SHA512_ED25519:
-		return signature.RedDSA_SHA512_Ed25519_SIZE
-	default:
-		return 0 // Unknown or unsupported signature type
+	size, err := signature.SignatureSize(int(sigtype))
+	if err != nil {
+		return 0
 	}
+	return size
 }

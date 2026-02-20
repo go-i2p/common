@@ -6,13 +6,6 @@
 
 Package signature implements the I2P Signature common data structure
 
-
-Package signature implements the I2P Signature common data structure
-
-Package signature implements the I2P Signature common data structure
-
-Package signature implements the I2P Signature common data structure
-
 ## Usage
 
 ```go
@@ -141,15 +134,14 @@ NewSignatureFromBytes(rawData, SIGNATURE_TYPE_EDDSA_SHA512_ED25519)
 func ReadSignature(data []byte, sigType int) (sig Signature, remainder []byte, err error)
 ```
 ReadSignature returns a Signature from a []byte. The remaining bytes after the
-specified length are also returned. Returns an error if there is insufficient
-data to read the signature.
+specified length are also returned. Returns an error if the sigType is
+unsupported/reserved, out of the valid spec range (0-65535), or if there is
+insufficient data to read the signature.
 
-Since the signature type and length are inferred from context (the type of key
-used), and are not explicitly stated, this function assumes the default
-signature type (DSA_SHA1) with a length of 40 bytes.
-
-If a different signature type is expected based on context, this function should
-be modified accordingly to handle the correct signature length.
+The sigType parameter selects the signature algorithm and determines the
+expected byte length (e.g., SIGNATURE_TYPE_EDDSA_SHA512_ED25519 → 64 bytes,
+SIGNATURE_TYPE_RSA_SHA512_4096 → 512 bytes). All ten implemented types plus
+reserved/experimental ranges are handled via getSignatureLength.
 
 #### func (Signature) Bytes
 

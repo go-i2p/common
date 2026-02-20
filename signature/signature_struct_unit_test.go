@@ -132,11 +132,11 @@ func TestSignatureStringFormat(t *testing.T) {
 		dataLen  int
 		expected string
 	}{
-		{SIGNATURE_TYPE_EDDSA_SHA512_ED25519, 64, "Signature{type: 7, length: 64}"},
-		{SIGNATURE_TYPE_DSA_SHA1, 40, "Signature{type: 0, length: 40}"},
-		{SIGNATURE_TYPE_RSA_SHA256_2048, 256, "Signature{type: 4, length: 256}"},
-		{SIGNATURE_TYPE_REDDSA_SHA512_ED25519, 64, "Signature{type: 11, length: 64}"},
-		{SIGNATURE_TYPE_ECDSA_SHA512_P521, 132, "Signature{type: 3, length: 132}"},
+		{SIGNATURE_TYPE_EDDSA_SHA512_ED25519, 64, "Signature{type: 7 (EdDSA_SHA512_Ed25519), length: 64}"},
+		{SIGNATURE_TYPE_DSA_SHA1, 40, "Signature{type: 0 (DSA_SHA1), length: 40}"},
+		{SIGNATURE_TYPE_RSA_SHA256_2048, 256, "Signature{type: 4 (RSA_SHA256_2048), length: 256}"},
+		{SIGNATURE_TYPE_REDDSA_SHA512_ED25519, 64, "Signature{type: 11 (RedDSA_SHA512_Ed25519), length: 64}"},
+		{SIGNATURE_TYPE_ECDSA_SHA512_P521, 132, "Signature{type: 3 (ECDSA_SHA512_P521), length: 132}"},
 	}
 
 	for _, tc := range testCases {

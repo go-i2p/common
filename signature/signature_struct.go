@@ -146,7 +146,8 @@ func (s Signature) Serialize() []byte {
 
 // String returns a string representation of the signature type and length.
 // Provides human-readable information about the signature for debugging and logging.
-// Format: "Signature{type: X, length: Y}" where X is the algorithm type and Y is byte length.
+// Format: "Signature{type: X (Name), length: Y}" where X is the algorithm type,
+// Name is the human-readable algorithm name, and Y is byte length.
 func (s Signature) String() string {
-	return fmt.Sprintf("Signature{type: %d, length: %d}", s.sigType, len(s.data))
+	return fmt.Sprintf("Signature{type: %d (%s), length: %d}", s.sigType, TypeName(s.sigType), len(s.data))
 }

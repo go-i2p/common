@@ -1,6 +1,7 @@
 package signature
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -127,4 +128,42 @@ func TestSigTypeRangeValidation(t *testing.T) {
 		_, err := SignatureSize(65280)
 		require.Error(t, err)
 	})
+}
+
+func TestSignatureSize_GapRange_21_65279(t *testing.T) {
+	// Types 21-65279 are not assigned to any algorithm; they should be rejected
+	// as "unknown signature type" by the default case in the switch.
+	gapTypes := []int{21, 22, 50, 100, 500, 1000, 5000, 10000, 30000, 65279}
+	for _, sigType := range gapTypes {
+		t.Run(fmt.Sprintf("type_%d", sigType), func(t *testing.T) {
+			_, err := SignatureSize(sigType)
+			require.Error(t, err, "type %d should be rejected", sigType)
+			assert.Contains(t, err.Error(), "unknown signature type",
+				"type %d should produce 'unknown signature type' error", sigType)
+		})
+	}
+}
+
+func TestReadSignature_GapRange_Rejected(t *testing.T) {
+	data := make([]byte, 512) // large enough for any type
+	gapTypes := []int{21, 100, 30000, 65279}
+	for _, sigType := range gapTypes {
+		t.Run(fmt.Sprintf("type_%d", sigType), func(t *testing.T) {
+			_, _, err := ReadSignature(data, sigType)
+			require.Error(t, err)
+			assert.Contains(t, err.Error(), "unknown signature type")
+		})
+	}
+}
+
+func TestNewSignatureFromBytes_GapRange_Rejected(t *testing.T) {
+	data := make([]byte, 64)
+	gapTypes := []int{21, 100, 30000, 65279}
+	for _, sigType := range gapTypes {
+		t.Run(fmt.Sprintf("type_%d", sigType), func(t *testing.T) {
+			_, err := NewSignatureFromBytes(data, sigType)
+			require.Error(t, err)
+			assert.Contains(t, err.Error(), "unknown signature type")
+		})
+	}
 }

@@ -46,12 +46,20 @@ const (
 	// Uses RedDSA variant of Ed25519 with SHA-512 for randomized EdDSA signatures.
 	RedDSA_SHA512_Ed25519_SIZE = 64
 
-	// GOST_R3410_2012_512_SIZE defines the byte length of GOST R 34.10-2012 signatures (64 bytes).
-	// Reserved per Proposal 134; not implemented.
+	// GOST_R3410_2012_512_SIZE defines the expected byte length of GOST R 34.10-2012 signatures (64 bytes).
+	// RESERVED / UNUSED: These types are reserved per Proposal 134 and are NOT implemented.
+	// getSignatureLength() returns an error (not this size) for GOST type 9.
+	// This constant is retained only for documentary completeness; do not use it in production code.
+	//
+	// Deprecated: GOST signatures are not supported. Use EdDSA (type 7) instead.
 	GOST_R3410_2012_512_SIZE = 64
 
-	// GOST_R3410_2012_1024_SIZE defines the byte length of GOST R 34.10-2012 signatures (128 bytes).
-	// Reserved per Proposal 134; not implemented.
+	// GOST_R3410_2012_1024_SIZE defines the expected byte length of GOST R 34.10-2012 signatures (128 bytes).
+	// RESERVED / UNUSED: These types are reserved per Proposal 134 and are NOT implemented.
+	// getSignatureLength() returns an error (not this size) for GOST type 10.
+	// This constant is retained only for documentary completeness; do not use it in production code.
+	//
+	// Deprecated: GOST signatures are not supported. Use EdDSA (type 7) instead.
 	GOST_R3410_2012_1024_SIZE = 128
 )
 

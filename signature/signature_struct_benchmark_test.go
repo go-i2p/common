@@ -70,3 +70,63 @@ func BenchmarkSignatureSize(b *testing.B) {
 		_, _ = SignatureSize(SIGNATURE_TYPE_EDDSA_SHA512_ED25519)
 	}
 }
+
+func BenchmarkReadSignature_RSA4096(b *testing.B) {
+	data := make([]byte, RSA_SHA512_4096_SIZE+100)
+	for i := range data {
+		data[i] = byte(i % 256)
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, _, _ = ReadSignature(data, SIGNATURE_TYPE_RSA_SHA512_4096)
+	}
+}
+
+func BenchmarkNewSignatureFromBytes_RSA4096(b *testing.B) {
+	data := make([]byte, RSA_SHA512_4096_SIZE)
+	for i := range data {
+		data[i] = byte(i % 256)
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, _ = NewSignatureFromBytes(data, SIGNATURE_TYPE_RSA_SHA512_4096)
+	}
+}
+
+func BenchmarkSignatureEqual_RSA4096(b *testing.B) {
+	data1 := make([]byte, RSA_SHA512_4096_SIZE)
+	data2 := make([]byte, RSA_SHA512_4096_SIZE)
+	for i := range data1 {
+		data1[i] = byte(i % 256)
+		data2[i] = byte(i % 256)
+	}
+	sig1, _ := NewSignatureFromBytes(data1, SIGNATURE_TYPE_RSA_SHA512_4096)
+	sig2, _ := NewSignatureFromBytes(data2, SIGNATURE_TYPE_RSA_SHA512_4096)
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		sig1.Equal(&sig2)
+	}
+}
+
+func BenchmarkSignatureBytes_RSA4096(b *testing.B) {
+	data := make([]byte, RSA_SHA512_4096_SIZE)
+	sig, _ := NewSignatureFromBytes(data, SIGNATURE_TYPE_RSA_SHA512_4096)
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = sig.Bytes()
+	}
+}
+
+func BenchmarkSignatureValidate_RSA4096(b *testing.B) {
+	data := make([]byte, RSA_SHA512_4096_SIZE)
+	sig, _ := NewSignatureFromBytes(data, SIGNATURE_TYPE_RSA_SHA512_4096)
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = sig.Validate()
+	}
+}

@@ -6,14 +6,13 @@ import (
 
 // ReadSignature returns a Signature from a []byte.
 // The remaining bytes after the specified length are also returned.
-// Returns an error if there is insufficient data to read the signature.
+// Returns an error if the sigType is unsupported/reserved, out of the valid
+// spec range (0-65535), or if there is insufficient data to read the signature.
 //
-// Since the signature type and length are inferred from context (the type of key used),
-// and are not explicitly stated, this function assumes the default signature type (DSA_SHA1)
-// with a length of 40 bytes.
-//
-// If a different signature type is expected based on context, this function should be
-// modified accordingly to handle the correct signature length.
+// The sigType parameter selects the signature algorithm and determines the
+// expected byte length (e.g., SIGNATURE_TYPE_EDDSA_SHA512_ED25519 → 64 bytes,
+// SIGNATURE_TYPE_RSA_SHA512_4096 → 512 bytes). All ten implemented types plus
+// reserved/experimental ranges are handled via getSignatureLength.
 func ReadSignature(data []byte, sigType int) (sig Signature, remainder []byte, err error) {
 	sigLength, err := getSignatureLength(sigType)
 	if err != nil {
@@ -34,6 +33,50 @@ func ReadSignature(data []byte, sigType int) (sig Signature, remainder []byte, e
 // valid range (0-65535) defined by the I2P spec's 2-byte Integer.
 func SignatureSize(sigType int) (int, error) {
 	return getSignatureLength(sigType)
+}
+
+// TypeName returns a human-readable name for the given signature algorithm type.
+// Returns "Unknown" for unrecognized types, and descriptive labels for reserved
+// and experimental ranges (e.g., "GOST_R3410_2012_512 (reserved)",
+// "MLDSA (reserved)", "Experimental").
+//
+// This function is useful for logging, debugging, and diagnostic output where
+// numeric type codes are insufficient for human interpretation.
+func TypeName(sigType int) string {
+	switch sigType {
+	case SIGNATURE_TYPE_DSA_SHA1:
+		return "DSA_SHA1"
+	case SIGNATURE_TYPE_ECDSA_SHA256_P256:
+		return "ECDSA_SHA256_P256"
+	case SIGNATURE_TYPE_ECDSA_SHA384_P384:
+		return "ECDSA_SHA384_P384"
+	case SIGNATURE_TYPE_ECDSA_SHA512_P521:
+		return "ECDSA_SHA512_P521"
+	case SIGNATURE_TYPE_RSA_SHA256_2048:
+		return "RSA_SHA256_2048"
+	case SIGNATURE_TYPE_RSA_SHA384_3072:
+		return "RSA_SHA384_3072"
+	case SIGNATURE_TYPE_RSA_SHA512_4096:
+		return "RSA_SHA512_4096"
+	case SIGNATURE_TYPE_EDDSA_SHA512_ED25519:
+		return "EdDSA_SHA512_Ed25519"
+	case SIGNATURE_TYPE_EDDSA_SHA512_ED25519PH:
+		return "EdDSA_SHA512_Ed25519ph"
+	case SIGNATURE_TYPE_GOST_R3410_2012_512:
+		return "GOST_R3410_2012_512 (reserved)"
+	case SIGNATURE_TYPE_GOST_R3410_2012_1024:
+		return "GOST_R3410_2012_1024 (reserved)"
+	case SIGNATURE_TYPE_REDDSA_SHA512_ED25519:
+		return "RedDSA_SHA512_Ed25519"
+	default:
+		if sigType >= SIGNATURE_TYPE_MLDSA_RESERVED_START && sigType <= SIGNATURE_TYPE_MLDSA_RESERVED_END {
+			return "MLDSA (reserved)"
+		}
+		if sigType >= SIGNATURE_TYPE_EXPERIMENTAL_START && sigType <= SIGNATURE_TYPE_EXPERIMENTAL_END {
+			return "Experimental"
+		}
+		return "Unknown"
+	}
 }
 
 // getSignatureLength determines the signature length based on the algorithm type.
