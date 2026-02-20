@@ -8,6 +8,8 @@ import (
 
 // NewRouterIdentityFromKeysAndCert creates a new RouterIdentity from KeysAndCert.
 // This is a simpler alternative to NewRouterIdentity for cases where you already have a KeysAndCert.
+// A defensive deep copy is made; the caller may freely mutate the original *KeysAndCert
+// after this call without affecting the RouterIdentity.
 // Returns an error if the provided KeysAndCert is invalid or uses prohibited key types.
 func NewRouterIdentityFromKeysAndCert(keysAndCert *keys_and_cert.KeysAndCert) (*RouterIdentity, error) {
 	if keysAndCert == nil {
@@ -21,8 +23,20 @@ func NewRouterIdentityFromKeysAndCert(keysAndCert *keys_and_cert.KeysAndCert) (*
 	}
 	logDeprecatedKeyTypes(keysAndCert.KeyCertificate)
 
+	// Defensive deep copy: clone struct, KeyCertificate pointer, and Padding slice.
+	kacCopy := *keysAndCert
+	if keysAndCert.KeyCertificate != nil {
+		keyCertCopy := *keysAndCert.KeyCertificate
+		kacCopy.KeyCertificate = &keyCertCopy
+	}
+	if keysAndCert.Padding != nil {
+		paddingCopy := make([]byte, len(keysAndCert.Padding))
+		copy(paddingCopy, keysAndCert.Padding)
+		kacCopy.Padding = paddingCopy
+	}
+
 	return &RouterIdentity{
-		KeysAndCert: keysAndCert,
+		KeysAndCert: &kacCopy,
 	}, nil
 }
 
@@ -37,8 +51,10 @@ func NewRouterIdentityFromBytes(data []byte) (*RouterIdentity, []byte, error) {
 	return ri, remainder, nil
 }
 
-// Validate checks if the RouterIdentity is properly initialized.
-// Returns an error if the router identity or its components are invalid.
+// Validate checks if the RouterIdentity is properly initialized and uses
+// permitted key types per the I2P specification. Returns an error if the
+// router identity or its components are invalid, or if prohibited key types
+// (RedDSA, RSA, Ed25519ph signing; MLKEM crypto) are present.
 func (ri *RouterIdentity) Validate() error {
 	if ri == nil {
 		return oops.Errorf("router identity is nil")
@@ -46,7 +62,10 @@ func (ri *RouterIdentity) Validate() error {
 	if ri.KeysAndCert == nil {
 		return oops.Errorf("router identity KeysAndCert is nil")
 	}
-	return ri.KeysAndCert.Validate()
+	if err := ri.KeysAndCert.Validate(); err != nil {
+		return err
+	}
+	return validateRouterIdentityKeyTypes(ri.KeysAndCert)
 }
 
 // IsValid returns true if the RouterIdentity is properly initialized.

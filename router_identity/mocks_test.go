@@ -33,7 +33,7 @@ func (m mockSigningPublicKey) NewVerifier() (types.Verifier, error) { return nil
 // ============================================================
 
 // createValidKeysAndCert creates a valid KeysAndCert for testing
-func createValidKeysAndCert(t *testing.T) *keys_and_cert.KeysAndCert {
+func createValidKeysAndCert(t testing.TB) *keys_and_cert.KeysAndCert {
 	t.Helper()
 	riBytes := createValidRouterIdentityBytes(t)
 	keysAndCert, _, err := keys_and_cert.ReadKeysAndCert(riBytes)
@@ -43,7 +43,7 @@ func createValidKeysAndCert(t *testing.T) *keys_and_cert.KeysAndCert {
 
 // createValidRouterIdentityBytes creates valid router identity bytes for testing
 // Uses DSA-SHA1/ElGamal (deprecated but accepted) for simplicity.
-func createValidRouterIdentityBytes(t *testing.T) []byte {
+func createValidRouterIdentityBytes(t testing.TB) []byte {
 	t.Helper()
 	keysData := make([]byte, 384)
 	_, err := rand.Read(keysData)
@@ -67,7 +67,7 @@ func buildKeyCertPayload(sigType, cryptoType int) []byte {
 
 // buildRouterIdentityBytes creates valid wire-format bytes for a RouterIdentity
 // with the given signing and crypto key types (using KEY certificate type 5).
-func buildRouterIdentityBytes(t *testing.T, sigType, cryptoType int) []byte {
+func buildRouterIdentityBytes(t testing.TB, sigType, cryptoType int) []byte {
 	t.Helper()
 	block := make([]byte, keys_and_cert.KEYS_AND_CERT_DATA_SIZE)
 	_, err := rand.Read(block)

@@ -144,3 +144,116 @@ func TestValidateRejectsNilKeyCertificate(t *testing.T) {
 		assert.Contains(t, err.Error(), "KeyCertificate is nil")
 	})
 }
+
+// TestValidate_RejectsProhibitedKeyTypes verifies that Validate() enforces
+// RouterIdentity-specific key type restrictions, not just KeysAndCert validity.
+func TestValidate_RejectsProhibitedKeyTypes(t *testing.T) {
+	t.Run("RedDSA signing type rejected by Validate", func(t *testing.T) {
+		kac := buildKeysAndCertForTypes(t,
+			key_certificate.KEYCERT_SIGN_REDDSA_ED25519,
+			key_certificate.KEYCERT_CRYPTO_X25519,
+		)
+		ri := &RouterIdentity{KeysAndCert: kac}
+
+		err := ri.Validate()
+		require.Error(t, err, "Validate() must reject RedDSA signing type")
+		assert.Contains(t, err.Error(), "not permitted for Router Identities")
+	})
+
+	t.Run("Ed25519ph signing type rejected by Validate", func(t *testing.T) {
+		kac := buildKeysAndCertForTypes(t,
+			key_certificate.KEYCERT_SIGN_ED25519PH,
+			key_certificate.KEYCERT_CRYPTO_X25519,
+		)
+		ri := &RouterIdentity{KeysAndCert: kac}
+
+		err := ri.Validate()
+		require.Error(t, err, "Validate() must reject Ed25519ph signing type")
+		assert.Contains(t, err.Error(), "not permitted for Router Identities")
+	})
+
+	t.Run("RSA-2048 signing type rejected by Validate", func(t *testing.T) {
+		kac := buildKeysAndCertForTypes(t,
+			key_certificate.KEYCERT_SIGN_RSA2048,
+			key_certificate.KEYCERT_CRYPTO_X25519,
+		)
+		ri := &RouterIdentity{KeysAndCert: kac}
+
+		err := ri.Validate()
+		require.Error(t, err, "Validate() must reject RSA-2048 signing type")
+		assert.Contains(t, err.Error(), "not permitted for Router Identities")
+	})
+
+	t.Run("MLKEM512_X25519 crypto type rejected by Validate", func(t *testing.T) {
+		kac := &keys_and_cert.KeysAndCert{}
+		keyCert, err := key_certificate.NewKeyCertificateWithTypes(
+			key_certificate.KEYCERT_SIGN_ED25519,
+			key_certificate.KEYCERT_CRYPTO_MLKEM512_X25519,
+		)
+		require.NoError(t, err)
+		kac.KeyCertificate = keyCert
+		kac.ReceivingPublic = mockPublicKey(make([]byte, keyCert.CryptoSize()))
+		kac.SigningPublic = mockSigningPublicKey(make([]byte, keyCert.SigningPublicKeySize()))
+
+		ri := &RouterIdentity{KeysAndCert: kac}
+
+		err = ri.Validate()
+		require.Error(t, err, "Validate() must reject MLKEM512_X25519 crypto type")
+		assert.Contains(t, err.Error(), "not permitted for Router Identities")
+	})
+
+	t.Run("Ed25519/X25519 accepted by Validate", func(t *testing.T) {
+		kac := buildKeysAndCertForTypes(t,
+			key_certificate.KEYCERT_SIGN_ED25519,
+			key_certificate.KEYCERT_CRYPTO_X25519,
+		)
+		ri := &RouterIdentity{KeysAndCert: kac}
+
+		err := ri.Validate()
+		assert.NoError(t, err, "Ed25519/X25519 should be accepted")
+	})
+
+	t.Run("DSA-SHA1/ElGamal accepted by Validate (deprecated but valid)", func(t *testing.T) {
+		kac := createValidKeysAndCert(t) // uses DSA-SHA1/ElGamal
+		ri := &RouterIdentity{KeysAndCert: kac}
+
+		err := ri.Validate()
+		assert.NoError(t, err, "Deprecated DSA-SHA1/ElGamal should still be accepted")
+	})
+
+	t.Run("IsValid reflects Validate key type enforcement", func(t *testing.T) {
+		kac := buildKeysAndCertForTypes(t,
+			key_certificate.KEYCERT_SIGN_REDDSA_ED25519,
+			key_certificate.KEYCERT_CRYPTO_X25519,
+		)
+		ri := &RouterIdentity{KeysAndCert: kac}
+		assert.False(t, ri.IsValid(), "IsValid must return false for prohibited key types")
+	})
+}
+
+// TestAsDestination_DestinationKeyTypeValidation verifies that AsDestination
+// returns a Destination that can be validated by the Destination's own Validate().
+func TestAsDestination_DestinationKeyTypeValidation(t *testing.T) {
+	t.Run("Ed25519/X25519 passes Destination validation", func(t *testing.T) {
+		kac := buildKeysAndCertForTypes(t,
+			key_certificate.KEYCERT_SIGN_ED25519,
+			key_certificate.KEYCERT_CRYPTO_X25519,
+		)
+		ri, err := NewRouterIdentityFromKeysAndCert(kac)
+		require.NoError(t, err)
+
+		dest := ri.AsDestination()
+		err = dest.Validate()
+		assert.NoError(t, err, "Ed25519/X25519 should pass Destination validation")
+	})
+
+	t.Run("DSA-SHA1/ElGamal passes Destination validation", func(t *testing.T) {
+		kac := createValidKeysAndCert(t) // DSA-SHA1/ElGamal
+		ri, err := NewRouterIdentityFromKeysAndCert(kac)
+		require.NoError(t, err)
+
+		dest := ri.AsDestination()
+		err = dest.Validate()
+		assert.NoError(t, err, "DSA-SHA1/ElGamal should pass Destination validation")
+	})
+}

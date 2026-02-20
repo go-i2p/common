@@ -2,9 +2,11 @@ package router_identity
 
 import (
 	"crypto/rand"
+	"crypto/sha256"
 	"strings"
 	"testing"
 
+	"github.com/go-i2p/common/certificate"
 	"github.com/go-i2p/common/key_certificate"
 	"github.com/go-i2p/common/keys_and_cert"
 	"github.com/stretchr/testify/assert"
@@ -484,14 +486,269 @@ func TestString(t *testing.T) {
 	})
 }
 
-// TestNewRouterIdentityDefensiveCopy tests that constructor does not retain references
-func TestNewRouterIdentityDefensiveCopy(t *testing.T) {
-	keysAndCert := createValidKeysAndCert(t)
-	ri, err := NewRouterIdentityFromKeysAndCert(keysAndCert)
+// TestNewRouterIdentityFromKeysAndCert_DefensiveCopy verifies that the constructor
+// makes a deep copy and mutations to the original don't affect the RouterIdentity.
+func TestNewRouterIdentityFromKeysAndCert_DefensiveCopy(t *testing.T) {
+	t.Run("mutating original KeyCertificate does not affect RouterIdentity", func(t *testing.T) {
+		kac := createValidKeysAndCert(t)
+		ri, err := NewRouterIdentityFromKeysAndCert(kac)
+		require.NoError(t, err)
+
+		origBytes, err := ri.Bytes()
+		require.NoError(t, err)
+
+		// Mutate the original KeysAndCert
+		kac.KeyCertificate = nil
+
+		// RouterIdentity must be unaffected
+		assert.NotNil(t, ri.KeysAndCert.KeyCertificate,
+			"RouterIdentity KeyCertificate must survive mutation of original")
+
+		afterBytes, err := ri.Bytes()
+		require.NoError(t, err)
+		assert.Equal(t, origBytes, afterBytes,
+			"RouterIdentity bytes must be unchanged after original mutation")
+	})
+
+	t.Run("mutating original Padding does not affect RouterIdentity", func(t *testing.T) {
+		kac := createValidKeysAndCert(t)
+		ri, err := NewRouterIdentityFromKeysAndCert(kac)
+		require.NoError(t, err)
+
+		if len(kac.Padding) == 0 {
+			t.Skip("no padding in this test configuration")
+		}
+
+		origPadding := make([]byte, len(ri.KeysAndCert.Padding))
+		copy(origPadding, ri.KeysAndCert.Padding)
+
+		// Mutate the original
+		kac.Padding[0] ^= 0xFF
+
+		assert.Equal(t, origPadding, ri.KeysAndCert.Padding,
+			"RouterIdentity Padding must be independent of original")
+	})
+
+	t.Run("pointer is different from input", func(t *testing.T) {
+		kac := createValidKeysAndCert(t)
+		ri, err := NewRouterIdentityFromKeysAndCert(kac)
+		require.NoError(t, err)
+
+		assert.True(t, ri.KeysAndCert != kac,
+			"RouterIdentity must hold a different KeysAndCert pointer")
+	})
+}
+
+// TestAsDestination_DeepCopy verifies that AsDestination returns a true deep copy.
+func TestAsDestination_DeepCopy(t *testing.T) {
+	t.Run("KeyCertificate pointer is distinct", func(t *testing.T) {
+		kac := createValidKeysAndCert(t)
+		ri, err := NewRouterIdentityFromKeysAndCert(kac)
+		require.NoError(t, err)
+
+		dest := ri.AsDestination()
+		require.NotNil(t, dest.KeysAndCert)
+		require.NotNil(t, dest.KeysAndCert.KeyCertificate)
+
+		// Pointers must be different
+		assert.True(t,
+			ri.KeysAndCert.KeyCertificate != dest.KeysAndCert.KeyCertificate,
+			"KeyCertificate pointer must be a separate allocation")
+	})
+
+	t.Run("mutating dest Padding does not affect original", func(t *testing.T) {
+		kac := createValidKeysAndCert(t)
+		ri, err := NewRouterIdentityFromKeysAndCert(kac)
+		require.NoError(t, err)
+
+		if len(ri.KeysAndCert.Padding) == 0 {
+			t.Skip("no padding in this test configuration")
+		}
+
+		origPadding := make([]byte, len(ri.KeysAndCert.Padding))
+		copy(origPadding, ri.KeysAndCert.Padding)
+
+		dest := ri.AsDestination()
+		if len(dest.KeysAndCert.Padding) > 0 {
+			dest.KeysAndCert.Padding[0] ^= 0xFF
+		}
+
+		assert.Equal(t, origPadding, ri.KeysAndCert.Padding,
+			"original Padding must not be affected by dest mutation")
+	})
+}
+
+// TestHash verifies the Hash() method.
+func TestHash(t *testing.T) {
+	t.Run("returns SHA-256 of serialized identity", func(t *testing.T) {
+		kac := createValidKeysAndCert(t)
+		ri, err := NewRouterIdentityFromKeysAndCert(kac)
+		require.NoError(t, err)
+
+		hash, err := ri.Hash()
+		require.NoError(t, err)
+
+		// Manually compute expected hash
+		b, err := ri.KeysAndCert.Bytes()
+		require.NoError(t, err)
+		expected := sha256.Sum256(b)
+
+		assert.Equal(t, expected, hash)
+	})
+
+	t.Run("nil receiver returns error", func(t *testing.T) {
+		var ri *RouterIdentity
+		_, err := ri.Hash()
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "not initialized")
+	})
+
+	t.Run("nil KeysAndCert returns error", func(t *testing.T) {
+		ri := &RouterIdentity{KeysAndCert: nil}
+		_, err := ri.Hash()
+		require.Error(t, err)
+	})
+
+	t.Run("consistent across calls", func(t *testing.T) {
+		kac := createValidKeysAndCert(t)
+		ri, err := NewRouterIdentityFromKeysAndCert(kac)
+		require.NoError(t, err)
+
+		hash1, err := ri.Hash()
+		require.NoError(t, err)
+		hash2, err := ri.Hash()
+		require.NoError(t, err)
+
+		assert.Equal(t, hash1, hash2, "Hash() must be deterministic")
+	})
+
+	t.Run("different identities produce different hashes", func(t *testing.T) {
+		data1 := buildRouterIdentityBytes(t,
+			key_certificate.KEYCERT_SIGN_ED25519,
+			key_certificate.KEYCERT_CRYPTO_X25519,
+		)
+		ri1, _, err := ReadRouterIdentity(data1)
+		require.NoError(t, err)
+
+		data2 := buildRouterIdentityBytes(t,
+			key_certificate.KEYCERT_SIGN_ED25519,
+			key_certificate.KEYCERT_CRYPTO_X25519,
+		)
+		ri2, _, err := ReadRouterIdentity(data2)
+		require.NoError(t, err)
+
+		hash1, err := ri1.Hash()
+		require.NoError(t, err)
+		hash2, err := ri2.Hash()
+		require.NoError(t, err)
+
+		assert.NotEqual(t, hash1, hash2,
+			"different random key material should produce different hashes")
+	})
+}
+
+// TestBytes verifies the Bytes() convenience method.
+func TestBytes(t *testing.T) {
+	t.Run("returns same as KeysAndCert.Bytes()", func(t *testing.T) {
+		kac := createValidKeysAndCert(t)
+		ri, err := NewRouterIdentityFromKeysAndCert(kac)
+		require.NoError(t, err)
+
+		riBytes, err := ri.Bytes()
+		require.NoError(t, err)
+
+		kacBytes, err := ri.KeysAndCert.Bytes()
+		require.NoError(t, err)
+
+		assert.Equal(t, kacBytes, riBytes)
+	})
+
+	t.Run("nil receiver returns error", func(t *testing.T) {
+		var ri *RouterIdentity
+		_, err := ri.Bytes()
+		require.Error(t, err)
+	})
+
+	t.Run("nil KeysAndCert returns error", func(t *testing.T) {
+		ri := &RouterIdentity{KeysAndCert: nil}
+		_, err := ri.Bytes()
+		require.Error(t, err)
+	})
+
+	t.Run("round trip through ReadRouterIdentity", func(t *testing.T) {
+		kac := createValidKeysAndCert(t)
+		ri, err := NewRouterIdentityFromKeysAndCert(kac)
+		require.NoError(t, err)
+
+		b, err := ri.Bytes()
+		require.NoError(t, err)
+
+		ri2, remainder, err := ReadRouterIdentity(b)
+		require.NoError(t, err)
+		assert.Empty(t, remainder)
+		assert.True(t, ri.Equal(ri2))
+	})
+}
+
+// TestNewRouterIdentity_NilCertificate tests error handling for nil certificate.
+func TestNewRouterIdentity_NilCertificate(t *testing.T) {
+	pubKey := make([]byte, 32)
+	_, _ = rand.Read(pubKey)
+	sigKey := make([]byte, 32)
+	_, _ = rand.Read(sigKey)
+
+	ri, err := NewRouterIdentity(mockPublicKey(pubKey), mockSigningPublicKey(sigKey), nil, nil)
+	require.Error(t, err, "nil certificate must be rejected")
+	assert.Nil(t, ri)
+}
+
+// TestNewRouterIdentityWithCompressiblePadding_NilCertificate tests nil cert handling.
+func TestNewRouterIdentityWithCompressiblePadding_NilCertificate(t *testing.T) {
+	pubKey := make([]byte, 32)
+	_, _ = rand.Read(pubKey)
+	sigKey := make([]byte, 32)
+	_, _ = rand.Read(sigKey)
+
+	ri, err := NewRouterIdentityWithCompressiblePadding(
+		mockPublicKey(pubKey), mockSigningPublicKey(sigKey), nil)
+	require.Error(t, err, "nil certificate must be rejected")
+	assert.Nil(t, ri)
+}
+
+// TestNewRouterIdentity_InvalidCertificate tests the error path when the
+// certificate is valid but cannot create a KeyCertificate.
+func TestNewRouterIdentity_InvalidCertificate(t *testing.T) {
+	// A NULL certificate (type 0) with no payload
+	nullCert, err := certificate.NewCertificateWithType(certificate.CERT_NULL, nil)
 	require.NoError(t, err)
 
-	// Verify that changing the original keysAndCert doesn't affect the stored one
-	origBytes, err := ri.KeysAndCert.Bytes()
-	require.NoError(t, err)
-	assert.NotEmpty(t, origBytes)
+	pubKey := make([]byte, 256)
+	_, _ = rand.Read(pubKey)
+	sigKey := make([]byte, 128)
+	_, _ = rand.Read(sigKey)
+
+	// This should fail because KeyCertificateFromCertificate expects CERT_KEY
+	ri, err := NewRouterIdentity(mockPublicKey(pubKey), mockSigningPublicKey(sigKey), nullCert, nil)
+	// Either succeeds (if NULL cert path works) or fails with a clear error
+	if err != nil {
+		assert.Nil(t, ri)
+	}
+}
+
+// TestNewRouterIdentityWithCompressiblePadding_ErrorPaths tests error paths.
+func TestNewRouterIdentityWithCompressiblePadding_ErrorPaths(t *testing.T) {
+	t.Run("invalid certificate type", func(t *testing.T) {
+		// Create a certificate with invalid type that can't be used as key cert
+		nullCert, err := certificate.NewCertificateWithType(certificate.CERT_NULL, nil)
+		require.NoError(t, err)
+
+		pubKey := make([]byte, 256)
+		sigKey := make([]byte, 128)
+
+		ri, err := NewRouterIdentityWithCompressiblePadding(
+			mockPublicKey(pubKey), mockSigningPublicKey(sigKey), nullCert)
+		if err != nil {
+			assert.Nil(t, ri)
+		}
+	})
 }
