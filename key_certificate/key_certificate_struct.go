@@ -7,6 +7,7 @@ import (
 	"github.com/go-i2p/crypto/ecdsa"
 	"github.com/go-i2p/crypto/ed25519"
 	elgamal "github.com/go-i2p/crypto/elg"
+	i2prsa "github.com/go-i2p/crypto/rsa"
 	"github.com/go-i2p/crypto/types"
 	"github.com/samber/oops"
 
@@ -77,8 +78,8 @@ func NewKeyCertificate(bytes []byte) (key_certificate *KeyCertificate, remainder
 	spkType, cpkType := extractKeyTypes(certData)
 
 	if validationErr := validatePayloadLengthAgainstKeyTypes(certData, spkType, cpkType); validationErr != nil {
-		log.WithError(validationErr).Warn("Key certificate payload length mismatch")
-		// Log warning but do not fail - some implementations may produce slightly different payloads
+		log.WithError(validationErr).Error("Key certificate payload length mismatch")
+		return nil, remainder, validationErr
 	}
 
 	key_certificate = buildKeyCertificate(cert, spkType, cpkType)
@@ -212,13 +213,18 @@ func logExtractedKeyTypes(certData []byte, spkType, cpkType data.Integer) {
 	}).Debug("Extracted key types from certificate data")
 }
 
-// Data returns the raw []byte contained in the Certificate.
+// Data returns the certificate payload bytes (the key type fields and any excess key data),
+// NOT the full serialized certificate. For the full certificate bytes (type+length+payload),
+// use Certificate.RawBytes() instead.
 func (keyCertificate KeyCertificate) Data() ([]byte, error) {
-	data := keyCertificate.Certificate.RawBytes()
+	data, err := keyCertificate.Certificate.Data()
+	if err != nil {
+		return nil, err
+	}
 	log.WithFields(logger.Fields{
 		"data_length": len(data),
-	}).Debug("Retrieved raw data from keyCertificate")
-	return keyCertificate.Certificate.RawBytes(), nil
+	}).Debug("Retrieved payload data from keyCertificate")
+	return data, nil
 }
 
 // SigningPublicKeyType returns the signingPublicKey type as a Go integer.
@@ -267,6 +273,15 @@ func (keyCertificate KeyCertificate) ConstructPublicKey(data []byte) (public_key
 		copy(elg_key[:], data[0:KEYCERT_CRYPTO_ELG_SIZE])
 		public_key = elg_key
 		log.Debug("Constructed ElgPublicKey")
+	case KEYCERT_CRYPTO_P256:
+		log.Warn("ECDH-P256 crypto key type is spec-defined but not yet implemented")
+		err = oops.Errorf("unimplemented crypto key type: ECDH-P256 (type %d)", KEYCERT_CRYPTO_P256)
+	case KEYCERT_CRYPTO_P384:
+		log.Warn("ECDH-P384 crypto key type is spec-defined but not yet implemented")
+		err = oops.Errorf("unimplemented crypto key type: ECDH-P384 (type %d)", KEYCERT_CRYPTO_P384)
+	case KEYCERT_CRYPTO_P521:
+		log.Warn("ECDH-P521 crypto key type is spec-defined but not yet implemented")
+		err = oops.Errorf("unimplemented crypto key type: ECDH-P521 (type %d)", KEYCERT_CRYPTO_P521)
 	case KEYCERT_CRYPTO_X25519,
 		KEYCERT_CRYPTO_MLKEM512_X25519,
 		KEYCERT_CRYPTO_MLKEM768_X25519,
@@ -275,11 +290,14 @@ func (keyCertificate KeyCertificate) ConstructPublicKey(data []byte) (public_key
 		copy(curve25519_key, data[0:KEYCERT_CRYPTO_X25519_SIZE])
 		public_key = curve25519_key
 		log.Debug("Constructed Curve25519PublicKey")
+	case KEYCERT_CRYPTO_RESERVED_NONE:
+		log.Warn("Crypto key type 255 (RESERVED_NONE) is reserved by spec and not implemented")
+		err = oops.Errorf("reserved crypto key type: RESERVED_NONE (type %d)", KEYCERT_CRYPTO_RESERVED_NONE)
 	default:
 		log.WithFields(logger.Fields{
 			"key_type": key_type,
-		}).Warn("Unsupported public key type")
-		err = oops.Errorf("unsupported crypto key type: %d", key_type)
+		}).Warn("Unknown public key type")
+		err = oops.Errorf("unknown crypto key type: %d", key_type)
 	}
 	return
 }
@@ -314,7 +332,7 @@ func validateSigningKeyData(dataLen, requiredSize int) error {
 		log.WithFields(logger.Fields{
 			"at":           "validateSigningKeyData",
 			"data_len":     dataLen,
-			"required_len": KEYCERT_SPK_SIZE,
+			"required_len": requiredSize,
 			"reason":       "not enough data",
 		}).Error("error constructing signing public key")
 		return oops.Errorf("error constructing signing public key: not enough data")
@@ -382,18 +400,91 @@ func constructECDSAP384Key(data []byte) (types.SigningPublicKey, error) {
 	return ec_p384_key, nil
 }
 
+// constructECDSAP521Key constructs an ECDSA P-521 signing public key from certificate data.
+// Provides 256-bit security level with 132-byte keys.
+// P521 keys (132 bytes) exceed KEYCERT_SPK_SIZE (128 bytes), so the key certificate
+// payload contains 4 bytes of excess signing key data that must be concatenated
+// with the 128-byte inline SPK field from KeysAndCert.
+// Accepts either full-field data (132+ bytes with excess prepended) or raw key data (132 bytes).
+func constructECDSAP521Key(data []byte) (types.SigningPublicKey, error) {
+	if len(data) < KEYCERT_SIGN_P521_SIZE {
+		return nil, oops.Errorf("insufficient data for P521 key: expected at least %d bytes, got %d",
+			KEYCERT_SIGN_P521_SIZE, len(data))
+	}
+	var ec_p521_key ecdsa.ECP521PublicKey
+	copy(ec_p521_key[:], data[:KEYCERT_SIGN_P521_SIZE])
+	log.Debug("Constructed P521PublicKey")
+	return ec_p521_key, nil
+}
+
+// constructRSA2048Key constructs an RSA-2048 signing public key from certificate data.
+// RSA-2048 keys (256 bytes) exceed KEYCERT_SPK_SIZE (128 bytes), requiring 128 bytes
+// of excess signing key data from the key certificate payload.
+func constructRSA2048Key(data []byte) (types.SigningPublicKey, error) {
+	if len(data) < KEYCERT_SIGN_RSA2048_SIZE {
+		return nil, oops.Errorf("insufficient data for RSA2048 key: expected at least %d bytes, got %d",
+			KEYCERT_SIGN_RSA2048_SIZE, len(data))
+	}
+	key, err := i2prsa.NewRSA2048PublicKey(data[:KEYCERT_SIGN_RSA2048_SIZE])
+	if err != nil {
+		return nil, oops.Wrapf(err, "failed to construct RSA2048 public key")
+	}
+	log.Debug("Constructed RSA2048PublicKey")
+	return *key, nil
+}
+
+// constructRSA3072Key constructs an RSA-3072 signing public key from certificate data.
+// RSA-3072 keys (384 bytes) exceed KEYCERT_SPK_SIZE (128 bytes), requiring 256 bytes
+// of excess signing key data from the key certificate payload.
+func constructRSA3072Key(data []byte) (types.SigningPublicKey, error) {
+	if len(data) < KEYCERT_SIGN_RSA3072_SIZE {
+		return nil, oops.Errorf("insufficient data for RSA3072 key: expected at least %d bytes, got %d",
+			KEYCERT_SIGN_RSA3072_SIZE, len(data))
+	}
+	key, err := i2prsa.NewRSA3072PublicKey(data[:KEYCERT_SIGN_RSA3072_SIZE])
+	if err != nil {
+		return nil, oops.Wrapf(err, "failed to construct RSA3072 public key")
+	}
+	log.Debug("Constructed RSA3072PublicKey")
+	return *key, nil
+}
+
+// constructRSA4096Key constructs an RSA-4096 signing public key from certificate data.
+// RSA-4096 keys (512 bytes) exceed KEYCERT_SPK_SIZE (128 bytes), requiring 384 bytes
+// of excess signing key data from the key certificate payload.
+func constructRSA4096Key(data []byte) (types.SigningPublicKey, error) {
+	if len(data) < KEYCERT_SIGN_RSA4096_SIZE {
+		return nil, oops.Errorf("insufficient data for RSA4096 key: expected at least %d bytes, got %d",
+			KEYCERT_SIGN_RSA4096_SIZE, len(data))
+	}
+	key, err := i2prsa.NewRSA4096PublicKey(data[:KEYCERT_SIGN_RSA4096_SIZE])
+	if err != nil {
+		return nil, oops.Wrapf(err, "failed to construct RSA4096 public key")
+	}
+	log.Debug("Constructed RSA4096PublicKey")
+	return *key, nil
+}
+
 // constructEd25519Key constructs an Ed25519 signing public key from certificate data.
 // Ed25519 provides excellent security with 32-byte keys and fast verification.
-// The input data should be exactly 32 bytes (the Ed25519 public key).
+// Accepts either padded data (128 bytes, key at end) or raw key data (32 bytes exact),
+// consistent with the ECDSA key constructors.
 func constructEd25519Key(data []byte) (types.SigningPublicKey, error) {
-	// For Ed25519, we expect exactly 32 bytes
-	if len(data) != KEYCERT_SIGN_ED25519_SIZE {
-		return nil, oops.Errorf("invalid Ed25519 key data length: expected %d, got %d",
+	if len(data) < KEYCERT_SIGN_ED25519_SIZE {
+		return nil, oops.Errorf("insufficient data for Ed25519 key: expected at least %d bytes, got %d",
 			KEYCERT_SIGN_ED25519_SIZE, len(data))
 	}
 
-	// Create Ed25519PublicKey from the bytes using safe constructor
-	ed25519_key, err := ed25519.NewEd25519PublicKey(data)
+	var keyBytes []byte
+	if len(data) >= KEYCERT_SPK_SIZE {
+		// Padded format: extract key from the end of the 128-byte field
+		keyBytes = data[KEYCERT_SPK_SIZE-KEYCERT_SIGN_ED25519_SIZE : KEYCERT_SPK_SIZE]
+	} else {
+		// Raw key data (exactly 32 bytes)
+		keyBytes = data[:KEYCERT_SIGN_ED25519_SIZE]
+	}
+
+	ed25519_key, err := ed25519.NewEd25519PublicKey(keyBytes)
 	if err != nil {
 		return nil, oops.Wrapf(err, "failed to construct Ed25519 public key")
 	}
@@ -403,16 +494,24 @@ func constructEd25519Key(data []byte) (types.SigningPublicKey, error) {
 
 // constructEd25519PHKey constructs an Ed25519ph (pre-hashed) signing public key from certificate data.
 // Uses the same key format as Ed25519 but with pre-hashing for efficiency.
-// The input data should be exactly 32 bytes (the Ed25519 public key).
+// Accepts either padded data (128 bytes, key at end) or raw key data (32 bytes exact),
+// consistent with the ECDSA key constructors.
 func constructEd25519PHKey(data []byte) (types.SigningPublicKey, error) {
-	// For Ed25519ph, we expect exactly 32 bytes
-	if len(data) != KEYCERT_SIGN_ED25519PH_SIZE {
-		return nil, oops.Errorf("invalid Ed25519ph key data length: expected %d, got %d",
+	if len(data) < KEYCERT_SIGN_ED25519PH_SIZE {
+		return nil, oops.Errorf("insufficient data for Ed25519ph key: expected at least %d bytes, got %d",
 			KEYCERT_SIGN_ED25519PH_SIZE, len(data))
 	}
 
-	// Create Ed25519PublicKey from the bytes using safe constructor
-	ed25519ph_key, err := ed25519.NewEd25519PublicKey(data)
+	var keyBytes []byte
+	if len(data) >= KEYCERT_SPK_SIZE {
+		// Padded format: extract key from the end of the 128-byte field
+		keyBytes = data[KEYCERT_SPK_SIZE-KEYCERT_SIGN_ED25519PH_SIZE : KEYCERT_SPK_SIZE]
+	} else {
+		// Raw key data (exactly 32 bytes)
+		keyBytes = data[:KEYCERT_SIGN_ED25519PH_SIZE]
+	}
+
+	ed25519ph_key, err := ed25519.NewEd25519PublicKey(keyBytes)
 	if err != nil {
 		return nil, oops.Wrapf(err, "failed to construct Ed25519ph public key")
 	}
@@ -458,13 +557,13 @@ func selectSigningKeyConstructor(signing_key_type int, data []byte) (types.Signi
 	case KEYCERT_SIGN_P384:
 		return constructECDSAP384Key(data)
 	case KEYCERT_SIGN_P521:
-		return nil, oops.Errorf("unimplemented signing key type: P521 (type %d)", KEYCERT_SIGN_P521)
+		return constructECDSAP521Key(data)
 	case KEYCERT_SIGN_RSA2048:
-		return nil, oops.Errorf("unimplemented signing key type: RSA2048 (type %d)", KEYCERT_SIGN_RSA2048)
+		return constructRSA2048Key(data)
 	case KEYCERT_SIGN_RSA3072:
-		return nil, oops.Errorf("unimplemented signing key type: RSA3072 (type %d)", KEYCERT_SIGN_RSA3072)
+		return constructRSA3072Key(data)
 	case KEYCERT_SIGN_RSA4096:
-		return nil, oops.Errorf("unimplemented signing key type: RSA4096 (type %d)", KEYCERT_SIGN_RSA4096)
+		return constructRSA4096Key(data)
 	case KEYCERT_SIGN_ED25519:
 		return constructEd25519Key(data)
 	case KEYCERT_SIGN_ED25519PH:

@@ -116,6 +116,11 @@ func validateSigningType(signingType int) error {
 
 // validateCryptoType validates that the crypto type is a known value.
 func validateCryptoType(cryptoType int) error {
+	// Check for spec-reserved type with specific error
+	if cryptoType == KEYCERT_CRYPTO_RESERVED_NONE {
+		return oops.Errorf("reserved crypto key type: RESERVED_NONE (type %d) is not implemented", cryptoType)
+	}
+
 	// Check if it's a known crypto type
 	validTypes := map[int]bool{
 		KEYCERT_CRYPTO_ELG:              true,

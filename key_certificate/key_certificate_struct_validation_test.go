@@ -123,17 +123,20 @@ func TestSigningPublicKeySize_UnknownTypeReturnsZero(t *testing.T) {
 		"SigningPublicKeySize should return 0 for unknown types, not 128")
 }
 
-// TestSelectSigningKeyConstructor_NoPanicOnP521 verifies P521 returns error, not panic.
-func TestSelectSigningKeyConstructor_NoPanicOnP521(t *testing.T) {
+// TestSelectSigningKeyConstructor_P521Constructs verifies P521 now succeeds with valid data.
+func TestSelectSigningKeyConstructor_P521Constructs(t *testing.T) {
 	data := make([]byte, 132) // P521 key size
+	for i := range data {
+		data[i] = byte(i + 1) // non-zero data
+	}
 	key, err := selectSigningKeyConstructor(KEYCERT_SIGN_P521, data)
-	assert.Error(t, err, "P521 should return error, not panic")
-	assert.Nil(t, key)
-	assert.Contains(t, err.Error(), "unimplemented")
+	assert.NoError(t, err, "P521 should succeed with valid data")
+	assert.NotNil(t, key)
+	assert.Equal(t, KEYCERT_SIGN_P521_SIZE, key.Len())
 }
 
-// TestSelectSigningKeyConstructor_NoPanicOnRSA verifies RSA types return error, not panic.
-func TestSelectSigningKeyConstructor_NoPanicOnRSA(t *testing.T) {
+// TestSelectSigningKeyConstructor_RSAConstructs verifies RSA types now succeed with valid data.
+func TestSelectSigningKeyConstructor_RSAConstructs(t *testing.T) {
 	rsaTypes := []struct {
 		name    string
 		keyType int
@@ -147,10 +150,13 @@ func TestSelectSigningKeyConstructor_NoPanicOnRSA(t *testing.T) {
 	for _, tt := range rsaTypes {
 		t.Run(tt.name, func(t *testing.T) {
 			data := make([]byte, tt.size)
+			for i := range data {
+				data[i] = byte(i%254 + 1) // non-zero data for valid RSA key
+			}
 			key, err := selectSigningKeyConstructor(tt.keyType, data)
-			assert.Error(t, err, "%s should return error, not panic", tt.name)
-			assert.Nil(t, key)
-			assert.Contains(t, err.Error(), "unimplemented")
+			assert.NoError(t, err, "%s should succeed with valid data", tt.name)
+			assert.NotNil(t, key)
+			assert.Equal(t, tt.size, key.Len())
 		})
 	}
 }
@@ -229,4 +235,202 @@ func TestKeyCertificateFromCertificate_NonKeyCertificateType(t *testing.T) {
 			assert.Contains(t, err.Error(), "invalid certificate type")
 		})
 	}
+}
+
+// TestConstructPublicKey_P256_ReturnsUnimplemented verifies ECDH-P256 gives a
+// specific unimplemented error, not a generic "unsupported" message.
+func TestConstructPublicKey_P256_ReturnsUnimplemented(t *testing.T) {
+	keyCert, err := NewKeyCertificateWithTypes(KEYCERT_SIGN_ED25519, KEYCERT_CRYPTO_P256)
+	require.NoError(t, err)
+
+	data := make([]byte, KEYCERT_PUBKEY_SIZE)
+	pk, err := keyCert.ConstructPublicKey(data)
+	assert.Error(t, err)
+	assert.Nil(t, pk)
+	assert.Contains(t, err.Error(), "unimplemented")
+	assert.Contains(t, err.Error(), "ECDH-P256")
+}
+
+// TestConstructPublicKey_P384_ReturnsUnimplemented verifies ECDH-P384 gives a
+// specific unimplemented error.
+func TestConstructPublicKey_P384_ReturnsUnimplemented(t *testing.T) {
+	keyCert, err := NewKeyCertificateWithTypes(KEYCERT_SIGN_ED25519, KEYCERT_CRYPTO_P384)
+	require.NoError(t, err)
+
+	data := make([]byte, KEYCERT_PUBKEY_SIZE)
+	pk, err := keyCert.ConstructPublicKey(data)
+	assert.Error(t, err)
+	assert.Nil(t, pk)
+	assert.Contains(t, err.Error(), "unimplemented")
+	assert.Contains(t, err.Error(), "ECDH-P384")
+}
+
+// TestConstructPublicKey_P521_ReturnsUnimplemented verifies ECDH-P521 gives a
+// specific unimplemented error.
+func TestConstructPublicKey_P521_ReturnsUnimplemented(t *testing.T) {
+	keyCert, err := NewKeyCertificateWithTypes(KEYCERT_SIGN_ED25519, KEYCERT_CRYPTO_P521)
+	require.NoError(t, err)
+
+	data := make([]byte, KEYCERT_PUBKEY_SIZE)
+	pk, err := keyCert.ConstructPublicKey(data)
+	assert.Error(t, err)
+	assert.Nil(t, pk)
+	assert.Contains(t, err.Error(), "unimplemented")
+	assert.Contains(t, err.Error(), "ECDH-P521")
+}
+
+// TestConstructPublicKey_ReservedNone_ReturnsReservedError verifies that
+// KEYCERT_CRYPTO_RESERVED_NONE (255) returns a specific "reserved" error.
+func TestConstructPublicKey_ReservedNone_ReturnsReservedError(t *testing.T) {
+	payload := []byte{0x00, 0x07, 0x00, 0xFF} // signing=Ed25519, crypto=255
+	cert, err := certificate.NewCertificateWithType(certificate.CERT_KEY, payload)
+	require.NoError(t, err)
+
+	keyCert, err := KeyCertificateFromCertificate(cert)
+	require.NoError(t, err)
+
+	data := make([]byte, KEYCERT_PUBKEY_SIZE)
+	pk, err := keyCert.ConstructPublicKey(data)
+	assert.Error(t, err)
+	assert.Nil(t, pk)
+	assert.Contains(t, err.Error(), "reserved")
+	assert.Contains(t, err.Error(), "RESERVED_NONE")
+}
+
+// TestConstructPublicKey_AllUnimplementedTypes covers all crypto types that
+// should return specific error messages.
+func TestConstructPublicKey_AllUnimplementedTypes(t *testing.T) {
+	tests := []struct {
+		name       string
+		cryptoType int
+		errSubstr  string
+	}{
+		{"P256", KEYCERT_CRYPTO_P256, "unimplemented"},
+		{"P384", KEYCERT_CRYPTO_P384, "unimplemented"},
+		{"P521", KEYCERT_CRYPTO_P521, "unimplemented"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			keyCert, err := NewKeyCertificateWithTypes(KEYCERT_SIGN_ED25519, tt.cryptoType)
+			require.NoError(t, err)
+
+			data := make([]byte, KEYCERT_PUBKEY_SIZE)
+			pk, err := keyCert.ConstructPublicKey(data)
+			assert.Error(t, err)
+			assert.Nil(t, pk)
+			assert.Contains(t, err.Error(), tt.errSubstr)
+		})
+	}
+}
+
+// TestConstructPublicKey_TrulyUnknownType verifies that types not in
+// any known range still get an "unknown" error (not "unimplemented").
+func TestConstructPublicKey_TrulyUnknownType(t *testing.T) {
+	payload := []byte{0x00, 0x07, 0x00, 0xC8} // signing=Ed25519, crypto=200
+	cert, err := certificate.NewCertificateWithType(certificate.CERT_KEY, payload)
+	require.NoError(t, err)
+
+	keyCert, err := KeyCertificateFromCertificate(cert)
+	require.NoError(t, err)
+
+	data := make([]byte, KEYCERT_PUBKEY_SIZE)
+	pk, err := keyCert.ConstructPublicKey(data)
+	assert.Error(t, err)
+	assert.Nil(t, pk)
+	assert.Contains(t, err.Error(), "unknown")
+}
+
+// TestNewKeyCertificate_PayloadTooShort_ReturnsError verifies strict payload
+// length enforcement (spec: "prohibit excess data").
+func TestNewKeyCertificate_PayloadTooShort_ReturnsError(t *testing.T) {
+	rawBytes := []byte{0x05, 0x00, 0x04, 0x00, 0x03, 0x00, 0x04} // sig=P521, crypto=X25519
+	keyCert, _, err := NewKeyCertificate(rawBytes)
+	assert.Error(t, err, "Should reject P521 cert with insufficient payload")
+	assert.Nil(t, keyCert)
+	assert.Contains(t, err.Error(), "payload too short")
+}
+
+// TestNewKeyCertificate_PayloadExactSize_Succeeds verifies that payload with
+// exactly the right size for the declared key types is accepted.
+func TestNewKeyCertificate_PayloadExactSize_Succeeds(t *testing.T) {
+	keyCert, _, err := NewKeyCertificate(testKeyCertBytesEd25519X25519)
+	assert.NoError(t, err)
+	assert.NotNil(t, keyCert)
+}
+
+// TestNewKeyCertificate_ShortPayload_ReturnsError verifies that
+// NewKeyCertificate rejects raw bytes with insufficient payload for a KEY cert.
+func TestNewKeyCertificate_ShortPayload_ReturnsError(t *testing.T) {
+	rawBytes := []byte{0x05, 0x00, 0x02, 0x00, 0x07}
+	keyCert, _, err := NewKeyCertificate(rawBytes)
+	assert.Error(t, err)
+	assert.Nil(t, keyCert)
+	assert.Contains(t, err.Error(), "too short")
+}
+
+// TestValidateSigningKeyData_CorrectErrorMessage verifies the error message
+// is returned correctly (functionally testing the fix).
+func TestValidateSigningKeyData_CorrectErrorMessage(t *testing.T) {
+	err := validateSigningKeyData(10, 32)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "not enough data")
+}
+
+// TestValidateSigningKeyData_ExactSize_NoError verifies exact size passes.
+func TestValidateSigningKeyData_ExactSize_NoError(t *testing.T) {
+	err := validateSigningKeyData(32, 32)
+	assert.NoError(t, err)
+}
+
+// TestConstructSigningPublicKey_RSA_InsufficientData verifies RSA types
+// give clear errors with insufficient data.
+func TestConstructSigningPublicKey_RSA_InsufficientData(t *testing.T) {
+	rsaTypes := []struct {
+		name    string
+		keyType int
+		size    int
+	}{
+		{"RSA2048", KEYCERT_SIGN_RSA2048, KEYCERT_SIGN_RSA2048_SIZE},
+		{"RSA3072", KEYCERT_SIGN_RSA3072, KEYCERT_SIGN_RSA3072_SIZE},
+		{"RSA4096", KEYCERT_SIGN_RSA4096, KEYCERT_SIGN_RSA4096_SIZE},
+	}
+
+	for _, tt := range rsaTypes {
+		t.Run(tt.name, func(t *testing.T) {
+			data := make([]byte, tt.size-1) // one byte short
+			key, err := selectSigningKeyConstructor(tt.keyType, data)
+			assert.Error(t, err, "%s should fail with insufficient data", tt.name)
+			assert.Nil(t, key)
+			assert.Contains(t, err.Error(), "insufficient data")
+		})
+	}
+}
+
+// TestConstructEd25519Key_TooShort verifies error on insufficient data.
+func TestConstructEd25519Key_TooShort(t *testing.T) {
+	data := make([]byte, 31)
+	_, err := constructEd25519Key(data)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "insufficient data")
+}
+
+// TestKeyCertificateFromCertificate_WithExcessPayload verifies that
+// KeyCertificateFromCertificate correctly parses a certificate with extra
+// payload bytes (e.g., P521 with 4 excess signing key data bytes).
+func TestKeyCertificateFromCertificate_WithExcessPayload(t *testing.T) {
+	payload := []byte{0x00, 0x03, 0x00, 0x00, 0xDE, 0xAD, 0xBE, 0xEF}
+	cert, err := certificate.NewCertificateWithType(certificate.CERT_KEY, payload)
+	require.NoError(t, err)
+
+	keyCert, err := KeyCertificateFromCertificate(cert)
+	require.NoError(t, err)
+	require.NotNil(t, keyCert)
+
+	assert.Equal(t, KEYCERT_SIGN_P521, keyCert.SigningPublicKeyType())
+	assert.Equal(t, KEYCERT_CRYPTO_ELG, keyCert.PublicKeyType())
+
+	data, err := keyCert.Data()
+	require.NoError(t, err)
+	assert.Equal(t, 8, len(data))
 }

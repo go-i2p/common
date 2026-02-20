@@ -10,7 +10,9 @@ var (
 	testKeyCertBytesDSAElGamal = []byte{0x05, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00}
 
 	// testKeyCertBytesP521Signing is a valid P521 signing key certificate (signing=3, crypto=7 MLKEM1024).
-	testKeyCertBytesP521Signing = []byte{0x05, 0x00, 0x04, 0x00, 0x03, 0x00, 0x07}
+	// P521 signing key (132 bytes) exceeds KEYCERT_SPK_SIZE (128), requiring 4 bytes excess in payload.
+	// Payload: 2-byte signing type + 2-byte crypto type + 4-byte excess signing data = 8 bytes.
+	testKeyCertBytesP521Signing = []byte{0x05, 0x00, 0x08, 0x00, 0x03, 0x00, 0x07, 0x00, 0x00, 0x00, 0x00}
 
 	// testKeyCertBytesP256P256 is a valid P256/P256 key certificate (signing=1, crypto=1).
 	testKeyCertBytesP256P256 = []byte{0x05, 0x00, 0x04, 0x00, 0x01, 0x00, 0x01}

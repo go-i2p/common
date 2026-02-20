@@ -282,3 +282,233 @@ func TestNewKeyCertificate_ExcessTrailingData(t *testing.T) {
 	assert.Equal(t, byte(0xBB), remainder[1])
 	assert.Equal(t, byte(0xCC), remainder[2])
 }
+
+// TestData_ReturnsPayloadOnly verifies that KeyCertificate.Data() returns only
+// the certificate payload (key type fields + excess key data), NOT the full
+// serialized certificate (type+length+payload).
+func TestData_ReturnsPayloadOnly(t *testing.T) {
+	keyCert, _, err := NewKeyCertificate(testKeyCertBytesEd25519X25519)
+	require.NoError(t, err)
+
+	data, err := keyCert.Data()
+	require.NoError(t, err)
+
+	// Ed25519/X25519 key cert has a 4-byte payload: 2 bytes signing type + 2 bytes crypto type
+	assert.Equal(t, 4, len(data),
+		"Data() should return 4-byte payload, not full cert bytes")
+
+	// Verify signing type = Ed25519 (0x0007)
+	assert.Equal(t, byte(0x00), data[0])
+	assert.Equal(t, byte(0x07), data[1])
+
+	// Verify crypto type = X25519 (0x0004)
+	assert.Equal(t, byte(0x00), data[2])
+	assert.Equal(t, byte(0x04), data[3])
+}
+
+// TestData_DistinctFromRawBytes confirms Data() and RawBytes() return different things.
+func TestData_DistinctFromRawBytes(t *testing.T) {
+	keyCert, _, err := NewKeyCertificate(testKeyCertBytesEd25519X25519)
+	require.NoError(t, err)
+
+	data, err := keyCert.Data()
+	require.NoError(t, err)
+
+	rawBytes := keyCert.Certificate.RawBytes()
+
+	assert.NotEqual(t, len(data), len(rawBytes),
+		"Data() and RawBytes() should return different lengths")
+	assert.Greater(t, len(rawBytes), len(data),
+		"RawBytes() should include type+length+payload and be longer than payload-only Data()")
+	// RawBytes = 1 byte type + 2 byte length + payload
+	assert.Equal(t, len(rawBytes), 1+2+len(data),
+		"RawBytes should be exactly 3 bytes longer than Data()")
+}
+
+// TestData_ConsistentWithCertificateData ensures KeyCertificate.Data() returns
+// the same result as calling Certificate.Data() on the embedded certificate.
+func TestData_ConsistentWithCertificateData(t *testing.T) {
+	keyCert, _, err := NewKeyCertificate(testKeyCertBytesEd25519X25519)
+	require.NoError(t, err)
+
+	keyCertData, err := keyCert.Data()
+	require.NoError(t, err)
+
+	certData, err := keyCert.Certificate.Data()
+	require.NoError(t, err)
+
+	assert.Equal(t, certData, keyCertData,
+		"KeyCertificate.Data() should return same result as Certificate.Data()")
+}
+
+// TestData_Godoc_PayloadNotFullCert is a documentation-driven test that
+// verifies the Data() method returns payload data, not the full certificate.
+func TestData_Godoc_PayloadNotFullCert(t *testing.T) {
+	keyCert, _, err := NewKeyCertificate(testKeyCertBytesDSAElGamal)
+	require.NoError(t, err)
+
+	data, err := keyCert.Data()
+	require.NoError(t, err)
+
+	// The full cert is 7 bytes (type + 2-byte length + 4-byte payload)
+	// Data() should return only the 4-byte payload
+	rawBytes := keyCert.Certificate.RawBytes()
+	assert.Equal(t, 7, len(rawBytes), "Full cert should be 7 bytes")
+	assert.Equal(t, 4, len(data), "Data() should return only 4-byte payload")
+}
+
+// TestConstructSigningPublicKey_P521_FullField verifies P521 construction
+// from a full 132-byte field (the key data passed to the constructor).
+func TestConstructSigningPublicKey_P521_FullField(t *testing.T) {
+	keyCert, _, err := NewKeyCertificate(testKeyCertBytesP521Signing)
+	require.NoError(t, err)
+
+	data := make([]byte, KEYCERT_SIGN_P521_SIZE)
+	for i := range data {
+		data[i] = byte(i + 1)
+	}
+
+	spk, err := keyCert.ConstructSigningPublicKey(data)
+	require.NoError(t, err)
+	require.NotNil(t, spk)
+	assert.Equal(t, KEYCERT_SIGN_P521_SIZE, spk.Len())
+}
+
+// TestConstructSigningPublicKey_RSA2048 verifies RSA-2048 construction.
+func TestConstructSigningPublicKey_RSA2048(t *testing.T) {
+	keyCert, err := NewKeyCertificateWithTypes(KEYCERT_SIGN_RSA2048, KEYCERT_CRYPTO_ELG)
+	require.NoError(t, err)
+
+	data := makeTestBytes(KEYCERT_SIGN_RSA2048_SIZE, 1)
+
+	spk, err := keyCert.ConstructSigningPublicKey(data)
+	require.NoError(t, err)
+	require.NotNil(t, spk)
+	assert.Equal(t, KEYCERT_SIGN_RSA2048_SIZE, spk.Len())
+}
+
+// TestConstructSigningPublicKey_RSA3072 verifies RSA-3072 construction.
+func TestConstructSigningPublicKey_RSA3072(t *testing.T) {
+	keyCert, err := NewKeyCertificateWithTypes(KEYCERT_SIGN_RSA3072, KEYCERT_CRYPTO_ELG)
+	require.NoError(t, err)
+
+	data := makeTestBytes(KEYCERT_SIGN_RSA3072_SIZE, 1)
+
+	spk, err := keyCert.ConstructSigningPublicKey(data)
+	require.NoError(t, err)
+	require.NotNil(t, spk)
+	assert.Equal(t, KEYCERT_SIGN_RSA3072_SIZE, spk.Len())
+}
+
+// TestConstructSigningPublicKey_RSA4096 verifies RSA-4096 construction.
+func TestConstructSigningPublicKey_RSA4096(t *testing.T) {
+	keyCert, err := NewKeyCertificateWithTypes(KEYCERT_SIGN_RSA4096, KEYCERT_CRYPTO_ELG)
+	require.NoError(t, err)
+
+	data := makeTestBytes(KEYCERT_SIGN_RSA4096_SIZE, 1)
+
+	spk, err := keyCert.ConstructSigningPublicKey(data)
+	require.NoError(t, err)
+	require.NotNil(t, spk)
+	assert.Equal(t, KEYCERT_SIGN_RSA4096_SIZE, spk.Len())
+}
+
+// TestConstructSigningPublicKey_P521_WithExcessData verifies that P521 signing
+// key construction works correctly when the key certificate contains excess
+// signing key data (the 4 bytes that don't fit in the 128-byte inline SPK field).
+func TestConstructSigningPublicKey_P521_WithExcessData(t *testing.T) {
+	data := make([]byte, KEYCERT_SIGN_P521_SIZE)
+	for i := range data {
+		data[i] = byte(i + 1)
+	}
+
+	key, err := selectSigningKeyConstructor(KEYCERT_SIGN_P521, data)
+	require.NoError(t, err)
+	require.NotNil(t, key)
+	assert.Equal(t, KEYCERT_SIGN_P521_SIZE, key.Len())
+
+	keyBytes := key.Bytes()
+	assert.Equal(t, byte(1), keyBytes[0])
+	assert.Equal(t, byte(132), keyBytes[131])
+}
+
+// TestConstructEd25519Key_Padded verifies Ed25519 accepts the 128-byte padded
+// format, extracting the key from the end of the field.
+func TestConstructEd25519Key_Padded(t *testing.T) {
+	data := make([]byte, KEYCERT_SPK_SIZE) // 128 bytes
+	for i := 0; i < KEYCERT_SIGN_ED25519_SIZE; i++ {
+		data[KEYCERT_SPK_SIZE-KEYCERT_SIGN_ED25519_SIZE+i] = byte(i + 1)
+	}
+
+	key, err := constructEd25519Key(data)
+	require.NoError(t, err)
+	require.NotNil(t, key)
+	assert.Equal(t, KEYCERT_SIGN_ED25519_SIZE, key.Len())
+
+	keyBytes := key.Bytes()
+	assert.Equal(t, byte(1), keyBytes[0])
+	assert.Equal(t, byte(32), keyBytes[31])
+}
+
+// TestConstructEd25519Key_Raw verifies Ed25519 accepts exact 32-byte raw input.
+func TestConstructEd25519Key_Raw(t *testing.T) {
+	data := make([]byte, KEYCERT_SIGN_ED25519_SIZE)
+	for i := range data {
+		data[i] = byte(i + 10)
+	}
+
+	key, err := constructEd25519Key(data)
+	require.NoError(t, err)
+	require.NotNil(t, key)
+	assert.Equal(t, KEYCERT_SIGN_ED25519_SIZE, key.Len())
+	assert.Equal(t, byte(10), key.Bytes()[0])
+}
+
+// TestConstructEd25519PHKey_Padded verifies Ed25519ph also accepts padded input.
+func TestConstructEd25519PHKey_Padded(t *testing.T) {
+	data := make([]byte, KEYCERT_SPK_SIZE)
+	for i := 0; i < KEYCERT_SIGN_ED25519PH_SIZE; i++ {
+		data[KEYCERT_SPK_SIZE-KEYCERT_SIGN_ED25519PH_SIZE+i] = byte(i + 1)
+	}
+
+	key, err := constructEd25519PHKey(data)
+	require.NoError(t, err)
+	require.NotNil(t, key)
+	assert.Equal(t, KEYCERT_SIGN_ED25519PH_SIZE, key.Len())
+}
+
+// TestEd25519_InputConsistency verifies that Ed25519 and ECDSA constructors
+// behave consistently: both accept padded (128-byte) and raw (exact-size) input.
+func TestEd25519_InputConsistency(t *testing.T) {
+	tests := []struct {
+		name      string
+		construct func([]byte) (interface{ Len() int }, error)
+		rawSize   int
+	}{
+		{"P256", func(d []byte) (interface{ Len() int }, error) { return constructECDSAP256Key(d) }, KEYCERT_SIGN_P256_SIZE},
+		{"P384", func(d []byte) (interface{ Len() int }, error) { return constructECDSAP384Key(d) }, KEYCERT_SIGN_P384_SIZE},
+		{"Ed25519", func(d []byte) (interface{ Len() int }, error) { return constructEd25519Key(d) }, KEYCERT_SIGN_ED25519_SIZE},
+		{"Ed25519ph", func(d []byte) (interface{ Len() int }, error) { return constructEd25519PHKey(d) }, KEYCERT_SIGN_ED25519PH_SIZE},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name+"_Raw", func(t *testing.T) {
+			data := makeTestBytes(tt.rawSize, 1)
+			key, err := tt.construct(data)
+			assert.NoError(t, err)
+			assert.NotNil(t, key)
+			assert.Equal(t, tt.rawSize, key.Len())
+		})
+
+		t.Run(tt.name+"_Padded128", func(t *testing.T) {
+			data := make([]byte, KEYCERT_SPK_SIZE)
+			for i := 0; i < tt.rawSize; i++ {
+				data[KEYCERT_SPK_SIZE-tt.rawSize+i] = byte(i + 1)
+			}
+			key, err := tt.construct(data)
+			assert.NoError(t, err)
+			assert.NotNil(t, key)
+			assert.Equal(t, tt.rawSize, key.Len())
+		})
+	}
+}

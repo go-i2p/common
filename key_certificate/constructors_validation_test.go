@@ -94,3 +94,12 @@ func TestConstructSigningPublicKeyByType_InsufficientData(t *testing.T) {
 		})
 	}
 }
+
+// TestValidateCryptoType_ReservedNone_SpecificError verifies that type 255
+// gets a specific error message, not a generic "invalid" one.
+func TestValidateCryptoType_ReservedNone_SpecificError(t *testing.T) {
+	err := validateCryptoType(KEYCERT_CRYPTO_RESERVED_NONE)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "reserved")
+	assert.Contains(t, err.Error(), "RESERVED_NONE")
+}

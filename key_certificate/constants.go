@@ -242,6 +242,10 @@ const (
 	// KEYCERT_SIGN_ED25519PH_SIZE defines the size of Ed25519ph signing public keys (32 bytes).
 	// Pre-hashed Ed25519 variant with same key size but optimized for large messages.
 	KEYCERT_SIGN_ED25519PH_SIZE = 32
+
+	// KEYCERT_SIGN_REDDSA_ED25519_SIZE defines the size of RedDSA-Ed25519 signing public keys (32 bytes).
+	// RedDSA uses the same 32-byte key format as Ed25519.
+	KEYCERT_SIGN_REDDSA_ED25519_SIZE = 32
 )
 
 // Public key size constants define the exact byte lengths

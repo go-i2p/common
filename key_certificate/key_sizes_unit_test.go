@@ -220,3 +220,16 @@ func BenchmarkGetCryptoKeySize(b *testing.B) {
 		_, _ = GetCryptoKeySize(KEYCERT_CRYPTO_X25519)
 	}
 }
+
+// TestRedDSAEd25519SizeConstant verifies the constant exists and equals Ed25519 size.
+func TestRedDSAEd25519SizeConstant(t *testing.T) {
+	assert.Equal(t, 32, KEYCERT_SIGN_REDDSA_ED25519_SIZE)
+	assert.Equal(t, KEYCERT_SIGN_ED25519_SIZE, KEYCERT_SIGN_REDDSA_ED25519_SIZE)
+}
+
+// TestSignaturePublicKeySizes_UsesRedDSAConstant verifies the map uses the named constant.
+func TestSignaturePublicKeySizes_UsesRedDSAConstant(t *testing.T) {
+	size, exists := SignaturePublicKeySizes[KEYCERT_SIGN_REDDSA_ED25519]
+	assert.True(t, exists)
+	assert.Equal(t, KEYCERT_SIGN_REDDSA_ED25519_SIZE, size)
+}
