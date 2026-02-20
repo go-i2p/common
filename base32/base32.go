@@ -6,7 +6,7 @@
 // identifiers, and other network components that require base32 representation.
 //
 // Key features:
-// - I2P-compatible base32 alphabet (excludes confusing characters)
+// - I2P-compatible base32 alphabet using RFC 3548 lowercase (a-z, 2-7)
 // - Consistent lowercase encoding for .b32.i2p domain compatibility
 // - Error handling for invalid input data during decoding operations
 // - High-performance encoding/decoding suitable for network operations

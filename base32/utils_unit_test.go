@@ -93,6 +93,51 @@ func TestDecodeStringNoPadding_52CharAddress(t *testing.T) {
 	assert.Equal(t, hash[:], decoded, "round-trip should preserve original hash bytes")
 }
 
+func TestEncodeToStringSafeNoPadding_ValidInput(t *testing.T) {
+	tests := []struct {
+		name  string
+		input []byte
+	}{
+		{"small input", []byte("Hello, World!")},
+		{"single byte", []byte{0x42}},
+		{"binary data", []byte{0x00, 0x01, 0x02, 0xFF, 0xFE, 0xFD}},
+	}
+
+	hash := sha256Sum([]byte("test"))
+	tests = append(tests, struct {
+		name  string
+		input []byte
+	}{"sha256 hash", hash[:]})
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			encoded, err := EncodeToStringSafeNoPadding(tt.input)
+			require.NoError(t, err, "EncodeToStringSafeNoPadding should not error on valid input")
+			require.NotEmpty(t, encoded, "encoded string should not be empty")
+
+			expectedEncoded := EncodeToStringNoPadding(tt.input)
+			assert.Equal(t, expectedEncoded, encoded,
+				"safe-no-padding and unsafe-no-padding versions should produce same output")
+
+			decoded, err := DecodeStringNoPadding(encoded)
+			require.NoError(t, err, "DecodeStringNoPadding should not error")
+			assert.Equal(t, tt.input, decoded, "round-trip should preserve data")
+		})
+	}
+}
+
+func TestEncodeToStringSafeNoPadding_SHA256Hash(t *testing.T) {
+	hash := sha256Sum([]byte("i2p address test"))
+	encoded, err := EncodeToStringSafeNoPadding(hash[:])
+	require.NoError(t, err)
+	assert.Equal(t, 52, len(encoded),
+		"32-byte hash should encode to exactly 52 unpadded base32 characters")
+
+	// Verify it matches the non-safe variant
+	expected := EncodeToStringNoPadding(hash[:])
+	assert.Equal(t, expected, encoded)
+}
+
 func TestDecodeString_FailsOnUnpadded(t *testing.T) {
 	hash := sha256Sum([]byte("test"))
 	padded := EncodeToString(hash[:])

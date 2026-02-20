@@ -13,7 +13,7 @@ implementation supports encoding binary data to human-readable strings for I2P
 destinations, router identifiers, and other network components that require
 base32 representation.
 
-Key features: - I2P-compatible base32 alphabet (excludes confusing characters) -
+Key features: - I2P-compatible base32 alphabet using RFC 3548 lowercase (a-z, 2-7) -
 Consistent lowercase encoding for .b32.i2p domain compatibility - Error handling
 for invalid input data during decoding operations - High-performance
 encoding/decoding suitable for network operations
@@ -38,8 +38,9 @@ const I2PEncodeAlphabet = "abcdefghijklmnopqrstuvwxyz234567"
 I2PEncodeAlphabet defines the base32 character set used throughout the I2P
 network. This alphabet follows RFC 3548 specifications but uses lowercase
 letters for consistency with I2P addressing conventions and .b32.i2p domain
-format requirements. The alphabet excludes confusing characters like 0, 1, 8,
-and 9 to prevent user errors.
+format requirements. The characters 0, 1, 8, and 9 are not part of the base32
+standard alphabet (RFC 3548 uses only a-z and 2-7), which inherently avoids
+ambiguity with similar-looking characters.
 
 ```go
 var I2PEncoding *b32.Encoding = b32.NewEncoding(I2PEncodeAlphabet)

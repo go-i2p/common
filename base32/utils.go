@@ -4,6 +4,11 @@ package base32
 // EncodeToString encodes binary data to a base32 string using I2P's encoding alphabet.
 // It converts arbitrary byte data into a human-readable base32 string representation
 // using the I2P-specific lowercase alphabet defined in RFC 3548.
+//
+// Note: EncodeToString(nil) and EncodeToString([]byte{}) both return "" without error.
+// These two cases are indistinguishable in the output. Use EncodeToStringSafe for
+// input validation that rejects nil and empty data.
+//
 // Example: EncodeToString([]byte{72, 101, 108, 108, 111}) returns "jbswy3dp"
 func EncodeToString(data []byte) string {
 	// Use I2P-specific base32 encoding with lowercase alphabet
@@ -77,4 +82,21 @@ func DecodeStringSafeNoPadding(data string) ([]byte, error) {
 		return nil, ErrInputTooLarge
 	}
 	return I2PEncodingNoPadding.DecodeString(data)
+}
+
+// EncodeToStringSafeNoPadding encodes binary data to an unpadded base32 string with
+// input validation. This combines the unpadded encoding of EncodeToStringNoPadding
+// with the size validation of EncodeToStringSafe. This is the recommended function for
+// generating I2P .b32.i2p addresses from untrusted or user-provided data, as it
+// validates input size and produces the standard unpadded 52-character format for
+// 32-byte SHA-256 hashes.
+// Returns an error if data is empty or exceeds MAX_ENCODE_SIZE.
+func EncodeToStringSafeNoPadding(data []byte) (string, error) {
+	if len(data) == 0 {
+		return "", ErrEmptyData
+	}
+	if len(data) > MAX_ENCODE_SIZE {
+		return "", ErrDataTooLarge
+	}
+	return I2PEncodingNoPadding.EncodeToString(data), nil
 }

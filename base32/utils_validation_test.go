@@ -44,6 +44,49 @@ func TestEncodeToStringSafe_MaxSize(t *testing.T) {
 
 	expectedEncoded := EncodeToString(maxSize)
 	assert.Equal(t, expectedEncoded, encoded, "should match unsafe version")
+
+	// Also verify NoPadding variant produces consistent output
+	encodedNoPad := EncodeToStringNoPadding(maxSize)
+	expectedNoPad := trimRight(expectedEncoded, "=")
+	assert.Equal(t, expectedNoPad, encodedNoPad,
+		"NoPadding output at max size should equal padded output with padding stripped")
+}
+
+func TestEncodeToStringSafeNoPadding_MaxSize(t *testing.T) {
+	maxSize := make([]byte, MAX_ENCODE_SIZE)
+	for i := range maxSize {
+		maxSize[i] = byte(i % 256)
+	}
+
+	encoded, err := EncodeToStringSafeNoPadding(maxSize)
+	assert.NoError(t, err, "should not error at exact max size")
+	assert.NotEmpty(t, encoded, "should produce encoded string")
+
+	expectedEncoded := EncodeToStringNoPadding(maxSize)
+	assert.Equal(t, expectedEncoded, encoded,
+		"safe NoPadding should match unsafe NoPadding at max size")
+}
+
+func TestEncodeToStringSafeNoPadding_EmptyInput(t *testing.T) {
+	encoded, err := EncodeToStringSafeNoPadding([]byte{})
+	assert.Error(t, err, "should error on empty input")
+	assert.Equal(t, ErrEmptyData, err, "should return ErrEmptyData")
+	assert.Empty(t, encoded, "encoded string should be empty on error")
+}
+
+func TestEncodeToStringSafeNoPadding_NilInput(t *testing.T) {
+	encoded, err := EncodeToStringSafeNoPadding(nil)
+	assert.Error(t, err, "should error on nil input")
+	assert.Equal(t, ErrEmptyData, err, "should return ErrEmptyData")
+	assert.Empty(t, encoded, "encoded string should be empty on error")
+}
+
+func TestEncodeToStringSafeNoPadding_TooLarge(t *testing.T) {
+	tooLarge := make([]byte, MAX_ENCODE_SIZE+1)
+	encoded, err := EncodeToStringSafeNoPadding(tooLarge)
+	assert.Error(t, err, "should error on oversized input")
+	assert.Equal(t, ErrDataTooLarge, err, "should return ErrDataTooLarge")
+	assert.Empty(t, encoded, "encoded string should be empty on error")
 }
 
 func TestEncodeToStringSafe_JustUnderMaxSize(t *testing.T) {
@@ -66,6 +109,32 @@ func TestDecodeStringSafe_TooLargeInput(t *testing.T) {
 	tooLarge := strings.Repeat("a", MAX_DECODE_SIZE+1)
 	_, err := DecodeStringSafe(tooLarge)
 	assert.ErrorIs(t, err, ErrInputTooLarge)
+}
+
+func TestDecodeStringSafe_AtExactMaxDecodeSize(t *testing.T) {
+	// Construct a valid base32 string at exactly MAX_DECODE_SIZE length.
+	// We encode a large byte slice and then verify decoding at the boundary.
+	// Base32 encodes 5 bytes to 8 characters, so MAX_DECODE_SIZE chars
+	// decode to at most (MAX_DECODE_SIZE * 5 / 8) bytes.
+	numBytes := MAX_DECODE_SIZE * 5 / 8
+	data := make([]byte, numBytes)
+	for i := range data {
+		data[i] = byte(i % 256)
+	}
+	encoded := EncodeToString(data)
+	// Trim to exactly MAX_DECODE_SIZE if the encoded string is longer
+	if len(encoded) > MAX_DECODE_SIZE {
+		// Re-adjust: use fewer bytes so encoded fits
+		numBytes = (MAX_DECODE_SIZE / 8) * 5
+		data = data[:numBytes]
+		encoded = EncodeToString(data)
+	}
+	require.LessOrEqual(t, len(encoded), MAX_DECODE_SIZE,
+		"encoded string must be <= MAX_DECODE_SIZE")
+
+	decoded, err := DecodeStringSafe(encoded)
+	require.NoError(t, err, "DecodeStringSafe should accept input within MAX_DECODE_SIZE")
+	assert.Equal(t, data, decoded, "decoded data should match original")
 }
 
 func TestDecodeStringSafeNoPadding_EmptyInput(t *testing.T) {
