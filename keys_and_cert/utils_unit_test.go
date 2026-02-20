@@ -83,4 +83,46 @@ func TestConstructSigningPublicKey_ModernTypes(t *testing.T) {
 		_, err := constructSigningPublicKey(make([]byte, 64), key_certificate.SIGNATURE_TYPE_ED25519_SHA512)
 		require.Error(t, err)
 	})
+
+	t.Run("DSA-SHA1 returns unsupported", func(t *testing.T) {
+		_, err := constructSigningPublicKey(make([]byte, 128), 0)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "unsupported signature key type: 0")
+	})
+
+	t.Run("ECDSA-P256 returns unsupported", func(t *testing.T) {
+		_, err := constructSigningPublicKey(make([]byte, 64), 1)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "unsupported signature key type: 1")
+	})
+
+	t.Run("ECDSA-P384 returns unsupported", func(t *testing.T) {
+		_, err := constructSigningPublicKey(make([]byte, 96), 2)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "unsupported signature key type: 2")
+	})
+}
+
+// ============================================================================
+// constructPublicKey — unsupported crypto type error paths
+// ============================================================================
+
+func TestConstructPublicKey_UnsupportedCryptoTypes(t *testing.T) {
+	t.Run("P256 returns unsupported", func(t *testing.T) {
+		_, err := constructPublicKey(make([]byte, 64), 1)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "unsupported crypto key type: 1")
+	})
+
+	t.Run("P384 returns unsupported", func(t *testing.T) {
+		_, err := constructPublicKey(make([]byte, 96), 2)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "unsupported crypto key type: 2")
+	})
+
+	t.Run("P521 returns unsupported", func(t *testing.T) {
+		_, err := constructPublicKey(make([]byte, 132), 3)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "unsupported crypto key type: 3")
+	})
 }

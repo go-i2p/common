@@ -814,3 +814,38 @@ func TestInteropWireFormat_ElGamalDSA(t *testing.T) {
 	assert.Equal(t, wireData[:256], kac.ReceivingPublic.Bytes())
 	assert.Equal(t, wireData[256:384], kac.SigningPublic.Bytes())
 }
+
+// ============================================================================
+// extractPaddingData defensive copy
+// ============================================================================
+
+func TestExtractPaddingDataDefensiveCopy(t *testing.T) {
+	t.Run("returned padding does not alias input buffer", func(t *testing.T) {
+		data := make([]byte, KEYS_AND_CERT_DATA_SIZE)
+		for i := range data {
+			data[i] = byte(i)
+		}
+		original := make([]byte, len(data))
+		copy(original, data)
+
+		padding := extractPaddingData(data, 256, 352)
+		require.Equal(t, 96, len(padding))
+
+		for i := range padding {
+			padding[i] = 0xFF
+		}
+
+		assert.Equal(t, original, data,
+			"mutating returned padding must not affect original input buffer")
+	})
+
+	t.Run("padding content matches source", func(t *testing.T) {
+		data := make([]byte, KEYS_AND_CERT_DATA_SIZE)
+		for i := range data {
+			data[i] = byte(i)
+		}
+
+		padding := extractPaddingData(data, 100, 200)
+		assert.Equal(t, data[100:200], padding)
+	})
+}

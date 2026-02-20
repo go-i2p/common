@@ -1,6 +1,7 @@
 package keys_and_cert
 
 import (
+	"crypto/rand"
 	"encoding/binary"
 	"testing"
 
@@ -330,5 +331,150 @@ func TestReadKeysAndCert_MalformedCertData(t *testing.T) {
 	t.Run("insufficient data for X25519AndEd25519", func(t *testing.T) {
 		_, _, err := ReadKeysAndCertX25519AndEd25519(make([]byte, 100))
 		require.Error(t, err)
+	})
+}
+
+// ============================================================================
+// Certificate() nil safety
+// ============================================================================
+
+func TestCertificate_NilSafety(t *testing.T) {
+	t.Run("nil receiver returns nil", func(t *testing.T) {
+		var kac *KeysAndCert
+		cert := kac.Certificate()
+		assert.Nil(t, cert, "Certificate() on nil receiver should return nil")
+	})
+
+	t.Run("nil KeyCertificate returns nil", func(t *testing.T) {
+		kac := &KeysAndCert{
+			KeyCertificate: nil,
+		}
+		cert := kac.Certificate()
+		assert.Nil(t, cert, "Certificate() with nil KeyCertificate should return nil")
+	})
+
+	t.Run("zero-value struct returns nil", func(t *testing.T) {
+		var kac KeysAndCert
+		cert := kac.Certificate()
+		assert.Nil(t, cert, "Certificate() on zero-value struct should return nil")
+	})
+
+	t.Run("valid struct returns non-nil", func(t *testing.T) {
+		kac := createValidKeyAndCert(t)
+		cert := kac.Certificate()
+		require.NotNil(t, cert, "Certificate() on valid struct should return non-nil")
+	})
+}
+
+// ============================================================================
+// Specialized reader cert type validation
+// ============================================================================
+
+func TestReadKeysAndCertElgAndEd25519_MismatchedCertTypes(t *testing.T) {
+	t.Run("rejects X25519 crypto type", func(t *testing.T) {
+		wireData := buildX25519Ed25519Data(t)
+		_, _, err := ReadKeysAndCertElgAndEd25519(wireData)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "crypto type mismatch")
+	})
+
+	t.Run("rejects P256 signing type", func(t *testing.T) {
+		block := make([]byte, KEYS_AND_CERT_DATA_SIZE)
+		_, err := rand.Read(block)
+		require.NoError(t, err)
+
+		certPayload := buildKeyCertPayload(key_certificate.KEYCERT_SIGN_P256, key_certificate.KEYCERT_CRYPTO_ELG)
+		certBytes := []byte{certificate.CERT_KEY}
+		lenBytes := make([]byte, 2)
+		binary.BigEndian.PutUint16(lenBytes, uint16(len(certPayload)))
+		certBytes = append(certBytes, lenBytes...)
+		certBytes = append(certBytes, certPayload...)
+		wireData := append(block, certBytes...)
+
+		_, _, err = ReadKeysAndCertElgAndEd25519(wireData)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "signing type mismatch")
+	})
+
+	t.Run("accepts correct ElGamal+Ed25519 types", func(t *testing.T) {
+		wireData := buildElgEd25519Data(t)
+		kac, _, err := ReadKeysAndCertElgAndEd25519(wireData)
+		require.NoError(t, err)
+		require.NotNil(t, kac)
+	})
+}
+
+func TestReadKeysAndCertX25519AndEd25519_MismatchedCertTypes(t *testing.T) {
+	t.Run("rejects ElGamal crypto type", func(t *testing.T) {
+		wireData := buildElgEd25519Data(t)
+		_, _, err := ReadKeysAndCertX25519AndEd25519(wireData)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "crypto type mismatch")
+	})
+
+	t.Run("rejects RedDSA signing type", func(t *testing.T) {
+		block := make([]byte, KEYS_AND_CERT_DATA_SIZE)
+		_, err := rand.Read(block)
+		require.NoError(t, err)
+
+		certPayload := buildKeyCertPayload(key_certificate.KEYCERT_SIGN_REDDSA_ED25519, key_certificate.KEYCERT_CRYPTO_X25519)
+		certBytes := []byte{certificate.CERT_KEY}
+		lenBytes := make([]byte, 2)
+		binary.BigEndian.PutUint16(lenBytes, uint16(len(certPayload)))
+		certBytes = append(certBytes, lenBytes...)
+		certBytes = append(certBytes, certPayload...)
+		wireData := append(block, certBytes...)
+
+		_, _, err = ReadKeysAndCertX25519AndEd25519(wireData)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "signing type mismatch")
+	})
+
+	t.Run("accepts correct X25519+Ed25519 types", func(t *testing.T) {
+		wireData := buildX25519Ed25519Data(t)
+		kac, _, err := ReadKeysAndCertX25519AndEd25519(wireData)
+		require.NoError(t, err)
+		require.NotNil(t, kac)
+	})
+}
+
+// ============================================================================
+// validateSpecializedReaderCertTypes
+// ============================================================================
+
+func TestValidateSpecializedReaderCertTypes(t *testing.T) {
+	t.Run("matching types pass", func(t *testing.T) {
+		keyCert := buildTestKeyCert(t, key_certificate.KEYCERT_SIGN_ED25519, key_certificate.KEYCERT_CRYPTO_X25519)
+		err := validateSpecializedReaderCertTypes(
+			keyCert,
+			key_certificate.KEYCERT_CRYPTO_X25519,
+			key_certificate.KEYCERT_SIGN_ED25519,
+			"test",
+		)
+		assert.NoError(t, err)
+	})
+
+	t.Run("crypto mismatch returns error", func(t *testing.T) {
+		keyCert := buildTestKeyCert(t, key_certificate.KEYCERT_SIGN_ED25519, key_certificate.KEYCERT_CRYPTO_ELG)
+		err := validateSpecializedReaderCertTypes(
+			keyCert,
+			key_certificate.KEYCERT_CRYPTO_X25519,
+			key_certificate.KEYCERT_SIGN_ED25519,
+			"test",
+		)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "crypto type mismatch")
+	})
+
+	t.Run("signing mismatch returns error", func(t *testing.T) {
+		keyCert := buildTestKeyCert(t, key_certificate.KEYCERT_SIGN_P256, key_certificate.KEYCERT_CRYPTO_X25519)
+		err := validateSpecializedReaderCertTypes(
+			keyCert,
+			key_certificate.KEYCERT_CRYPTO_X25519,
+			key_certificate.KEYCERT_SIGN_ED25519,
+			"test",
+		)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "signing type mismatch")
 	})
 }

@@ -300,13 +300,15 @@ func (keys_and_cert *KeysAndCert) SigningPublicKey() (types.SigningPublicKey, er
 	return keys_and_cert.SigningPublic, nil
 }
 
-// Certificate returns the certificate.
+// Certificate returns the Certificate embedded within the KeyCertificate.
+// Returns nil if the receiver is nil or KeyCertificate has not been set.
 func (keys_and_cert *KeysAndCert) Certificate() *certificate.Certificate {
+	if keys_and_cert == nil || keys_and_cert.KeyCertificate == nil {
+		return nil
+	}
 	return &keys_and_cert.KeyCertificate.Certificate
 }
 
-// ReadKeysAndCert creates a new *KeysAndCert from []byte using ReadKeysAndCert.
-// Returns a pointer to KeysAndCert unlike ReadKeysAndCert.
 // validateKeysAndCertDataSize validates that data meets minimum KeysAndCert size requirements.
 // Returns error if data is too short to contain a valid KeysAndCert structure.
 func validateKeysAndCertDataSize(dataLen int) error {
@@ -337,6 +339,10 @@ func parseKeyCertificateFromData(data []byte, offset int) (*key_certificate.KeyC
 // Returns the constructed public key or error if construction fails.
 // The full 256-byte public key region is passed to ConstructPublicKey, which extracts
 // the actual key from its start-aligned position within the field.
+//
+// Limitation: All currently-defined I2P crypto key types fit within 256 bytes (the largest
+// is ElGamal at 256). If a future type exceeds this, excess data reconstruction from the
+// certificate payload would be needed (similar to signing keys > 128 bytes).
 func constructPublicKeyFromCert(keyCert *key_certificate.KeyCertificate, data []byte) (types.ReceivingPublicKey, error) {
 	pubKeySize := keyCert.CryptoSize()
 	if pubKeySize == 0 {
@@ -402,6 +408,10 @@ func constructSigningKeyFromCert(keyCert *key_certificate.KeyCertificate, data [
 	return sigKey, nil
 }
 
+// ReadKeysAndCert parses a KeysAndCert from wire-format bytes. It supports both
+// NULL certificates (ElGamal + DSA-SHA1) and KEY certificates with declared key types.
+// Returns the parsed KeysAndCert, any remaining bytes after the structure, and an error
+// if parsing fails.
 func ReadKeysAndCert(data []byte) (*KeysAndCert, []byte, error) {
 	log.WithFields(logger.Fields{
 		"input_length": len(data),
@@ -454,6 +464,27 @@ func ReadKeysAndCert(data []byte) (*KeysAndCert, []byte, error) {
 	return keysAndCert, remainder, nil
 }
 
+// validateSpecializedReaderCertTypes validates that the parsed KeyCertificate declares
+// crypto and signing types consistent with the hardcoded key sizes used by a specialized reader.
+// Returns an error if the certificate's declared types don't match expectations.
+func validateSpecializedReaderCertTypes(keyCert *key_certificate.KeyCertificate, expectedCryptoType, expectedSigType int, readerName string) error {
+	actualCrypto := keyCert.PublicKeyType()
+	actualSig := keyCert.SigningPublicKeyType()
+	if actualCrypto != expectedCryptoType {
+		return oops.Errorf(
+			"%s: certificate crypto type mismatch: expected %d, got %d",
+			readerName, expectedCryptoType, actualCrypto,
+		)
+	}
+	if actualSig != expectedSigType {
+		return oops.Errorf(
+			"%s: certificate signing type mismatch: expected %d, got %d",
+			readerName, expectedSigType, actualSig,
+		)
+	}
+	return nil
+}
+
 // validateMinimumDataLength validates that the data has sufficient length for parsing.
 // Returns an error if the data is smaller than the minimum required size.
 func validateMinimumDataLength(dataLen, minDataLength int) error {
@@ -479,9 +510,12 @@ func extractElGamalPublicKey(data []byte, pubKeySize int) (types.ReceivingPublic
 }
 
 // extractPaddingData extracts padding bytes from the data at the specified range.
-// Returns a copy of the padding data.
+// Returns a defensive copy so mutations do not affect the original input buffer.
 func extractPaddingData(data []byte, paddingStart, paddingEnd int) []byte {
-	return data[paddingStart:paddingEnd]
+	src := data[paddingStart:paddingEnd]
+	dst := make([]byte, len(src))
+	copy(dst, src)
+	return dst
 }
 
 // extractEd25519SigningKey extracts and validates an Ed25519 signing public key from the data.
@@ -575,6 +609,15 @@ func ReadKeysAndCertElgAndEd25519(data []byte) (keysAndCert *KeysAndCert, remain
 		return
 	}
 
+	if err = validateSpecializedReaderCertTypes(
+		keysAndCert.KeyCertificate,
+		key_certificate.KEYCERT_CRYPTO_ELG,
+		key_certificate.KEYCERT_SIGN_ED25519,
+		"ReadKeysAndCertElgAndEd25519",
+	); err != nil {
+		return
+	}
+
 	logElgEd25519Success(len(keysAndCert.Padding), len(remainder))
 	return
 }
@@ -622,6 +665,10 @@ func readKeysAndCertNonKeyCert(rawData []byte, certType int) (*KeysAndCert, []by
 
 // buildNullCertKeyCertificate creates a synthetic KeyCertificate for NULL certificates.
 // NULL certificates imply ElGamal (type 0) encryption + DSA-SHA1 (type 0) signing.
+//
+// NOTE: This directly sets exported fields (SpkType, CpkType) rather than using a
+// KeyCertificate constructor, because no constructor exists for synthetic (non-parsed)
+// KeyCertificates. If KeyCertificate adds validation in constructors, this should be updated.
 func buildNullCertKeyCertificate(cert *certificate.Certificate) *key_certificate.KeyCertificate {
 	spkType := i2pdata.Integer([]byte{0x00, 0x00}) // DSA-SHA1 = 0
 	cpkType := i2pdata.Integer([]byte{0x00, 0x00}) // ElGamal = 0
@@ -683,6 +730,15 @@ func ReadKeysAndCertX25519AndEd25519(data []byte) (keysAndCert *KeysAndCert, rem
 
 	keysAndCert.KeyCertificate, remainder, err = extractKeyCertificate(data, totalKeySize)
 	if err != nil {
+		return
+	}
+
+	if err = validateSpecializedReaderCertTypes(
+		keysAndCert.KeyCertificate,
+		key_certificate.KEYCERT_CRYPTO_X25519,
+		key_certificate.KEYCERT_SIGN_ED25519,
+		"ReadKeysAndCertX25519AndEd25519",
+	); err != nil {
 		return
 	}
 

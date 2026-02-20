@@ -35,3 +35,39 @@ func FuzzReadKeysAndCert(f *testing.F) {
 		}
 	})
 }
+
+func FuzzReadKeysAndCertElgAndEd25519(f *testing.F) {
+	validData := make([]byte, KEYS_AND_CERT_DATA_SIZE)
+	validData = append(validData, []byte{0x05, 0x00, 0x04, 0x00, 0x07, 0x00, 0x00}...)
+	f.Add(validData)
+	f.Add([]byte{0x00, 0x01, 0x02})
+	mismatch := make([]byte, KEYS_AND_CERT_DATA_SIZE)
+	mismatch = append(mismatch, []byte{0x05, 0x00, 0x04, 0x00, 0x07, 0x00, 0x04}...)
+	f.Add(mismatch)
+	f.Add(make([]byte, KEYS_AND_CERT_DATA_SIZE+3))
+
+	f.Fuzz(func(t *testing.T, input []byte) {
+		kac, _, err := ReadKeysAndCertElgAndEd25519(input)
+		if err == nil && kac != nil {
+			_, _ = kac.Bytes()
+		}
+	})
+}
+
+func FuzzReadKeysAndCertX25519AndEd25519(f *testing.F) {
+	validData := make([]byte, KEYS_AND_CERT_DATA_SIZE)
+	validData = append(validData, []byte{0x05, 0x00, 0x04, 0x00, 0x07, 0x00, 0x04}...)
+	f.Add(validData)
+	f.Add([]byte{0x00, 0x01, 0x02})
+	mismatch := make([]byte, KEYS_AND_CERT_DATA_SIZE)
+	mismatch = append(mismatch, []byte{0x05, 0x00, 0x04, 0x00, 0x07, 0x00, 0x00}...)
+	f.Add(mismatch)
+	f.Add(make([]byte, KEYS_AND_CERT_DATA_SIZE+3))
+
+	f.Fuzz(func(t *testing.T, input []byte) {
+		kac, _, err := ReadKeysAndCertX25519AndEd25519(input)
+		if err == nil && kac != nil {
+			_, _ = kac.Bytes()
+		}
+	})
+}
