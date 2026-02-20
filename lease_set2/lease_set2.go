@@ -2,6 +2,7 @@
 package lease_set2
 
 import (
+	"crypto/ed25519"
 	"encoding/binary"
 	"sort"
 	"strings"
@@ -13,6 +14,8 @@ import (
 	"github.com/go-i2p/common/lease"
 	"github.com/go-i2p/common/offline_signature"
 	sig "github.com/go-i2p/common/signature"
+	signatureTypes "github.com/go-i2p/common/signature"
+	"github.com/go-i2p/crypto/ed25519ph"
 	"github.com/go-i2p/logger"
 	"github.com/samber/oops"
 )
@@ -416,6 +419,28 @@ func warnIfOptionsUnsorted(mapping common.Mapping) {
 	}
 }
 
+// validateOptionsSorted checks that options mapping keys are sorted per spec:
+// "LS2 options MUST be sorted by key, so the signature is invariant."
+// Returns an error if keys are unsorted. An empty or single-key mapping is always valid.
+func validateOptionsSorted(options common.Mapping) error {
+	vals := options.Values()
+	if len(vals) <= 1 {
+		return nil
+	}
+	keys := make([]string, 0, len(vals))
+	for _, pair := range vals {
+		keyData, err := pair[0].Data()
+		if err != nil {
+			continue
+		}
+		keys = append(keys, keyData)
+	}
+	if !sort.StringsAreSorted(keys) {
+		return oops.Errorf("options mapping keys are not sorted; spec requires sorted keys for signature invariance")
+	}
+	return nil
+}
+
 // parseEncryptionKeys parses the encryption keys from the data.
 // Returns remaining data after parsing or error if validation or parsing fails.
 func parseEncryptionKeys(ls2 *LeaseSet2, data []byte) ([]byte, error) {
@@ -637,6 +662,10 @@ func parseLeases(ls2 *LeaseSet2, data []byte) ([]byte, error) {
 	numLeases := int(data[0])
 	data = data[1:]
 
+	// Note: The parser accepts 0 leases (Postel's law / lenient input handling),
+	// while the constructor and Validate() require at least 1 lease per spec:
+	// "All LeaseSet2 variants require at least one Lease."
+	// This asymmetry is intentional — parsed LeaseSets with 0 leases will fail Validate().
 	if err := validateLeaseCount(numLeases); err != nil {
 		return nil, err
 	}
@@ -740,6 +769,12 @@ func NewLeaseSet2(
 		return LeaseSet2{}, err
 	}
 
+	// Validate that options keys are sorted per spec:
+	// "LS2 options MUST be sorted by key, so the signature is invariant."
+	if err := validateOptionsSorted(options); err != nil {
+		return LeaseSet2{}, err
+	}
+
 	// Construct the LeaseSet2 data for signing
 	dataToSign, err := serializeLeaseSet2ForSigning(dest, published, expiresOffset, flags, offlineSig, options, encryptionKeys, leases)
 	if err != nil {
@@ -818,13 +853,12 @@ func validateDestinationSize(dest destination.Destination) error {
 }
 
 // validateExpiresOffset validates that the expiration offset is within allowed range.
+// Note: The expires field is uint16, so it is naturally bounded to 0-65535 (the full
+// range of LEASESET2_MAX_EXPIRES_OFFSET). No runtime check is needed, but we retain
+// this function as a validation step placeholder and for documentation clarity.
 func validateExpiresOffset(expiresOffset uint16) error {
-	if expiresOffset > LEASESET2_MAX_EXPIRES_OFFSET {
-		return oops.
-			Code("invalid_expires_offset").
-			With("max_allowed", LEASESET2_MAX_EXPIRES_OFFSET).
-			Errorf("expires offset %d exceeds maximum %d", expiresOffset, LEASESET2_MAX_EXPIRES_OFFSET)
-	}
+	// uint16 is naturally bounded to 0-65535, which equals LEASESET2_MAX_EXPIRES_OFFSET.
+	// No runtime check needed.
 	return nil
 }
 
@@ -952,9 +986,11 @@ func serializeLeaseSet2Content(
 		data = append(data, offlineSig.Bytes()...)
 	}
 
-	// Add options mapping
-	if len(options.Values()) > 0 {
-		data = append(data, options.Data()...)
+	// Add options mapping — use Data() as the single consistent representation.
+	// If Data() is available (non-nil, non-empty), serialize it directly.
+	// Otherwise, emit the 2-byte empty mapping (size=0).
+	if optData := options.Data(); len(optData) > 0 {
+		data = append(data, optData...)
 	} else {
 		data = append(data, 0x00, 0x00)
 	}
@@ -993,9 +1029,9 @@ func determineSignatureType(dest destination.Destination, offlineSig *offline_si
 }
 
 // createLeaseSet2Signature signs the LeaseSet2 data with the provided key.
+// Supported signing types: Ed25519 (7), Ed25519ph (8), RedDSA (11).
+// Legacy types (DSA, ECDSA, RSA) are not supported per project "modern crypto only" policy.
 func createLeaseSet2Signature(signingKey interface{}, data []byte, sigType uint16) (sig.Signature, error) {
-	// This is a placeholder - actual signing would use the crypto library
-	// For now, we create a zero signature of the correct size
 	sigSize := offline_signature.SignatureSize(sigType)
 	if sigSize == 0 {
 		return sig.Signature{}, oops.
@@ -1004,11 +1040,12 @@ func createLeaseSet2Signature(signingKey interface{}, data []byte, sigType uint1
 			Errorf("unknown signature type: %d", sigType)
 	}
 
-	// TODO: Implement actual signing using the signingKey
-	// This would call into crypto/signature package to create real signatures
-	// For now, return an empty signature of the correct size
-	signatureData := make([]byte, sigSize)
-	signature, err := sig.NewSignatureFromBytes(signatureData, int(sigType))
+	signatureBytes, err := signLeaseSet2Data(signingKey, data, sigType)
+	if err != nil {
+		return sig.Signature{}, err
+	}
+
+	signature, err := sig.NewSignatureFromBytes(signatureBytes, int(sigType))
 	if err != nil {
 		return sig.Signature{}, oops.Errorf("failed to create signature: %w", err)
 	}
@@ -1017,7 +1054,61 @@ func createLeaseSet2Signature(signingKey interface{}, data []byte, sigType uint1
 		"signature_type": sigType,
 		"signature_size": sigSize,
 		"data_size":      len(data),
-	}).Warn("Created placeholder signature - implement actual signing")
+	}).Debug("Created LeaseSet2 signature")
 
 	return signature, nil
+}
+
+// signLeaseSet2Data performs the actual cryptographic signing operation.
+// Extracts the ed25519.PrivateKey from the signingKey interface and delegates
+// to the appropriate signing algorithm based on sigType.
+func signLeaseSet2Data(signingKey interface{}, data []byte, sigType uint16) ([]byte, error) {
+	privKey, err := extractEd25519PrivateKey(signingKey)
+	if err != nil {
+		return nil, err
+	}
+
+	switch sigType {
+	case uint16(signatureTypes.SIGNATURE_TYPE_EDDSA_SHA512_ED25519),
+		uint16(signatureTypes.SIGNATURE_TYPE_REDDSA_SHA512_ED25519):
+		// Ed25519 and RedDSA both use standard Ed25519 signing.
+		// RedDSA verification is identical on the curve level;
+		// full RedDSA randomized nonces are a documented limitation.
+		return ed25519.Sign(privKey, data), nil
+	case uint16(signatureTypes.SIGNATURE_TYPE_EDDSA_SHA512_ED25519PH):
+		return signEd25519ph(privKey, data)
+	default:
+		return nil, oops.Errorf("signing not implemented for signature type %d (modern crypto only: Ed25519, Ed25519ph, RedDSA)", sigType)
+	}
+}
+
+// signEd25519ph performs Ed25519ph (pre-hashed) signing per RFC 8032 Section 5.1.
+// The message is first hashed with SHA-512, then the 64-byte digest is signed.
+func signEd25519ph(privKey ed25519.PrivateKey, data []byte) ([]byte, error) {
+	pk, err := ed25519ph.NewEd25519phPrivateKey([]byte(privKey))
+	if err != nil {
+		return nil, oops.Errorf("invalid Ed25519ph private key: %w", err)
+	}
+	signer, err := pk.NewSigner()
+	if err != nil {
+		return nil, oops.Errorf("failed to create Ed25519ph signer: %w", err)
+	}
+	return signer.Sign(data)
+}
+
+// extractEd25519PrivateKey extracts an ed25519.PrivateKey from the signingKey interface.
+func extractEd25519PrivateKey(signingKey interface{}) (ed25519.PrivateKey, error) {
+	switch key := signingKey.(type) {
+	case ed25519.PrivateKey:
+		return key, nil
+	case []byte:
+		if len(key) != ed25519.PrivateKeySize {
+			return nil, oops.Errorf("invalid signing key length: got %d, expected %d", len(key), ed25519.PrivateKeySize)
+		}
+		return ed25519.PrivateKey(key), nil
+	case nil:
+		return nil, oops.Errorf("signing key is nil")
+	default:
+		return nil, oops.Errorf("unsupported signing key type: %T (expected ed25519.PrivateKey)", signingKey)
+	}
 }

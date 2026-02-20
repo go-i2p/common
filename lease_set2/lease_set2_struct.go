@@ -139,7 +139,7 @@ type LeaseSet2 struct {
 	offlineSignature *offline_signature.OfflineSignature // Optional offline signature (present if flags bit 0 set)
 	options          common.Mapping                      // Options mapping for service records (2+ bytes, sorted by key)
 	encryptionKeys   []EncryptionKey                     // Encryption keys (1-16 keys)
-	leases           []lease.Lease2                      // Lease2 structures (0-16 leases)
+	leases           []lease.Lease2                      // Lease2 structures (0-16 leases, 40 bytes each with 4-byte timestamp)
 	signature        sig.Signature                       // Signature by destination or transient key
 }
 
@@ -204,11 +204,16 @@ func validateOfflineSignatureConsistency(hasOfflineKeys bool, offlineSig *offlin
 }
 
 // validateReservedFlagsAndLeases validates that reserved flag bits are zero and the
-// lease count does not exceed the maximum.
+// lease count is within the allowed range. Per spec: "All LeaseSet2 variants require
+// at least one Lease." The minimum check is applied in Validate() but not during parsing
+// (parser accepts 0 leases per Postel's law for lenient input handling).
 func validateReservedFlagsAndLeases(flags uint16, leases []lease.Lease2) error {
 	reservedMask := uint16(0xFFF8)
 	if flags&reservedMask != 0 {
 		return oops.Errorf("LeaseSet2 has non-zero reserved flag bits: 0x%04x", flags&reservedMask)
+	}
+	if len(leases) < 1 {
+		return oops.Errorf("LeaseSet2 must have at least 1 lease per I2P specification")
 	}
 	if len(leases) > LEASESET2_MAX_LEASES {
 		return oops.Errorf("LeaseSet2 has too many leases: %d (max %d)", len(leases), LEASESET2_MAX_LEASES)
@@ -235,4 +240,26 @@ func validateEncryptionKeyConsistency(index int, key EncryptionKey) error {
 // IsValid returns true if the LeaseSet2 passes structural validation.
 func (ls2 *LeaseSet2) IsValid() bool {
 	return ls2.Validate() == nil
+}
+
+// Equals compares two LeaseSet2 structures for equality by comparing their
+// serialized byte representations. Returns true if both produce identical bytes.
+func (ls2 *LeaseSet2) Equals(other *LeaseSet2) bool {
+	if ls2 == nil || other == nil {
+		return ls2 == other
+	}
+	a, errA := ls2.Bytes()
+	b, errB := other.Bytes()
+	if errA != nil || errB != nil {
+		return false
+	}
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if a[i] != b[i] {
+			return false
+		}
+	}
+	return true
 }

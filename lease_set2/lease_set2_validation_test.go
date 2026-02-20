@@ -1,6 +1,8 @@
 package lease_set2
 
 import (
+	"crypto/ed25519"
+	"crypto/rand"
 	"encoding/binary"
 	"testing"
 	"time"
@@ -477,4 +479,103 @@ func TestParserAcceptsZeroLeases(t *testing.T) {
 	ls2, _, err := ReadLeaseSet2(data)
 	assert.NoError(t, err, "Parser should accept 0 leases (lenient parsing)")
 	assert.Equal(t, 0, ls2.LeaseCount())
+}
+
+//
+// Options sort validation tests
+//
+
+func TestConstructorRejectsUnsortedOptions(t *testing.T) {
+	pub, priv, err := ed25519.GenerateKey(rand.Reader)
+	require.NoError(t, err)
+
+	dest := createTestDestWithKey(t, pub)
+	l := createTestLease2(t, 0)
+	encKey := EncryptionKey{
+		KeyType: key_certificate.KEYCERT_CRYPTO_X25519,
+		KeyLen:  32,
+		KeyData: make([]byte, 32),
+	}
+
+	unsortedMapping := buildMappingWithKeys(t, []string{"z", "a"})
+
+	_, err = NewLeaseSet2(
+		dest, uint32(time.Now().Unix()), 600, 0, nil,
+		unsortedMapping, []EncryptionKey{encKey}, []lease.Lease2{*l}, priv,
+	)
+	assert.Error(t, err, "Constructor should reject unsorted options")
+	assert.Contains(t, err.Error(), "sorted")
+}
+
+func TestConstructorAcceptsSortedOptions(t *testing.T) {
+	pub, priv, err := ed25519.GenerateKey(rand.Reader)
+	require.NoError(t, err)
+
+	dest := createTestDestWithKey(t, pub)
+	l := createTestLease2(t, 0)
+	encKey := EncryptionKey{
+		KeyType: key_certificate.KEYCERT_CRYPTO_X25519,
+		KeyLen:  32,
+		KeyData: make([]byte, 32),
+	}
+
+	sortedMapping := buildMappingWithKeys(t, []string{"a", "z"})
+
+	ls2, err := NewLeaseSet2(
+		dest, uint32(time.Now().Unix()), 600, 0, nil,
+		sortedMapping, []EncryptionKey{encKey}, []lease.Lease2{*l}, priv,
+	)
+	assert.NoError(t, err, "Constructor should accept sorted options")
+	assert.Equal(t, 2, len(ls2.Options().Values()))
+}
+
+func TestConstructorAcceptsEmptyOptions(t *testing.T) {
+	pub, priv, err := ed25519.GenerateKey(rand.Reader)
+	require.NoError(t, err)
+
+	dest := createTestDestWithKey(t, pub)
+	l := createTestLease2(t, 0)
+	encKey := EncryptionKey{
+		KeyType: key_certificate.KEYCERT_CRYPTO_X25519,
+		KeyLen:  32,
+		KeyData: make([]byte, 32),
+	}
+
+	_, err = NewLeaseSet2(
+		dest, uint32(time.Now().Unix()), 600, 0, nil,
+		common.Mapping{}, []EncryptionKey{encKey}, []lease.Lease2{*l}, priv,
+	)
+	assert.NoError(t, err, "Constructor should accept empty options")
+}
+
+//
+// Minimum lease count validation tests
+//
+
+func TestValidateRejectsZeroLeasesMinCount(t *testing.T) {
+	ls2 := &LeaseSet2{
+		encryptionKeys: []EncryptionKey{{KeyType: 4, KeyLen: 32, KeyData: make([]byte, 32)}},
+		leases:         []lease.Lease2{},
+	}
+	err := ls2.Validate()
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "at least 1 lease")
+}
+
+func TestValidateAcceptsOneLeaseMinCount(t *testing.T) {
+	data := buildMinimalLeaseSet2Data(t, key_certificate.KEYCERT_SIGN_ED25519, 1, 0)
+	ls2, _, err := ReadLeaseSet2(data)
+	require.NoError(t, err)
+	assert.NoError(t, ls2.Validate())
+}
+
+func TestParserAcceptsZeroLeasesValidateRejects(t *testing.T) {
+	data := buildMinimalLeaseSet2Data(t, key_certificate.KEYCERT_SIGN_ED25519, 0, 0)
+	ls2, _, err := ReadLeaseSet2(data)
+	assert.NoError(t, err, "Parser should accept 0 leases (lenient)")
+	assert.Equal(t, 0, ls2.LeaseCount())
+
+	err = ls2.Validate()
+	assert.Error(t, err, "Validate should reject 0 leases")
+	assert.Contains(t, err.Error(), "at least 1 lease")
 }

@@ -1,7 +1,10 @@
 package lease_set2
 
 import (
+	"crypto/ed25519"
+	"crypto/rand"
 	"encoding/binary"
+	"sort"
 	"testing"
 	"time"
 
@@ -264,6 +267,9 @@ func TestLeaseSet2FlagMethods(t *testing.T) {
 //
 
 func TestNewLeaseSet2(t *testing.T) {
+	_, priv, err := ed25519.GenerateKey(rand.Reader)
+	require.NoError(t, err)
+
 	destData := createTestDestination(t, key_certificate.KEYCERT_SIGN_ED25519)
 	dest, _, err := destination.ReadDestination(destData)
 	require.NoError(t, err)
@@ -288,12 +294,9 @@ func TestNewLeaseSet2(t *testing.T) {
 
 	ls2, err := NewLeaseSet2(
 		dest, published, expiresOffset, 0, nil,
-		common.Mapping{}, []EncryptionKey{encKey}, []lease.Lease2{*lease2}, nil,
+		common.Mapping{}, []EncryptionKey{encKey}, []lease.Lease2{*lease2}, priv,
 	)
-	if err != nil {
-		// Skip if destination too small for validation
-		return
-	}
+	require.NoError(t, err)
 
 	destAddr2, err := dest.Base32Address()
 	require.NoError(t, err)
@@ -308,6 +311,9 @@ func TestNewLeaseSet2(t *testing.T) {
 }
 
 func TestNewLeaseSet2ConstructorAcceptsOneLease(t *testing.T) {
+	_, priv, err := ed25519.GenerateKey(rand.Reader)
+	require.NoError(t, err)
+
 	dest := createTestDest(t)
 	l := createTestLease2(t, 0)
 	encKey := EncryptionKey{
@@ -318,13 +324,16 @@ func TestNewLeaseSet2ConstructorAcceptsOneLease(t *testing.T) {
 
 	ls2, err := NewLeaseSet2(
 		dest, uint32(time.Now().Unix()), 600, 0, nil,
-		common.Mapping{}, []EncryptionKey{encKey}, []lease.Lease2{*l}, nil,
+		common.Mapping{}, []EncryptionKey{encKey}, []lease.Lease2{*l}, priv,
 	)
 	assert.NoError(t, err)
 	assert.Equal(t, 1, ls2.LeaseCount())
 }
 
 func TestNewLeaseSet2ConstructorAcceptsConsistentKey(t *testing.T) {
+	_, priv, err := ed25519.GenerateKey(rand.Reader)
+	require.NoError(t, err)
+
 	dest := createTestDest(t)
 	l := createTestLease2(t, 0)
 	goodKey := EncryptionKey{
@@ -333,9 +342,9 @@ func TestNewLeaseSet2ConstructorAcceptsConsistentKey(t *testing.T) {
 		KeyData: make([]byte, 32),
 	}
 
-	_, err := NewLeaseSet2(
+	_, err = NewLeaseSet2(
 		dest, uint32(time.Now().Unix()), 600, 0, nil,
-		common.Mapping{}, []EncryptionKey{goodKey}, []lease.Lease2{*l}, nil,
+		common.Mapping{}, []EncryptionKey{goodKey}, []lease.Lease2{*l}, priv,
 	)
 	assert.NoError(t, err)
 }
@@ -386,6 +395,9 @@ func TestSerializeForSigningPrepends0x03(t *testing.T) {
 }
 
 func TestSharedSerializationConsistency(t *testing.T) {
+	_, priv, err := ed25519.GenerateKey(rand.Reader)
+	require.NoError(t, err)
+
 	dest := createTestDest(t)
 	l := createTestLease2(t, 0)
 	encKey := EncryptionKey{
@@ -396,7 +408,7 @@ func TestSharedSerializationConsistency(t *testing.T) {
 
 	ls2, err := NewLeaseSet2(
 		dest, uint32(time.Now().Unix()), 600, 0, nil,
-		common.Mapping{}, []EncryptionKey{encKey}, []lease.Lease2{*l}, nil,
+		common.Mapping{}, []EncryptionKey{encKey}, []lease.Lease2{*l}, priv,
 	)
 	require.NoError(t, err)
 
@@ -417,4 +429,193 @@ func TestSharedSerializationConsistency(t *testing.T) {
 // TestDocGoExists verifies the package documentation is available
 func TestDocGoExists(t *testing.T) {
 	t.Log("doc.go exists and compiles successfully")
+}
+
+//
+// Signing key type tests
+//
+
+func TestNilSigningKeyReturnsError(t *testing.T) {
+	dest := createTestDest(t)
+	l := createTestLease2(t, 0)
+	encKey := EncryptionKey{
+		KeyType: key_certificate.KEYCERT_CRYPTO_X25519,
+		KeyLen:  32,
+		KeyData: make([]byte, 32),
+	}
+
+	_, err := NewLeaseSet2(
+		dest, uint32(time.Now().Unix()), 600, 0, nil,
+		common.Mapping{}, []EncryptionKey{encKey}, []lease.Lease2{*l}, nil,
+	)
+	assert.Error(t, err, "nil signing key should return error")
+	assert.Contains(t, err.Error(), "nil")
+}
+
+func TestWrongKeyTypeReturnsError(t *testing.T) {
+	dest := createTestDest(t)
+	l := createTestLease2(t, 0)
+	encKey := EncryptionKey{
+		KeyType: key_certificate.KEYCERT_CRYPTO_X25519,
+		KeyLen:  32,
+		KeyData: make([]byte, 32),
+	}
+
+	_, err := NewLeaseSet2(
+		dest, uint32(time.Now().Unix()), 600, 0, nil,
+		common.Mapping{}, []EncryptionKey{encKey}, []lease.Lease2{*l}, "not-a-key",
+	)
+	assert.Error(t, err, "string signing key should return error")
+	assert.Contains(t, err.Error(), "unsupported")
+}
+
+func TestByteSliceSigningKeyWorks(t *testing.T) {
+	pub, priv, err := ed25519.GenerateKey(rand.Reader)
+	require.NoError(t, err)
+
+	dest := createTestDestWithKey(t, pub)
+	l := createTestLease2(t, 0)
+	encKey := EncryptionKey{
+		KeyType: key_certificate.KEYCERT_CRYPTO_X25519,
+		KeyLen:  32,
+		KeyData: make([]byte, 32),
+	}
+
+	ls2, err := NewLeaseSet2(
+		dest, uint32(time.Now().Unix()), 600, 0, nil,
+		common.Mapping{}, []EncryptionKey{encKey}, []lease.Lease2{*l}, []byte(priv),
+	)
+	require.NoError(t, err)
+
+	err = ls2.Verify()
+	assert.NoError(t, err, "[]byte signing key should produce verifiable signature")
+}
+
+//
+// validateExpiresOffset tests
+//
+
+func TestValidateExpiresOffsetNeverFails(t *testing.T) {
+	assert.NoError(t, validateExpiresOffset(0))
+	assert.NoError(t, validateExpiresOffset(1))
+	assert.NoError(t, validateExpiresOffset(660))
+	assert.NoError(t, validateExpiresOffset(65535))
+}
+
+func TestExpiresOffsetConstant(t *testing.T) {
+	assert.Equal(t, uint16(LEASESET2_MAX_EXPIRES_OFFSET), uint16(65535))
+}
+
+//
+// warnIfOptionsUnsorted tests
+//
+
+func TestWarnIfOptionsUnsorted(t *testing.T) {
+	t.Run("sorted_keys_no_warning", func(t *testing.T) {
+		m := buildMappingWithKeys(t, []string{"a", "b", "c"})
+		warnIfOptionsUnsorted(m)
+	})
+
+	t.Run("unsorted_keys_warning_path", func(t *testing.T) {
+		m := buildMappingWithKeys(t, []string{"c", "a", "b"})
+		warnIfOptionsUnsorted(m)
+	})
+
+	t.Run("single_key_no_warning", func(t *testing.T) {
+		m := buildMappingWithKeys(t, []string{"z"})
+		warnIfOptionsUnsorted(m)
+	})
+
+	t.Run("empty_mapping_no_warning", func(t *testing.T) {
+		warnIfOptionsUnsorted(common.Mapping{})
+	})
+}
+
+//
+// validateOptionsSorted tests
+//
+
+func TestValidateOptionsSorted(t *testing.T) {
+	t.Run("empty_mapping_valid", func(t *testing.T) {
+		assert.NoError(t, validateOptionsSorted(common.Mapping{}))
+	})
+
+	t.Run("single_key_valid", func(t *testing.T) {
+		m := buildMappingWithKeys(t, []string{"a"})
+		assert.NoError(t, validateOptionsSorted(m))
+	})
+
+	t.Run("sorted_keys_valid", func(t *testing.T) {
+		m := buildMappingWithKeys(t, []string{"a", "b", "c"})
+		assert.NoError(t, validateOptionsSorted(m))
+	})
+
+	t.Run("unsorted_keys_error", func(t *testing.T) {
+		m := buildMappingWithKeys(t, []string{"b", "a"})
+		err := validateOptionsSorted(m)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "sorted")
+	})
+
+	t.Run("reverse_sorted_keys_error", func(t *testing.T) {
+		m := buildMappingWithKeys(t, []string{"z", "y", "x"})
+		err := validateOptionsSorted(m)
+		assert.Error(t, err)
+	})
+}
+
+//
+// Equals method tests
+//
+
+func TestEquals(t *testing.T) {
+	t.Run("identical_leaseset2_are_equal", func(t *testing.T) {
+		data := buildMinimalLeaseSet2Data(t, key_certificate.KEYCERT_SIGN_ED25519, 1, 0)
+		ls2a, _, err := ReadLeaseSet2(data)
+		require.NoError(t, err)
+		ls2b, _, err := ReadLeaseSet2(data)
+		require.NoError(t, err)
+		assert.True(t, ls2a.Equals(&ls2b))
+	})
+
+	t.Run("different_published_are_not_equal", func(t *testing.T) {
+		data1 := buildMinimalLeaseSet2Data(t, key_certificate.KEYCERT_SIGN_ED25519, 1, 0)
+		ls2a, _, err := ReadLeaseSet2(data1)
+		require.NoError(t, err)
+
+		ls2b := ls2a
+		ls2b.published = ls2a.published + 1
+		assert.False(t, ls2a.Equals(&ls2b))
+	})
+
+	t.Run("nil_handling", func(t *testing.T) {
+		data := buildMinimalLeaseSet2Data(t, key_certificate.KEYCERT_SIGN_ED25519, 1, 0)
+		ls2, _, err := ReadLeaseSet2(data)
+		require.NoError(t, err)
+
+		assert.False(t, ls2.Equals(nil))
+
+		var nilLS *LeaseSet2
+		assert.True(t, nilLS.Equals(nil))
+	})
+}
+
+//
+// Lease2 size test
+//
+
+func TestLease2Size40Bytes(t *testing.T) {
+	l := createTestLease2(t, 0)
+	assert.Equal(t, 40, len(l.Bytes()), "Lease2 should be exactly 40 bytes (32 hash + 4 tunnel_id + 4 end_date)")
+}
+
+//
+// sort.StringsAreSorted sanity check
+//
+
+func TestSortStringsSorted(t *testing.T) {
+	assert.True(t, sort.StringsAreSorted([]string{"a", "b", "c"}))
+	assert.False(t, sort.StringsAreSorted([]string{"z", "a"}))
+	assert.True(t, sort.StringsAreSorted([]string{}))
+	assert.True(t, sort.StringsAreSorted([]string{"a"}))
 }

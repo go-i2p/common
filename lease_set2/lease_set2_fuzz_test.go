@@ -1,10 +1,14 @@
 package lease_set2
 
 import (
+	"crypto/ed25519"
+	"crypto/rand"
 	"encoding/binary"
 	"testing"
 
+	common "github.com/go-i2p/common/data"
 	"github.com/go-i2p/common/key_certificate"
+	"github.com/go-i2p/common/lease"
 	"github.com/go-i2p/common/signature"
 )
 
@@ -79,6 +83,48 @@ func FuzzReadLeaseSet2(f *testing.F) {
 		_ = ls2.LeaseCount()
 		_ = ls2.Signature()
 		_ = ls2.Options()
+		_, _ = ls2.Bytes()
+	})
+}
+
+func FuzzNewLeaseSet2Constructor(f *testing.F) {
+	f.Add(uint32(1735689600), uint16(600), uint16(0), uint8(1), uint8(1))
+	f.Add(uint32(0), uint16(0), uint16(0), uint8(1), uint8(1))
+	f.Add(uint32(4294967295), uint16(65535), uint16(7), uint8(16), uint8(16))
+
+	f.Fuzz(func(t *testing.T, published uint32, expires uint16, flags uint16, numKeys uint8, numLeases uint8) {
+		if numKeys < 1 || numKeys > 16 {
+			return
+		}
+		if numLeases < 1 || numLeases > 16 {
+			return
+		}
+
+		dest := createTestDest(t)
+		encKeys := make([]EncryptionKey, numKeys)
+		for i := range encKeys {
+			encKeys[i] = EncryptionKey{
+				KeyType: key_certificate.KEYCERT_CRYPTO_X25519,
+				KeyLen:  32,
+				KeyData: make([]byte, 32),
+			}
+		}
+		leases := make([]lease.Lease2, numLeases)
+		for i := range leases {
+			l := createTestLease2(t, i)
+			leases[i] = *l
+		}
+
+		_, pub, err := ed25519.GenerateKey(rand.Reader)
+		if err != nil {
+			return
+		}
+
+		ls2, err := NewLeaseSet2(dest, published, expires, flags, nil, common.Mapping{}, encKeys, leases, pub)
+		if err != nil {
+			return // validation error is fine
+		}
+		_ = ls2.Validate()
 		_, _ = ls2.Bytes()
 	})
 }

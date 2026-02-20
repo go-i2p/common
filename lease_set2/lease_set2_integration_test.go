@@ -1,6 +1,9 @@
 package lease_set2
 
 import (
+	"bytes"
+	"crypto/ed25519"
+	"crypto/rand"
 	"encoding/binary"
 	"testing"
 	"time"
@@ -369,6 +372,9 @@ func TestVerifyRejectsInvalidSignature(t *testing.T) {
 }
 
 func TestVerifyDataConsistency(t *testing.T) {
+	_, priv, err := ed25519.GenerateKey(rand.Reader)
+	require.NoError(t, err)
+
 	dest := createTestDest(t)
 	l := createTestLease2(t, 0)
 	encKey := EncryptionKey{
@@ -379,7 +385,7 @@ func TestVerifyDataConsistency(t *testing.T) {
 
 	ls2, err := NewLeaseSet2(
 		dest, uint32(time.Now().Unix()), 600, 0, nil,
-		common.Mapping{}, []EncryptionKey{encKey}, []lease.Lease2{*l}, nil,
+		common.Mapping{}, []EncryptionKey{encKey}, []lease.Lease2{*l}, priv,
 	)
 	require.NoError(t, err)
 
@@ -405,6 +411,9 @@ func TestVerifyDataConsistency(t *testing.T) {
 //
 
 func TestConstructorWithOfflineSignature(t *testing.T) {
+	_, transientPriv, err := ed25519.GenerateKey(rand.Reader)
+	require.NoError(t, err)
+
 	dest := createTestDest(t)
 	l := createTestLease2(t, 0)
 	encKey := EncryptionKey{
@@ -413,7 +422,7 @@ func TestConstructorWithOfflineSignature(t *testing.T) {
 		KeyData: make([]byte, 32),
 	}
 
-	transientPubKey := make([]byte, 32)
+	transientPubKey := transientPriv.Public().(ed25519.PublicKey)
 	offlineSigBytes := make([]byte, 64)
 	offSig, err := offline_signature.NewOfflineSignature(
 		uint32(time.Now().Unix()+86400),
@@ -426,9 +435,332 @@ func TestConstructorWithOfflineSignature(t *testing.T) {
 
 	ls2, err := NewLeaseSet2(
 		dest, uint32(time.Now().Unix()), 600, LEASESET2_FLAG_OFFLINE_KEYS, &offSig,
-		common.Mapping{}, []EncryptionKey{encKey}, []lease.Lease2{*l}, nil,
+		common.Mapping{}, []EncryptionKey{encKey}, []lease.Lease2{*l}, transientPriv,
 	)
 	require.NoError(t, err)
 	assert.True(t, ls2.HasOfflineKeys())
 	assert.NotNil(t, ls2.OfflineSignature())
+}
+
+//
+// Real signature integration tests
+//
+
+func TestNewLeaseSet2ProducesRealSignature(t *testing.T) {
+	pub, priv, err := ed25519.GenerateKey(rand.Reader)
+	require.NoError(t, err)
+
+	dest := createTestDestWithKey(t, pub)
+	l := createTestLease2(t, 0)
+	encKey := EncryptionKey{
+		KeyType: key_certificate.KEYCERT_CRYPTO_X25519,
+		KeyLen:  32,
+		KeyData: make([]byte, 32),
+	}
+
+	ls2, err := NewLeaseSet2(
+		dest, uint32(time.Now().Unix()), 600, 0, nil,
+		common.Mapping{}, []EncryptionKey{encKey}, []lease.Lease2{*l}, priv,
+	)
+	require.NoError(t, err)
+
+	sigBytes := ls2.Signature().Bytes()
+	allZero := true
+	for _, b := range sigBytes {
+		if b != 0 {
+			allZero = false
+			break
+		}
+	}
+	assert.False(t, allZero, "Signature should not be all zeros")
+
+	err = ls2.Verify()
+	assert.NoError(t, err, "Signature created by NewLeaseSet2 should verify successfully")
+}
+
+func TestSignatureVerifiesAfterRoundTrip(t *testing.T) {
+	pub, priv, err := ed25519.GenerateKey(rand.Reader)
+	require.NoError(t, err)
+
+	dest := createTestDestWithKey(t, pub)
+	l := createTestLease2(t, 0)
+	encKey := EncryptionKey{
+		KeyType: key_certificate.KEYCERT_CRYPTO_X25519,
+		KeyLen:  32,
+		KeyData: make([]byte, 32),
+	}
+
+	ls2, err := NewLeaseSet2(
+		dest, uint32(time.Now().Unix()), 600, 0, nil,
+		common.Mapping{}, []EncryptionKey{encKey}, []lease.Lease2{*l}, priv,
+	)
+	require.NoError(t, err)
+
+	serialized, err := ls2.Bytes()
+	require.NoError(t, err)
+
+	parsed, remainder, err := ReadLeaseSet2(serialized)
+	require.NoError(t, err)
+	assert.Empty(t, remainder)
+
+	err = parsed.Verify()
+	assert.NoError(t, err, "Signature should verify after round-trip")
+}
+
+func TestTamperedDataFailsVerify(t *testing.T) {
+	pub, priv, err := ed25519.GenerateKey(rand.Reader)
+	require.NoError(t, err)
+
+	dest := createTestDestWithKey(t, pub)
+	l := createTestLease2(t, 0)
+	encKey := EncryptionKey{
+		KeyType: key_certificate.KEYCERT_CRYPTO_X25519,
+		KeyLen:  32,
+		KeyData: make([]byte, 32),
+	}
+
+	ls2, err := NewLeaseSet2(
+		dest, uint32(time.Now().Unix()), 600, 0, nil,
+		common.Mapping{}, []EncryptionKey{encKey}, []lease.Lease2{*l}, priv,
+	)
+	require.NoError(t, err)
+
+	ls2.published = ls2.published + 1
+
+	err = ls2.Verify()
+	assert.Error(t, err, "Tampered LeaseSet2 should fail verification")
+}
+
+func TestDifferentDataProducesDifferentSignatures(t *testing.T) {
+	pub, priv, err := ed25519.GenerateKey(rand.Reader)
+	require.NoError(t, err)
+
+	dest := createTestDestWithKey(t, pub)
+	encKey := EncryptionKey{
+		KeyType: key_certificate.KEYCERT_CRYPTO_X25519,
+		KeyLen:  32,
+		KeyData: make([]byte, 32),
+	}
+
+	l1 := createTestLease2(t, 0)
+	l2 := createTestLease2(t, 1)
+
+	ls2a, err := NewLeaseSet2(
+		dest, uint32(time.Now().Unix()), 600, 0, nil,
+		common.Mapping{}, []EncryptionKey{encKey}, []lease.Lease2{*l1}, priv,
+	)
+	require.NoError(t, err)
+
+	ls2b, err := NewLeaseSet2(
+		dest, uint32(time.Now().Unix()), 600, 0, nil,
+		common.Mapping{}, []EncryptionKey{encKey}, []lease.Lease2{*l2}, priv,
+	)
+	require.NoError(t, err)
+
+	assert.False(t, bytes.Equal(ls2a.Signature().Bytes(), ls2b.Signature().Bytes()),
+		"Different lease data should produce different signatures")
+}
+
+//
+// Options serialization consistency
+//
+
+func TestSerializationOptionsConsistency(t *testing.T) {
+	pub, priv, err := ed25519.GenerateKey(rand.Reader)
+	require.NoError(t, err)
+
+	dest := createTestDestWithKey(t, pub)
+	l := createTestLease2(t, 0)
+	encKey := EncryptionKey{
+		KeyType: key_certificate.KEYCERT_CRYPTO_X25519,
+		KeyLen:  32,
+		KeyData: make([]byte, 32),
+	}
+
+	t.Run("empty_options_serialize_as_two_zero_bytes", func(t *testing.T) {
+		ls2, err := NewLeaseSet2(
+			dest, uint32(time.Now().Unix()), 600, 0, nil,
+			common.Mapping{}, []EncryptionKey{encKey}, []lease.Lease2{*l}, priv,
+		)
+		require.NoError(t, err)
+
+		serialized, err := ls2.Bytes()
+		require.NoError(t, err)
+
+		ls2RT, rem, err := ReadLeaseSet2(serialized)
+		require.NoError(t, err)
+		assert.Empty(t, rem)
+		assert.Equal(t, ls2.Published(), ls2RT.Published())
+	})
+
+	t.Run("parsed_options_roundtrip_correctly", func(t *testing.T) {
+		data := buildLeaseSet2DataWithOptions(t)
+		ls2, _, err := ReadLeaseSet2(data)
+		require.NoError(t, err)
+
+		serialized, err := ls2.Bytes()
+		require.NoError(t, err)
+
+		ls2RT, _, err := ReadLeaseSet2(serialized)
+		require.NoError(t, err)
+		assert.Equal(t, len(ls2.Options().Values()), len(ls2RT.Options().Values()))
+	})
+}
+
+//
+// Multiple encryption key types
+//
+
+func TestParseMultipleEncryptionKeyTypes(t *testing.T) {
+	destData := createTestDestination(t, key_certificate.KEYCERT_SIGN_ED25519)
+	data := destData
+
+	publishedBytes := make([]byte, 4)
+	binary.BigEndian.PutUint32(publishedBytes, 1735689600)
+	data = append(data, publishedBytes...)
+
+	expiresBytes := make([]byte, 2)
+	binary.BigEndian.PutUint16(expiresBytes, 600)
+	data = append(data, expiresBytes...)
+
+	data = append(data, 0x00, 0x00) // flags
+	data = append(data, 0x00, 0x00) // empty options
+
+	data = append(data, 0x02) // 2 encryption keys
+
+	keyTypeBytes := make([]byte, 2)
+	binary.BigEndian.PutUint16(keyTypeBytes, key_certificate.KEYCERT_CRYPTO_X25519)
+	data = append(data, keyTypeBytes...)
+	keyLenBytes := make([]byte, 2)
+	binary.BigEndian.PutUint16(keyLenBytes, 32)
+	data = append(data, keyLenBytes...)
+	x25519Key := make([]byte, 32)
+	for i := range x25519Key {
+		x25519Key[i] = byte(i)
+	}
+	data = append(data, x25519Key...)
+
+	binary.BigEndian.PutUint16(keyTypeBytes, key_certificate.KEYCERT_CRYPTO_ELG)
+	data = append(data, keyTypeBytes...)
+	binary.BigEndian.PutUint16(keyLenBytes, 256)
+	data = append(data, keyLenBytes...)
+	elgKey := make([]byte, 256)
+	for i := range elgKey {
+		elgKey[i] = byte(0xBB + i)
+	}
+	data = append(data, elgKey...)
+
+	data = append(data, 0x01)
+	data = append(data, make([]byte, 32)...)
+	tunnelID := make([]byte, 4)
+	binary.BigEndian.PutUint32(tunnelID, 12345)
+	data = append(data, tunnelID...)
+	endDate := make([]byte, 4)
+	binary.BigEndian.PutUint32(endDate, uint32(time.Now().Unix()+600))
+	data = append(data, endDate...)
+
+	data = append(data, make([]byte, signature.EdDSA_SHA512_Ed25519_SIZE)...)
+
+	ls2, remainder, err := ReadLeaseSet2(data)
+	require.NoError(t, err)
+	assert.Empty(t, remainder)
+	assert.Equal(t, 2, ls2.EncryptionKeyCount())
+
+	keys := ls2.EncryptionKeys()
+	assert.Equal(t, uint16(key_certificate.KEYCERT_CRYPTO_X25519), keys[0].KeyType)
+	assert.Equal(t, uint16(32), keys[0].KeyLen)
+	assert.Equal(t, uint16(key_certificate.KEYCERT_CRYPTO_ELG), keys[1].KeyType)
+	assert.Equal(t, uint16(256), keys[1].KeyLen)
+}
+
+//
+// Verify with valid signature (various lease counts)
+//
+
+func TestVerifyWithValidSignature(t *testing.T) {
+	pub, priv, err := ed25519.GenerateKey(rand.Reader)
+	require.NoError(t, err)
+
+	dest := createTestDestWithKey(t, pub)
+
+	testCases := []struct {
+		name      string
+		numLeases int
+	}{
+		{"single_lease", 1},
+		{"three_leases", 3},
+		{"max_leases", 16},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			leases := make([]lease.Lease2, tc.numLeases)
+			for i := range leases {
+				l := createTestLease2(t, i)
+				leases[i] = *l
+			}
+			encKey := EncryptionKey{
+				KeyType: key_certificate.KEYCERT_CRYPTO_X25519,
+				KeyLen:  32,
+				KeyData: make([]byte, 32),
+			}
+
+			ls2, err := NewLeaseSet2(
+				dest, uint32(time.Now().Unix()), 600, 0, nil,
+				common.Mapping{}, []EncryptionKey{encKey}, leases, priv,
+			)
+			require.NoError(t, err)
+			assert.NoError(t, ls2.Verify(), "Verify should succeed with valid signature")
+		})
+	}
+}
+
+//
+// Verify with offline signature (end-to-end)
+//
+
+func TestVerifyWithOfflineSignature(t *testing.T) {
+	destPub, destPriv, err := ed25519.GenerateKey(rand.Reader)
+	require.NoError(t, err)
+
+	transientPub, transientPriv, err := ed25519.GenerateKey(rand.Reader)
+	require.NoError(t, err)
+
+	dest := createTestDestWithKey(t, destPub)
+
+	offlineExpires := uint32(time.Now().Unix() + 86400)
+	offSig, err := offline_signature.CreateOfflineSignature(
+		offlineExpires,
+		key_certificate.KEYCERT_SIGN_ED25519,
+		transientPub,
+		destPriv,
+		key_certificate.KEYCERT_SIGN_ED25519,
+	)
+	require.NoError(t, err)
+
+	l := createTestLease2(t, 0)
+	encKey := EncryptionKey{
+		KeyType: key_certificate.KEYCERT_CRYPTO_X25519,
+		KeyLen:  32,
+		KeyData: make([]byte, 32),
+	}
+
+	ls2, err := NewLeaseSet2(
+		dest, uint32(time.Now().Unix()), 600, LEASESET2_FLAG_OFFLINE_KEYS, &offSig,
+		common.Mapping{}, []EncryptionKey{encKey}, []lease.Lease2{*l}, transientPriv,
+	)
+	require.NoError(t, err)
+	assert.True(t, ls2.HasOfflineKeys())
+
+	err = ls2.Verify()
+	assert.NoError(t, err, "Verify should succeed using transient key from offline signature")
+}
+
+//
+// Lease2 size verification
+//
+
+func TestLease2Size40Bytes(t *testing.T) {
+	l := createTestLease2(t, 0)
+	assert.Equal(t, 40, len(l.Bytes()), "Lease2 should be exactly 40 bytes (32 hash + 4 tunnel_id + 4 end_date)")
 }
