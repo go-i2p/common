@@ -13,7 +13,6 @@ import (
 	"github.com/go-i2p/common/lease"
 	"github.com/go-i2p/common/lease_set2"
 	"github.com/go-i2p/common/offline_signature"
-	goi2ped25519 "github.com/go-i2p/crypto/ed25519"
 	"github.com/stretchr/testify/require"
 	"go.step.sm/crypto/x25519"
 )
@@ -26,14 +25,14 @@ import (
 func createTestEd25519Destination(t *testing.T) destination.Destination {
 	t.Helper()
 
-	publicKey, _, err := goi2ped25519.GenerateEd25519KeyPair()
+	publicKey, _, err := ed25519.GenerateKey(rand.Reader)
 	require.NoError(t, err, "Failed to generate Ed25519 key pair")
 
 	destBytes := make([]byte, 391)
 	_, _ = rand.Read(destBytes[:384])
 
 	// Copy actual Ed25519 public key to the signing key position
-	copy(destBytes[352:384], publicKey.Bytes())
+	copy(destBytes[352:384], publicKey)
 
 	// Certificate: type=KEY(5), length=4, sigtype=Ed25519(7), cryptotype=ElGamal(0)
 	destBytes[384] = 0x05
@@ -87,7 +86,9 @@ func createTestLeaseSet2(t *testing.T) *lease_set2.LeaseSet2 {
 	testLease2, err := lease.NewLease2(tunnelGwHash, 12345, time.Now().Add(10*time.Minute))
 	require.NoError(t, err)
 
-	_, ed25519SigningPriv, err := goi2ped25519.GenerateEd25519KeyPair()
+	// Use stdlib crypto/ed25519 directly — lease_set2.NewLeaseSet2
+	// expects ed25519.PrivateKey, not *goi2ped25519.Ed25519PrivateKey.
+	_, ed25519SigningPriv, err := ed25519.GenerateKey(rand.Reader)
 	require.NoError(t, err)
 
 	ls2, err := lease_set2.NewLeaseSet2(

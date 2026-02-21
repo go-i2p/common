@@ -11,7 +11,6 @@ import (
 	goi2ped25519 "github.com/go-i2p/crypto/ed25519"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"go.step.sm/crypto/x25519"
 )
 
 // ————————————————————————————————————————————————
@@ -21,13 +20,12 @@ import (
 
 func TestNewEncryptedLeaseSet(t *testing.T) {
 	ls2 := createTestLeaseSet2(t)
-	recipientPub, _, err := x25519.GenerateKey(rand.Reader)
-	require.NoError(t, err)
 
-	var cookie [32]byte
-	_, _ = rand.Read(cookie[:])
+	var subcredential [32]byte
+	_, _ = rand.Read(subcredential[:])
+	published := uint32(time.Now().Unix())
 
-	encryptedData, err := EncryptInnerLeaseSet2(ls2, cookie, &recipientPub)
+	encryptedData, err := EncryptInnerLeaseSet2(ls2, subcredential, published)
 	require.NoError(t, err)
 
 	_, signingPriv, err := goi2ped25519.GenerateEd25519KeyPair()
@@ -35,7 +33,6 @@ func TestNewEncryptedLeaseSet(t *testing.T) {
 
 	blindedKey := make([]byte, 32)
 	_, _ = rand.Read(blindedKey)
-	published := uint32(time.Now().Unix())
 	expires := uint16(600)
 
 	els, err := NewEncryptedLeaseSet(
@@ -62,13 +59,12 @@ func TestNewEncryptedLeaseSet(t *testing.T) {
 
 func TestNewEncryptedLeaseSetFromDestination(t *testing.T) {
 	ls2 := createTestLeaseSet2(t)
-	recipientPub, _, err := x25519.GenerateKey(rand.Reader)
-	require.NoError(t, err)
 
-	var cookie [32]byte
-	_, _ = rand.Read(cookie[:])
+	var subcredential [32]byte
+	_, _ = rand.Read(subcredential[:])
+	published := uint32(time.Now().Unix())
 
-	encryptedData, err := EncryptInnerLeaseSet2(ls2, cookie, &recipientPub)
+	encryptedData, err := EncryptInnerLeaseSet2(ls2, subcredential, published)
 	require.NoError(t, err)
 
 	_, signingPriv, err := goi2ped25519.GenerateEd25519KeyPair()
@@ -80,7 +76,7 @@ func TestNewEncryptedLeaseSetFromDestination(t *testing.T) {
 
 	els, err := NewEncryptedLeaseSetFromDestination(
 		dest,
-		uint32(time.Now().Unix()),
+		published,
 		600,
 		0,
 		nil,
@@ -94,12 +90,12 @@ func TestNewEncryptedLeaseSetFromDestination(t *testing.T) {
 
 func TestNewEncryptedLeaseSetWithByteSliceKey(t *testing.T) {
 	ls2 := createTestLeaseSet2(t)
-	recipientPub, _, err := x25519.GenerateKey(rand.Reader)
-	require.NoError(t, err)
 
-	var cookie [32]byte
-	_, _ = rand.Read(cookie[:])
-	encryptedData, err := EncryptInnerLeaseSet2(ls2, cookie, &recipientPub)
+	var subcredential [32]byte
+	_, _ = rand.Read(subcredential[:])
+	published := uint32(time.Now().Unix())
+
+	encryptedData, err := EncryptInnerLeaseSet2(ls2, subcredential, published)
 	require.NoError(t, err)
 
 	_, signingPriv, err := goi2ped25519.GenerateEd25519KeyPair()
@@ -112,7 +108,7 @@ func TestNewEncryptedLeaseSetWithByteSliceKey(t *testing.T) {
 	els, err := NewEncryptedLeaseSet(
 		key_certificate.KEYCERT_SIGN_ED25519,
 		blindedKey,
-		uint32(time.Now().Unix()),
+		published,
 		600,
 		0,
 		nil,
@@ -279,4 +275,23 @@ func TestConstructorRejectsReservedFlags(t *testing.T) {
 		assert.Error(t, err, "flags 0x%04x should be rejected", flags)
 		assert.Contains(t, err.Error(), "reserved flag bits")
 	}
+}
+
+// TestNewEncryptedLeaseSetRejectsInvalidSigType verifies that the constructor
+// rejects sig types that are not Ed25519 (7) or RedDSA (11).
+func TestNewEncryptedLeaseSetRejectsInvalidSigType(t *testing.T) {
+	pub, _, _ := ed25519.GenerateKey(nil)
+	encData := make([]byte, 80)
+	_, err := NewEncryptedLeaseSet(
+		1, // ECDSA_P256 — not allowed for blinded keys
+		pub,
+		uint32(time.Now().Unix()),
+		600,
+		0,
+		nil,
+		encData,
+		pub, // will fail on sig_type first
+	)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "invalid blinded sig_type")
 }

@@ -145,15 +145,15 @@ func validateInputs(
 	return validateEncryptedPayload(encryptedInnerData)
 }
 
-// validateSigTypeAndKeySize validates the signing key type is known and the blinded
-// public key has the correct size for that type.
+// validateSigTypeAndKeySize validates the signing key type is Red25519 (11) or
+// Ed25519 (7) per spec, and the blinded public key has the correct size.
 func validateSigTypeAndKeySize(sigType uint16, blindedPublicKey []byte) error {
-	sizes, ok := key_certificate.SigningKeySizes[int(sigType)]
-	if !ok {
-		return oops.Code("unknown_sig_type").
+	if !isAllowedBlindedSigType(sigType) {
+		return oops.Code("invalid_sig_type").
 			With("sig_type", sigType).
-			Errorf("unknown signing key type: %d", sigType)
+			Errorf("invalid blinded sig_type %d: spec requires Red25519 (11) or Ed25519 (7)", sigType)
 	}
+	sizes := key_certificate.SigningKeySizes[int(sigType)]
 	if len(blindedPublicKey) != sizes.SigningPublicKeySize {
 		return oops.Code("invalid_key_size").
 			With("got", len(blindedPublicKey)).
@@ -203,15 +203,20 @@ func validateEncryptedPayload(encryptedInnerData []byte) error {
 	return nil
 }
 
-// createSignature signs data using Ed25519, producing a signature that is
-// compatible with the go-i2p/crypto library's Ed25519Verifier.Verify method.
+// createSignature signs data using Ed25519, producing a signature compatible
+// with the go-i2p/crypto library's Ed25519Verifier.Verify method.
+//
+// NOTE: The I2P spec mandates Red25519 (RedDSA) for EncryptedLeaseSet outer
+// signatures. Red25519 uses randomized nonces for unlinkability. This
+// implementation uses standard deterministic Ed25519 signing, which produces
+// valid signatures (verification is identical at the curve level), but
+// deterministic signatures allow correlation of re-publications. A full
+// Red25519 randomized nonce implementation is a known limitation.
 //
 // IMPORTANT: Do NOT pre-hash here. The Ed25519Verifier.Verify() method in the
 // crypto library already applies SHA-512 internally before calling VerifyHash.
-// Pre-hashing here would cause a double-hash mismatch (sign over SHA512(data)
-// but verify over SHA512(SHA512(data))).
 //
-// Supports ed25519.PrivateKey, [64]byte, *Ed25519PrivateKey, and 64-byte []byte key types.
+// Supports ed25519.PrivateKey, [64]byte, *Ed25519PrivateKey, and 64-byte []byte.
 func createSignature(signingKey interface{}, data []byte, sigType uint16) (sig.Signature, error) {
 	switch key := signingKey.(type) {
 	case ed25519.PrivateKey:

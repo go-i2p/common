@@ -199,3 +199,26 @@ func TestEd25519SigningMatchesCryptoLibrary(t *testing.T) {
 	err = els.Verify()
 	assert.NoError(t, err, "Verify() round-trip must succeed")
 }
+
+// TestSigningDeterministic verifies that Ed25519 is deterministic — same input
+// yields the same signature. (RedDSA would be non-deterministic; documented limitation.)
+func TestSigningDeterministic(t *testing.T) {
+	pub, priv, _ := ed25519.GenerateKey(nil)
+	encData := make([]byte, 80)
+	published := uint32(time.Now().Unix())
+
+	els1, err := NewEncryptedLeaseSet(
+		uint16(key_certificate.KEYCERT_SIGN_ED25519),
+		pub, published, 600, 0, nil, encData, priv,
+	)
+	require.NoError(t, err)
+
+	els2, err := NewEncryptedLeaseSet(
+		uint16(key_certificate.KEYCERT_SIGN_ED25519),
+		pub, published, 600, 0, nil, encData, priv,
+	)
+	require.NoError(t, err)
+
+	assert.Equal(t, els1.Signature().Bytes(), els2.Signature().Bytes(),
+		"deterministic Ed25519 produces identical signatures")
+}

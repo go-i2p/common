@@ -53,7 +53,27 @@ const (
 	// ENCRYPTED_LEASESET_MIN_SIGNATURE_SIZE is the minimum signature size (Ed25519 = 64 bytes).
 	ENCRYPTED_LEASESET_MIN_SIGNATURE_SIZE int = 64
 
-	// ENCRYPTED_LEASESET_MIN_ENCRYPTED_SIZE is the minimum encrypted data size:
-	// ephemeral_key(32) + nonce(12) + plaintext(1 min) + tag(16) = 61 bytes.
-	ENCRYPTED_LEASESET_MIN_ENCRYPTED_SIZE int = 61
+	// ENCRYPTED_LEASESET_MIN_ENCRYPTED_SIZE is the minimum encrypted inner data size:
+	// outerSalt(32) + authType(1) + innerSalt(32) + plaintext(1 min) = 66 bytes.
+	// Per the I2P spec, encrypted data uses a two-layer ChaCha20 scheme with 32-byte salts.
+	ENCRYPTED_LEASESET_MIN_ENCRYPTED_SIZE int = 66
+
+	// ENCRYPTED_LEASESET_OUTER_SALT_SIZE is the size of the outer salt in the encrypted data (32 bytes).
+	ENCRYPTED_LEASESET_OUTER_SALT_SIZE int = 32
+
+	// ENCRYPTED_LEASESET_INNER_SALT_SIZE is the size of the inner salt in the Layer 1 plaintext (32 bytes).
+	ENCRYPTED_LEASESET_INNER_SALT_SIZE int = 32
+
+	// Auth type constants for per-client authorization in Layer 1.
+
+	// ENCRYPTED_LEASESET_AUTH_TYPE_NONE indicates no per-client authorization (type 0).
+	ENCRYPTED_LEASESET_AUTH_TYPE_NONE byte = 0
+
+	// ENCRYPTED_LEASESET_AUTH_TYPE_DH indicates per-client DH authorization (type 1).
+	// Not yet implemented.
+	ENCRYPTED_LEASESET_AUTH_TYPE_DH byte = 1
+
+	// ENCRYPTED_LEASESET_AUTH_TYPE_PSK indicates per-client PSK authorization (type 2).
+	// Not yet implemented.
+	ENCRYPTED_LEASESET_AUTH_TYPE_PSK byte = 2
 )

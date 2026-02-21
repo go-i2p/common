@@ -92,7 +92,9 @@ func logParsedEncryptedLeaseSet(els *EncryptedLeaseSet) {
 	}).Debug("Successfully parsed EncryptedLeaseSet")
 }
 
-// parseSigType reads the 2-byte sig_type field and validates it is a known type.
+// parseSigType reads the 2-byte sig_type field and validates it is Red25519 (11)
+// or Ed25519 (7). Per spec: "This will always be type 11, identifying a Red25519
+// blinded key." Ed25519 (7) is also accepted for backward compatibility.
 func parseSigType(els *EncryptedLeaseSet, data []byte) ([]byte, error) {
 	if len(data) < ENCRYPTED_LEASESET_SIGTYPE_SIZE {
 		return nil, oops.Code("sigtype_too_short").
@@ -100,12 +102,20 @@ func parseSigType(els *EncryptedLeaseSet, data []byte) ([]byte, error) {
 	}
 	els.sigType = binary.BigEndian.Uint16(data[:ENCRYPTED_LEASESET_SIGTYPE_SIZE])
 
-	if _, ok := key_certificate.SigningKeySizes[int(els.sigType)]; !ok {
-		return nil, oops.Code("unknown_sig_type").
+	if !isAllowedBlindedSigType(els.sigType) {
+		return nil, oops.Code("invalid_sig_type").
 			With("sig_type", els.sigType).
-			Errorf("unknown signing key type: %d", els.sigType)
+			Errorf("invalid blinded sig_type %d: spec requires Red25519 (11) or Ed25519 (7)", els.sigType)
 	}
 	return data[ENCRYPTED_LEASESET_SIGTYPE_SIZE:], nil
+}
+
+// isAllowedBlindedSigType returns true if the sig type is valid for
+// EncryptedLeaseSet blinded public keys. Per spec, this should always be
+// Red25519 (type 11). Ed25519 (type 7) is accepted for compatibility.
+func isAllowedBlindedSigType(sigType uint16) bool {
+	return sigType == key_certificate.KEYCERT_SIGN_REDDSA_ED25519 ||
+		sigType == key_certificate.KEYCERT_SIGN_ED25519
 }
 
 // parseBlindedPublicKey reads the blinded public key whose length is determined by sig_type.
@@ -386,13 +396,13 @@ func (els *EncryptedLeaseSet) Validate() error {
 	return els.signature.Validate()
 }
 
-// validateSigTypeAndKey validates that the sig_type is known and the blinded public key
-// matches the expected size for that type.
+// validateSigTypeAndKey validates that the sig_type is Red25519 or Ed25519
+// and the blinded public key matches the expected size.
 func validateSigTypeAndKey(els *EncryptedLeaseSet) error {
-	sizes, ok := key_certificate.SigningKeySizes[int(els.sigType)]
-	if !ok {
-		return oops.Errorf("unknown sig_type: %d", els.sigType)
+	if !isAllowedBlindedSigType(els.sigType) {
+		return oops.Errorf("invalid blinded sig_type %d: spec requires Red25519 (11) or Ed25519 (7)", els.sigType)
 	}
+	sizes := key_certificate.SigningKeySizes[int(els.sigType)]
 	if len(els.blindedPublicKey) != sizes.SigningPublicKeySize {
 		return oops.Errorf("blinded public key size %d != expected %d for sig_type %d",
 			len(els.blindedPublicKey), sizes.SigningPublicKeySize, els.sigType)

@@ -1,7 +1,9 @@
 package encrypted_leaseset
 
 import (
+	"crypto/ed25519"
 	"crypto/rand"
+	"encoding/binary"
 	"testing"
 	"time"
 
@@ -190,4 +192,61 @@ func TestEncryptedLeaseSetLargeInnerData(t *testing.T) {
 	els2, _, err := ReadEncryptedLeaseSet(serialized)
 	require.NoError(t, err)
 	assert.Equal(t, uint16(1000), els2.InnerLength())
+}
+
+// TestWireFormatFieldOrder verifies the wire format matches the spec field order:
+// sig_type(2) | blinded_key(32) | published(4) | expires(2) | flags(2) | len(2) | enc_data | sig(64)
+func TestWireFormatFieldOrder(t *testing.T) {
+	pub, priv, _ := ed25519.GenerateKey(nil)
+	encData := make([]byte, 80)
+	_, _ = rand.Read(encData)
+	published := uint32(time.Now().Unix())
+
+	els, err := NewEncryptedLeaseSet(
+		uint16(key_certificate.KEYCERT_SIGN_ED25519),
+		pub,
+		published,
+		600,
+		0,
+		nil,
+		encData,
+		priv,
+	)
+	require.NoError(t, err)
+
+	serialized, err := els.Bytes()
+	require.NoError(t, err)
+
+	// Parse wire format manually
+	offset := 0
+	sigType := binary.BigEndian.Uint16(serialized[offset : offset+2])
+	offset += 2
+	assert.Equal(t, uint16(7), sigType)
+
+	blindedKey := serialized[offset : offset+32]
+	offset += 32
+	assert.Equal(t, []byte(pub), blindedKey)
+
+	parsedPublished := binary.BigEndian.Uint32(serialized[offset : offset+4])
+	offset += 4
+	assert.Equal(t, published, parsedPublished)
+
+	parsedExpires := binary.BigEndian.Uint16(serialized[offset : offset+2])
+	offset += 2
+	assert.Equal(t, uint16(600), parsedExpires)
+
+	parsedFlags := binary.BigEndian.Uint16(serialized[offset : offset+2])
+	offset += 2
+	assert.Equal(t, uint16(0), parsedFlags)
+
+	innerLen := binary.BigEndian.Uint16(serialized[offset : offset+2])
+	offset += 2
+	assert.Equal(t, uint16(80), innerLen)
+
+	parsedEncData := serialized[offset : offset+80]
+	offset += 80
+	assert.Equal(t, encData, parsedEncData)
+
+	parsedSig := serialized[offset:]
+	assert.Equal(t, 64, len(parsedSig))
 }

@@ -9,7 +9,6 @@ import (
 	goi2ped25519 "github.com/go-i2p/crypto/ed25519"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"go.step.sm/crypto/x25519"
 )
 
 // ————————————————————————————————————————————————
@@ -19,12 +18,12 @@ import (
 
 func TestNewEncryptedLeaseSetRoundTrip(t *testing.T) {
 	ls2 := createTestLeaseSet2(t)
-	recipientPub, recipientPriv, err := x25519.GenerateKey(rand.Reader)
-	require.NoError(t, err)
 
-	var cookie [32]byte
-	_, _ = rand.Read(cookie[:])
-	encryptedData, err := EncryptInnerLeaseSet2(ls2, cookie, &recipientPub)
+	var subcredential [32]byte
+	_, _ = rand.Read(subcredential[:])
+	published := uint32(time.Now().Unix())
+
+	encryptedData, err := EncryptInnerLeaseSet2(ls2, subcredential, published)
 	require.NoError(t, err)
 
 	_, signingPriv, err := goi2ped25519.GenerateEd25519KeyPair()
@@ -36,7 +35,7 @@ func TestNewEncryptedLeaseSetRoundTrip(t *testing.T) {
 	original, err := NewEncryptedLeaseSet(
 		key_certificate.KEYCERT_SIGN_ED25519,
 		blindedKey,
-		uint32(time.Now().Unix()),
+		published,
 		600,
 		0,
 		nil,
@@ -60,8 +59,8 @@ func TestNewEncryptedLeaseSetRoundTrip(t *testing.T) {
 	assert.Equal(t, original.InnerLength(), parsed.InnerLength())
 	assert.Equal(t, original.EncryptedInnerData(), parsed.EncryptedInnerData())
 
-	// Verify decryption still works
-	decrypted, err := parsed.DecryptInnerData(cookie[:], &recipientPriv)
+	// Verify decryption still works after round-trip through serialization
+	decrypted, err := parsed.DecryptInnerData(subcredential)
 	require.NoError(t, err)
 	assert.NotNil(t, decrypted)
 	assert.Equal(t, ls2.Published(), decrypted.Published())
@@ -69,12 +68,12 @@ func TestNewEncryptedLeaseSetRoundTrip(t *testing.T) {
 
 func TestEncryptedLeaseSetValidateViaConstructor(t *testing.T) {
 	ls2 := createTestLeaseSet2(t)
-	recipientPub, _, err := x25519.GenerateKey(rand.Reader)
-	require.NoError(t, err)
 
-	var cookie [32]byte
-	_, _ = rand.Read(cookie[:])
-	encryptedData, err := EncryptInnerLeaseSet2(ls2, cookie, &recipientPub)
+	var subcredential [32]byte
+	_, _ = rand.Read(subcredential[:])
+	published := uint32(time.Now().Unix())
+
+	encryptedData, err := EncryptInnerLeaseSet2(ls2, subcredential, published)
 	require.NoError(t, err)
 
 	_, signingPriv, err := goi2ped25519.GenerateEd25519KeyPair()
@@ -86,7 +85,7 @@ func TestEncryptedLeaseSetValidateViaConstructor(t *testing.T) {
 	els, err := NewEncryptedLeaseSet(
 		key_certificate.KEYCERT_SIGN_ED25519,
 		blindedKey,
-		uint32(time.Now().Unix()),
+		published,
 		600,
 		0,
 		nil,

@@ -27,3 +27,22 @@ func TestNoBlindedflag(t *testing.T) {
 	assert.Equal(t, uint16(0x0001), ENCRYPTED_LEASESET_FLAG_OFFLINE_KEYS)
 	assert.Equal(t, uint16(0x0002), ENCRYPTED_LEASESET_FLAG_UNPUBLISHED)
 }
+
+// TestAuthTypeConstants verifies the per-client auth type constants.
+func TestAuthTypeConstants(t *testing.T) {
+	assert.Equal(t, byte(0), ENCRYPTED_LEASESET_AUTH_TYPE_NONE)
+	assert.Equal(t, byte(1), ENCRYPTED_LEASESET_AUTH_TYPE_DH)
+	assert.Equal(t, byte(2), ENCRYPTED_LEASESET_AUTH_TYPE_PSK)
+}
+
+// TestSaltSizeConstants verifies outer and inner salt sizes are 32 bytes.
+func TestSaltSizeConstants(t *testing.T) {
+	assert.Equal(t, 32, ENCRYPTED_LEASESET_OUTER_SALT_SIZE)
+	assert.Equal(t, 32, ENCRYPTED_LEASESET_INNER_SALT_SIZE)
+}
+
+// TestMinEncryptedSizeConstant verifies MIN_ENCRYPTED_SIZE =
+// outerSalt(32) + authType(1) + innerSalt(32) + plaintext(1) = 66.
+func TestMinEncryptedSizeConstant(t *testing.T) {
+	assert.Equal(t, 66, ENCRYPTED_LEASESET_MIN_ENCRYPTED_SIZE)
+}

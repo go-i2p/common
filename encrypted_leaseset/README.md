@@ -4,23 +4,24 @@ Package `encrypted_leaseset` implements the I2P EncryptedLeaseSet common data st
 
 ## Overview
 
-EncryptedLeaseSet provides encrypted and blinded lease sets for enhanced privacy and forward secrecy in I2P hidden services. Introduced in I2P version 0.9.38, it addresses privacy concerns with traditional lease sets by:
+EncryptedLeaseSet provides encrypted and blinded lease sets for enhanced privacy in I2P hidden services. Introduced in I2P version 0.9.38, it addresses privacy concerns with traditional lease sets by:
 
 - **Encrypting destination and leases**: The actual service destination and tunnel endpoints are encrypted, protecting against traffic analysis
-- **Blinded key derivation**: Each published EncryptedLeaseSet uses a blinded destination, preventing correlation between different publications of the same service
-- **Per-client encryption**: Unique symmetric keys can be derived for each authorized client
-- **Forward secrecy**: Cookie rotation ensures past encrypted data cannot be decrypted if keys are compromised
-- **Anti-replay protection**: Cookies prevent reuse of captured encrypted lease sets
+- **Blinded key derivation**: Each published EncryptedLeaseSet uses a blinded signing key, preventing correlation between different publications of the same service
+- **Two-layer encryption**: Uses HKDF-SHA256 + ChaCha20 stream cipher with per-publication random salts
+- **Subcredential binding**: Encryption is bound to knowledge of the destination's signing public key via a subcredential, so only clients who know the original destination can decrypt
 
-## Structure
+## Wire Format
 
-An EncryptedLeaseSet consists of the following components (wire format):
+An EncryptedLeaseSet consists of the following fields (cleartext outer structure):
 
 ```text
 +----+----+----+----+----+----+----+----+
-| blinded_destination (387+ bytes)      |
-|   - Derived from actual destination   |
-|   - Prevents correlation              |
+| sig_type (2 bytes)                    |
+|   - Red25519 (11) or Ed25519 (7)     |
++----+----+----+----+----+----+----+----+
+| blinded_public_key (variable)         |
+|   - 32 bytes for Ed25519/Red25519    |
 +----+----+----+----+----+----+----+----+
 | published (4 bytes)                   |
 |   - Seconds since Unix epoch          |
@@ -30,197 +31,174 @@ An EncryptedLeaseSet consists of the following components (wire format):
 +----+----+----+----+----+----+----+----+
 | flags (2 bytes)                       |
 |   - Bit 0: Offline signature present  |
-|   - Bit 1: Unpublished                |
-|   - Bit 2: Blinded (always set)       |
+|   - Bit 1: Unpublished               |
+|   - Bits 2-15: Reserved (must be 0)  |
 +----+----+----+----+----+----+----+----+
 | [offline_signature] (variable)        |
-|   - Optional, if flags bit 0 set      |
-+----+----+----+----+----+----+----+----+
-| options (2+ bytes)                    |
-|   - Mapping for service metadata      |
-+----+----+----+----+----+----+----+----+
-| cookie (32 bytes)                     |
-|   - For key derivation and anti-replay|
+|   - Present only if flags bit 0 set   |
 +----+----+----+----+----+----+----+----+
 | inner_length (2 bytes)                |
-|   - Size of encrypted data            |
+|   - Size of encrypted_data            |
 +----+----+----+----+----+----+----+----+
-| encrypted_inner_data (variable)       |
-|   - Encrypted LeaseSet2 structure     |
+| encrypted_data (inner_length bytes)   |
+|   - Two-layer ChaCha20 encrypted      |
+|     LeaseSet2 (see below)             |
 +----+----+----+----+----+----+----+----+
 | signature (variable)                  |
-|   - By blinded destination or         |
-|     transient key                     |
+|   - By blinded key or transient key   |
+|   - 64 bytes for Ed25519/Red25519    |
 +----+----+----+----+----+----+----+----+
 ```
+
+### Encrypted Data Structure
+
+The `encrypted_data` field uses a two-layer ChaCha20 stream cipher scheme:
+
+```text
+encrypted_data = outerSalt(32) || Layer1Ciphertext
+
+Layer 1 plaintext = authType(1) || innerSalt(32) || Layer2Ciphertext
+
+Layer 2 plaintext = serialized LeaseSet2
+```
+
+Key derivation:
+- Layer 1 key: `HKDF-SHA256(outerSalt, subcredential || published, "ELS2_L1K", 44)`
+- Layer 2 key: `HKDF-SHA256(innerSalt, subcredential || published, "ELS2_L2K", 44)`
+
+Where `subcredential = SHA-256("subcredential" || credential || blindedPubKey)` and `credential = SHA-256("credential" || destSigningPubKey)`.
 
 ## Usage
 
-### Basic Example (Structure Only - Phase 3)
-
-**Note**: Full encryption/decryption functionality will be implemented in Phase 4 after crypto package integration.
+### Parsing an EncryptedLeaseSet
 
 ```go
-package main
-
-import (
-    "fmt"
-    "log"
-    
-    "github.com/go-i2p/common/encrypted_leaseset"
-)
-
-func main() {
-    // Parse encrypted lease set from network data
-    data := []byte{/* received from network */}
-    els, remainder, err := encrypted_leaseset.ReadEncryptedLeaseSet(data)
-    if err != nil {
-        log.Fatal("Failed to parse:", err)
-    }
-    
-    // Check if expired
-    if els.IsExpired() {
-        fmt.Println("Encrypted lease set has expired")
-        return
-    }
-    
-    // Access outer (public) fields
-    fmt.Printf("Blinded destination: %s\n", els.BlindedDestination().Base32Address())
-    fmt.Printf("Published: %s\n", els.PublishedTime())
-    fmt.Printf("Expires: %s\n", els.ExpirationTime())
-    fmt.Printf("Cookie: %x\n", els.Cookie())
-    fmt.Printf("Encrypted data length: %d bytes\n", els.InnerLength())
-    
-    // Check flags
-    if els.HasOfflineKeys() {
-        fmt.Println("Uses offline signature")
-    }
-    if els.IsBlinded() {
-        fmt.Println("Uses blinded destination (always true)")
-    }
+// Parse from network data
+els, remainder, err := encrypted_leaseset.ReadEncryptedLeaseSet(data)
+if err != nil {
+    log.Fatal("Failed to parse:", err)
 }
+
+// Access outer fields
+fmt.Printf("Sig type: %d\n", els.SigType())
+fmt.Printf("Published: %s\n", els.PublishedTime())
+fmt.Printf("Expires: %s\n", els.ExpirationTime())
+fmt.Printf("Encrypted data length: %d bytes\n", els.InnerLength())
 ```
 
-### Future Usage (Phase 4 - With Crypto)
+### Decrypting the Inner LeaseSet2
 
 ```go
-// Decrypt inner data (requires authorization cookie and private key)
-authCookie := []byte{/* 32-byte cookie */}
-privateKey := /* your X25519 private key */
+// Derive subcredential from known destination signing key and blinded key
+subcredential := encrypted_leaseset.DeriveSubcredential(
+    destSigningPubKey,
+    els.BlindedPublicKey(),
+)
 
-innerData, err := els.DecryptInnerData(authCookie, privateKey)
+// Decrypt
+innerLS2, err := els.DecryptInnerData(subcredential)
 if err != nil {
     log.Fatal("Decryption failed:", err)
-}
-
-// Parse inner LeaseSet2
-innerLS2, _, err := lease_set2.ReadLeaseSet2(innerData)
-if err != nil {
-    log.Fatal("Failed to parse inner LeaseSet2:", err)
 }
 
 // Access actual destination and leases
 dest := innerLS2.Destination()
 leases := innerLS2.Leases()
-
 fmt.Printf("Actual destination: %s\n", dest.Base32Address())
 fmt.Printf("Number of leases: %d\n", len(leases))
+```
+
+### Constructing and Encrypting
+
+```go
+// Derive subcredential
+subcredential := encrypted_leaseset.DeriveSubcredential(destSigningPubKey, blindedPubKey)
+
+// Encrypt the inner LeaseSet2
+published := uint32(time.Now().Unix())
+encryptedData, err := encrypted_leaseset.EncryptInnerLeaseSet2(
+    ls2, subcredential, published,
+)
+if err != nil {
+    log.Fatal("Encryption failed:", err)
+}
+
+// Build the EncryptedLeaseSet
+els, err := encrypted_leaseset.NewEncryptedLeaseSet(
+    key_certificate.KEYCERT_SIGN_ED25519,
+    blindedPubKey,
+    published,
+    600,     // expires offset (seconds)
+    0,       // flags
+    nil,     // offline signature (nil if not used)
+    encryptedData,
+    signingPrivKey,
+)
+if err != nil {
+    log.Fatal("Construction failed:", err)
+}
+
+// Serialize for network transmission
+wireBytes, err := els.Bytes()
 ```
 
 ## Security Considerations
 
 ### Blinding
 
-The blinded destination is derived from the actual service destination using a blinding factor (alpha). This ensures:
+The blinded signing key is derived from the destination's Ed25519 signing key using a date-dependent blinding factor. This ensures:
 
-- **Unlinkability**: Different EncryptedLeaseSet publications cannot be correlated to the same service
-- **Forward unlinkability**: Even if the blinding secret is compromised, past publications remain unlinkable
-- **Verifiability**: Clients can verify the blinded destination matches the expected service
+- **Unlinkability**: Different publications cannot be correlated to the same service
+- **Verifiability**: Clients who know the destination can derive the expected blinded key
 
-### Cookie Management
+### Subcredentials
 
-The 32-byte cookie serves multiple purposes:
-
-- **Key derivation**: Combined with ECDH shared secret via HKDF to derive symmetric encryption key
-- **Anti-replay**: Each EncryptedLeaseSet should use a unique cookie
-- **Authorization**: Only clients with the correct cookie can decrypt the inner data
-
-Best practices:
-
-- Generate cryptographically random cookies
-- Rotate cookies periodically (e.g., every publication)
-- Never reuse cookies across different publications
-- Include cookie in authorization credentials
+The subcredential binds encryption to knowledge of the original destination's signing public key. Only clients who know the unblinded destination can compute the subcredential and decrypt the inner data.
 
 ### Encryption
 
-The encrypted inner data protects:
+The inner LeaseSet2 is protected by two-layer ChaCha20 stream cipher:
 
-- **Destination**: The actual service destination and its signing/encryption keys
-- **Encryption keys**: Per-endpoint encryption keys (if multiple)
-- **Leases**: Active tunnel endpoints and their expiration times
+- **Layer 1**: Keyed by `HKDF(outerSalt, subcredential || published, "ELS2_L1K")`
+- **Layer 2**: Keyed by `HKDF(innerSalt, subcredential || published, "ELS2_L2K")`
+- Random salts ensure distinct ciphertexts for each publication
 
-Recommended algorithms (Phase 4):
+### Known Limitations
 
-- **Symmetric encryption**: ChaCha20-Poly1305 or AES-256-GCM
-- **Key derivation**: HKDF-SHA256
-- **Key agreement**: X25519 (Curve25519 ECDH)
-
-## Implementation Status
-
-### Phase 3.1: EncryptedLeaseSet Foundation ✅ Complete
-
-- ✅ Package structure created
-- ✅ Constants defined
-- ✅ Struct definitions complete
-- ✅ README documentation
-- ✅ Header parsing (destination, published, expires, flags)
-- ✅ Options parsing
-- ✅ Signature parsing
-- ✅ `Bytes()` for outer structure
-- ✅ Comprehensive test suite (72.7% coverage)
-
-### Phase 3.2: Crypto Package Assessment (In Progress)
-
-Current status of github.com/go-i2p/crypto@v0.0.5:
-
-**Available:**
-- ✅ ChaCha20Poly1305 AEAD - Ready for inner data encryption
-- ✅ HKDF - Ready for key derivation
-- ✅ KDF with standard purposes - Ready for consistent key derivation
-- ✅ X25519 ECDH - Ready for key agreement
-- ✅ Ed25519 - Ready for signing
-- ✅ Elligator2 - Available for obfuscation (if needed)
-
-**Missing (BLOCKING Phase 4):**
-- ❌ Ed25519 point blinding - Required for blinded destinations
-- ❌ Blinding factor derivation - Required for per-day blinding
-- ❌ PurposeEncryptedLeaseSetEncryption constant - Required for KDF
-
-### Phase 4: Encryption Integration (BLOCKED)
-
-Blocked pending crypto package updates:
-
-- ⏳ Crypto package integration
-- ⏳ `DecryptInnerData()` method
-- ⏳ `EncryptInnerLeaseSet2()` helper
-- ⏳ Blinding key derivation (BLOCKED - needs crypto package)
-- ⏳ End-to-end encryption/decryption tests
-- ⏳ Security property validation
+- **Red25519 signing**: The spec mandates Red25519 (randomized nonces) for the outer signature. This implementation uses standard deterministic Ed25519, which produces verifiable signatures but allows correlation of re-publications of the same data. A full Red25519 implementation is planned.
+- **Per-client authorization**: DH and PSK per-client auth types are not yet implemented. Only auth type 0 (no per-client auth) is supported.
 
 ## API Reference
 
-### Core Functions (Planned)
+### Core Functions
 
 ```go
-// Reading/parsing
+// Parsing
 func ReadEncryptedLeaseSet(data []byte) (EncryptedLeaseSet, []byte, error)
+
+// Construction
+func NewEncryptedLeaseSet(sigType uint16, blindedPubKey []byte, published uint32,
+    expiresOffset uint16, flags uint16, offlineSig *offline_signature.OfflineSignature,
+    encryptedInnerData []byte, signingKey interface{}) (EncryptedLeaseSet, error)
+func NewEncryptedLeaseSetFromDestination(dest destination.Destination, published uint32,
+    expiresOffset uint16, flags uint16, offlineSig *offline_signature.OfflineSignature,
+    encryptedInnerData []byte, signingKey interface{}) (EncryptedLeaseSet, error)
+
+// Encryption
+func DeriveSubcredential(destSigningPubKey, blindedPubKey []byte) [32]byte
+func EncryptInnerLeaseSet2(ls2 *lease_set2.LeaseSet2, subcredential [32]byte,
+    published uint32) ([]byte, error)
+
+// Blinding
+func CreateBlindedDestination(dest destination.Destination, secret []byte,
+    date string) (destination.Destination, error)
 
 // Serialization
 func (els *EncryptedLeaseSet) Bytes() ([]byte, error)
 
 // Accessors
-func (els *EncryptedLeaseSet) BlindedDestination() destination.Destination
+func (els *EncryptedLeaseSet) SigType() uint16
+func (els *EncryptedLeaseSet) BlindedPublicKey() []byte
 func (els *EncryptedLeaseSet) Published() uint32
 func (els *EncryptedLeaseSet) PublishedTime() time.Time
 func (els *EncryptedLeaseSet) Expires() uint16
@@ -229,39 +207,35 @@ func (els *EncryptedLeaseSet) IsExpired() bool
 func (els *EncryptedLeaseSet) Flags() uint16
 func (els *EncryptedLeaseSet) HasOfflineKeys() bool
 func (els *EncryptedLeaseSet) IsUnpublished() bool
-func (els *EncryptedLeaseSet) IsBlinded() bool  // Always true
 func (els *EncryptedLeaseSet) OfflineSignature() *offline_signature.OfflineSignature
-func (els *EncryptedLeaseSet) Options() data.Mapping
-func (els *EncryptedLeaseSet) Cookie() [32]byte
 func (els *EncryptedLeaseSet) InnerLength() uint16
 func (els *EncryptedLeaseSet) EncryptedInnerData() []byte
 func (els *EncryptedLeaseSet) Signature() sig.Signature
 
-// Encryption/decryption (Phase 4)
-func (els *EncryptedLeaseSet) DecryptInnerData(authCookie []byte, privateKey interface{}) ([]byte, error)
-func EncryptInnerLeaseSet2(ls2 lease_set2.LeaseSet2, cookie [32]byte, publicKey interface{}) ([]byte, error)
+// Decryption
+func (els *EncryptedLeaseSet) DecryptInnerData(subcredential [32]byte) (*lease_set2.LeaseSet2, error)
+
+// Validation
+func (els *EncryptedLeaseSet) Validate() error
+func (els *EncryptedLeaseSet) IsValid() bool
+
+// Verification
+func (els *EncryptedLeaseSet) Verify() error
 ```
 
 ## Related Packages
 
-- `github.com/go-i2p/common/lease_set` - Legacy LeaseSet (Type 1)
-- `github.com/go-i2p/common/lease_set2` - Modern LeaseSet (Type 3)
-- `github.com/go-i2p/common/meta_leaseset` - MetaLeaseSet aggregation (Type 7)
+- `github.com/go-i2p/common/lease_set2` - Modern LeaseSet (Type 3) — the inner structure
 - `github.com/go-i2p/common/destination` - Destination and identity handling
 - `github.com/go-i2p/common/offline_signature` - Offline signature support
-- `github.com/go-i2p/crypto` - Cryptographic operations (Phase 4)
+- `github.com/go-i2p/common/key_certificate` - Key certificate types and sizes
+- `github.com/go-i2p/crypto` - Cryptographic operations (Ed25519, blinding)
 
 ## I2P Specification
 
-- **Common Structures**: <https://geti2p.net/spec/common-structures>
-- **EncryptedLeaseSet**: <https://geti2p.net/spec/common-structures#encryptedleaseset>
-- **LeaseSet2**: <https://geti2p.net/spec/common-structures#leaseset2>
+- **Common Structures — EncryptedLeaseSet**: <https://geti2p.net/spec/common-structures#encryptedleaseset>
+- **Encrypted LeaseSet Specification**: <https://geti2p.net/spec/encryptedleaseset>
 - **Proposal 123**: <https://geti2p.net/spec/proposals/123-new-netdb-entries>
-
-## Version
-
-Target I2P Specification: **0.9.67** (June 2025)  
-Implementation Phase: **Phase 3 - Foundation**
 
 ## License
 

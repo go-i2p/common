@@ -71,7 +71,7 @@ func TestEncryptedLeaseSetUnknownSigType(t *testing.T) {
 	binary.BigEndian.PutUint16(data[:2], 999)
 	_, _, err := ReadEncryptedLeaseSet(data)
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "unknown signing key type")
+	assert.Contains(t, err.Error(), "invalid blinded sig_type")
 }
 
 func TestEncryptedLeaseSetValidate(t *testing.T) {
@@ -82,7 +82,7 @@ func TestEncryptedLeaseSetValidate(t *testing.T) {
 
 	t.Run("unknown sig_type", func(t *testing.T) {
 		els := &EncryptedLeaseSet{sigType: 999}
-		assert.ErrorContains(t, els.Validate(), "unknown sig_type")
+		assert.ErrorContains(t, els.Validate(), "invalid blinded sig_type")
 	})
 
 	t.Run("wrong key size", func(t *testing.T) {
@@ -153,4 +153,38 @@ func TestEncryptedInnerDataMinimumCryptoOverhead(t *testing.T) {
 	)
 	assert.Error(t, err, "encrypted data below minimum crypto overhead should be rejected")
 	assert.Contains(t, err.Error(), "encrypted inner data size")
+}
+
+// TestReadEncryptedLeaseSetRejectsLegacySigTypes verifies that parseSigType
+// rejects valid-but-wrong sig types. Only Ed25519 (7) and RedDSA (11) are allowed.
+func TestReadEncryptedLeaseSetRejectsLegacySigTypes(t *testing.T) {
+	legacyTypes := []uint16{
+		0, // DSA_SHA1
+		1, // ECDSA_SHA256_P256
+		2, // ECDSA_SHA384_P384
+		3, // ECDSA_SHA512_P521
+		4, // RSA_SHA256_2048
+		5, // RSA_SHA384_3072
+		6, // RSA_SHA512_4096
+		8, // Ed25519ph
+		9, // REDDSA placeholder
+	}
+	for _, sigType := range legacyTypes {
+		data := make([]byte, 200)
+		binary.BigEndian.PutUint16(data[:2], sigType)
+		_, _, err := ReadEncryptedLeaseSet(data)
+		assert.Error(t, err, "sig_type %d should be rejected", sigType)
+		assert.Contains(t, err.Error(), "invalid blinded sig_type",
+			"sig_type %d should give 'invalid blinded sig_type' error", sigType)
+	}
+}
+
+// TestIsAllowedBlindedSigType verifies the isAllowedBlindedSigType helper
+// accepts only Ed25519 (7) and RedDSA_Ed25519 (11).
+func TestIsAllowedBlindedSigType(t *testing.T) {
+	assert.True(t, isAllowedBlindedSigType(key_certificate.KEYCERT_SIGN_ED25519))
+	assert.True(t, isAllowedBlindedSigType(key_certificate.KEYCERT_SIGN_REDDSA_ED25519))
+	assert.False(t, isAllowedBlindedSigType(0))
+	assert.False(t, isAllowedBlindedSigType(1))
+	assert.False(t, isAllowedBlindedSigType(999))
 }
