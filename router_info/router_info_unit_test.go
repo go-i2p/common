@@ -3,6 +3,7 @@ package router_info
 import (
 	"bytes"
 	"crypto/rand"
+	"os"
 	"testing"
 	"time"
 
@@ -558,4 +559,169 @@ func TestReceiverConsistency(t *testing.T) {
 		str := riVal.String()
 		assert.NotEmpty(t, str)
 	})
+}
+
+//
+// Nil options safety: RouterCapabilities and RouterVersion must not panic
+//
+
+func TestRouterCapabilitiesNilOptions(t *testing.T) {
+	ri := &RouterInfo{options: nil}
+	caps := ri.RouterCapabilities()
+	assert.Equal(t, "", caps, "RouterCapabilities should return empty string with nil options")
+}
+
+func TestRouterVersionNilOptions(t *testing.T) {
+	ri := &RouterInfo{options: nil}
+	version := ri.RouterVersion()
+	assert.Equal(t, "", version, "RouterVersion should return empty string with nil options")
+}
+
+func TestRouterCapabilitiesNilOptionsTransitiveMethods(t *testing.T) {
+	ri := &RouterInfo{options: nil}
+	// All these methods call RouterCapabilities() transitively — none should panic
+	assert.False(t, ri.IsFloodfill())
+	assert.False(t, ri.IsMediumCongested())
+	assert.False(t, ri.IsHighCongested())
+	assert.False(t, ri.IsRejectingTunnels())
+	assert.Equal(t, "", ri.SharedBandwidthCategory())
+	assert.True(t, ri.UnCongested())
+	assert.False(t, ri.Reachable())
+	assert.False(t, ri.IsLowBandwidthRouter())
+	assert.False(t, ri.IsMediumLowBandwidthRouter())
+	assert.False(t, ri.IsMediumBandwidthRouter())
+	assert.False(t, ri.IsMediumHighBandwidthRouter())
+	assert.False(t, ri.IsHighBandwidthRouter())
+	assert.False(t, ri.IsUnlimitedBandwidthRouter())
+}
+
+func TestGoodVersionNilOptions(t *testing.T) {
+	ri := &RouterInfo{options: nil}
+	good, err := ri.GoodVersion()
+	assert.False(t, good)
+	assert.Error(t, err)
+}
+
+//
+// IdentHash round-trip consistency
+//
+
+func TestIdentHashRoundTripConsistency(t *testing.T) {
+	ri, err := generateTestRouterInfo(t, time.Now())
+	require.NoError(t, err)
+
+	hash1, err := ri.IdentHash()
+	require.NoError(t, err)
+
+	b, err := ri.Bytes()
+	require.NoError(t, err)
+
+	ri2, _, err := ReadRouterInfo(b)
+	require.NoError(t, err)
+
+	hash2, err := ri2.IdentHash()
+	require.NoError(t, err)
+
+	assert.Equal(t, hash1, hash2, "IdentHash should be consistent across serialize/deserialize")
+}
+
+func TestIdentHashNilIdentity(t *testing.T) {
+	ri := &RouterInfo{}
+	_, err := ri.IdentHash()
+	assert.Error(t, err)
+}
+
+//
+// Bandwidth tier methods with specific capability letters
+//
+
+func TestBandwidthTierMethodsCorrectness(t *testing.T) {
+	tests := []struct {
+		name     string
+		caps     string
+		low      bool
+		medLow   bool
+		med      bool
+		medHigh  bool
+		high     bool
+		unlim    bool
+		category string
+	}{
+		{"L tier", "fL", true, false, false, false, false, false, "L"},
+		{"M tier", "fM", false, true, false, false, false, false, "M"},
+		{"N tier", "fN", false, false, true, false, false, false, "N"},
+		{"O tier", "fO", false, false, false, true, false, false, "O"},
+		{"P tier", "fP", false, false, false, false, true, false, "P"},
+		{"X tier", "fX", false, false, false, false, false, true, "X"},
+		{"K tier", "K", false, false, false, false, false, false, "K"},
+		{"no caps", "", false, false, false, false, false, false, ""},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ri := createRouterInfoWithCaps(t, tt.caps)
+			assert.Equal(t, tt.category, ri.SharedBandwidthCategory())
+			assert.Equal(t, tt.low, ri.IsLowBandwidthRouter())
+			assert.Equal(t, tt.medLow, ri.IsMediumLowBandwidthRouter())
+			assert.Equal(t, tt.med, ri.IsMediumBandwidthRouter())
+			assert.Equal(t, tt.medHigh, ri.IsMediumHighBandwidthRouter())
+			assert.Equal(t, tt.high, ri.IsHighBandwidthRouter())
+			assert.Equal(t, tt.unlim, ri.IsUnlimitedBandwidthRouter())
+		})
+	}
+}
+
+func TestCongestionMethods(t *testing.T) {
+	tests := []struct {
+		name      string
+		caps      string
+		floodfill bool
+		medCong   bool
+		highCong  bool
+		rejectTun bool
+		uncong    bool
+		reachable bool
+	}{
+		{"floodfill reachable", "fR", true, false, false, false, true, true},
+		{"medium congestion", "D", false, true, false, false, false, false},
+		{"high congestion", "E", false, false, true, false, false, false},
+		{"rejecting tunnels", "G", false, false, false, true, false, false},
+		{"unreachable", "U", false, false, false, false, true, false},
+		{"clean", "RN", false, false, false, false, true, true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ri := createRouterInfoWithCaps(t, tt.caps)
+			assert.Equal(t, tt.floodfill, ri.IsFloodfill())
+			assert.Equal(t, tt.medCong, ri.IsMediumCongested())
+			assert.Equal(t, tt.highCong, ri.IsHighCongested())
+			assert.Equal(t, tt.rejectTun, ri.IsRejectingTunnels())
+			assert.Equal(t, tt.uncong, ri.UnCongested())
+			assert.Equal(t, tt.reachable, ri.Reachable())
+		})
+	}
+}
+
+//
+// HasIPv4 and HasIPv6 with actual IP addresses
+//
+
+func TestHasIPv4WithAddress(t *testing.T) {
+	ri := createRouterInfoWithHostAddress(t, "127.0.0.1")
+	assert.True(t, ri.HasIPv4(), "should detect IPv4 address")
+	assert.False(t, ri.HasIPv6(), "should not detect IPv6 for IPv4-only")
+}
+
+func TestHasIPv6WithAddress(t *testing.T) {
+	ri := createRouterInfoWithHostAddress(t, "::1")
+	assert.True(t, ri.HasIPv6(), "should detect IPv6 address")
+	assert.False(t, ri.HasIPv4(), "should not detect IPv4 for IPv6-only")
+}
+
+//
+// doc.go existence
+//
+
+func TestDocGoExists(t *testing.T) {
+	_, err := os.Stat("doc.go")
+	assert.NoError(t, err, "doc.go should exist in the router_info package")
 }

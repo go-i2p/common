@@ -3,6 +3,7 @@ package router_info
 import (
 	"bytes"
 	"crypto/rand"
+	"fmt"
 	"testing"
 	"time"
 
@@ -162,7 +163,116 @@ func createTestRouterAddresses(t *testing.T) []*router_address.RouterAddress {
 }
 
 // generateTestRouterInfoForFuzz creates a test RouterInfo without *testing.T.
+// Returns a valid serialized RouterInfo for use as a fuzz seed corpus entry.
 func generateTestRouterInfoForFuzz() (*RouterInfo, error) {
-	// Can't easily create full RouterInfo without *testing.T helpers.
-	return nil, nil
+	ed25519_signingprivkey, err := ed25519.GenerateEd25519Key()
+	if err != nil {
+		return nil, err
+	}
+	ed25519_privkey := ed25519_signingprivkey.(ed25519.Ed25519PrivateKey)
+	ed25519_pubkey, err := ed25519_privkey.Public()
+	if err != nil {
+		return nil, err
+	}
+	ed25519_sigpubkey, ok := ed25519_pubkey.(types.SigningPublicKey)
+	if !ok {
+		return nil, fmt.Errorf("failed to get SigningPublicKey from Ed25519 public key")
+	}
+
+	var elgamal_privkey elgamal.PrivateKey
+	err = elgamal.ElgamalGenerate(&elgamal_privkey.PrivateKey, rand.Reader)
+	if err != nil {
+		return nil, err
+	}
+	var elg_pubkey elgamal.ElgPublicKey
+	yBytes := elgamal_privkey.PublicKey.Y.Bytes()
+	if len(yBytes) > 256 {
+		return nil, fmt.Errorf("ElGamal public key Y too large")
+	}
+	copy(elg_pubkey[256-len(yBytes):], yBytes)
+
+	var payload bytes.Buffer
+	sigType, err := data.NewIntegerFromInt(7, 2)
+	if err != nil {
+		return nil, err
+	}
+	cryptoType, err := data.NewIntegerFromInt(0, 2)
+	if err != nil {
+		return nil, err
+	}
+	payload.Write(*sigType)
+	payload.Write(*cryptoType)
+
+	cert, err := certificate.NewCertificateWithType(certificate.CERT_KEY, payload.Bytes())
+	if err != nil {
+		return nil, err
+	}
+	keyCert, err := key_certificate.KeyCertificateFromCertificate(cert)
+	if err != nil {
+		return nil, err
+	}
+	pubKeySize := keyCert.CryptoSize()
+	sigKeySize := keyCert.SigningPublicKeySize()
+	paddingSize := keys_and_cert.KEYS_AND_CERT_DATA_SIZE - pubKeySize - sigKeySize
+	padding := make([]byte, paddingSize)
+	_, err = rand.Read(padding)
+	if err != nil {
+		return nil, err
+	}
+
+	routerIdentity, err := router_identity.NewRouterIdentity(elg_pubkey, ed25519_sigpubkey, cert, padding)
+	if err != nil {
+		return nil, err
+	}
+
+	options := map[string]string{"router.version": "0.9.64"}
+	routerAddress, err := router_address.NewRouterAddress(3, time.Time{}, "NTCP2", options)
+	if err != nil {
+		return nil, err
+	}
+
+	return NewRouterInfo(routerIdentity, time.Now(), []*router_address.RouterAddress{routerAddress},
+		map[string]string{"router.version": "0.9.64"}, &ed25519_privkey, signature.SIGNATURE_TYPE_EDDSA_SHA512_ED25519)
+}
+
+// createRouterInfoWithCaps creates a RouterInfo with the specified capability letters in the options.
+func createRouterInfoWithCaps(t *testing.T, caps string) *RouterInfo {
+	t.Helper()
+	keyPair := generateTestKeyPair(t)
+	routerIdentity := assembleTestRouterIdentity(t, keyPair)
+	routerAddresses := createTestRouterAddresses(t)
+	options := map[string]string{
+		"router.version": "0.9.64",
+		"caps":           caps,
+	}
+	ri, err := NewRouterInfo(routerIdentity, time.Now(), routerAddresses, options,
+		&keyPair.ed25519PrivKey, signature.SIGNATURE_TYPE_EDDSA_SHA512_ED25519)
+	if err != nil {
+		t.Fatalf("Failed to create router info with caps %q: %v", caps, err)
+	}
+	return ri
+}
+
+// createRouterInfoWithHostAddress creates a RouterInfo with a router address containing
+// a specific host IP address for testing HasIPv4/HasIPv6.
+func createRouterInfoWithHostAddress(t *testing.T, host string) *RouterInfo {
+	t.Helper()
+	keyPair := generateTestKeyPair(t)
+	routerIdentity := assembleTestRouterIdentity(t, keyPair)
+	addrOptions := map[string]string{
+		"host": host,
+	}
+	addr, err := router_address.NewRouterAddress(3, time.Time{}, "NTCP2", addrOptions)
+	if err != nil {
+		t.Fatalf("Failed to create router address with host %q: %v", host, err)
+	}
+	riOptions := map[string]string{
+		"router.version": "0.9.64",
+	}
+	ri, err := NewRouterInfo(routerIdentity, time.Now(), []*router_address.RouterAddress{addr}, riOptions,
+		&keyPair.ed25519PrivKey, signature.SIGNATURE_TYPE_EDDSA_SHA512_ED25519)
+	if err != nil {
+		t.Fatalf("Failed to create router info with host address %q: %v", host, err)
+	}
+	return ri
 }

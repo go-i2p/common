@@ -337,6 +337,8 @@ func serializeRouterInfoFields(ri *RouterInfo) ([]byte, error) {
 }
 
 // String returns a string representation of the RouterInfo.
+// Uses a value receiver (like Bytes, Options, Signature, and Network) for
+// compatibility with fmt.Stringer and to allow calling on both values and pointers.
 // Returns a placeholder string if any required field is nil.
 func (router_info RouterInfo) String() string {
 	log.Debug("Converting RouterInfo to string")
@@ -445,8 +447,11 @@ func (router_info RouterInfo) Network() string {
 }
 
 // AddAddress adds a RouterAddress to this RouterInfo and updates the size field.
-// Returns an error if the address count would exceed 255 (max for 1-byte Integer).
+// Returns an error if address is nil or if the address count would exceed 255 (max for 1-byte Integer).
 func (router_info *RouterInfo) AddAddress(address *router_address.RouterAddress) error {
+	if address == nil {
+		return oops.Errorf("cannot add nil address")
+	}
 	newCount := len(router_info.addresses) + 1
 	newSize, err := data.NewIntegerFromInt(newCount, 1)
 	if err != nil {
@@ -458,28 +463,36 @@ func (router_info *RouterInfo) AddAddress(address *router_address.RouterAddress)
 }
 
 // RouterCapabilities returns the capabilities string for this RouterInfo.
+// Returns an empty string if the options field is nil (e.g. zero-value or failed-parse RouterInfo).
 func (router_info *RouterInfo) RouterCapabilities() string {
 	log.Debug("Retrieving RouterCapabilities")
+	if router_info.options == nil {
+		log.Debug("RouterCapabilities called with nil options, returning empty string")
+		return ""
+	}
 	str, err := data.ToI2PString("caps")
 	if err != nil {
 		log.WithError(err).Error("Failed to create I2PString for 'caps'")
 		return ""
 	}
-	// return string(router_info.options.Values().Get(str))
 	caps := string(router_info.options.Values().Get(str))
 	log.WithField("capabilities", caps).Debug("Retrieved RouterCapabilities")
 	return caps
 }
 
 // RouterVersion returns the version string for this RouterInfo.
+// Returns an empty string if the options field is nil (e.g. zero-value or failed-parse RouterInfo).
 func (router_info *RouterInfo) RouterVersion() string {
 	log.Debug("Retrieving RouterVersion")
+	if router_info.options == nil {
+		log.Debug("RouterVersion called with nil options, returning empty string")
+		return ""
+	}
 	str, err := data.ToI2PString("router.version")
 	if err != nil {
 		log.WithError(err).Error("Failed to create I2PString for 'router.version'")
 		return ""
 	}
-	// return string(router_info.options.Values().Get(str))
 	version := string(router_info.options.Values().Get(str))
 	log.WithField("version", version).Debug("Retrieved RouterVersion")
 	return version
@@ -665,6 +678,17 @@ func (ri *RouterInfo) serializeWithoutSignature() ([]byte, error) {
 func ReadRouterInfo(bytes []byte) (info RouterInfo, remainder []byte, err error) {
 	log.WithField("input_length", len(bytes)).Debug("Reading RouterInfo from bytes")
 
+	if len(bytes) < ROUTER_INFO_MIN_SIZE {
+		err = oops.Errorf("data too short for RouterInfo: need at least %d bytes, got %d", ROUTER_INFO_MIN_SIZE, len(bytes))
+		log.WithFields(logger.Fields{
+			"at":           "ReadRouterInfo",
+			"data_len":     len(bytes),
+			"required_len": ROUTER_INFO_MIN_SIZE,
+			"reason":       "data too short",
+		}).Error("error parsing router info")
+		return
+	}
+
 	// Parse core RouterInfo fields
 	info, remainder, err = parseRouterInfoCore(bytes)
 	if err != nil {
@@ -774,6 +798,9 @@ func parsePeerSizeAndOptions(remainder []byte) (*data.Integer, *data.Mapping, []
 }
 
 // parsePeerSizeFromBytes extracts the peer size integer from the byte data.
+// Per the I2P spec, peer_size is "unused, always zero". However, for forward
+// compatibility, if peer_size > 0 we skip peer_size * 32 bytes of peer hash data
+// rather than letting it corrupt the subsequent options mapping parse.
 func parsePeerSizeFromBytes(remainder []byte) (*data.Integer, []byte, error) {
 	peer_size, remainder, err := data.NewInteger(remainder, 1)
 	if err != nil {
@@ -783,7 +810,12 @@ func parsePeerSizeFromBytes(remainder []byte) (*data.Integer, []byte, error) {
 	if peer_size.Int() != 0 {
 		log.WithFields(logger.Fields{
 			"peer_size": peer_size.Int(),
-		}).Warn("Spec violation: peer_size should always be zero")
+		}).Warn("Spec violation: peer_size should always be zero, skipping peer hash data")
+		skipBytes := peer_size.Int() * 32
+		if len(remainder) < skipBytes {
+			return peer_size, remainder, oops.Errorf("not enough data to skip %d peer hashes (%d bytes needed, %d available)", peer_size.Int(), skipBytes, len(remainder))
+		}
+		remainder = remainder[skipBytes:]
 	}
 	return peer_size, remainder, nil
 }

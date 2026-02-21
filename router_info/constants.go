@@ -1,6 +1,7 @@
 package router_info
 
 // ROUTER_INFO_MIN_SIZE defines the minimum size of a RouterInfo structure in bytes.
+// Derivation: RouterIdentity(387) + Date(8) + size(1) + peer_size(1) + Mapping(2 min) + Signature(40 DSA-SHA1 default) = 439
 const ROUTER_INFO_MIN_SIZE = 439
 
 // MIN_GOOD_VERSION defines the minimum acceptable router version.

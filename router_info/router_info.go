@@ -112,12 +112,11 @@ func validateTimestampAndSize(ri *RouterInfo) error {
 	return nil
 }
 
-// validateAddressesAndOptions validates that addresses are present, their count
-// matches the size field, and that options and signature are properly set.
+// validateAddressesAndOptions validates that the address count matches the size
+// field and that options and signature are properly set.
+// Note: The I2P spec allows 0 addresses (size is "0-255"), so we do not reject
+// a RouterInfo with zero addresses at the structural validation level.
 func validateAddressesAndOptions(ri *RouterInfo) error {
-	if len(ri.addresses) == 0 {
-		return oops.Errorf("router must have at least one address")
-	}
 	sizeValue := ri.size.Int()
 	if sizeValue != len(ri.addresses) {
 		return oops.Errorf("size mismatch: size field is %d but have %d addresses", sizeValue, len(ri.addresses))
