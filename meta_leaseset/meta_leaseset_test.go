@@ -17,7 +17,7 @@ import (
 
 // TestMetaLeaseSetStructExists verifies the package structure is set up correctly
 func TestMetaLeaseSetStructExists(t *testing.T) {
-	// Verify constants are defined
+	// Verify core constants are defined
 	if META_LEASESET_TYPE != 7 {
 		t.Errorf("META_LEASESET_TYPE = %d, want 7", META_LEASESET_TYPE)
 	}
@@ -29,6 +29,33 @@ func TestMetaLeaseSetStructExists(t *testing.T) {
 	if META_LEASESET_MAX_ENTRIES != 16 {
 		t.Errorf("META_LEASESET_MAX_ENTRIES = %d, want 16", META_LEASESET_MAX_ENTRIES)
 	}
+
+	// Verify MIN_SIZE arithmetic:
+	// Destination(387) + published(4) + expires(2) + flags(2) + options(2) +
+	// num(1) + 1 entry(40) + numr(1) + signature(64) = 503
+	assert.Equal(t, 503, META_LEASESET_MIN_SIZE)
+	expectedMin := META_LEASESET_MIN_DESTINATION_SIZE +
+		META_LEASESET_PUBLISHED_SIZE +
+		META_LEASESET_EXPIRES_SIZE +
+		META_LEASESET_FLAGS_SIZE +
+		2 + // minimum options mapping
+		META_LEASESET_NUM_ENTRIES_SIZE +
+		META_LEASESET_ENTRY_SIZE +
+		META_LEASESET_NUM_REVOCATIONS_SIZE +
+		64 // minimum EdDSA signature size
+	assert.Equal(t, expectedMin, META_LEASESET_MIN_SIZE)
+
+	// Verify entry size sum: hash(32) + flags(3) + cost(1) + end_date(4) = 40
+	assert.Equal(t, META_LEASESET_ENTRY_SIZE,
+		META_LEASESET_ENTRY_HASH_SIZE+META_LEASESET_ENTRY_FLAGS_SIZE+
+			META_LEASESET_ENTRY_COST_SIZE+META_LEASESET_ENTRY_END_DATE_SIZE)
+
+	// Verify revocation constants
+	assert.Equal(t, 1, META_LEASESET_NUM_REVOCATIONS_SIZE)
+	assert.Equal(t, 32, META_LEASESET_REVOCATION_HASH_SIZE)
+
+	// Verify DB store type
+	assert.Equal(t, 0x07, META_LEASESET_DBSTORE_TYPE)
 }
 
 // TestMetaLeaseSetEntryTypes verifies entry type constants
@@ -38,9 +65,10 @@ func TestMetaLeaseSetEntryTypes(t *testing.T) {
 		typeVal  uint8
 		expected uint8
 	}{
+		{"Unknown", META_LEASESET_ENTRY_TYPE_UNKNOWN, 0},
 		{"LeaseSet", META_LEASESET_ENTRY_TYPE_LEASESET, 1},
 		{"LeaseSet2", META_LEASESET_ENTRY_TYPE_LEASESET2, 3},
-		{"EncryptedLeaseSet", META_LEASESET_ENTRY_TYPE_ENCRYPTED, 5},
+		{"MetaLeaseSet", META_LEASESET_ENTRY_TYPE_META_LEASESET, 5},
 	}
 
 	for _, tt := range tests {
@@ -87,28 +115,27 @@ func createTestDestination(t *testing.T, sigType uint16) []byte {
 	return append(keysData, certData...)
 }
 
-// createTestEntry creates a test MetaLeaseSetEntry
+// createTestEntry creates a test MetaLeaseSetEntry in spec wire format (40 bytes).
+// Per spec: hash(32) + flags(3) + cost(1) + end_date(4) = 40 bytes.
 func createTestEntry(leaseType uint8, cost uint8) []byte {
-	data := make([]byte, 0)
+	data := make([]byte, 0, META_LEASESET_ENTRY_SIZE)
 
 	// Hash (32 bytes)
 	hash := sha256.Sum256([]byte("test entry"))
 	data = append(data, hash[:]...)
 
-	// Type (1 byte)
-	data = append(data, leaseType)
-
-	// Expires (4 bytes) - 1 hour from now
-	expires := uint32(time.Now().Unix() + 3600)
-	expiresBytes := make([]byte, 4)
-	binary.BigEndian.PutUint32(expiresBytes, expires)
-	data = append(data, expiresBytes...)
+	// Flags (3 bytes) - entry type in bits 3-0 of byte[2]
+	flags := MakeEntryFlags(leaseType)
+	data = append(data, flags[:]...)
 
 	// Cost (1 byte)
 	data = append(data, cost)
 
-	// Properties (empty mapping = 2 bytes)
-	data = append(data, 0x00, 0x00)
+	// End date (4 bytes) - 1 hour from now, seconds since epoch
+	endDate := uint32(time.Now().Unix() + 3600)
+	endDateBytes := make([]byte, 4)
+	binary.BigEndian.PutUint32(endDateBytes, endDate)
+	data = append(data, endDateBytes...)
 
 	return data
 }
@@ -116,14 +143,13 @@ func createTestEntry(leaseType uint8, cost uint8) []byte {
 // createTestEntryStruct creates a MetaLeaseSetEntry struct for tests
 func createTestEntryStruct(leaseType uint8, cost uint8) MetaLeaseSetEntry {
 	hash := sha256.Sum256([]byte(fmt.Sprintf("test entry %d", cost)))
-	expires := uint32(time.Now().Unix() + 3600)
+	endDate := uint32(time.Now().Unix() + 3600)
 
 	return MetaLeaseSetEntry{
-		hash:       hash,
-		leaseType:  leaseType,
-		expires:    expires,
-		cost:       cost,
-		properties: common.Mapping{},
+		hash:    hash,
+		flags:   MakeEntryFlags(leaseType),
+		cost:    cost,
+		endDate: endDate,
 	}
 }
 
@@ -188,6 +214,9 @@ func TestReadMetaLeaseSetMinimalValid(t *testing.T) {
 	entryData := createTestEntry(META_LEASESET_ENTRY_TYPE_LEASESET2, 10)
 	data = append(data, entryData...)
 
+	// Number of revocations (0)
+	data = append(data, 0x00)
+
 	// Signature
 	signatureData := make([]byte, signature.EdDSA_SHA512_Ed25519_SIZE)
 	for i := 0; i < signature.EdDSA_SHA512_Ed25519_SIZE; i++ {
@@ -243,7 +272,10 @@ func TestReadMetaLeaseSetMultipleEntries(t *testing.T) {
 	// Different types and costs
 	data = append(data, createTestEntry(META_LEASESET_ENTRY_TYPE_LEASESET, 5)...)
 	data = append(data, createTestEntry(META_LEASESET_ENTRY_TYPE_LEASESET2, 10)...)
-	data = append(data, createTestEntry(META_LEASESET_ENTRY_TYPE_ENCRYPTED, 15)...)
+	data = append(data, createTestEntry(META_LEASESET_ENTRY_TYPE_META_LEASESET, 15)...)
+
+	// Number of revocations (0)
+	data = append(data, 0x00)
 
 	signatureData := make([]byte, signature.EdDSA_SHA512_Ed25519_SIZE)
 	data = append(data, signatureData...)
@@ -257,7 +289,7 @@ func TestReadMetaLeaseSetMultipleEntries(t *testing.T) {
 	entries := mls.Entries()
 	assert.Equal(t, uint8(META_LEASESET_ENTRY_TYPE_LEASESET), entries[0].Type())
 	assert.Equal(t, uint8(META_LEASESET_ENTRY_TYPE_LEASESET2), entries[1].Type())
-	assert.Equal(t, uint8(META_LEASESET_ENTRY_TYPE_ENCRYPTED), entries[2].Type())
+	assert.Equal(t, uint8(META_LEASESET_ENTRY_TYPE_META_LEASESET), entries[2].Type())
 }
 
 // TestReadMetaLeaseSetTooShort tests error handling for insufficient data
@@ -347,11 +379,11 @@ func TestReadMetaLeaseSetInvalidEntryType(t *testing.T) {
 func TestMetaLeaseSetFindEntriesByType(t *testing.T) {
 	mls := &MetaLeaseSet{
 		entries: []MetaLeaseSetEntry{
-			{leaseType: META_LEASESET_ENTRY_TYPE_LEASESET, cost: 1},
-			{leaseType: META_LEASESET_ENTRY_TYPE_LEASESET2, cost: 2},
-			{leaseType: META_LEASESET_ENTRY_TYPE_LEASESET, cost: 3},
-			{leaseType: META_LEASESET_ENTRY_TYPE_ENCRYPTED, cost: 4},
-			{leaseType: META_LEASESET_ENTRY_TYPE_LEASESET2, cost: 5},
+			{flags: MakeEntryFlags(META_LEASESET_ENTRY_TYPE_LEASESET), cost: 1},
+			{flags: MakeEntryFlags(META_LEASESET_ENTRY_TYPE_LEASESET2), cost: 2},
+			{flags: MakeEntryFlags(META_LEASESET_ENTRY_TYPE_LEASESET), cost: 3},
+			{flags: MakeEntryFlags(META_LEASESET_ENTRY_TYPE_META_LEASESET), cost: 4},
+			{flags: MakeEntryFlags(META_LEASESET_ENTRY_TYPE_LEASESET2), cost: 5},
 		},
 	}
 
@@ -363,19 +395,19 @@ func TestMetaLeaseSetFindEntriesByType(t *testing.T) {
 	ls2Entries := mls.FindEntriesByType(META_LEASESET_ENTRY_TYPE_LEASESET2)
 	assert.Equal(t, 2, len(ls2Entries))
 
-	// Find EncryptedLeaseSet entries
-	encEntries := mls.FindEntriesByType(META_LEASESET_ENTRY_TYPE_ENCRYPTED)
-	assert.Equal(t, 1, len(encEntries))
+	// Find MetaLeaseSet entries
+	metaEntries := mls.FindEntriesByType(META_LEASESET_ENTRY_TYPE_META_LEASESET)
+	assert.Equal(t, 1, len(metaEntries))
 }
 
 // TestMetaLeaseSetSortEntriesByCost tests sorting entries by cost
 func TestMetaLeaseSetSortEntriesByCost(t *testing.T) {
 	mls := &MetaLeaseSet{
 		entries: []MetaLeaseSetEntry{
-			{cost: 15, leaseType: META_LEASESET_ENTRY_TYPE_LEASESET},
-			{cost: 5, leaseType: META_LEASESET_ENTRY_TYPE_LEASESET2},
-			{cost: 10, leaseType: META_LEASESET_ENTRY_TYPE_ENCRYPTED},
-			{cost: 1, leaseType: META_LEASESET_ENTRY_TYPE_LEASESET2},
+			{cost: 15, flags: MakeEntryFlags(META_LEASESET_ENTRY_TYPE_LEASESET)},
+			{cost: 5, flags: MakeEntryFlags(META_LEASESET_ENTRY_TYPE_LEASESET2)},
+			{cost: 10, flags: MakeEntryFlags(META_LEASESET_ENTRY_TYPE_META_LEASESET)},
+			{cost: 1, flags: MakeEntryFlags(META_LEASESET_ENTRY_TYPE_LEASESET2)},
 		},
 	}
 
@@ -436,12 +468,12 @@ func TestMetaLeaseSetExpirationCheck(t *testing.T) {
 func TestMetaLeaseSetEntryExpiration(t *testing.T) {
 	// Expired entry
 	pastTime := uint32(time.Now().Unix() - 100)
-	entry := MetaLeaseSetEntry{expires: pastTime}
+	entry := MetaLeaseSetEntry{endDate: pastTime}
 	assert.True(t, entry.IsExpired())
 
 	// Valid entry
 	futureTime := uint32(time.Now().Unix() + 3600)
-	entry2 := MetaLeaseSetEntry{expires: futureTime}
+	entry2 := MetaLeaseSetEntry{endDate: futureTime}
 	assert.False(t, entry2.IsExpired())
 }
 
@@ -497,65 +529,61 @@ func TestMetaLeaseSetAccessors(t *testing.T) {
 // TestMetaLeaseSetEntryAccessors tests entry accessor methods
 func TestMetaLeaseSetEntryAccessors(t *testing.T) {
 	hash := sha256.Sum256([]byte("test"))
-	expires := uint32(time.Now().Unix() + 3600)
+	endDate := uint32(time.Now().Unix() + 3600)
 	cost := uint8(42)
 	leaseType := uint8(META_LEASESET_ENTRY_TYPE_LEASESET2)
 
 	entry := MetaLeaseSetEntry{
-		hash:       hash,
-		leaseType:  leaseType,
-		expires:    expires,
-		cost:       cost,
-		properties: common.Mapping{},
+		hash:    hash,
+		flags:   MakeEntryFlags(leaseType),
+		endDate: endDate,
+		cost:    cost,
 	}
 
 	assert.Equal(t, hash, entry.Hash())
 	assert.Equal(t, leaseType, entry.Type())
-	assert.Equal(t, expires, entry.Expires())
+	assert.Equal(t, endDate, entry.Expires())
 	assert.Equal(t, cost, entry.Cost())
-	assert.NotNil(t, entry.Properties())
+	assert.Equal(t, MakeEntryFlags(leaseType), entry.Flags())
 
 	expiresTime := entry.ExpiresTime()
-	assert.Equal(t, int64(expires), expiresTime.Unix())
+	assert.Equal(t, int64(endDate), expiresTime.Unix())
 }
 
 // TestMetaLeaseSetEntryBytes tests entry serialization
 func TestMetaLeaseSetEntryBytes(t *testing.T) {
 	hash := sha256.Sum256([]byte("test hash"))
-	expires := uint32(time.Now().Unix() + 3600)
+	endDate := uint32(time.Now().Unix() + 3600)
 	cost := uint8(10)
 	leaseType := uint8(META_LEASESET_ENTRY_TYPE_LEASESET2)
 
 	entry := MetaLeaseSetEntry{
-		hash:       hash,
-		leaseType:  leaseType,
-		expires:    expires,
-		cost:       cost,
-		properties: common.Mapping{},
+		hash:    hash,
+		flags:   MakeEntryFlags(leaseType),
+		cost:    cost,
+		endDate: endDate,
 	}
 
 	bytes, err := entry.Bytes()
 	assert.NoError(t, err)
 
-	// Verify size: hash(32) + type(1) + expires(4) + cost(1) + empty properties(2) = 40 bytes
-	assert.Equal(t, 40, len(bytes))
+	// Verify size: hash(32) + flags(3) + cost(1) + end_date(4) = 40 bytes
+	assert.Equal(t, META_LEASESET_ENTRY_SIZE, len(bytes))
 
-	// Verify hash
+	// Verify hash (bytes 0-31)
 	assert.Equal(t, hash[:], bytes[0:32])
 
-	// Verify type
-	assert.Equal(t, leaseType, bytes[32])
+	// Verify flags (bytes 32-34), type in byte[34] bits 3-0
+	assert.Equal(t, byte(0), bytes[32])
+	assert.Equal(t, byte(0), bytes[33])
+	assert.Equal(t, leaseType, bytes[34]&0x0F)
 
-	// Verify expires
-	parsedExpires := binary.BigEndian.Uint32(bytes[33:37])
-	assert.Equal(t, expires, parsedExpires)
+	// Verify cost (byte 35)
+	assert.Equal(t, cost, bytes[35])
 
-	// Verify cost
-	assert.Equal(t, cost, bytes[37])
-
-	// Verify empty properties (2 zero bytes)
-	assert.Equal(t, byte(0x00), bytes[38])
-	assert.Equal(t, byte(0x00), bytes[39])
+	// Verify end_date (bytes 36-39)
+	parsedEndDate := binary.BigEndian.Uint32(bytes[36:40])
+	assert.Equal(t, endDate, parsedEndDate)
 }
 
 // TestMetaLeaseSetBytes tests MetaLeaseSet serialization
@@ -585,8 +613,8 @@ func TestMetaLeaseSetBytes(t *testing.T) {
 	assert.NotEmpty(t, bytes)
 
 	// Verify minimum expected size
-	// dest(391) + published(4) + expires(2) + flags(2) + options(2) + numEntries(1) + 2*entry(40) + sig(64) = 546
-	assert.GreaterOrEqual(t, len(bytes), 546)
+	// dest(391) + published(4) + expires(2) + flags(2) + options(2) + numEntries(1) + 2*entry(40) + numr(1) + sig(64) = 547
+	assert.GreaterOrEqual(t, len(bytes), 547)
 
 	// Verify structure by checking key positions
 	// Published should be at offset 391
@@ -635,24 +663,18 @@ func TestMetaLeaseSetSerializationConsistency(t *testing.T) {
 	assert.Equal(t, len(bytes1), len(bytes2))
 }
 
-// TestMetaLeaseSetBytesWithProperties tests serialization with non-empty properties
-func TestMetaLeaseSetBytesWithProperties(t *testing.T) {
+// TestMetaLeaseSetBytesWithRevocations tests serialization with revocation hashes
+func TestMetaLeaseSetBytesWithRevocations(t *testing.T) {
 	dest := createTestDestinationStruct(t)
 	published := uint32(time.Now().Unix())
 	expires := uint16(600)
 
-	// Create entry with properties
-	hash := sha256.Sum256([]byte("test"))
-	props, err := common.GoMapToMapping(map[string]string{"key": "value"})
-	assert.NoError(t, err)
+	// Create entry
+	entry := createTestEntryStruct(META_LEASESET_ENTRY_TYPE_LEASESET2, 5)
 
-	entry := MetaLeaseSetEntry{
-		hash:       hash,
-		leaseType:  uint8(META_LEASESET_ENTRY_TYPE_LEASESET2),
-		expires:    uint32(time.Now().Unix() + 3600),
-		cost:       uint8(5),
-		properties: *props,
-	}
+	// Create revocation hashes
+	rev1 := sha256.Sum256([]byte("revoked lease set 1"))
+	rev2 := sha256.Sum256([]byte("revoked lease set 2"))
 
 	mls := MetaLeaseSet{
 		destination:      dest,
@@ -663,6 +685,8 @@ func TestMetaLeaseSetBytesWithProperties(t *testing.T) {
 		options:          common.Mapping{},
 		numEntries:       1,
 		entries:          []MetaLeaseSetEntry{entry},
+		numRevocations:   2,
+		revocations:      [][32]byte{rev1, rev2},
 		signature:        createTestSignature(),
 	}
 
@@ -670,7 +694,281 @@ func TestMetaLeaseSetBytesWithProperties(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotEmpty(t, bytes)
 
-	// Verify properties were serialized (entry will be longer than 40 bytes)
-	// dest(391) + published(4) + expires(2) + flags(2) + options(2) + numEntries(1) + entry(>40) + sig(64)
-	assert.Greater(t, len(bytes), 506, "Entry with properties should make total size larger")
+	// Verify size includes revocations
+	// dest(391) + published(4) + expires(2) + flags(2) + options(2) + numEntries(1) + 1*entry(40) + numr(1) + 2*hash(64) + sig(64) = 571
+	assert.GreaterOrEqual(t, len(bytes), 571)
+
+	// Verify NumRevocations and Revocations accessors
+	assert.Equal(t, 2, mls.NumRevocations())
+	revs := mls.Revocations()
+	assert.Equal(t, 2, len(revs))
+	assert.Equal(t, rev1, revs[0])
+	assert.Equal(t, rev2, revs[1])
+
+	// Test GetRevocation
+	r0, err := mls.GetRevocation(0)
+	assert.NoError(t, err)
+	assert.Equal(t, rev1, r0)
+
+	r1, err := mls.GetRevocation(1)
+	assert.NoError(t, err)
+	assert.Equal(t, rev2, r1)
+
+	// Test out of range
+	_, err = mls.GetRevocation(2)
+	assert.Error(t, err)
+}
+
+// TestMetaLeaseSetValidateEntryTypes tests that validateEntryType accepts all spec-valid
+// types (0, 1, 3, 5) and rejects invalid ones.
+func TestMetaLeaseSetValidateEntryTypes(t *testing.T) {
+	validTypes := []struct {
+		name    string
+		typeVal uint8
+	}{
+		{"unknown", META_LEASESET_ENTRY_TYPE_UNKNOWN},
+		{"LeaseSet", META_LEASESET_ENTRY_TYPE_LEASESET},
+		{"LeaseSet2", META_LEASESET_ENTRY_TYPE_LEASESET2},
+		{"MetaLeaseSet", META_LEASESET_ENTRY_TYPE_META_LEASESET},
+	}
+
+	for _, vt := range validTypes {
+		t.Run(vt.name, func(t *testing.T) {
+			err := validateEntryType(vt.typeVal, 0)
+			assert.NoError(t, err, "type %d (%s) must be accepted", vt.typeVal, vt.name)
+		})
+	}
+
+	// Invalid types should be rejected
+	invalidTypes := []uint8{2, 4, 6, 7, 8, 15}
+	for _, it := range invalidTypes {
+		err := validateEntryType(it, 0)
+		assert.Error(t, err, "type %d must be rejected", it)
+	}
+}
+
+// TestMetaLeaseSetTypeExtractsFromFlags verifies that Type() correctly extracts
+// bits 3-0 from flags[2], ignoring reserved upper bits.
+func TestMetaLeaseSetTypeExtractsFromFlags(t *testing.T) {
+	tests := []struct {
+		name     string
+		flags    [3]byte
+		expected uint8
+	}{
+		{"type 0", [3]byte{0, 0, 0x00}, 0},
+		{"type 1", [3]byte{0, 0, 0x01}, 1},
+		{"type 3", [3]byte{0, 0, 0x03}, 3},
+		{"type 5", [3]byte{0, 0, 0x05}, 5},
+		{"type 5 with upper bits", [3]byte{0xFF, 0xFF, 0xF5}, 5},
+		{"type 1 with reserved bits", [3]byte{0xAB, 0xCD, 0xE1}, 1},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			entry := MetaLeaseSetEntry{flags: tt.flags}
+			assert.Equal(t, tt.expected, entry.Type(),
+				"Type() must extract bits 3-0 of flags[2]")
+		})
+	}
+}
+
+// TestMetaLeaseSetMakeEntryFlags tests the MakeEntryFlags helper
+func TestMetaLeaseSetMakeEntryFlags(t *testing.T) {
+	flags := MakeEntryFlags(3)
+	assert.Equal(t, [3]byte{0, 0, 3}, flags)
+
+	// Only low nibble should be set
+	flags = MakeEntryFlags(0xFF)
+	assert.Equal(t, [3]byte{0, 0, 0x0F}, flags,
+		"MakeEntryFlags should mask to bits 3-0")
+}
+
+// TestMetaLeaseSetRoundTrip verifies parse → serialize → parse consistency.
+func TestMetaLeaseSetRoundTrip(t *testing.T) {
+	destData := createTestDestination(t, key_certificate.KEYCERT_SIGN_ED25519)
+	data := destData
+
+	published := uint32(1700000000) // fixed timestamp
+	publishedBytes := make([]byte, 4)
+	binary.BigEndian.PutUint32(publishedBytes, published)
+	data = append(data, publishedBytes...)
+
+	expires := uint16(3600)
+	expiresBytes := make([]byte, 2)
+	binary.BigEndian.PutUint16(expiresBytes, expires)
+	data = append(data, expiresBytes...)
+
+	data = append(data, 0x00, 0x00) // flags = 0
+	data = append(data, 0x00, 0x00) // empty options
+
+	// 2 entries
+	data = append(data, 0x02)
+	data = append(data, createTestEntry(META_LEASESET_ENTRY_TYPE_LEASESET, 5)...)
+	data = append(data, createTestEntry(META_LEASESET_ENTRY_TYPE_LEASESET2, 15)...)
+
+	// 1 revocation
+	data = append(data, 0x01)
+	rev := sha256.Sum256([]byte("revoked dest"))
+	data = append(data, rev[:]...)
+
+	// Signature
+	sigBytes := make([]byte, signature.EdDSA_SHA512_Ed25519_SIZE)
+	for i := range sigBytes {
+		sigBytes[i] = byte(i)
+	}
+	data = append(data, sigBytes...)
+
+	// Parse
+	mls, remainder, err := ReadMetaLeaseSet(data)
+	require.NoError(t, err)
+	assert.Empty(t, remainder)
+
+	// Re-serialize
+	reserialized, err := mls.Bytes()
+	require.NoError(t, err)
+
+	// Re-parse
+	mls2, remainder2, err := ReadMetaLeaseSet(reserialized)
+	require.NoError(t, err)
+	assert.Empty(t, remainder2)
+
+	// Compare fields
+	assert.Equal(t, mls.Published(), mls2.Published())
+	assert.Equal(t, mls.Expires(), mls2.Expires())
+	assert.Equal(t, mls.Flags(), mls2.Flags())
+	assert.Equal(t, mls.NumEntries(), mls2.NumEntries())
+	assert.Equal(t, mls.NumRevocations(), mls2.NumRevocations())
+
+	for i := 0; i < mls.NumEntries(); i++ {
+		e1, _ := mls.GetEntry(i)
+		e2, _ := mls2.GetEntry(i)
+		assert.Equal(t, e1.Hash(), e2.Hash(), "entry %d hash", i)
+		assert.Equal(t, e1.Type(), e2.Type(), "entry %d type", i)
+		assert.Equal(t, e1.Cost(), e2.Cost(), "entry %d cost", i)
+		assert.Equal(t, e1.Expires(), e2.Expires(), "entry %d end_date", i)
+		assert.Equal(t, e1.Flags(), e2.Flags(), "entry %d flags", i)
+	}
+
+	revs1 := mls.Revocations()
+	revs2 := mls2.Revocations()
+	assert.Equal(t, revs1, revs2, "revocation hashes must match")
+}
+
+// TestReadMetaLeaseSetWithRevocations tests parsing a MetaLeaseSet that contains revocations.
+func TestReadMetaLeaseSetWithRevocations(t *testing.T) {
+	destData := createTestDestination(t, key_certificate.KEYCERT_SIGN_ED25519)
+	data := destData
+
+	published := uint32(time.Now().Unix())
+	publishedBytes := make([]byte, 4)
+	binary.BigEndian.PutUint32(publishedBytes, published)
+	data = append(data, publishedBytes...)
+
+	expires := uint16(600)
+	expiresBytes := make([]byte, 2)
+	binary.BigEndian.PutUint16(expiresBytes, expires)
+	data = append(data, expiresBytes...)
+
+	data = append(data, 0x00, 0x00) // flags = 0
+	data = append(data, 0x00, 0x00) // empty options
+
+	// 1 entry
+	data = append(data, 0x01)
+	data = append(data, createTestEntry(META_LEASESET_ENTRY_TYPE_LEASESET, 10)...)
+
+	// 2 revocations
+	data = append(data, 0x02)
+	rev1 := sha256.Sum256([]byte("revoked 1"))
+	rev2 := sha256.Sum256([]byte("revoked 2"))
+	data = append(data, rev1[:]...)
+	data = append(data, rev2[:]...)
+
+	// Signature
+	sigBytes := make([]byte, signature.EdDSA_SHA512_Ed25519_SIZE)
+	data = append(data, sigBytes...)
+
+	mls, remainder, err := ReadMetaLeaseSet(data)
+	require.NoError(t, err)
+	assert.Empty(t, remainder)
+
+	assert.Equal(t, 2, mls.NumRevocations())
+	revs := mls.Revocations()
+	require.Equal(t, 2, len(revs))
+	assert.Equal(t, rev1, revs[0])
+	assert.Equal(t, rev2, revs[1])
+
+	r0, err := mls.GetRevocation(0)
+	assert.NoError(t, err)
+	assert.Equal(t, rev1, r0)
+}
+
+// TestMetaLeaseSetRevocationsTruncatedData tests error handling for malformed revocation data.
+func TestMetaLeaseSetRevocationsTruncatedData(t *testing.T) {
+	mls := &MetaLeaseSet{}
+
+	// Missing numr byte entirely
+	_, err := parseRevocations(mls, []byte{})
+	assert.Error(t, err, "empty data should fail")
+
+	// numr=1 but no hash data
+	_, err = parseRevocations(mls, []byte{0x01})
+	assert.Error(t, err, "numr=1 with no hash data should fail")
+
+	// numr=1 with partial hash (only 16 bytes instead of 32)
+	partial := make([]byte, 17)
+	partial[0] = 0x01
+	_, err = parseRevocations(mls, partial)
+	assert.Error(t, err, "numr=1 with partial hash should fail")
+}
+
+// TestReadMetaLeaseSetAllEntryTypes tests parsing with all valid entry types including type 0.
+func TestReadMetaLeaseSetAllEntryTypes(t *testing.T) {
+	destData := createTestDestination(t, key_certificate.KEYCERT_SIGN_ED25519)
+	data := destData
+
+	published := uint32(time.Now().Unix())
+	publishedBytes := make([]byte, 4)
+	binary.BigEndian.PutUint32(publishedBytes, published)
+	data = append(data, publishedBytes...)
+
+	data = append(data, 0x02, 0x58) // expires = 600
+	data = append(data, 0x00, 0x00) // flags = 0
+	data = append(data, 0x00, 0x00) // empty options
+
+	// 4 entries with all valid types
+	data = append(data, 0x04)
+	data = append(data, createTestEntry(META_LEASESET_ENTRY_TYPE_UNKNOWN, 1)...)
+	data = append(data, createTestEntry(META_LEASESET_ENTRY_TYPE_LEASESET, 5)...)
+	data = append(data, createTestEntry(META_LEASESET_ENTRY_TYPE_LEASESET2, 10)...)
+	data = append(data, createTestEntry(META_LEASESET_ENTRY_TYPE_META_LEASESET, 15)...)
+
+	// 0 revocations
+	data = append(data, 0x00)
+
+	// Signature
+	sigBytes := make([]byte, signature.EdDSA_SHA512_Ed25519_SIZE)
+	data = append(data, sigBytes...)
+
+	mls, remainder, err := ReadMetaLeaseSet(data)
+	require.NoError(t, err)
+	assert.Empty(t, remainder)
+
+	assert.Equal(t, 4, mls.NumEntries())
+	entries := mls.Entries()
+	assert.Equal(t, uint8(0), entries[0].Type()) // unknown
+	assert.Equal(t, uint8(1), entries[1].Type()) // LeaseSet
+	assert.Equal(t, uint8(3), entries[2].Type()) // LeaseSet2
+	assert.Equal(t, uint8(5), entries[3].Type()) // MetaLeaseSet
+
+	assert.Equal(t, uint8(1), entries[0].Cost())
+	assert.Equal(t, uint8(5), entries[1].Cost())
+	assert.Equal(t, uint8(10), entries[2].Cost())
+	assert.Equal(t, uint8(15), entries[3].Cost())
+
+	// Verify entry size is exactly 40 bytes for all types
+	for i, e := range entries {
+		b, err := e.Bytes()
+		require.NoError(t, err)
+		assert.Equal(t, META_LEASESET_ENTRY_SIZE, len(b), "entry %d must be exactly 40 bytes", i)
+	}
 }

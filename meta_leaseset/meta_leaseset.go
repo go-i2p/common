@@ -64,6 +64,12 @@ func ReadMetaLeaseSet(data []byte) (mls MetaLeaseSet, remainder []byte, err erro
 		return
 	}
 
+	// Parse revocations (numr + revocation hashes)
+	data, err = parseRevocations(&mls, data)
+	if err != nil {
+		return
+	}
+
 	// Parse signature and finalize
 	remainder, err = parseSignatureAndFinalize(&mls, data)
 	if err != nil {
@@ -287,33 +293,24 @@ func parseSingleEntry(mls *MetaLeaseSet, entryIndex int, data []byte) ([]byte, e
 	var entry MetaLeaseSetEntry
 	data = parseEntryFixedFields(&entry, data)
 
-	if err := validateEntryType(entry.leaseType, entryIndex); err != nil {
-		return nil, err
-	}
-
-	rem, err := parseEntryProperties(&entry, entryIndex, data)
-	if err != nil {
+	if err := validateEntryType(entry.Type(), entryIndex); err != nil {
 		return nil, err
 	}
 
 	mls.entries[entryIndex] = entry
 	logParsedEntry(entryIndex, &entry)
-	return rem, nil
+	return data, nil
 }
 
 // validateEntryMinSize checks that there is enough data remaining to read the
 // fixed-size header fields of a MetaLeaseSet entry.
 func validateEntryMinSize(entryIndex int, dataLen int) error {
-	minSize := META_LEASESET_ENTRY_HASH_SIZE + META_LEASESET_ENTRY_TYPE_SIZE +
-		META_LEASESET_ENTRY_EXPIRES_SIZE + META_LEASESET_ENTRY_COST_SIZE +
-		META_LEASESET_ENTRY_MIN_PROPERTIES_SIZE
-
-	if dataLen < minSize {
+	if dataLen < META_LEASESET_ENTRY_SIZE {
 		err := oops.
 			Code("entry_too_short").
 			With("entry_index", entryIndex).
 			With("remaining_length", dataLen).
-			With("minimum_required", minSize).
+			With("minimum_required", META_LEASESET_ENTRY_SIZE).
 			Errorf("insufficient data for entry %d", entryIndex)
 		log.WithFields(logger.Fields{
 			"at":          "parseSingleEntry",
@@ -324,66 +321,50 @@ func validateEntryMinSize(entryIndex int, dataLen int) error {
 	return nil
 }
 
-// parseEntryFixedFields reads the hash, type, expires, and cost fields from data
+// parseEntryFixedFields reads the hash, flags, cost, and end_date fields from data
 // into the entry and returns the remaining data.
+// Per spec: hash(32) + flags(3) + cost(1) + end_date(4) = 40 bytes.
 func parseEntryFixedFields(entry *MetaLeaseSetEntry, data []byte) []byte {
 	copy(entry.hash[:], data[:META_LEASESET_ENTRY_HASH_SIZE])
 	data = data[META_LEASESET_ENTRY_HASH_SIZE:]
 
-	entry.leaseType = data[0]
-	data = data[META_LEASESET_ENTRY_TYPE_SIZE:]
-
-	entry.expires = binary.BigEndian.Uint32(data[:META_LEASESET_ENTRY_EXPIRES_SIZE])
-	data = data[META_LEASESET_ENTRY_EXPIRES_SIZE:]
+	copy(entry.flags[:], data[:META_LEASESET_ENTRY_FLAGS_SIZE])
+	data = data[META_LEASESET_ENTRY_FLAGS_SIZE:]
 
 	entry.cost = data[0]
 	data = data[META_LEASESET_ENTRY_COST_SIZE:]
 
-	return data
-}
+	entry.endDate = binary.BigEndian.Uint32(data[:META_LEASESET_ENTRY_END_DATE_SIZE])
+	data = data[META_LEASESET_ENTRY_END_DATE_SIZE:]
 
-// parseEntryProperties reads the properties mapping for a MetaLeaseSet entry.
-func parseEntryProperties(entry *MetaLeaseSetEntry, entryIndex int, data []byte) ([]byte, error) {
-	properties, rem, errs := common.ReadMapping(data)
-	if len(errs) > 0 {
-		err := oops.
-			Code("entry_properties_parse_failed").
-			With("entry_index", entryIndex).
-			Wrapf(errs[0], "failed to parse properties for entry %d", entryIndex)
-		log.WithFields(logger.Fields{
-			"at":          "parseSingleEntry",
-			"entry_index": entryIndex,
-		}).Error(err.Error())
-		return nil, err
-	}
-	entry.properties = properties
-	return rem, nil
+	return data
 }
 
 // logParsedEntry logs diagnostic details after successfully parsing a MetaLeaseSet entry.
 func logParsedEntry(entryIndex int, entry *MetaLeaseSetEntry) {
 	log.WithFields(logger.Fields{
 		"entry_index": entryIndex,
-		"type":        entry.leaseType,
+		"type":        entry.Type(),
 		"cost":        entry.cost,
-		"expires":     entry.expires,
+		"end_date":    entry.endDate,
 	}).Debug("Parsed MetaLeaseSet entry")
 }
 
-// validateEntryType validates that the entry type is a valid lease set type.
-// Valid types are: 1 (LeaseSet), 3 (LeaseSet2), 5 (EncryptedLeaseSet)
+// validateEntryType validates that the entry type (from flags bits 3-0) is a known type.
+// Per spec, valid types are: 0 (unknown), 1 (LeaseSet), 3 (LeaseSet2), 5 (MetaLeaseSet)
 func validateEntryType(leaseType uint8, entryIndex int) error {
 	switch leaseType {
-	case META_LEASESET_ENTRY_TYPE_LEASESET,
+	case META_LEASESET_ENTRY_TYPE_UNKNOWN,
+		META_LEASESET_ENTRY_TYPE_LEASESET,
 		META_LEASESET_ENTRY_TYPE_LEASESET2,
-		META_LEASESET_ENTRY_TYPE_ENCRYPTED:
+		META_LEASESET_ENTRY_TYPE_META_LEASESET:
 		return nil
 	default:
 		err := oops.
 			Code("invalid_entry_type").
 			With("entry_index", entryIndex).
 			With("lease_type", leaseType).
-			Errorf("invalid lease set type %d in entry %d (valid: 1, 3, 5)", leaseType, entryIndex)
+			Errorf("invalid lease set type %d in entry %d (valid: 0, 1, 3, 5)", leaseType, entryIndex)
 		log.WithFields(logger.Fields{
 			"at":          "validateEntryType",
 			"entry_index": entryIndex,
@@ -515,11 +496,11 @@ func (mls *MetaLeaseSet) GetEntry(index int) (MetaLeaseSetEntry, error) {
 }
 
 // FindEntriesByType returns all entries matching the specified lease set type.
-// Valid types: 1 (LeaseSet), 3 (LeaseSet2), 5 (EncryptedLeaseSet)
+// Valid types: 0 (unknown), 1 (LeaseSet), 3 (LeaseSet2), 5 (MetaLeaseSet)
 func (mls *MetaLeaseSet) FindEntriesByType(leaseType uint8) []MetaLeaseSetEntry {
 	var matched []MetaLeaseSetEntry
 	for _, entry := range mls.entries {
-		if entry.leaseType == leaseType {
+		if entry.Type() == leaseType {
 			matched = append(matched, entry)
 		}
 	}
@@ -546,19 +527,26 @@ func (entry *MetaLeaseSetEntry) Hash() [32]byte {
 	return entry.hash
 }
 
-// Type returns the type of the referenced lease set.
+// Flags returns the 3-byte flags field of the entry.
+// Bits 3-0 encode the entry type, bits 23-4 are reserved.
+func (entry *MetaLeaseSetEntry) Flags() [3]byte {
+	return entry.flags
+}
+
+// Type returns the type of the referenced lease set, extracted from flags bits 3-0.
+// Valid types: 0 (unknown), 1 (LeaseSet), 3 (LeaseSet2), 5 (MetaLeaseSet)
 func (entry *MetaLeaseSetEntry) Type() uint8 {
-	return entry.leaseType
+	return entry.flags[2] & 0x0F
 }
 
 // Expires returns the expiration timestamp (seconds since Unix epoch).
 func (entry *MetaLeaseSetEntry) Expires() uint32 {
-	return entry.expires
+	return entry.endDate
 }
 
 // ExpiresTime returns the expiration time as a Go time.Time value.
 func (entry *MetaLeaseSetEntry) ExpiresTime() time.Time {
-	return time.Unix(int64(entry.expires), 0).UTC()
+	return time.Unix(int64(entry.endDate), 0).UTC()
 }
 
 // IsExpired checks if the entry has expired based on the current time.
@@ -569,11 +557,6 @@ func (entry *MetaLeaseSetEntry) IsExpired() bool {
 // Cost returns the cost metric for load balancing (lower is better).
 func (entry *MetaLeaseSetEntry) Cost() uint8 {
 	return entry.cost
-}
-
-// Properties returns the properties mapping for this entry.
-func (entry *MetaLeaseSetEntry) Properties() common.Mapping {
-	return entry.properties
 }
 
 // Bytes serializes the MetaLeaseSet to its wire format representation.
@@ -642,6 +625,14 @@ func (mls *MetaLeaseSet) Bytes() ([]byte, error) {
 		result = append(result, entryBytes...)
 	}
 
+	// Add number of revocations (1 byte)
+	result = append(result, mls.numRevocations)
+
+	// Add revocation hashes (32 bytes each)
+	for _, hash := range mls.revocations {
+		result = append(result, hash[:]...)
+	}
+
 	// Add signature
 	result = append(result, mls.signature.Bytes()...)
 
@@ -657,38 +648,29 @@ func (mls *MetaLeaseSet) Bytes() ([]byte, error) {
 }
 
 // Bytes serializes a MetaLeaseSetEntry to its wire format representation.
-// Returns the byte representation of this entry (40+ bytes).
+// Returns the byte representation of this entry (exactly 40 bytes).
 //
-// Wire format:
+// Per the I2P MetaLease spec, wire format is:
 //  1. Hash (32 bytes)
-//  2. Type (1 byte)
-//  3. Expires (4 bytes)
-//  4. Cost (1 byte)
-//  5. Properties mapping (2+ bytes)
+//  2. Flags (3 bytes) — bits 3-0 = entry type
+//  3. Cost (1 byte)
+//  4. End date (4 bytes, seconds since epoch)
 func (entry *MetaLeaseSetEntry) Bytes() ([]byte, error) {
-	result := make([]byte, 0, 40)
+	result := make([]byte, 0, META_LEASESET_ENTRY_SIZE)
 
 	// Add hash (32 bytes)
 	result = append(result, entry.hash[:]...)
 
-	// Add type (1 byte)
-	result = append(result, entry.leaseType)
-
-	// Add expires (4 bytes)
-	expiresBytes := make([]byte, 4)
-	binary.BigEndian.PutUint32(expiresBytes, entry.expires)
-	result = append(result, expiresBytes...)
+	// Add flags (3 bytes)
+	result = append(result, entry.flags[:]...)
 
 	// Add cost (1 byte)
 	result = append(result, entry.cost)
 
-	// Add properties mapping
-	if len(entry.properties.Values()) > 0 {
-		result = append(result, entry.properties.Data()...)
-	} else {
-		// Empty mapping (2 bytes of zero)
-		result = append(result, 0x00, 0x00)
-	}
+	// Add end_date (4 bytes)
+	endDateBytes := make([]byte, 4)
+	binary.BigEndian.PutUint32(endDateBytes, entry.endDate)
+	result = append(result, endDateBytes...)
 
 	return result, nil
 }

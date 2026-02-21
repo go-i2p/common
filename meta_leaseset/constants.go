@@ -9,11 +9,10 @@ const (
 	META_LEASESET_TYPE = 7
 
 	// META_LEASESET_MIN_SIZE is the absolute minimum size for a MetaLeaseSet structure.
-	// This assumes: Destination (387 bytes) + published (4 bytes) + expires (2 bytes) +
-	// flags (2 bytes) + options (2 bytes) + num_entries (1 byte) +
-	// 1 entry (41 bytes minimum) + signature (64 bytes EdDSA)
-	// = 387 + 4 + 2 + 2 + 2 + 1 + 41 + 64 = 505 bytes minimum
-	META_LEASESET_MIN_SIZE = 505
+	// Destination (387) + published (4) + expires (2) + flags (2) + options (2) +
+	// num (1) + 1 entry (40) + numr (1) + signature (64 bytes EdDSA)
+	// = 387 + 4 + 2 + 2 + 2 + 1 + 40 + 1 + 64 = 503 bytes minimum
+	META_LEASESET_MIN_SIZE = 503
 
 	// META_LEASESET_HEADER_MIN_SIZE is the minimum size of MetaLeaseSet header without offline signature.
 	// Destination (387 bytes) + published (4 bytes) + expires (2 bytes) + flags (2 bytes)
@@ -40,21 +39,25 @@ const (
 	// META_LEASESET_ENTRY_HASH_SIZE is the size of each entry's hash field (32 bytes, SHA256).
 	META_LEASESET_ENTRY_HASH_SIZE = 32
 
-	// META_LEASESET_ENTRY_TYPE_SIZE is the size of each entry's type field (1 byte).
-	META_LEASESET_ENTRY_TYPE_SIZE = 1
-
-	// META_LEASESET_ENTRY_EXPIRES_SIZE is the size of each entry's expiration timestamp (4 bytes).
-	META_LEASESET_ENTRY_EXPIRES_SIZE = 4
+	// META_LEASESET_ENTRY_FLAGS_SIZE is the size of each entry's flags field (3 bytes).
+	// Bits 3-0 encode the entry type, bits 23-4 are reserved.
+	META_LEASESET_ENTRY_FLAGS_SIZE = 3
 
 	// META_LEASESET_ENTRY_COST_SIZE is the size of each entry's cost field (1 byte).
 	META_LEASESET_ENTRY_COST_SIZE = 1
 
-	// META_LEASESET_ENTRY_MIN_PROPERTIES_SIZE is the minimum size of entry properties mapping (2 bytes for empty map).
-	META_LEASESET_ENTRY_MIN_PROPERTIES_SIZE = 2
+	// META_LEASESET_ENTRY_END_DATE_SIZE is the size of each entry's end_date field (4 bytes, seconds since epoch).
+	META_LEASESET_ENTRY_END_DATE_SIZE = 4
 
-	// META_LEASESET_ENTRY_MIN_SIZE is the minimum total size of a single entry.
-	// hash (32) + type (1) + expires (4) + cost (1) + properties (2) = 40 bytes
-	META_LEASESET_ENTRY_MIN_SIZE = 40
+	// META_LEASESET_ENTRY_SIZE is the fixed total size of a single MetaLease entry.
+	// Per spec: hash (32) + flags (3) + cost (1) + end_date (4) = 40 bytes.
+	META_LEASESET_ENTRY_SIZE = 40
+
+	// META_LEASESET_NUM_REVOCATIONS_SIZE is the size of the numr field (1 byte).
+	META_LEASESET_NUM_REVOCATIONS_SIZE = 1
+
+	// META_LEASESET_REVOCATION_HASH_SIZE is the size of each revocation hash (32 bytes).
+	META_LEASESET_REVOCATION_HASH_SIZE = 32
 )
 
 // MetaLeaseSet Entry Count Limits
@@ -94,12 +97,17 @@ const (
 // MetaLeaseSet Entry Type Constants
 // These constants define the valid lease set types that can be referenced in MetaLeaseSet entries.
 const (
-	// META_LEASESET_ENTRY_TYPE_LEASESET represents a legacy LeaseSet (Database Store Type 1).
+	// META_LEASESET_ENTRY_TYPE_UNKNOWN represents an unknown lease set type (0).
+	// Per spec: "0 = unknown" in MetaLease flags bits 3-0.
+	META_LEASESET_ENTRY_TYPE_UNKNOWN = 0
+
+	// META_LEASESET_ENTRY_TYPE_LEASESET represents a legacy LeaseSet (type 1 in flags bits 3-0).
 	META_LEASESET_ENTRY_TYPE_LEASESET = 1
 
-	// META_LEASESET_ENTRY_TYPE_LEASESET2 represents a LeaseSet2 (Database Store Type 3).
+	// META_LEASESET_ENTRY_TYPE_LEASESET2 represents a LeaseSet2 (type 3 in flags bits 3-0).
 	META_LEASESET_ENTRY_TYPE_LEASESET2 = 3
 
-	// META_LEASESET_ENTRY_TYPE_ENCRYPTED represents an EncryptedLeaseSet (Database Store Type 5).
-	META_LEASESET_ENTRY_TYPE_ENCRYPTED = 5
+	// META_LEASESET_ENTRY_TYPE_META_LEASESET represents a MetaLeaseSet (type 5 in flags bits 3-0).
+	// Note: This is the MetaLease entry type value, not the EncryptedLeaseSet database store type.
+	META_LEASESET_ENTRY_TYPE_META_LEASESET = 5
 )

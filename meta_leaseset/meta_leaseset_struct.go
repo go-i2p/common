@@ -23,8 +23,8 @@ and is keyed under the SHA256 of the contained Destination.
 
 Contents:
 Destination, published timestamp, expires offset, flags, optional offline signature,
-options mapping, number of entries, entries (hash, type, expires, cost, properties),
-and signature.
+options mapping, number of entries, entries (hash, flags, cost, end_date),
+number of revocations, revocation hashes, and signature.
 
 Wire Format:
 +----+----+----+----+----+----+----+----+
@@ -52,14 +52,16 @@ Wire Format:
 +                                       +
 |                                       |
 +----+----+----+----+----+----+----+----+
-|type| expires (4) |cost|               |
-+----+----+----+----+----+               +
-|          properties (2+ bytes)        |
-~        (Mapping)                      ~
-|                                       |
+|    flags (3 bytes)    |cost|          |
++----+----+----+----+----+----+----+----+
+|      end_date (4 bytes)               |
 +----+----+----+----+----+----+----+----+
 | Entry 1 ... Entry (num-1)             |
-~        (same format)                  ~
+~        (same format, 40 bytes each)   ~
+|                                       |
++----+----+----+----+----+----+----+----+
+|numr| revocation hashes (32 bytes ea.) |
+~        (numr * 32 bytes)              ~
 |                                       |
 +----+----+----+----+----+----+----+----+
 |          signature                    |
@@ -99,9 +101,19 @@ num :: Integer
        Number of entries to follow
        value: 1 <= num <= 16
 
-entries :: [MetaLeaseSetEntry]
-           length -> variable (40+ bytes per entry)
-           Each entry references another lease set
+entries :: [MetaLease]
+           length -> 40 bytes per entry
+           Each entry is a fixed 40-byte MetaLease structure:
+             hash (32 bytes) + flags (3 bytes) + cost (1 byte) + end_date (4 bytes)
+           Flags bits 3-0 encode entry type: 0=unknown, 1=LeaseSet, 3=LeaseSet2, 5=MetaLeaseSet
+
+numr :: Integer
+        length -> 1 byte
+        Number of revocation hashes to follow
+
+revocations :: [Hash]
+              length -> numr * 32 bytes
+              SHA256 hashes of revoked lease sets
 
 signature :: Signature
              length -> 40+ bytes (varies based on signature type)
@@ -112,7 +124,7 @@ Notes:
 - The signature is over the data above, PREPENDED with the single byte containing
   the DatabaseStore type (7).
 - Each entry references another lease set by its SHA256 hash.
-- Entry types can be LeaseSet (1), LeaseSet2 (3), or EncryptedLeaseSet (5).
+- Entry types can be unknown (0), LeaseSet (1), LeaseSet2 (3), or MetaLeaseSet (5).
 - Entries are not required to be sorted; clients should use cost for selection.
 - The options mapping must be sorted by key for signature invariance.
 - Entry properties mappings must also be sorted by key.
@@ -138,16 +150,24 @@ type MetaLeaseSet struct {
 	options          common.Mapping                      // Options mapping for service discovery (2+ bytes, sorted by key)
 	numEntries       uint8                               // Number of lease set entries (1 byte, 1-16)
 	entries          []MetaLeaseSetEntry                 // Lease set entries referencing other lease sets
+	numRevocations   uint8                               // Number of revocation hashes (1 byte, per spec)
+	revocations      [][32]byte                          // Revocation hashes (32 bytes each)
 	signature        sig.Signature                       // Signature by destination or transient key
 }
 
-// MetaLeaseSetEntry represents a single entry in a MetaLeaseSet.
-// Each entry references another lease set by hash and includes metadata
-// for routing decisions (type, expiration, cost).
+// MetaLeaseSetEntry represents a single MetaLease entry in a MetaLeaseSet.
+// Per the I2P specification, each MetaLease is exactly 40 bytes:
+//
+//	hash(32) + flags(3) + cost(1) + end_date(4)
+//
+// The flags field encodes the entry type in bits 3-0:
+//
+//	0 = unknown, 1 = LeaseSet, 3 = LeaseSet2, 5 = MetaLeaseSet
+//
+// https://geti2p.net/spec/common-structures#metalease
 type MetaLeaseSetEntry struct {
-	hash       [32]byte       // Hash of the referenced lease set (32 bytes, SHA256)
-	leaseType  uint8          // Type of the referenced lease set (1 byte: 1=LeaseSet, 3=LeaseSet2, 5=EncryptedLeaseSet)
-	expires    uint32         // Expiration timestamp (4 bytes, seconds since epoch)
-	cost       uint8          // Cost metric for load balancing (1 byte, lower is better)
-	properties common.Mapping // Properties mapping for additional metadata (2+ bytes)
+	hash    [32]byte // Hash of the referenced lease set (32 bytes, SHA256)
+	flags   [3]byte  // Flags (3 bytes): bits 3-0 = entry type, bits 23-4 reserved
+	cost    uint8    // Cost metric for load balancing (1 byte, lower is better)
+	endDate uint32   // Expiration timestamp (4 bytes, seconds since epoch)
 }
