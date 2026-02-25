@@ -30,13 +30,11 @@ func TestReadSessionTag(t *testing.T) {
 			name:          "data too short",
 			input:         make([]byte, 31),
 			expectedError: true,
-			expectedRem:   []byte{},
 		},
 		{
 			name:          "empty data",
 			input:         []byte{},
 			expectedError: true,
-			expectedRem:   []byte{},
 		},
 	}
 
@@ -46,6 +44,7 @@ func TestReadSessionTag(t *testing.T) {
 
 			if tt.expectedError {
 				assert.Error(t, err)
+				assert.Nil(t, remainder, "remainder must be nil on error")
 			} else {
 				assert.NoError(t, err)
 				assert.Equal(t, 32, len(sessionTag.Bytes()))

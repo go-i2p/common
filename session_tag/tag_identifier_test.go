@@ -93,3 +93,56 @@ func TestTagIdentifier_Polymorphism(t *testing.T) {
 		assert.NotEmpty(t, tag.Bytes())
 	}
 }
+
+func TestTagIdentifier_EqualBytes_SessionTag(t *testing.T) {
+	tag, err := NewRandomSessionTag()
+	require.NoError(t, err)
+
+	var iface TagIdentifier = tag
+
+	t.Run("matches own bytes", func(t *testing.T) {
+		assert.True(t, iface.EqualBytes(tag.Bytes()))
+	})
+
+	t.Run("differs from wrong length", func(t *testing.T) {
+		assert.False(t, iface.EqualBytes(tag.Bytes()[:8]))
+	})
+
+	t.Run("differs from zero bytes", func(t *testing.T) {
+		assert.False(t, iface.EqualBytes(make([]byte, SessionTagSize)))
+	})
+}
+
+func TestTagIdentifier_EqualBytes_ECIESSessionTag(t *testing.T) {
+	tag, err := NewRandomECIESSessionTag()
+	require.NoError(t, err)
+
+	var iface TagIdentifier = tag
+
+	t.Run("matches own bytes", func(t *testing.T) {
+		assert.True(t, iface.EqualBytes(tag.Bytes()))
+	})
+
+	t.Run("differs from wrong length", func(t *testing.T) {
+		assert.False(t, iface.EqualBytes(tag.Bytes()[:4]))
+	})
+
+	t.Run("differs from zero bytes", func(t *testing.T) {
+		assert.False(t, iface.EqualBytes(make([]byte, ECIESSessionTagSize)))
+	})
+}
+
+func TestTagIdentifier_EqualBytes_Polymorphic(t *testing.T) {
+	st, err := NewRandomSessionTag()
+	require.NoError(t, err)
+	ecies, err := NewRandomECIESSessionTag()
+	require.NoError(t, err)
+
+	tags := []TagIdentifier{st, ecies}
+	for _, tag := range tags {
+		// Every tag must match its own bytes through the interface.
+		assert.True(t, tag.EqualBytes(tag.Bytes()), "tag should equal its own bytes")
+		// An empty slice must not match any tag.
+		assert.False(t, tag.EqualBytes(nil), "tag should not equal nil")
+	}
+}

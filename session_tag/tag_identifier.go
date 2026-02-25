@@ -15,6 +15,10 @@ type TagIdentifier interface {
 	String() string
 	// IsZero returns true if the tag is the zero value.
 	IsZero() bool
+	// EqualBytes performs a constant-time equality check against a raw
+	// byte slice. Returns false if lengths differ. This allows polymorphic
+	// comparison through the interface without unsafe type assertions.
+	EqualBytes(other []byte) bool
 }
 
 // Compile-time interface compliance checks.

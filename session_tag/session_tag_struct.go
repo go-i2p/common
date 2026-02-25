@@ -57,6 +57,12 @@ func (st SessionTag) Equal(other SessionTag) bool {
 	return subtle.ConstantTimeCompare(st.value[:], other.value[:]) == 1
 }
 
+// EqualBytes performs a constant-time equality check against a raw byte slice.
+// Returns false if the lengths differ, avoiding out-of-bounds panics.
+func (st SessionTag) EqualBytes(other []byte) bool {
+	return subtle.ConstantTimeCompare(st.value[:], other) == 1
+}
+
 // String returns a hex representation of the SessionTag for debugging.
 func (st SessionTag) String() string {
 	return fmt.Sprintf("%x", st.value[:])

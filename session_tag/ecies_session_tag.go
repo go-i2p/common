@@ -8,11 +8,12 @@ import (
 	"github.com/samber/oops"
 )
 
-// ECIESSessionTag is an 8-byte session tag used with ECIES-X25519-AEAD-Ratchet.
-// When the ECIESFlag (bit 4) is set in DatabaseLookup messages, reply session
-// tags are 8 bytes instead of the standard 32-byte ElGamal/AES SessionTag.
+// ECIESSessionTag is an 8-byte session tag used with the
+// ECIES-X25519-AEAD-Ratchet protocol. 8-byte tags are a fundamental property
+// of this protocol (for all ECIES-X25519 destinations and routers), not
+// limited to any specific I2NP message type.
 //
-// https://geti2p.net/spec/i2np#databaselookup
+// https://geti2p.net/spec/common-structures#session-tag
 // https://geti2p.net/spec/ecies
 type ECIESSessionTag struct {
 	value [ECIESSessionTagSize]byte
@@ -47,6 +48,12 @@ func (st *ECIESSessionTag) SetBytes(data []byte) error {
 // to prevent timing side-channel attacks on session tag lookups.
 func (st ECIESSessionTag) Equal(other ECIESSessionTag) bool {
 	return subtle.ConstantTimeCompare(st.value[:], other.value[:]) == 1
+}
+
+// EqualBytes performs a constant-time equality check against a raw byte slice.
+// Returns false if the lengths differ, avoiding out-of-bounds panics.
+func (st ECIESSessionTag) EqualBytes(other []byte) bool {
+	return subtle.ConstantTimeCompare(st.value[:], other) == 1
 }
 
 // String returns a hex representation of the ECIESSessionTag for debugging.
