@@ -2,6 +2,7 @@
 package router_identity
 
 import (
+	"github.com/go-i2p/common/key_certificate"
 	"github.com/go-i2p/common/keys_and_cert"
 	"github.com/samber/oops"
 )
@@ -10,6 +11,16 @@ import (
 // This is a simpler alternative to NewRouterIdentity for cases where you already have a KeysAndCert.
 // A defensive deep copy is made; the caller may freely mutate the original *KeysAndCert
 // after this call without affecting the RouterIdentity.
+//
+// Deep copy semantics:
+//   - KeyCertificate is cloned by re-parsing its bytes, giving it an independent
+//     Certificate.payload backing array.
+//   - Padding is cloned via make+copy.
+//   - ReceivingPublic and SigningPublic are interface values; for production key types
+//     backed by fixed-size Go arrays the struct copy creates independent values.
+//     Slice-backed test implementations share the underlying array — see
+//     TestNewRouterIdentityFromKeysAndCert_DefensiveCopy for documented behaviour.
+//
 // Returns an error if the provided KeysAndCert is invalid or uses prohibited key types.
 func NewRouterIdentityFromKeysAndCert(keysAndCert *keys_and_cert.KeysAndCert) (*RouterIdentity, error) {
 	if keysAndCert == nil {
@@ -23,12 +34,21 @@ func NewRouterIdentityFromKeysAndCert(keysAndCert *keys_and_cert.KeysAndCert) (*
 	}
 	logDeprecatedKeyTypes(keysAndCert.KeyCertificate)
 
-	// Defensive deep copy: clone struct, KeyCertificate pointer, and Padding slice.
+	// Defensive deep copy: clone struct, then independently copy pointer/slice fields.
 	kacCopy := *keysAndCert
+
+	// Deep copy KeyCertificate by re-parsing its wire bytes, giving an independent
+	// Certificate.payload backing array (fixes the shallow-copy aliasing risk).
 	if keysAndCert.KeyCertificate != nil {
-		keyCertCopy := *keysAndCert.KeyCertificate
-		kacCopy.KeyCertificate = &keyCertCopy
+		certBytes := keysAndCert.KeyCertificate.Certificate.RawBytes()
+		newKeyCert, _, err := key_certificate.NewKeyCertificate(certBytes)
+		if err != nil {
+			return nil, oops.Errorf("internal error: failed to deep-copy KeyCertificate: %w", err)
+		}
+		kacCopy.KeyCertificate = newKeyCert
 	}
+
+	// Deep copy Padding slice backing array.
 	if keysAndCert.Padding != nil {
 		paddingCopy := make([]byte, len(keysAndCert.Padding))
 		copy(paddingCopy, keysAndCert.Padding)

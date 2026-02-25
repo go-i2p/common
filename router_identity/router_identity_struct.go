@@ -212,7 +212,11 @@ func (ri *RouterIdentity) Equal(other *RouterIdentity) bool {
 }
 
 // String returns a human-readable representation of the RouterIdentity,
-// showing a truncated SHA-256 hash (16 bytes / 128 bits) of the serialized identity.
+// showing a truncated SHA-256 hash of the serialized identity for brevity.
+// The hash is truncated to 16 bytes (128 bits) — sufficient to uniquely identify
+// a router in log/debug output at negligible collision risk in practice, while
+// keeping the string short.  The full 32-byte hash (used as the actual netdb key)
+// is available via Hash().
 // Implements fmt.Stringer.
 func (ri *RouterIdentity) String() string {
 	if ri == nil || ri.KeysAndCert == nil {

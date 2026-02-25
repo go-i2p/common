@@ -10,6 +10,7 @@ import "github.com/go-i2p/common/key_certificate"
 // Per spec:
 //   - RedDSA (type 11): "For Destinations and encrypted leasesets only; never used for Router Identities."
 //   - RSA types (4-6): "Offline only; never used in Key Certificates for Router Identities or Destinations."
+//   - Ed25519ph (type 8): Offline/transient use only; not for Router Identity Key Certificates.
 var disallowedSigningKeyTypes = map[int]string{
 	key_certificate.KEYCERT_SIGN_RSA2048:        "RSA-2048 (offline only, not for Router Identities)",
 	key_certificate.KEYCERT_SIGN_RSA3072:        "RSA-3072 (offline only, not for Router Identities)",
@@ -26,6 +27,13 @@ var disallowedCryptoKeyTypes = map[int]string{
 	key_certificate.KEYCERT_CRYPTO_MLKEM768_X25519:  "MLKEM768+X25519 (LeaseSet only, not for Router Identities)",
 	key_certificate.KEYCERT_CRYPTO_MLKEM1024_X25519: "MLKEM1024+X25519 (LeaseSet only, not for Router Identities)",
 }
+
+// ECDSA types (P256=1, P384=2, P521=3) are NOT in the disallow lists.
+// The spec marks them as "Deprecated — Rarely if ever used for Destinations" but does not
+// prohibit them for Router Identities.  ECDSA-P521 (132-byte key) requires excess signing-key
+// data in the Key Certificate payload; this reconstruction is now supported by
+// keys_and_cert.ReadKeysAndCert (see keys_and_cert/AUDIT.md, SPEC finding, FIXED).
+// P256 (64 B) and P384 (96 B) fit fully in the 128-byte inline SPK field and parse cleanly.
 
 // Deprecated key types for Router Identities.
 // Per spec (0.9.58):

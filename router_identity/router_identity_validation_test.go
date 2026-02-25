@@ -185,19 +185,15 @@ func TestValidate_RejectsProhibitedKeyTypes(t *testing.T) {
 	})
 
 	t.Run("MLKEM512_X25519 crypto type rejected by Validate", func(t *testing.T) {
-		kac := &keys_and_cert.KeysAndCert{}
-		keyCert, err := key_certificate.NewKeyCertificateWithTypes(
+		// Use buildKeysAndCertForTypes so padding is computed correctly (384-32-32=320)
+		// and kac.Validate() passes; Validate() must then reject on type grounds.
+		kac := buildKeysAndCertForTypes(t,
 			key_certificate.KEYCERT_SIGN_ED25519,
 			key_certificate.KEYCERT_CRYPTO_MLKEM512_X25519,
 		)
-		require.NoError(t, err)
-		kac.KeyCertificate = keyCert
-		kac.ReceivingPublic = mockPublicKey(make([]byte, keyCert.CryptoSize()))
-		kac.SigningPublic = mockSigningPublicKey(make([]byte, keyCert.SigningPublicKeySize()))
-
 		ri := &RouterIdentity{KeysAndCert: kac}
 
-		err = ri.Validate()
+		err := ri.Validate()
 		require.Error(t, err, "Validate() must reject MLKEM512_X25519 crypto type")
 		assert.Contains(t, err.Error(), "not permitted for Router Identities")
 	})

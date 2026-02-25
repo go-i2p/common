@@ -38,6 +38,14 @@ func FuzzNewRouterIdentityFromBytes(f *testing.F) {
 	)
 	f.Add(seed)
 
+	// DSA-SHA1/ElGamal seed (KEY certificate form)
+	f.Add(createValidRouterIdentityBytes(f))
+
+	// NULL certificate seed: exercises the non-KEY-cert parsing path.
+	nullSeed := make([]byte, keys_and_cert.KEYS_AND_CERT_DATA_SIZE+3)
+	nullSeed[keys_and_cert.KEYS_AND_CERT_DATA_SIZE] = 0x00 // CERT_NULL
+	f.Add(nullSeed)
+
 	f.Fuzz(func(t *testing.T, data []byte) {
 		ri, _, err := NewRouterIdentityFromBytes(data)
 		if err != nil {
@@ -57,9 +65,16 @@ func FuzzReadRouterIdentity(f *testing.F) {
 	)
 	f.Add(seed)
 
-	// Valid DSA-SHA1/ElGamal seed
+	// Valid DSA-SHA1/ElGamal seed (KEY certificate form)
 	dsaSeed := createValidRouterIdentityBytes(f)
 	f.Add(dsaSeed)
+
+	// NULL certificate seed (387 bytes): 384 random key bytes + [0x00, 0x00, 0x00]
+	// Exercises readKeysAndCertNonKeyCert / buildNullCertKeyCertificate path.
+	nullSeed := make([]byte, keys_and_cert.KEYS_AND_CERT_DATA_SIZE+3)
+	nullSeed[keys_and_cert.KEYS_AND_CERT_DATA_SIZE] = 0x00 // CERT_NULL
+	// length bytes already zero (0x00, 0x00)
+	f.Add(nullSeed)
 
 	// Short data seed
 	f.Add([]byte{0x00, 0x01, 0x02})
