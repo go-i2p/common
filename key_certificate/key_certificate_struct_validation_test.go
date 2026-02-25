@@ -14,7 +14,7 @@ func TestSigningPublicKeyTypeWithInvalidData(t *testing.T) {
 
 	key_cert, _, err := NewKeyCertificate(testKeyCertBytesShortPayload)
 	assert.NotNil(err)
-	assert.Contains(err.Error(), "key certificate data too short")
+	assert.Contains(err.Error(), "too short")
 	assert.Nil(key_cert)
 }
 

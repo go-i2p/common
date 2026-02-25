@@ -6,6 +6,7 @@ import (
 	"github.com/go-i2p/crypto/dsa"
 	"github.com/go-i2p/crypto/ecdsa"
 	"github.com/go-i2p/crypto/ed25519"
+	"github.com/go-i2p/crypto/ed25519ph"
 	elgamal "github.com/go-i2p/crypto/elg"
 	i2prsa "github.com/go-i2p/crypto/rsa"
 	"github.com/go-i2p/crypto/types"
@@ -511,7 +512,7 @@ func constructEd25519PHKey(data []byte) (types.SigningPublicKey, error) {
 		keyBytes = data[:KEYCERT_SIGN_ED25519PH_SIZE]
 	}
 
-	ed25519ph_key, err := ed25519.NewEd25519PublicKey(keyBytes)
+	ed25519ph_key, err := ed25519ph.NewEd25519phPublicKey(keyBytes)
 	if err != nil {
 		return nil, oops.Wrapf(err, "failed to construct Ed25519ph public key")
 	}
