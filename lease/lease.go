@@ -107,9 +107,16 @@ func NewLease2(tunnelGateway data.Hash, tunnelID uint32, expirationTime time.Tim
 		log.Warn("Tunnel ID is 0; the I2P spec recommends values greater than zero except in special cases")
 	}
 
-	// Check for uint32 overflow: Lease2 uses 4-byte second timestamps
+	// Check for pre-epoch times first: Lease2 stores unsigned seconds, so
+	// a pre-epoch time would wrap to a very large uint32 on the wire.
 	unixSec := expirationTime.Unix()
-	if unixSec < 0 || uint64(unixSec) > LEASE2_MAX_END_DATE {
+	if unixSec < 0 {
+		return nil, oops.Wrapf(ErrPreEpochTimestamp,
+			"expiration time %v (unix=%d) is before Unix epoch",
+			expirationTime, unixSec)
+	}
+	// Check for uint32 overflow: Lease2 uses 4-byte second timestamps
+	if uint64(unixSec) > LEASE2_MAX_END_DATE {
 		return nil, oops.Wrapf(ErrTimestampOverflow,
 			"expiration time %v (unix=%d) exceeds Lease2 uint32 range (max %d)",
 			expirationTime, unixSec, LEASE2_MAX_END_DATE)

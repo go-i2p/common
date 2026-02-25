@@ -28,7 +28,7 @@ func ReadLease(data []byte) (lease Lease, remainder []byte, err error) {
 
 	log.WithFields(logger.Fields{
 		"tunnel_id":        lease.TunnelID(),
-		"expiration":       lease.Date().Time(),
+		"expiration":       lease.Time(),
 		"remainder_length": len(remainder),
 	}).Debug("Successfully read Lease")
 
@@ -54,7 +54,7 @@ func NewLeaseFromBytes(data []byte) (lease *Lease, remainder []byte, err error) 
 
 	log.WithFields(logger.Fields{
 		"tunnel_id":        lease.TunnelID(),
-		"expiration":       lease.Date().Time(),
+		"expiration":       lease.Time(),
 		"remainder_length": len(remainder),
 	}).Debug("Successfully created Lease from bytes")
 

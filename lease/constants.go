@@ -21,6 +21,11 @@ var (
 	// would wrap to extremely large unsigned values on the wire.
 	ErrPreEpochTimestamp = errors.New("expiration time is before Unix epoch")
 
+	// ErrNullDate indicates a lease with end_date = 0, which the I2P spec defines as
+	// "undefined or null" (Date type definition). Distinct from ErrExpiredLease so
+	// callers can handle null-date leases differently from merely-expired ones.
+	ErrNullDate = errors.New("lease end_date is null (zero per I2P spec Date definition)")
+
 	// ErrZeroTunnelID indicates a lease with tunnel ID 0.
 	// The I2P spec states: "A Tunnel ID is generally greater than zero;
 	// do not use a value of zero except in special cases."

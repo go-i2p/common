@@ -2,8 +2,6 @@
 --
     import "github.com/go-i2p/common/lease"
 
-Package lease implements the I2P lease common data structure
-
 Package lease implements the I2P Lease common data structure according to
 specification version 0.9.67.
 
@@ -59,12 +57,6 @@ Common usage patterns:
     expirationSeconds := lease2.EndDate()
     expirationTime := lease2.Time()
 
-
-Package lease implements the I2P lease common data structure
-
-Package lease implements the I2P lease common data structure
-
-Package lease implements the I2P lease common data structure
 
 ## Usage
 

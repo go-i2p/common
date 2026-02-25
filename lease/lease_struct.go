@@ -3,6 +3,7 @@ package lease
 import (
 	"encoding/binary"
 	"errors"
+	"math"
 	"time"
 
 	"github.com/go-i2p/common/data"
@@ -77,11 +78,14 @@ func (lease Lease) Date() (date data.Date) {
 }
 
 // Time returns the expiration time as a Go time.Time value for convenient time operations.
-// Converts the 8-byte millisecond timestamp directly via binary.BigEndian.Uint64 to avoid
-// signed integer truncation issues in data.Integer.Int() for timestamps beyond year 2262.
+// Uses unsigned decoding with a math.MaxInt64 cap to match data.Date.Time() behaviour;
+// values above math.MaxInt64 are clamped to time.UnixMilli(math.MaxInt64) rather than
+// wrapping to a pre-epoch time via signed cast.
 func (lease Lease) Time() time.Time {
-	dateBytes := lease[LEASE_TUNNEL_GW_SIZE+LEASE_TUNNEL_ID_SIZE:]
-	millis := binary.BigEndian.Uint64(dateBytes)
+	millis := binary.BigEndian.Uint64(lease[LEASE_TUNNEL_GW_SIZE+LEASE_TUNNEL_ID_SIZE:])
+	if millis > uint64(math.MaxInt64) {
+		return time.UnixMilli(math.MaxInt64).UTC()
+	}
 	return time.UnixMilli(int64(millis)).UTC()
 }
 
@@ -97,7 +101,8 @@ func (lease Lease) Equal(other Lease) bool {
 
 // Validate performs semantic validation on the lease.
 // Returns a combined error (via errors.Join) if multiple issues are found:
-// zero gateway hash, zero tunnel ID (advisory per spec), or expired lease.
+// zero gateway hash, zero tunnel ID (advisory per spec), null end_date (per spec
+// "Date == 0 is undefined or null"), or expired lease.
 // Use errors.Is to check for specific error conditions.
 // This is separate from construction to allow representing arbitrary wire-format data.
 func (lease Lease) Validate() error {
@@ -109,7 +114,10 @@ func (lease Lease) Validate() error {
 	if lease.TunnelID() == 0 {
 		errs = append(errs, ErrZeroTunnelID)
 	}
-	if lease.IsExpired() {
+	millis := binary.BigEndian.Uint64(lease[LEASE_TUNNEL_GW_SIZE+LEASE_TUNNEL_ID_SIZE:])
+	if millis == 0 {
+		errs = append(errs, ErrNullDate)
+	} else if lease.IsExpired() {
 		errs = append(errs, ErrExpiredLease)
 	}
 	return errors.Join(errs...)

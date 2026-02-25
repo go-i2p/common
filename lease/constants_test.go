@@ -37,6 +37,8 @@ func TestErrorSentinels(t *testing.T) {
 	assert.True(t, errors.Is(ErrTimestampOverflow, ErrTimestampOverflow))
 	assert.True(t, errors.Is(ErrPreEpochTimestamp, ErrPreEpochTimestamp))
 	assert.True(t, errors.Is(ErrZeroTunnelID, ErrZeroTunnelID))
+	assert.True(t, errors.Is(ErrNullDate, ErrNullDate))
 	assert.False(t, errors.Is(ErrExpiredLease, ErrZeroGatewayHash))
 	assert.False(t, errors.Is(ErrPreEpochTimestamp, ErrTimestampOverflow))
+	assert.False(t, errors.Is(ErrNullDate, ErrExpiredLease))
 }
