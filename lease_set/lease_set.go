@@ -2,6 +2,9 @@
 package lease_set
 
 import (
+	"bytes"
+	"crypto/sha256"
+
 	"github.com/go-i2p/common/certificate"
 	"github.com/go-i2p/common/data"
 	"github.com/go-i2p/common/destination"
@@ -99,6 +102,12 @@ func NewLeaseSet(
 		return nil, err
 	}
 
+	// Validate that signingPrivateKey corresponds to the destination's signing public key.
+	// A mismatch produces a struct-valid LeaseSet that fails every Verify() call — fail fast.
+	if err := validatePrivKeyCorrespondence(dest, signingPrivateKey); err != nil {
+		return nil, err
+	}
+
 	dbytes, err := serializeLeaseSetData(dest, encryptionKey, signingKey, leases)
 	if err != nil {
 		return nil, err
@@ -116,6 +125,25 @@ func NewLeaseSet(
 
 	logLeaseSetCreationSuccess(leaseSet)
 	return &leaseSet, nil
+}
+
+// validatePrivKeyCorrespondence verifies that signingPrivateKey corresponds to
+// the signing public key embedded in dest. Spec: the LeaseSet signature must be
+// "signed by the Destination's SigningPrivateKey". A mismatched key produces a
+// struct-valid LeaseSet that fails every Verify() call — this helper makes it fail fast.
+func validatePrivKeyCorrespondence(dest destination.Destination, signingPrivateKey types.SigningPrivateKey) error {
+	derivedPub, err := signingPrivateKey.Public()
+	if err != nil {
+		return oops.Errorf("failed to derive public key from signing private key: %w", err)
+	}
+	destPub, err := dest.SigningPublicKey()
+	if err != nil {
+		return oops.Errorf("failed to retrieve destination signing public key: %w", err)
+	}
+	if !bytes.Equal(derivedPub.Bytes(), destPub.Bytes()) {
+		return oops.Errorf("signing private key does not correspond to destination's signing public key")
+	}
+	return nil
 }
 
 // validateLeaseSetInputs validates all input parameters for LeaseSet creation.
@@ -297,13 +325,15 @@ func isElGamalKey(key types.ReceivingPublicKey) bool {
 }
 
 // isAllZero returns true if every byte in the slice is zero.
+// An empty or nil slice returns false: there is no key material to check,
+// so it must not be mistakenly treated as "all-zero key material".
 func isAllZero(b []byte) bool {
 	for _, v := range b {
 		if v != 0 {
 			return false
 		}
 	}
-	return len(b) > 0 && true
+	return len(b) > 0
 }
 
 // getSignatureType determines the signature type from a certificate
@@ -458,6 +488,17 @@ func (lease_set LeaseSet) Verify() error {
 	return nil
 }
 
+// Hash returns the SHA-256 hash of the Destination bytes.
+// Per the I2P spec, the LeaseSet "is keyed under the SHA256 of the contained
+// Destination". This is the netdb lookup key used by floodfill routers.
+func (lease_set LeaseSet) Hash() ([32]byte, error) {
+	destBytes, err := lease_set.dest.KeysAndCert.Bytes()
+	if err != nil {
+		return [32]byte{}, oops.Errorf("failed to serialize destination for Hash: %w", err)
+	}
+	return sha256.Sum256(destBytes), nil
+}
+
 // NewestExpiration returns the newest lease expiration as an I2P Date.
 // If there are no leases, returns epoch zero and ErrNoLeases.
 func (lease_set LeaseSet) NewestExpiration() (newest data.Date, err error) {
@@ -479,6 +520,12 @@ func (lease_set LeaseSet) NewestExpiration() (newest data.Date, err error) {
 
 // OldestExpiration returns the oldest lease expiration as an I2P Date.
 // If there are no leases, returns epoch zero and ErrNoLeases.
+//
+// Per the I2P spec, the earliest expiration of all Leases is treated as the
+// timestamp or version of the LeaseSet. Floodfill routers will generally not
+// accept a store of a LeaseSet unless it is 'newer' (i.e. has a later
+// OldestExpiration) than the currently cached entry. Use OldestExpiration,
+// not NewestExpiration, when comparing LeaseSet versions for netdb purposes.
 func (lease_set LeaseSet) OldestExpiration() (earliest data.Date, err error) {
 	log.Debug("Finding oldest expiration in LeaseSet")
 	leases := lease_set.leases

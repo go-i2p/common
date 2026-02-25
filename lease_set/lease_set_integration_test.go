@@ -1,6 +1,7 @@
 package lease_set
 
 import (
+	"crypto/sha256"
 	"testing"
 
 	"github.com/go-i2p/common/lease"
@@ -306,4 +307,44 @@ func TestIntegration_ParsedSigningKeySizeMatchesCert(t *testing.T) {
 	expectedSize := determineSigningKeySize(cert, kind)
 	assert.Equal(t, expectedSize, len(sigKey.Bytes()),
 		"parsed signing key size should match certificate-derived size")
+}
+
+// --- NewLeaseSet rejects mismatched signing private key (spec: signed by Destination's key) ---
+
+func TestIntegration_NewLeaseSetMismatchedPrivKeyReturnsError(t *testing.T) {
+	dest, encKey, sigKey, _, err := generateTestDestination(t)
+	require.NoError(t, err)
+
+	// Generate a completely independent destination; grab only its private key.
+	_, _, _, mismatchedPrivKey, err2 := generateTestDestination(t)
+	require.NoError(t, err2)
+
+	_, newErr := NewLeaseSet(*dest, encKey, sigKey, nil, mismatchedPrivKey)
+	require.Error(t, newErr,
+		"NewLeaseSet must return an error when the signing private key does not correspond to the destination's signing public key")
+}
+
+// --- Hash returns the SHA-256 of the Destination (spec: netdb key) ---
+
+func TestIntegration_HashIsDestinationSHA256(t *testing.T) {
+	dest, encKey, sigKey, sigPrivKey, err := generateTestDestination(t)
+	require.NoError(t, err)
+
+	leaseSet, err := NewLeaseSet(*dest, encKey, sigKey, []lease.Lease{}, sigPrivKey)
+	require.NoError(t, err)
+
+	hash, err := leaseSet.Hash()
+	require.NoError(t, err)
+	require.Equal(t, 32, len(hash), "hash must be 32 bytes")
+
+	// Hash must equal SHA-256(Destination bytes) per spec.
+	destBytes, err := dest.KeysAndCert.Bytes()
+	require.NoError(t, err)
+	expected := sha256.Sum256(destBytes)
+	assert.Equal(t, expected, hash, "Hash must equal SHA-256 of serialized Destination")
+
+	// Must be deterministic across calls.
+	hash2, err := leaseSet.Hash()
+	require.NoError(t, err)
+	assert.Equal(t, hash, hash2, "Hash must be deterministic across calls")
 }

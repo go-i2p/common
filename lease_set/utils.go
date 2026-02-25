@@ -202,6 +202,13 @@ func parseEncryptionKey(data []byte) (elgamal.ElgPublicKey, []byte, error) {
 	if err != nil {
 		return elgamal.ElgPublicKey{}, nil, oops.Wrapf(err, "failed to construct ElGamal public key")
 	}
+
+	// Explicitly reject all-zero keys at parse time. This makes the invariant
+	// independent of the ElGamal library's behaviour and consistent with Validate().
+	if isAllZero(encKeyBytes) {
+		return elgamal.ElgPublicKey{}, nil, ErrAllZeroEncryptionKey
+	}
+
 	remainder := data[LEASE_SET_PUBKEY_SIZE:]
 
 	// NewElgPublicKey returns a pointer, dereference it
@@ -318,7 +325,7 @@ func parseSignature(data []byte, dest destination.Destination) (sig.Signature, [
 		log.WithFields(logger.Fields{
 			"trailing_bytes": len(remainder),
 		}).Warn("LeaseSet has trailing data after signature")
-		return sig.Signature{}, data, oops.Errorf(
+		return sig.Signature{}, remainder, oops.Errorf(
 			"LeaseSet has %d trailing bytes after signature; excess data is prohibited per spec: %w",
 			len(remainder), ErrTrailingData,
 		)
