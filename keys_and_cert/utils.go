@@ -35,18 +35,14 @@ func constructPublicKey(data []byte, cryptoType uint16) (types.ReceivingPublicKe
 }
 
 // constructSigningPublicKey constructs a signing public key from raw data based on signature type.
-// Supports Ed25519 (type 7), Ed25519ph (type 8), and RedDSA (type 11) signing key types.
+// Supports all modern I2P signing key types by delegating to the key_certificate package.
+// DSA-SHA1 (type 0) is explicitly rejected as a legacy algorithm per the module policy.
+// For the full set of supported types see key_certificate.ConstructSigningPublicKeyByType.
 func constructSigningPublicKey(data []byte, sigType uint16) (types.SigningPublicKey, error) {
-	switch sigType {
-	case key_certificate.SIGNATURE_TYPE_ED25519_SHA512:
-		return constructEd25519SigningKey(data, "Ed25519")
-	case key_certificate.KEYCERT_SIGN_ED25519PH:
-		return constructEd25519SigningKey(data, "Ed25519ph")
-	case key_certificate.KEYCERT_SIGN_REDDSA_ED25519:
-		return constructEd25519SigningKey(data, "RedDSA")
-	default:
-		return nil, oops.Errorf("unsupported signature key type: %d", sigType)
+	if sigType == key_certificate.KEYCERT_SIGN_DSA_SHA1 {
+		return nil, oops.Errorf("DSA-SHA1 (type 0) is a legacy algorithm and is not supported")
 	}
+	return key_certificate.ConstructSigningPublicKeyByType(data, int(sigType))
 }
 
 // constructEd25519SigningKey constructs an Ed25519-family signing key from raw data.

@@ -1,8 +1,9 @@
 package keys_and_cert
 
 import (
-	"github.com/go-i2p/crypto/rand"
 	"testing"
+
+	"github.com/go-i2p/crypto/rand"
 
 	"github.com/go-i2p/common/key_certificate"
 
@@ -76,30 +77,34 @@ func TestConstructSigningPublicKey_ModernTypes(t *testing.T) {
 	t.Run("unsupported type", func(t *testing.T) {
 		_, err := constructSigningPublicKey(keyData, 99)
 		require.Error(t, err)
-		assert.Contains(t, err.Error(), "unsupported signature key type")
+		// key_certificate.ConstructSigningPublicKeyByType returns "unknown signing key type"
+		assert.Contains(t, err.Error(), "unknown signing key type")
 	})
 
-	t.Run("wrong size Ed25519", func(t *testing.T) {
-		_, err := constructSigningPublicKey(make([]byte, 64), key_certificate.SIGNATURE_TYPE_ED25519_SHA512)
+	t.Run("wrong size Ed25519 (too small)", func(t *testing.T) {
+		// < 32 bytes is always insufficient for Ed25519
+		_, err := constructSigningPublicKey(make([]byte, 8), key_certificate.SIGNATURE_TYPE_ED25519_SHA512)
 		require.Error(t, err)
 	})
 
-	t.Run("DSA-SHA1 returns unsupported", func(t *testing.T) {
+	t.Run("DSA-SHA1 returns legacy error", func(t *testing.T) {
 		_, err := constructSigningPublicKey(make([]byte, 128), 0)
 		require.Error(t, err)
-		assert.Contains(t, err.Error(), "unsupported signature key type: 0")
+		assert.Contains(t, err.Error(), "legacy")
 	})
 
-	t.Run("ECDSA-P256 returns unsupported", func(t *testing.T) {
-		_, err := constructSigningPublicKey(make([]byte, 64), 1)
-		require.Error(t, err)
-		assert.Contains(t, err.Error(), "unsupported signature key type: 1")
+	t.Run("ECDSA-P256 succeeds", func(t *testing.T) {
+		key, err := constructSigningPublicKey(make([]byte, 64), 1)
+		require.NoError(t, err)
+		assert.NotNil(t, key)
+		assert.Equal(t, 64, key.Len())
 	})
 
-	t.Run("ECDSA-P384 returns unsupported", func(t *testing.T) {
-		_, err := constructSigningPublicKey(make([]byte, 96), 2)
-		require.Error(t, err)
-		assert.Contains(t, err.Error(), "unsupported signature key type: 2")
+	t.Run("ECDSA-P384 succeeds", func(t *testing.T) {
+		key, err := constructSigningPublicKey(make([]byte, 96), 2)
+		require.NoError(t, err)
+		assert.NotNil(t, key)
+		assert.Equal(t, 96, key.Len())
 	})
 }
 

@@ -72,10 +72,32 @@ total length: 387+ bytes
 //
 // https://geti2p.net/spec/common-structures#keysandcert
 type KeysAndCert struct {
-	KeyCertificate  *key_certificate.KeyCertificate
+	// KeyCertificate carries the I2P KEY certificate that declares the
+	// encryption and signing algorithm types for this identity.
+	KeyCertificate *key_certificate.KeyCertificate
+
+	// ReceivingPublic holds the encryption public key. It is start-aligned
+	// in the 256-byte wire field: bytes [0, pubKeySize) are the key, the
+	// remaining bytes are padding stored in the Padding field.
 	ReceivingPublic types.ReceivingPublicKey
-	Padding         []byte
-	SigningPublic   types.SigningPublicKey
+
+	// Padding stores the two padding regions concatenated as
+	// [pubKeyPad || sigKeyPad], where:
+	//   pubKeyPad (len = 256 - pubKeySize):               bytes after the
+	//     crypto key in the 256-byte wire field.
+	//   sigKeyPad (len = 128 - min(sigKeySize, 128)):     bytes before the
+	//     signing key in the 128-byte wire field.
+	// Callers constructing KeysAndCert directly must set this to the
+	// correctly-sized slice; NewKeysAndCert enforces the size and
+	// Validate() will return an error if it is wrong.
+	Padding []byte
+
+	// SigningPublic holds the signing public key. For key types ≤ 128 bytes
+	// it is right-justified in the 128-byte wire field. For types > 128
+	// bytes (ECDSA-P521 = 132 B, RSA-2048/3072/4096 = 256–512 B), the first
+	// 128 bytes are stored inline and the remainder are appended to the Key
+	// Certificate payload per the I2P spec.
+	SigningPublic types.SigningPublicKey
 }
 
 // NewKeysAndCert creates a new KeysAndCert instance with the provided parameters.
@@ -157,7 +179,9 @@ func validateRequiredFields(kac *KeysAndCert) error {
 }
 
 // validateKeySizes verifies that the actual crypto and signing key sizes match
-// the sizes declared by the KeyCertificate.
+// the sizes declared by the KeyCertificate, and that the Padding field has the
+// expected size.  Validate() closes the gap between direct struct construction
+// and NewKeysAndCert: both paths enforce the same invariants.
 func validateKeySizes(kac *KeysAndCert) error {
 	expectedCryptoSize := kac.KeyCertificate.CryptoSize()
 	if expectedCryptoSize > 0 && kac.ReceivingPublic.Len() != expectedCryptoSize {
@@ -172,6 +196,13 @@ func validateKeySizes(kac *KeysAndCert) error {
 			"SigningPublic key size mismatch: certificate declares %d bytes, key has %d bytes",
 			expectedSigSize, kac.SigningPublic.Len(),
 		)
+	}
+	// Validate padding size when both key sizes are known.  This catches
+	// directly-constructed structs with nil or wrong-sized Padding.
+	if expectedCryptoSize > 0 && expectedSigSize > 0 {
+		if err := validatePaddingSize(kac.Padding, expectedCryptoSize, expectedSigSize); err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -213,15 +244,22 @@ func validateSigningKeySize(signingPublicKey types.SigningPublicKey, expectedSiz
 }
 
 // validatePaddingSize validates that the padding has the expected size based on key sizes.
+// For signing keys larger than KEYS_AND_CERT_SPK_SIZE (128), only the first 128 bytes
+// are stored inline in the wire block; the excess is carried in the cert payload.
 // Returns error if the padding size is incorrect.
 func validatePaddingSize(padding []byte, pubKeySize, sigKeySize int) error {
-	expectedPaddingSize := KEYS_AND_CERT_DATA_SIZE - pubKeySize - sigKeySize
+	// Cap the inline signing key size at the wire field capacity.
+	inlineSigKeySize := sigKeySize
+	if inlineSigKeySize > KEYS_AND_CERT_SPK_SIZE {
+		inlineSigKeySize = KEYS_AND_CERT_SPK_SIZE
+	}
+	expectedPaddingSize := KEYS_AND_CERT_DATA_SIZE - pubKeySize - inlineSigKeySize
 	if len(padding) != expectedPaddingSize {
 		log.WithFields(logger.Fields{
 			"expected_size": expectedPaddingSize,
 			"actual_size":   len(padding),
 		}).Error("Invalid padding size")
-		return oops.Errorf("invalid padding size")
+		return oops.Errorf("invalid padding size: expected %d, got %d", expectedPaddingSize, len(padding))
 	}
 	return nil
 }
@@ -273,10 +311,18 @@ func buildKeysAndCertBlock(kac *KeysAndCert) []byte {
 		copy(block[KEYS_AND_CERT_PUBKEY_SIZE:KEYS_AND_CERT_PUBKEY_SIZE+sigPaddingSize],
 			kac.Padding[pubPaddingSize:pubPaddingSize+sigPaddingSize])
 	}
-	// Right-justify signing key in 128-byte field
+	// Place signing key in the 128-byte SPK wire field.
+	// For keys ≤ 128 bytes: right-justified (key at end of field, padding before).
+	// For keys > 128 bytes (P521, RSA*): first 128 bytes fill the field entirely;
+	// the excess bytes are already stored in the KeyCertificate payload.
 	if kac.SigningPublic != nil {
 		sigBytes := kac.SigningPublic.Bytes()
-		copy(block[KEYS_AND_CERT_DATA_SIZE-len(sigBytes):KEYS_AND_CERT_DATA_SIZE], sigBytes)
+		inlineSize := len(sigBytes)
+		if inlineSize > KEYS_AND_CERT_SPK_SIZE {
+			inlineSize = KEYS_AND_CERT_SPK_SIZE
+		}
+		sigStartOffset := KEYS_AND_CERT_DATA_SIZE - inlineSize
+		copy(block[sigStartOffset:KEYS_AND_CERT_DATA_SIZE], sigBytes[:inlineSize])
 	}
 
 	return block
@@ -364,15 +410,22 @@ func constructPublicKeyFromCert(keyCert *key_certificate.KeyCertificate, data []
 //   - Public key field padding: bytes after the start-aligned crypto key in the 256-byte field
 //   - Signing key field padding: bytes before the right-justified signing key in the 128-byte field
 //
+// For signing keys > 128 bytes (P521, RSA*), the inline portion is capped at 128 bytes, so
+// sigPaddingSize = 0.
 // Returns concatenated padding [pubKeyPadding || sigKeyPadding] or nil if no padding.
 func extractPaddingFromData(data []byte, pubKeySize, sigKeySize int) []byte {
-	paddingSize := KEYS_AND_CERT_DATA_SIZE - pubKeySize - sigKeySize
+	// For signing keys larger than the SPK field, only 128 bytes are inline.
+	inlineSigKeySize := sigKeySize
+	if inlineSigKeySize > KEYS_AND_CERT_SPK_SIZE {
+		inlineSigKeySize = KEYS_AND_CERT_SPK_SIZE
+	}
+	paddingSize := KEYS_AND_CERT_DATA_SIZE - pubKeySize - inlineSigKeySize
 	if paddingSize <= 0 {
 		return nil
 	}
 	padding := make([]byte, paddingSize)
 	pubPaddingSize := KEYS_AND_CERT_PUBKEY_SIZE - pubKeySize
-	sigPaddingSize := KEYS_AND_CERT_SPK_SIZE - sigKeySize
+	sigPaddingSize := KEYS_AND_CERT_SPK_SIZE - inlineSigKeySize
 	// Crypto key is start-aligned; padding follows at offset pubKeySize
 	if pubPaddingSize > 0 {
 		copy(padding[:pubPaddingSize], data[pubKeySize:KEYS_AND_CERT_PUBKEY_SIZE])
@@ -384,25 +437,56 @@ func extractPaddingFromData(data []byte, pubKeySize, sigKeySize int) []byte {
 }
 
 // constructSigningKeyFromCert constructs a signing public key using data and the key certificate.
-// Returns the constructed signing key or error if construction fails.
-// For signing keys <= 128 bytes, the key is right-justified in the last 128 bytes of the 384-byte block.
-// For signing keys > 128 bytes, excess data would need to be read from the certificate payload
-// (not yet implemented for legacy RSA types).
+// For signing keys ≤ 128 bytes: right-justified in the last 128 bytes of the 384-byte block.
+// For signing keys > 128 bytes (P521=132 B, RSA-2048=256 B, RSA-3072=384 B, RSA-4096=512 B):
+// the first 128 bytes are inline (filling the SPK wire field) and the excess bytes are read
+// from the Key Certificate payload immediately after the 4-byte key-type fields.
 func constructSigningKeyFromCert(keyCert *key_certificate.KeyCertificate, data []byte, sigKeySize int) (types.SigningPublicKey, error) {
 	if sigKeySize <= 0 {
 		return nil, oops.Errorf("invalid signing key size: %d", sigKeySize)
 	}
-	if sigKeySize > KEYS_AND_CERT_SPK_SIZE {
+	if sigKeySize <= KEYS_AND_CERT_SPK_SIZE {
+		sigKey, err := keyCert.ConstructSigningPublicKey(
+			data[KEYS_AND_CERT_DATA_SIZE-sigKeySize : KEYS_AND_CERT_DATA_SIZE],
+		)
+		if err != nil {
+			log.WithError(err).Error("Failed to construct signingPublicKey")
+			return nil, err
+		}
+		return sigKey, nil
+	}
+	return constructLargeSigningKey(keyCert, data, sigKeySize)
+}
+
+// constructLargeSigningKey reconstructs a signing key whose total size exceeds
+// KEYS_AND_CERT_SPK_SIZE (128 bytes). Per the I2P spec:
+//   - The first 128 bytes reside in the inline SPK field (data[256:384]).
+//   - The remaining (sigKeySize − 128) bytes follow the 4-byte key-type fields
+//     in the Key Certificate payload.
+func constructLargeSigningKey(keyCert *key_certificate.KeyCertificate, data []byte, sigKeySize int) (types.SigningPublicKey, error) {
+	const certPayloadKeyTypeOffset = 4 // 2-byte SpkType + 2-byte CpkType
+	excess := sigKeySize - KEYS_AND_CERT_SPK_SIZE
+
+	certData, err := keyCert.Certificate.Data()
+	if err != nil {
+		return nil, oops.Wrapf(err, "failed to get certificate data for excess signing key bytes")
+	}
+	if len(certData) < certPayloadKeyTypeOffset+excess {
 		return nil, oops.Errorf(
-			"signing key size %d exceeds inline capacity (%d bytes); excess certificate data reconstruction not implemented",
-			sigKeySize, KEYS_AND_CERT_SPK_SIZE,
+			"certificate payload too short for excess signing key bytes: need %d bytes, got %d",
+			certPayloadKeyTypeOffset+excess, len(certData),
 		)
 	}
-	sigKey, err := keyCert.ConstructSigningPublicKey(
-		data[KEYS_AND_CERT_DATA_SIZE-sigKeySize : KEYS_AND_CERT_DATA_SIZE],
-	)
+
+	fullKey := make([]byte, sigKeySize)
+	copy(fullKey[:KEYS_AND_CERT_SPK_SIZE],
+		data[KEYS_AND_CERT_DATA_SIZE-KEYS_AND_CERT_SPK_SIZE:KEYS_AND_CERT_DATA_SIZE])
+	copy(fullKey[KEYS_AND_CERT_SPK_SIZE:],
+		certData[certPayloadKeyTypeOffset:certPayloadKeyTypeOffset+excess])
+
+	sigKey, err := keyCert.ConstructSigningPublicKey(fullKey)
 	if err != nil {
-		log.WithError(err).Error("Failed to construct signingPublicKey")
+		log.WithError(err).Error("Failed to construct signingPublicKey from inline+excess data")
 		return nil, err
 	}
 	return sigKey, nil
@@ -639,7 +723,10 @@ func readKeysAndCertNonKeyCert(rawData []byte, certType int) (*KeysAndCert, []by
 	}
 
 	// NULL certificate implies ElGamal (type 0) + DSA-SHA1 (type 0)
-	keyCert := buildNullCertKeyCertificate(cert)
+	keyCert, err := buildNullCertKeyCertificate(cert)
+	if err != nil {
+		return nil, remainder, err
+	}
 
 	pubKey, err := constructPublicKeyFromCert(keyCert, rawData)
 	if err != nil {
@@ -669,14 +756,17 @@ func readKeysAndCertNonKeyCert(rawData []byte, certType int) (*KeysAndCert, []by
 // NOTE: This directly sets exported fields (SpkType, CpkType) rather than using a
 // KeyCertificate constructor, because no constructor exists for synthetic (non-parsed)
 // KeyCertificates. If KeyCertificate adds validation in constructors, this should be updated.
-func buildNullCertKeyCertificate(cert *certificate.Certificate) *key_certificate.KeyCertificate {
+func buildNullCertKeyCertificate(cert *certificate.Certificate) (*key_certificate.KeyCertificate, error) {
+	if cert == nil {
+		return nil, oops.Errorf("ReadCertificate returned nil certificate")
+	}
 	spkType := i2pdata.Integer([]byte{0x00, 0x00}) // DSA-SHA1 = 0
 	cpkType := i2pdata.Integer([]byte{0x00, 0x00}) // ElGamal = 0
 	return &key_certificate.KeyCertificate{
 		Certificate: *cert,
 		SpkType:     spkType,
 		CpkType:     cpkType,
-	}
+	}, nil
 }
 
 // extractX25519PublicKey extracts an X25519 public key from the 256-byte public key field.

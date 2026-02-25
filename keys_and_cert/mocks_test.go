@@ -2,9 +2,10 @@ package keys_and_cert
 
 import (
 	"bytes"
-	"github.com/go-i2p/crypto/rand"
 	"encoding/binary"
 	"testing"
+
+	"github.com/go-i2p/crypto/rand"
 
 	"github.com/go-i2p/common/certificate"
 	"github.com/go-i2p/common/data"
@@ -241,4 +242,44 @@ func (k wrongSizeKey) NewVerifier() (types.Verifier, error) { return nil, nil }
 // would be wrong for a certificate declaring Ed25519 (32 bytes).
 func createWrongSizeSigningKey() types.SigningPublicKey {
 	return wrongSizeKey(make([]byte, 64))
+}
+
+// buildP521WireData builds a valid 395-byte wire slice for ECDSA-P521 + ElGamal.
+// Returns the wire bytes and the full 132-byte P521 signing key for assertion.
+// Layout:
+//   - block[0:256]   – ElGamal public key (random)
+//   - block[256:384] – first 128 bytes of P521 signing key
+//   - cert header:     CERT_KEY(0x05) | len_hi(0x00) | len_lo(0x08)
+//   - cert payload:    SpkType(0x00,0x03) | CpkType(0x00,0x00) | excess[0:4]
+func buildP521WireData(t *testing.T) (wireData []byte, fullSigningKey []byte) {
+	t.Helper()
+
+	block := make([]byte, KEYS_AND_CERT_DATA_SIZE) // 384 bytes
+
+	// Random ElGamal key in public-key field
+	_, err := rand.Read(block[0:256])
+	require.NoError(t, err)
+
+	// Generate a random 132-byte P521 signing key
+	fullSigningKey = make([]byte, 132)
+	_, err = rand.Read(fullSigningKey)
+	require.NoError(t, err)
+
+	// First 128 bytes are inline in the SPK field (right-justified = starts at 256)
+	copy(block[256:384], fullSigningKey[0:128])
+
+	// Build cert payload: SpkType(P521=3) || CpkType(ElGamal=0) || excess(4 bytes)
+	certPayload := make([]byte, 8)
+	binary.BigEndian.PutUint16(certPayload[0:2], uint16(key_certificate.KEYCERT_SIGN_P521))
+	binary.BigEndian.PutUint16(certPayload[2:4], uint16(key_certificate.KEYCERT_CRYPTO_ELG))
+	copy(certPayload[4:8], fullSigningKey[128:132]) // excess bytes
+
+	certBytes := []byte{certificate.CERT_KEY}
+	lenBytes := make([]byte, 2)
+	binary.BigEndian.PutUint16(lenBytes, uint16(len(certPayload)))
+	certBytes = append(certBytes, lenBytes...)
+	certBytes = append(certBytes, certPayload...)
+
+	wireData = append(block, certBytes...)
+	return
 }

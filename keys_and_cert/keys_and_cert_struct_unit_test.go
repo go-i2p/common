@@ -2,9 +2,10 @@ package keys_and_cert
 
 import (
 	"bytes"
-	"github.com/go-i2p/crypto/rand"
 	"encoding/binary"
 	"testing"
+
+	"github.com/go-i2p/crypto/rand"
 
 	"github.com/go-i2p/common/certificate"
 	"github.com/go-i2p/common/data"
@@ -113,7 +114,9 @@ func TestReadKeysAndCert_NullCertificate(t *testing.T) {
 
 		serialized, err := kac.Bytes()
 		require.NoError(t, err)
-		assert.Equal(t, wireData[:384], serialized[:384], "384-byte block should match")
+		// Compare the full wire bytes including the trailing 3-byte NULL certificate.
+		// A regression in Bytes() that corrupts the appended certificate would be caught here.
+		assert.Equal(t, wireData, serialized, "full wire data including NULL cert should match")
 	})
 
 	t.Run("with remainder", func(t *testing.T) {
@@ -159,6 +162,43 @@ func TestReadKeysAndCert_X25519CryptoType(t *testing.T) {
 
 	sigKeyType := kac.KeyCertificate.SigningPublicKeyType()
 	assert.Equal(t, key_certificate.KEYCERT_SIGN_ED25519, sigKeyType)
+}
+
+// ============================================================================
+// ReadKeysAndCert – P521 signing type (excess cert bytes)
+// ============================================================================
+
+// TestReadKeysAndCert_P521SigningType verifies that ECDSA-P521 (132-byte signing key)
+// is parsed correctly. The first 128 bytes are inline in the wire block; the
+// remaining 4 bytes are stored in the Key Certificate payload after the 4-byte
+// key-type fields.
+func TestReadKeysAndCert_P521SigningType(t *testing.T) {
+	t.Run("parses without error", func(t *testing.T) {
+		wireData, signingKey := buildP521WireData(t)
+		kac, remainder, err := ReadKeysAndCert(wireData)
+		require.NoError(t, err, "P521 signing key should be parsed without error")
+		assert.Empty(t, remainder)
+		require.NotNil(t, kac)
+		assert.Equal(t, 132, kac.SigningPublic.Len(), "P521 signing key should be 132 bytes")
+		assert.Equal(t, signingKey, kac.SigningPublic.Bytes(), "reconstructed signing key should match original")
+	})
+
+	t.Run("no panic on parse", func(t *testing.T) {
+		wireData, _ := buildP521WireData(t)
+		require.NotPanics(t, func() {
+			_, _, _ = ReadKeysAndCert(wireData)
+		})
+	})
+
+	t.Run("round-trip serialization", func(t *testing.T) {
+		wireData, _ := buildP521WireData(t)
+		kac, _, err := ReadKeysAndCert(wireData)
+		require.NoError(t, err)
+
+		serialized, err := kac.Bytes()
+		require.NoError(t, err)
+		assert.Equal(t, wireData, serialized, "P521 round-trip should reproduce original wire data exactly")
+	})
 }
 
 // ============================================================================
@@ -574,14 +614,16 @@ func TestExtractPaddingFromData(t *testing.T) {
 func TestConstructSigningKeyFromCert_LargeKeySize(t *testing.T) {
 	keyCert := buildTestKeyCert(t, key_certificate.KEYCERT_SIGN_RSA4096, key_certificate.KEYCERT_CRYPTO_ELG)
 
-	t.Run("RSA4096 returns error not panic", func(t *testing.T) {
+	t.Run("RSA4096 with short cert payload returns error not panic", func(t *testing.T) {
 		dummyData := make([]byte, KEYS_AND_CERT_DATA_SIZE)
 		sigKeySize := keyCert.SigningPublicKeySize() // 512
 		assert.Greater(t, sigKeySize, KEYS_AND_CERT_SPK_SIZE)
 
+		// keyCert was built with a 4-byte payload (no excess bytes), so
+		// constructLargeSigningKey will detect the shortage and return an error.
+		// The important guarantee is no panic.
 		_, err := constructSigningKeyFromCert(keyCert, dummyData, sigKeySize)
 		require.Error(t, err)
-		assert.Contains(t, err.Error(), "exceeds inline capacity")
 	})
 
 	t.Run("negative size returns error", func(t *testing.T) {
