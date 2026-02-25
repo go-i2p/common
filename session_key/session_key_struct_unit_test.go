@@ -4,7 +4,9 @@ import (
 	"bytes"
 	"crypto/rand"
 	"encoding"
+	"encoding/base64"
 	"encoding/hex"
+	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -433,4 +435,146 @@ func TestSessionKeyBytesAliasing(t *testing.T) {
 		assert.Equal(t, byte(1), sk[0],
 			"value receiver Bytes() should not alias even through pointer")
 	})
+}
+
+// --- ReadFrom / WriteTo ---
+
+func TestSessionKeyReadFromWriteTo(t *testing.T) {
+	t.Run("WriteTo then ReadFrom round-trip", func(t *testing.T) {
+		sk, err := GenerateSessionKey()
+		require.NoError(t, err)
+
+		var buf bytes.Buffer
+		n, err := sk.WriteTo(&buf)
+		require.NoError(t, err)
+		assert.Equal(t, int64(SESSION_KEY_SIZE), n)
+
+		var sk2 SessionKey
+		n2, err := sk2.ReadFrom(&buf)
+		require.NoError(t, err)
+		assert.Equal(t, int64(SESSION_KEY_SIZE), n2)
+		assert.True(t, sk.Equal(sk2))
+	})
+
+	t.Run("ReadFrom short reader errors and zeroes key", func(t *testing.T) {
+		r := bytes.NewReader(make([]byte, SESSION_KEY_SIZE-1))
+		var sk SessionKey
+		for i := range sk {
+			sk[i] = 0xFF
+		}
+		_, err := sk.ReadFrom(r)
+		assert.Error(t, err)
+		assert.Equal(t, SessionKey{}, sk, "key must be zeroed on error")
+	})
+}
+
+// --- FromHex / FromBase64 ---
+
+func TestFromHex(t *testing.T) {
+	t.Run("round-trip with String()", func(t *testing.T) {
+		sk, err := GenerateSessionKey()
+		require.NoError(t, err)
+
+		hexStr := sk.String()
+		sk2, err := FromHex(hexStr)
+		require.NoError(t, err)
+		assert.True(t, sk.Equal(sk2))
+	})
+
+	t.Run("uppercase hex accepted", func(t *testing.T) {
+		raw := make([]byte, SESSION_KEY_SIZE)
+		for i := range raw {
+			raw[i] = byte(i)
+		}
+		upper := hex.EncodeToString(raw)
+		for _, s := range []string{upper, string(bytes.ToUpper([]byte(upper)))} {
+			sk, err := FromHex(s)
+			require.NoError(t, err)
+			assert.Equal(t, raw, sk[:])
+		}
+	})
+
+	t.Run("wrong length errors", func(t *testing.T) {
+		_, err := FromHex(hex.EncodeToString(make([]byte, 16)))
+		assert.Error(t, err)
+	})
+
+	t.Run("invalid hex errors", func(t *testing.T) {
+		_, err := FromHex("zz" + hex.EncodeToString(make([]byte, 31)))
+		assert.Error(t, err)
+	})
+}
+
+func TestFromBase64(t *testing.T) {
+	t.Run("round-trip with standard base64", func(t *testing.T) {
+		sk, err := GenerateSessionKey()
+		require.NoError(t, err)
+
+		enc := base64.StdEncoding.EncodeToString(sk[:])
+		sk2, err := FromBase64(enc)
+		require.NoError(t, err)
+		assert.True(t, sk.Equal(sk2))
+	})
+
+	t.Run("round-trip without padding (raw base64)", func(t *testing.T) {
+		sk, err := GenerateSessionKey()
+		require.NoError(t, err)
+
+		enc := base64.RawStdEncoding.EncodeToString(sk[:])
+		sk2, err := FromBase64(enc)
+		require.NoError(t, err)
+		assert.True(t, sk.Equal(sk2))
+	})
+
+	t.Run("wrong decoded length errors", func(t *testing.T) {
+		enc := base64.StdEncoding.EncodeToString(make([]byte, 16))
+		_, err := FromBase64(enc)
+		assert.Error(t, err)
+	})
+
+	t.Run("invalid base64 errors", func(t *testing.T) {
+		_, err := FromBase64("!!not-valid-base64!!")
+		assert.Error(t, err)
+	})
+}
+
+// --- Concurrency safety ---
+
+// TestSessionKeyZeroizeConcurrency documents that SessionKey is NOT safe for
+// concurrent use without external synchronization. Under -race, this test
+// confirms no data race when access is properly serialized; it also documents
+// that callers must guard concurrent Zeroize / read access themselves.
+func TestSessionKeyZeroizeConcurrencyDocumented(t *testing.T) {
+	sk, err := GenerateSessionKey()
+	require.NoError(t, err)
+
+	var mu sync.Mutex
+	var wg sync.WaitGroup
+
+	// Writer goroutine: Zeroize under lock
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		mu.Lock()
+		sk.Zeroize()
+		mu.Unlock()
+	}()
+
+	// Reader goroutines: read under lock
+	for i := 0; i < 4; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			mu.Lock()
+			_ = sk.Bytes()
+			_ = sk.IsZero()
+			mu.Unlock()
+		}()
+	}
+
+	wg.Wait()
+	// After Zeroize, key must be all zeros
+	mu.Lock()
+	assert.True(t, sk.IsZero(), "key must be zeroed after Zeroize()")
+	mu.Unlock()
 }

@@ -17,9 +17,14 @@
 // SessionKey is defined as a bare fixed-size array type ([32]byte) rather than
 // a wrapper struct. This means SessionKey values are directly comparable with
 // == and can be used as map keys, which is convenient for session management.
-// The tradeoff is that Bytes() returns a slice aliasing the underlying array,
-// so callers should not mutate the returned slice unless they intend to modify
-// the key. The sibling session_tag package uses a wrapper struct instead; both
+//
+// Because Bytes() uses a value receiver, the returned slice is backed by a
+// copy of the array, NOT the original SessionKey. Mutations to the returned
+// slice do NOT affect the original key, and zeroing the returned slice does
+// NOT erase the key material. To securely erase key material, call
+// sk.Zeroize() on the original SessionKey value.
+//
+// The sibling session_tag package uses a wrapper struct instead; both
 // approaches are valid Go idioms with different tradeoffs.
 //
 // # Usage

@@ -36,6 +36,7 @@ func FuzzReadSessionKey(f *testing.F) {
 			// Must error for short input
 			assert.Error(t, err)
 			assert.Equal(t, SessionKey{}, sk)
+			assert.Nil(t, remainder) // contract: remainder is nil on error
 		} else {
 			// Must succeed for sufficient input
 			assert.NoError(t, err)

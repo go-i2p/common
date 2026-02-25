@@ -3,7 +3,10 @@ package session_key
 import (
 	"crypto/rand"
 	"crypto/subtle"
+	"encoding/base64"
+	"encoding/hex"
 	"fmt"
+	"io"
 
 	"github.com/go-i2p/logger"
 	"github.com/samber/oops"
@@ -28,6 +31,12 @@ type SessionKey [SESSION_KEY_SIZE]byte
 var log = logger.GetGoI2PLogger()
 
 // Bytes returns the SessionKey as a byte slice.
+//
+// Because Bytes uses a value receiver, the returned slice is backed by a copy
+// of the key array. Mutations to the returned slice do NOT affect this
+// SessionKey, and zeroing the returned slice does NOT erase this key's
+// material. To securely erase key material, call Zeroize() on the original
+// SessionKey pointer.
 func (sk SessionKey) Bytes() []byte {
 	return sk[:]
 }
@@ -45,6 +54,10 @@ func (sk SessionKey) String() string {
 
 // SetBytes sets the SessionKey value from a byte slice.
 // The input must be exactly SESSION_KEY_SIZE bytes long.
+//
+// If the input slice may contain trailing bytes (e.g. when parsing from a
+// network buffer), use ReadSessionKey instead — it accepts len >= SESSION_KEY_SIZE
+// and returns the remaining bytes as the second return value.
 func (sk *SessionKey) SetBytes(data []byte) error {
 	if len(data) != SESSION_KEY_SIZE {
 		return oops.Errorf("SetBytes: invalid data length, expected %d bytes, got %d", SESSION_KEY_SIZE, len(data))
@@ -142,4 +155,62 @@ func (sk *SessionKey) UnmarshalBinary(data []byte) error {
 	}
 	copy(sk[:], data)
 	return nil
+}
+
+// ReadFrom reads exactly SESSION_KEY_SIZE bytes from r into the SessionKey.
+// Implements io.ReaderFrom. Returns the number of bytes read and any error.
+// Use this to avoid allocating an intermediate buffer when reading from a
+// net.Conn or bytes.Reader in protocol-level code.
+func (sk *SessionKey) ReadFrom(r io.Reader) (int64, error) {
+	n, err := io.ReadFull(r, sk[:])
+	if err != nil {
+		*sk = SessionKey{}
+		return int64(n), oops.Errorf("SessionKey.ReadFrom: %w", err)
+	}
+	return int64(n), nil
+}
+
+// WriteTo writes the SESSION_KEY_SIZE bytes of the SessionKey to w.
+// Implements io.WriterTo. Returns the number of bytes written and any error.
+func (sk SessionKey) WriteTo(w io.Writer) (int64, error) {
+	n, err := w.Write(sk[:])
+	if err != nil {
+		return int64(n), oops.Errorf("SessionKey.WriteTo: %w", err)
+	}
+	return int64(n), nil
+}
+
+// FromHex parses a lowercase or uppercase hex-encoded string into a SessionKey.
+// The string must encode exactly SESSION_KEY_SIZE bytes (64 hex characters).
+// This is the symmetric counterpart to String().
+func FromHex(s string) (SessionKey, error) {
+	b, err := hex.DecodeString(s)
+	if err != nil {
+		return SessionKey{}, oops.Errorf("FromHex: %w", err)
+	}
+	if len(b) != SESSION_KEY_SIZE {
+		return SessionKey{}, oops.Errorf("FromHex: expected %d bytes, got %d", SESSION_KEY_SIZE, len(b))
+	}
+	var sk SessionKey
+	copy(sk[:], b)
+	return sk, nil
+}
+
+// FromBase64 parses a standard base64-encoded string (with or without padding)
+// into a SessionKey. The decoded bytes must be exactly SESSION_KEY_SIZE.
+func FromBase64(s string) (SessionKey, error) {
+	b, err := base64.StdEncoding.DecodeString(s)
+	if err != nil {
+		// Also try without padding
+		b, err = base64.RawStdEncoding.DecodeString(s)
+		if err != nil {
+			return SessionKey{}, oops.Errorf("FromBase64: %w", err)
+		}
+	}
+	if len(b) != SESSION_KEY_SIZE {
+		return SessionKey{}, oops.Errorf("FromBase64: expected %d bytes, got %d", SESSION_KEY_SIZE, len(b))
+	}
+	var sk SessionKey
+	copy(sk[:], b)
+	return sk, nil
 }
