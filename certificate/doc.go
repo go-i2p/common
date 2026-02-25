@@ -42,10 +42,8 @@
 //	    return err
 //	}
 //
-//	// Create a NULL certificate (no payload)
-//	cert, err := certificate.NewCertificateBuilder().
-//	    WithType(certificate.CERT_NULL).
-//	    Build()
+//	// Create a NULL certificate (the default type; no further configuration needed)
+//	cert, err := certificate.NewCertificateBuilder().Build()
 //
 // # Parsing from Bytes
 //

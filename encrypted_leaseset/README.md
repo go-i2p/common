@@ -104,7 +104,11 @@ if err != nil {
 // Access actual destination and leases
 dest := innerLS2.Destination()
 leases := innerLS2.Leases()
-fmt.Printf("Actual destination: %s\n", dest.Base32Address())
+base32Addr, err := dest.Base32Address()
+if err != nil {
+    log.Fatal("Failed to encode address:", err)
+}
+fmt.Printf("Actual destination: %s\n", base32Addr)
 fmt.Printf("Number of leases: %d\n", len(leases))
 ```
 
@@ -179,10 +183,10 @@ func ReadEncryptedLeaseSet(data []byte) (EncryptedLeaseSet, []byte, error)
 // Construction
 func NewEncryptedLeaseSet(sigType uint16, blindedPubKey []byte, published uint32,
     expiresOffset uint16, flags uint16, offlineSig *offline_signature.OfflineSignature,
-    encryptedInnerData []byte, signingKey interface{}) (EncryptedLeaseSet, error)
+    encryptedInnerData []byte, signingKey interface{}) (*EncryptedLeaseSet, error)
 func NewEncryptedLeaseSetFromDestination(dest destination.Destination, published uint32,
     expiresOffset uint16, flags uint16, offlineSig *offline_signature.OfflineSignature,
-    encryptedInnerData []byte, signingKey interface{}) (EncryptedLeaseSet, error)
+    encryptedInnerData []byte, signingKey interface{}) (*EncryptedLeaseSet, error)
 
 // Encryption
 func DeriveSubcredential(destSigningPubKey, blindedPubKey []byte) [32]byte
@@ -191,7 +195,7 @@ func EncryptInnerLeaseSet2(ls2 *lease_set2.LeaseSet2, subcredential [32]byte,
 
 // Blinding
 func CreateBlindedDestination(dest destination.Destination, secret []byte,
-    date string) (destination.Destination, error)
+    date time.Time) (destination.Destination, error)
 
 // Serialization
 func (els *EncryptedLeaseSet) Bytes() ([]byte, error)

@@ -1,4 +1,4 @@
-// Package key_certificate implements the I2P Destination common data structure
+// Package key_certificate implements the I2P KeyCertificate common data structure
 package key_certificate
 
 import (

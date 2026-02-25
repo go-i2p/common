@@ -94,21 +94,39 @@ import (
 )
 
 func main() {
-    // Build a key certificate using fluent interface
-    cert, err := certificate.NewCertificateBuilder().
-        WithKeyTypes(certificate.KEYCERT_SIGN_ED25519, certificate.KEYCERT_CRYPTO_X25519).
-        Build()
+    // Build a KEY certificate (7=Ed25519 signing, 4=X25519 crypto)
+    builder := certificate.NewCertificateBuilder()
+    builder, err := builder.WithKeyTypes(7, 4)
     if err != nil {
         fmt.Printf("Error: %v\n", err)
         return
     }
-    
-    // Or build a certificate with custom payload
+    cert, err := builder.Build()
+    if err != nil {
+        fmt.Printf("Error: %v\n", err)
+        return
+    }
+    _ = cert
+
+    // Or build a certificate with a custom payload
     customPayload := []byte{0x01, 0x02, 0x03, 0x04}
-    cert, err = certificate.NewCertificateBuilder().
-        WithType(certificate.CERT_SIGNED).
-        WithPayload(customPayload).
-        Build()
+    builder2 := certificate.NewCertificateBuilder()
+    builder2, err = builder2.WithType(certificate.CERT_HASHCASH)
+    if err != nil {
+        fmt.Printf("Error: %v\n", err)
+        return
+    }
+    builder2, err = builder2.WithPayload(customPayload)
+    if err != nil {
+        fmt.Printf("Error: %v\n", err)
+        return
+    }
+    cert, err = builder2.Build()
+    if err != nil {
+        fmt.Printf("Error: %v\n", err)
+        return
+    }
+    _ = cert
 }
 ```
 
@@ -167,8 +185,18 @@ func main() {
         return
     }
     
-    fmt.Printf("Certificate type: %d\n", cert.Type())
-    fmt.Printf("Certificate length: %d\n", cert.Length())
+    certType, err := cert.Type()
+    if err != nil {
+        fmt.Printf("Error: %v\n", err)
+        return
+    }
+    certLen, err := cert.Length()
+    if err != nil {
+        fmt.Printf("Error: %v\n", err)
+        return
+    }
+    fmt.Printf("Certificate type: %d\n", certType)
+    fmt.Printf("Certificate length: %d\n", certLen)
     fmt.Printf("Remaining bytes: %d\n", len(remainder))
 }
 ```
@@ -191,11 +219,17 @@ func main() {
         fmt.Printf("Error: %v\n", err)
         return
     }
-    
-    // Generate I2P addresses
-    base32Address := dest.Base32Address()
-    base64Address := dest.Base64()
-    
+    _ = remainder
+    base32Address, err := dest.Base32Address()
+    if err != nil {
+        fmt.Printf("Error: %v\n", err)
+        return
+    }
+    base64Address, err := dest.Base64()
+    if err != nil {
+        fmt.Printf("Error: %v\n", err)
+        return
+    }
     fmt.Printf("Base32 address: %s\n", base32Address)
     fmt.Printf("Base64 address: %s\n", base64Address)
 }
@@ -219,8 +253,7 @@ func main() {
         fmt.Printf("Error: %v\n", err)
         return
     }
-    
-    // Access router information
+    _ = remainder
     identity := routerInfo.RouterIdentity()
     addresses := routerInfo.RouterAddresses()
     capabilities := routerInfo.RouterCapabilities()
@@ -267,13 +300,12 @@ func main() {
 
 ## Requirements
 
-- **Go Version**: 1.24.2 or later
+- **Go Version**: 1.24.5 or later
 - **I2P Specification**: 0.9.67 (June 2025)
 - **Dependencies**:
-  - `github.com/go-i2p/go-i2p` - Core I2P library
+  - `github.com/go-i2p/crypto` - I2P cryptographic primitives
   - `github.com/go-i2p/logger` - Structured logging wrapper
   - `github.com/samber/oops` - Enhanced error handling
-  - `github.com/sirupsen/logrus` - Logging framework
   - `github.com/stretchr/testify` - Testing utilities
 
 ---

@@ -1,28 +1,24 @@
-// Package key_certificate implements the I2P Destination common data structure
+// Package key_certificate implements the I2P KeyCertificate common data structure
 package key_certificate
 
 /*
-I2P Key Certificate
+I2P Key Certificate (CERT_KEY, type 5) payload format
 https://geti2p.net/spec/common-structures#certificate
-Accurate for version 0.9.24
+Accurate for version 0.9.67
 
-+----+----+----+----+----+-//
-|type| length  | payload
-+----+----+----+----+----+-//
+The KEY certificate payload encodes the signing and crypto key types:
 
-type :: Integer
-        length -> 1 byte
++----+----+----+----+
+| sig_type (2)      |
++----+----+----+----+
+| crypto_type (2)   |
++----+----+----+----+
 
-        case 0 -> NULL
-        case 1 -> HASHCASH
-        case 2 -> HIDDEN
-        case 3 -> SIGNED
-        case 4 -> MULTIPLE
-        case 5 -> KEY
+sig_type :: Integer
+            length -> 2 bytes, big-endian
+            value  -> signing algorithm type (e.g. 7 = Ed25519)
 
-length :: Integer
-          length -> 2 bytes
-
-payload :: data
-           length -> $length bytes
+crypto_type :: Integer
+               length -> 2 bytes, big-endian
+               value  -> encryption algorithm type (e.g. 4 = X25519)
 */
