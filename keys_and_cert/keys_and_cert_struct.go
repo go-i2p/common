@@ -2,7 +2,7 @@
 package keys_and_cert
 
 import (
-	"crypto/rand"
+	"github.com/go-i2p/crypto/rand"
 
 	"github.com/go-i2p/crypto/curve25519"
 	"github.com/go-i2p/crypto/ed25519"

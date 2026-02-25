@@ -2,7 +2,7 @@ package session_key
 
 import (
 	"bytes"
-	"crypto/rand"
+	"github.com/go-i2p/crypto/rand"
 	"encoding"
 	"encoding/base64"
 	"encoding/hex"

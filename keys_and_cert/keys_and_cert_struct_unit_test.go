@@ -2,7 +2,7 @@ package keys_and_cert
 
 import (
 	"bytes"
-	"crypto/rand"
+	"github.com/go-i2p/crypto/rand"
 	"encoding/binary"
 	"testing"
 

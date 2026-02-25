@@ -1,7 +1,7 @@
 package router_identity
 
 import (
-	"crypto/rand"
+	"github.com/go-i2p/crypto/rand"
 	"crypto/sha256"
 	"strings"
 	"testing"

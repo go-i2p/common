@@ -1,7 +1,7 @@
 package session_key
 
 import (
-	"crypto/rand"
+	"github.com/go-i2p/crypto/rand"
 	"crypto/subtle"
 	"encoding/base64"
 	"encoding/hex"

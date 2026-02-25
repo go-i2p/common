@@ -1,7 +1,7 @@
 package lease_set
 
 import (
-	"crypto/rand"
+	"github.com/go-i2p/crypto/rand"
 	"errors"
 	"testing"
 

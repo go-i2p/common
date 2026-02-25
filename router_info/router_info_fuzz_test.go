@@ -1,7 +1,7 @@
 package router_info
 
 import (
-	"crypto/rand"
+	"github.com/go-i2p/crypto/rand"
 	"testing"
 )
 

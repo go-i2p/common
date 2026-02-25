@@ -1,6 +1,6 @@
 package session_tag
 
-import "crypto/rand"
+import "github.com/go-i2p/crypto/rand"
 
 // TagIdentifier is a common interface implemented by both SessionTag and
 // ECIESSessionTag, enabling polymorphic handling of either tag type in

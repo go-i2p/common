@@ -1,7 +1,7 @@
 package keys_and_cert
 
 import (
-	"crypto/rand"
+	"github.com/go-i2p/crypto/rand"
 	"testing"
 
 	"github.com/go-i2p/common/key_certificate"

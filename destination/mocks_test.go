@@ -1,7 +1,7 @@
 package destination
 
 import (
-	"crypto/rand"
+	"github.com/go-i2p/crypto/rand"
 	"encoding/binary"
 	"testing"
 
