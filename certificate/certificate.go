@@ -11,8 +11,9 @@ import (
 	"github.com/go-i2p/common/data"
 )
 
-// ReadCertificate creates a Certificate from []byte and returns any ExcessBytes at the end of the input.
+// ReadCertificate creates a Certificate from []byte and returns any remaining bytes after the certificate.
 // Returns nil certificate on error (not partial certificate).
+// Per the I2P spec, type-specific payload length constraints are enforced as hard errors.
 func ReadCertificate(data []byte) (certificate *Certificate, remainder []byte, err error) {
 	cert, err := parseCertificateFromData(data)
 	if err != nil {
@@ -20,18 +21,20 @@ func ReadCertificate(data []byte) (certificate *Certificate, remainder []byte, e
 		return nil, data, err
 	}
 
-	// Validate type-specific payload constraints per spec
-	if warning := validateTypeSpecificPayload(cert); warning != nil {
+	// Validate type-specific payload constraints per spec — enforced as errors, not warnings.
+	// Unknown certificate types (>CERT_KEY) are logged as warnings for forward compatibility.
+	if err := validateTypeSpecificPayload(cert); err != nil {
 		log.WithFields(logger.Fields{
 			"at":     "ReadCertificate",
-			"reason": warning.Error(),
-		}).Warn("certificate type-specific validation warning")
+			"reason": err.Error(),
+		}).Error("certificate type-specific validation failed")
+		return nil, data, err
 	}
 
 	remainder = calculateRemainder(data, cert)
 
 	logCertificateReadCompletion(cert, data, remainder)
-	return &cert, remainder, err
+	return &cert, remainder, nil
 }
 
 // parseCertificateFromData constructs a Certificate based on the input data length and content.
@@ -101,14 +104,17 @@ func handleValidCertificateData(certificate Certificate, bytes []byte) (Certific
 	copy(lenCopy, bytes[CERT_LENGTH_FIELD_START:CERT_LENGTH_FIELD_END])
 	certificate.len = data.Integer(lenCopy)
 
-	payloadLength := len(bytes) - CERT_MIN_SIZE
-	payloadCopy := make([]byte, payloadLength)
-	copy(payloadCopy, bytes[CERT_MIN_SIZE:])
-	certificate.payload = payloadCopy
-
-	if err := validateCertificatePayloadLength(certificate, bytes, payloadLength); err != nil {
+	availableLen := len(bytes) - CERT_MIN_SIZE
+	if err := validateCertificatePayloadLength(certificate, bytes, availableLen); err != nil {
 		return certificate, err
 	}
+
+	// Store only the declared-length bytes. Bytes beyond the declared boundary
+	// belong to subsequent structures in the stream and must not be captured here.
+	declaredLen := certificate.len.Int()
+	payloadCopy := make([]byte, declaredLen)
+	copy(payloadCopy, bytes[CERT_MIN_SIZE:CERT_MIN_SIZE+declaredLen])
+	certificate.payload = payloadCopy
 
 	log.WithFields(logger.Fields{
 		"type":   certificate.kind.Int(),
@@ -136,9 +142,10 @@ func validateCertificatePayloadLength(certificate Certificate, bytes []byte, pay
 	return nil
 }
 
-// validateTypeSpecificPayload checks that the certificate payload length is appropriate
-// for its declared type, per the I2P spec Certificate Types table.
-// Returns a warning error for mismatches; callers should log but not reject.
+// validateTypeSpecificPayload enforces per the I2P spec that the payload length is
+// correct for the certificate's declared type. Returns an error for known types with
+// non-conforming payloads. Unknown types (>CERT_KEY) are only logged as warnings to
+// preserve forward compatibility with future certificate types.
 func validateTypeSpecificPayload(cert Certificate) error {
 	certType := cert.kind.Int()
 	payloadLen := cert.len.Int()
@@ -162,8 +169,11 @@ func validateTypeSpecificPayload(cert Certificate) error {
 			return oops.Errorf("KEY certificate payload too short: %d bytes (minimum %d)", payloadLen, CERT_MIN_KEY_PAYLOAD_SIZE)
 		}
 	default:
+		// Unknown type — log a warning but accept for forward compatibility.
 		if certType > CERT_KEY {
-			return oops.Errorf("unknown certificate type %d (max known: %d)", certType, CERT_KEY)
+			log.WithFields(logger.Fields{
+				"cert_type": certType,
+			}).Warn("unknown certificate type")
 		}
 	}
 	return nil
@@ -206,19 +216,77 @@ func GetSignatureTypeFromCertificate(cert Certificate) (int, error) {
 }
 
 // GetCryptoTypeFromCertificate extracts the crypto public key type from a KEY certificate.
-// Returns an error if the certificate is not a KEY type or if the payload is too short.
+// Returns -1 (not 0) on every error path to avoid ambiguity with the valid ElGamal
+// crypto type code 0. Callers must always check the returned error before using the int.
 func GetCryptoTypeFromCertificate(cert Certificate) (int, error) {
 	kind, err := cert.Type()
 	if err != nil {
 		log.WithFields(logger.Fields{"at": "GetCryptoTypeFromCertificate", "reason": "invalid certificate type"}).Error(err.Error())
-		return 0, err
+		return -1, err
 	}
 	if kind != CERT_KEY {
-		return 0, oops.Errorf("unexpected certificate type: %d", kind)
+		return -1, oops.Errorf("unexpected certificate type: %d", kind)
 	}
 	if len(cert.payload) < CERT_MIN_KEY_PAYLOAD_SIZE {
-		return 0, oops.Errorf("certificate payload too short to contain crypto type")
+		return -1, oops.Errorf("certificate payload too short to contain crypto type")
 	}
 	cryptoType := int(binary.BigEndian.Uint16(cert.payload[CERT_KEY_CRYPTO_TYPE_OFFSET : CERT_KEY_CRYPTO_TYPE_OFFSET+CERT_CRYPTO_KEY_TYPE_SIZE]))
 	return cryptoType, nil
+}
+
+// GetExcessSigningPublicKeyData extracts the excess signing public key bytes from a KEY
+// certificate. For signing key types whose total length exceeds CERT_SPK_SLOT_SIZE (128)
+// bytes, the overflow is stored starting at byte CERT_MIN_KEY_PAYLOAD_SIZE of the payload.
+// Returns nil (no error) when signingKeySize <= CERT_SPK_SLOT_SIZE.
+func GetExcessSigningPublicKeyData(cert Certificate, signingKeySize int) ([]byte, error) {
+	kind, err := cert.Type()
+	if err != nil {
+		return nil, err
+	}
+	if kind != CERT_KEY {
+		return nil, oops.Errorf("unexpected certificate type: %d", kind)
+	}
+	excessLen := signingKeySize - CERT_SPK_SLOT_SIZE
+	if excessLen <= 0 {
+		return nil, nil
+	}
+	if len(cert.payload) < CERT_MIN_KEY_PAYLOAD_SIZE+excessLen {
+		return nil, oops.Errorf(
+			"certificate payload too short for excess signing key data: need %d bytes, have %d",
+			CERT_MIN_KEY_PAYLOAD_SIZE+excessLen, len(cert.payload),
+		)
+	}
+	result := make([]byte, excessLen)
+	copy(result, cert.payload[CERT_MIN_KEY_PAYLOAD_SIZE:CERT_MIN_KEY_PAYLOAD_SIZE+excessLen])
+	return result, nil
+}
+
+// GetExcessCryptoPublicKeyData extracts the excess crypto public key bytes from a KEY
+// certificate. For crypto key types whose total length exceeds CERT_CPK_SLOT_SIZE (256)
+// bytes, the overflow is stored after any excess signing key data in the payload.
+// The excessSigningLen parameter is the number of excess signing key bytes already
+// stored before the crypto excess (= max(0, signingKeySize - CERT_SPK_SLOT_SIZE)).
+// Returns nil (no error) when cryptoKeySize <= CERT_CPK_SLOT_SIZE.
+func GetExcessCryptoPublicKeyData(cert Certificate, cryptoKeySize, excessSigningLen int) ([]byte, error) {
+	kind, err := cert.Type()
+	if err != nil {
+		return nil, err
+	}
+	if kind != CERT_KEY {
+		return nil, oops.Errorf("unexpected certificate type: %d", kind)
+	}
+	excessLen := cryptoKeySize - CERT_CPK_SLOT_SIZE
+	if excessLen <= 0 {
+		return nil, nil
+	}
+	offset := CERT_MIN_KEY_PAYLOAD_SIZE + excessSigningLen
+	if len(cert.payload) < offset+excessLen {
+		return nil, oops.Errorf(
+			"certificate payload too short for excess crypto key data: need %d bytes, have %d",
+			offset+excessLen, len(cert.payload),
+		)
+	}
+	result := make([]byte, excessLen)
+	copy(result, cert.payload[offset:offset+excessLen])
+	return result, nil
 }

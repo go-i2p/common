@@ -106,6 +106,10 @@ func validateCertPayload(certType uint8, payload []byte) error {
 		return oops.Errorf("KEY certificates require at least %d bytes payload, got %d",
 			CERT_MIN_KEY_PAYLOAD_SIZE, len(payload))
 	}
+	// CERT_HASHCASH: per spec the payload must be an ASCII colon-separated hashcash
+	// string. A zero-length payload is technically invalid per spec, but is accepted
+	// here for backward compatibility. Callers requiring strict HASHCASH validation
+	// should verify the payload format externally.
 	return nil
 }
 
@@ -144,8 +148,16 @@ func (c *Certificate) RawBytes() []byte {
 	return bytes
 }
 
-// ExcessBytes returns the excess bytes in a certificate found after the specified payload length.
-// Returns nil if the certificate is nil or not initialized.
+// ExcessBytes returns payload bytes beyond the declared certificate length, or nil if
+// the payload exactly matches the declared length.
+//
+// After ReadCertificate, the payload is trimmed to the declared length, so ExcessBytes()
+// always returns nil for normally-parsed certificates. This method is relevant only for
+// certificates whose payload field was set larger than the declared length by direct
+// struct construction (e.g., unit tests).
+//
+// Note: bytes that follow a certificate in the wire stream are returned by ReadCertificate
+// as the "remainder" slice, not via ExcessBytes. The two values do not overlap.
 func (c *Certificate) ExcessBytes() []byte {
 	if !c.IsValid() {
 		return nil
@@ -226,7 +238,10 @@ func (c *Certificate) Length() (length int, err error) {
 		return 0, oops.Errorf("certificate is not initialized")
 	}
 	length = c.len.Int()
-	if length < CERT_EMPTY_PAYLOAD_SIZE || length > CERT_MAX_PAYLOAD_SIZE {
+	// data.Integer parsed from 2 big-endian bytes is always in [0, 65535];
+	// the lower bound `length < 0` is structurally unreachable but retained
+	// as documentation that future signed-integer sources must be guarded.
+	if length < 0 || length > CERT_MAX_PAYLOAD_SIZE {
 		log.WithFields(logger.Fields{
 			"at":     "Certificate.Length",
 			"reason": "invalid certificate length",

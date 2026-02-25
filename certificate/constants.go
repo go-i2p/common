@@ -73,3 +73,13 @@ const CERT_SIGNED_PAYLOAD_SHORT = 40
 // CERT_SIGNED_PAYLOAD_LONG is the spec-defined SIGNED certificate payload length
 // containing a 40-byte DSA signature followed by a 32-byte Hash of the signing Destination.
 const CERT_SIGNED_PAYLOAD_LONG = 72
+
+// CERT_SPK_SLOT_SIZE is the number of bytes in the keys_and_cert structure reserved for
+// the signing public key. Signing keys larger than this store the overflow bytes as excess
+// signing public key data in the KEY certificate payload after the 4-byte type header.
+const CERT_SPK_SLOT_SIZE = 128
+
+// CERT_CPK_SLOT_SIZE is the number of bytes in the keys_and_cert structure reserved for
+// the crypto public key. Crypto keys larger than this store the overflow bytes as excess
+// crypto public key data in the KEY certificate payload after any excess signing key bytes.
+const CERT_CPK_SLOT_SIZE = 256

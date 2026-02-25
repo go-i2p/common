@@ -23,8 +23,9 @@ func TestCertificateLengthErrWhenDataTooShort(t *testing.T) {
 }
 
 func TestReadCertificateWithCorrectData(t *testing.T) {
-	cert, remainder, err := ReadCertificate([]byte{0x00, 0x00, 0x02, 0xff, 0xff})
-	assert.Equal(t, 5, cert.length())
+	// KEY cert with valid 4-byte payload — exactly spec-conformant.
+	cert, remainder, err := ReadCertificate([]byte{CERT_KEY, 0x00, 0x04, 0x00, 0x07, 0x00, 0x04})
+	assert.Equal(t, 7, cert.length())
 	assert.Equal(t, 0, len(remainder))
 	assert.Nil(t, err)
 }
@@ -38,7 +39,8 @@ func TestReadCertificateWithDataTooShort(t *testing.T) {
 }
 
 func TestReadCertificateWithRemainder(t *testing.T) {
-	cert, remainder, err := ReadCertificate([]byte{0x00, 0x00, 0x02, 0xff, 0xff, 0x01})
+	// MULTIPLE cert (no payload length restriction) declared 2-byte payload, 1 extra stream byte.
+	cert, remainder, err := ReadCertificate([]byte{CERT_MULTIPLE, 0x00, 0x02, 0xff, 0xff, 0x01})
 	assert.Equal(t, 5, cert.length())
 	assert.Equal(t, 1, len(remainder))
 	assert.Nil(t, err)
@@ -155,11 +157,10 @@ func TestBuildKeyTypePayloadValidation(t *testing.T) {
 }
 
 func TestTypeSpecificPayloadValidation(t *testing.T) {
-	t.Run("NULL cert with payload logs warning but parses", func(t *testing.T) {
+	t.Run("NULL cert with non-zero payload is rejected", func(t *testing.T) {
 		cert, _, err := ReadCertificate([]byte{CERT_NULL, 0x00, 0x02, 0xAA, 0xBB})
-		require.NoError(t, err)
-		certType, _ := cert.Type()
-		assert.Equal(t, CERT_NULL, certType)
+		require.Error(t, err)
+		assert.Nil(t, cert)
 	})
 
 	t.Run("KEY cert with valid payload parses", func(t *testing.T) {
@@ -169,10 +170,10 @@ func TestTypeSpecificPayloadValidation(t *testing.T) {
 		assert.Equal(t, CERT_KEY, certType)
 	})
 
-	t.Run("KEY cert with insufficient payload logs warning", func(t *testing.T) {
+	t.Run("KEY cert with insufficient payload returns error", func(t *testing.T) {
 		cert, _, err := ReadCertificate([]byte{CERT_KEY, 0x00, 0x02, 0x00, 0x07})
-		require.NoError(t, err)
-		require.NotNil(t, cert)
+		require.Error(t, err)
+		assert.Nil(t, cert)
 	})
 }
 
@@ -205,13 +206,21 @@ func TestTypeAsymmetry(t *testing.T) {
 		}
 	})
 
-	t.Run("parser accepts any type byte 0-255", func(t *testing.T) {
-		for _, typeVal := range []byte{0, 5, 6, 100, 255} {
+	t.Run("parser accepts unknown type bytes with zero payload", func(t *testing.T) {
+		// Known types (NULL=0, HIDDEN=2) with zero payload are also valid.
+		// CERT_KEY (5) with zero payload is rejected: KEY requires >= 4 bytes.
+		for _, typeVal := range []byte{0, 2, 6, 100, 255} {
 			cert, _, err := ReadCertificate([]byte{typeVal, 0x00, 0x00})
-			require.NoError(t, err)
+			require.NoError(t, err, "type %d with zero payload should parse", typeVal)
 			ct, _ := cert.Type()
 			assert.Equal(t, int(typeVal), ct)
 		}
+	})
+
+	t.Run("parser rejects CERT_KEY with zero payload", func(t *testing.T) {
+		cert, _, err := ReadCertificate([]byte{CERT_KEY, 0x00, 0x00})
+		require.Error(t, err)
+		assert.Nil(t, cert)
 	})
 }
 
@@ -245,11 +254,10 @@ func TestSignedCertificatePayloadValidation(t *testing.T) {
 		require.Error(t, err)
 	})
 
-	t.Run("ReadCertificate still accepts non-conforming SIGNED from wire", func(t *testing.T) {
+	t.Run("ReadCertificate rejects non-conforming SIGNED from wire", func(t *testing.T) {
 		cert, _, err := ReadCertificate([]byte{CERT_SIGNED, 0x00, 0x02, 0xAA, 0xBB})
-		require.NoError(t, err)
-		certType, _ := cert.Type()
-		assert.Equal(t, CERT_SIGNED, certType)
+		require.Error(t, err)
+		assert.Nil(t, cert)
 	})
 }
 
@@ -322,8 +330,9 @@ func TestReadCertificateWithoutNormalize(t *testing.T) {
 		assert.Equal(t, 0, len(remainder))
 	})
 
-	t.Run("cert with excess data parses correctly", func(t *testing.T) {
-		cert, remainder, err := ReadCertificate([]byte{CERT_SIGNED, 0x00, 0x02, 0xAA, 0xBB, 0xCC, 0xDD})
+	t.Run("MULTIPLE cert with stream bytes returns correct remainder", func(t *testing.T) {
+		// MULTIPLE has no type-specific payload restriction. Declared 2 bytes, 2 extra.
+		cert, remainder, err := ReadCertificate([]byte{CERT_MULTIPLE, 0x00, 0x02, 0xAA, 0xBB, 0xCC, 0xDD})
 		require.NoError(t, err)
 		require.NotNil(t, cert)
 		assert.Equal(t, []byte{0xCC, 0xDD}, remainder)
@@ -342,7 +351,108 @@ func TestCertificateAccessorsWithInvalidCertificate(t *testing.T) {
 	assert.Nil(t, cert)
 }
 
-// Fuzz test
+// TestGetCryptoType_ErrorSentinelIsMinusOne verifies that GetCryptoTypeFromCertificate
+// uses -1 as its error sentinel, consistent with GetSignatureTypeFromCertificate and
+// unambiguous with the valid ElGamal crypto type code 0.
+func TestGetCryptoType_ErrorSentinelIsMinusOne(t *testing.T) {
+	t.Run("error sentinel is -1 not 0", func(t *testing.T) {
+		cert, _ := NewCertificateWithType(CERT_NULL, []byte{})
+		cryptoType, err := GetCryptoTypeFromCertificate(*cert)
+		require.Error(t, err)
+		assert.Equal(t, -1, cryptoType,
+			"error sentinel must be -1 to not collide with ElGamal crypto type code 0")
+	})
+
+	t.Run("valid ElGamal type 0 is distinguishable from error", func(t *testing.T) {
+		payload := []byte{0x00, 0x00, 0x00, 0x00} // sigType=0, cryptoType=0
+		cert, _ := NewCertificateWithType(CERT_KEY, payload)
+		cryptoType, err := GetCryptoTypeFromCertificate(*cert)
+		require.NoError(t, err)
+		assert.Equal(t, 0, cryptoType, "ElGamal crypto type 0 should be returned on success")
+	})
+
+	t.Run("uninitialized cert returns -1", func(t *testing.T) {
+		var cert Certificate
+		cryptoType, err := GetCryptoTypeFromCertificate(cert)
+		require.Error(t, err)
+		assert.Equal(t, -1, cryptoType)
+	})
+
+	t.Run("short payload returns -1", func(t *testing.T) {
+		// parseCertificateFromData bypasses type-specific validation, giving a KEY cert
+		// with a 2-byte payload to exercise the short-payload sentinel path.
+		shortCert, _ := parseCertificateFromData([]byte{CERT_KEY, 0x00, 0x02, 0x00, 0x07})
+		cryptoType, err2 := GetCryptoTypeFromCertificate(shortCert)
+		require.Error(t, err2)
+		assert.Equal(t, -1, cryptoType)
+	})
+
+	t.Run("HIDDEN cert returns -1", func(t *testing.T) {
+		cert, _ := NewCertificateWithType(CERT_HIDDEN, []byte{})
+		cryptoType, err := GetCryptoTypeFromCertificate(*cert)
+		require.Error(t, err)
+		assert.Equal(t, -1, cryptoType)
+	})
+}
+
+// TestGetExcessKeyData validates the excess signing/crypto key data extraction functions.
+func TestGetExcessKeyData(t *testing.T) {
+	t.Run("no excess signing key when size <= 128", func(t *testing.T) {
+		cert, _ := NewCertificateWithType(CERT_KEY, []byte{0x00, 0x07, 0x00, 0x04})
+		result, err := GetExcessSigningPublicKeyData(*cert, 32) // Ed25519 = 32 bytes
+		require.NoError(t, err)
+		assert.Nil(t, result)
+	})
+
+	t.Run("no excess crypto key when size <= 256", func(t *testing.T) {
+		cert, _ := NewCertificateWithType(CERT_KEY, []byte{0x00, 0x07, 0x00, 0x04})
+		result, err := GetExcessCryptoPublicKeyData(*cert, 32, 0) // X25519 = 32 bytes
+		require.NoError(t, err)
+		assert.Nil(t, result)
+	})
+
+	t.Run("excess signing key extracted correctly", func(t *testing.T) {
+		// Signing key size 256 bytes — excess = 256-128 = 128 bytes.
+		excessSigningData := make([]byte, 128)
+		for i := range excessSigningData {
+			excessSigningData[i] = byte(i)
+		}
+		payload := append([]byte{0x00, 0x09, 0x00, 0x00}, excessSigningData...) // sigType=9 (RSA-2048)
+		cert, err := NewCertificateWithType(CERT_KEY, payload)
+		require.NoError(t, err)
+		result, err := GetExcessSigningPublicKeyData(*cert, 256)
+		require.NoError(t, err)
+		assert.Equal(t, excessSigningData, result)
+	})
+
+	t.Run("excess crypto key extracted correctly", func(t *testing.T) {
+		// Crypto key size 512 bytes — excess = 512-256 = 256 bytes.
+		excessCryptoData := make([]byte, 256)
+		for i := range excessCryptoData {
+			excessCryptoData[i] = byte(i + 1)
+		}
+		// payload: [sigType 2B][cryptoType 2B][excessCrypto 256B]
+		payload := append([]byte{0x00, 0x07, 0x00, 0x06}, excessCryptoData...)
+		cert, err := NewCertificateWithType(CERT_KEY, payload)
+		require.NoError(t, err)
+		result, err := GetExcessCryptoPublicKeyData(*cert, 512, 0)
+		require.NoError(t, err)
+		assert.Equal(t, excessCryptoData, result)
+	})
+
+	t.Run("non-KEY cert returns error for excess signing", func(t *testing.T) {
+		cert, _ := NewCertificateWithType(CERT_NULL, []byte{})
+		_, err := GetExcessSigningPublicKeyData(*cert, 256)
+		require.Error(t, err)
+	})
+
+	t.Run("payload too short for excess signing key", func(t *testing.T) {
+		cert, _ := NewCertificateWithType(CERT_KEY, []byte{0x00, 0x09, 0x00, 0x00})
+		_, err := GetExcessSigningPublicKeyData(*cert, 256) // needs 128 excess bytes, only 0 available
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "payload too short")
+	})
+}
 
 func FuzzReadCertificate(f *testing.F) {
 	f.Add([]byte{})
@@ -393,9 +503,10 @@ func TestGetSignatureType_ErrorSentinelIsNegativeOne(t *testing.T) {
 	})
 
 	t.Run("short payload returns -1", func(t *testing.T) {
-		cert, _, err := ReadCertificate([]byte{CERT_KEY, 0x00, 0x02, 0x00, 0x07})
-		require.NoError(t, err)
-		sigType, err := GetSignatureTypeFromCertificate(*cert)
+		// parseCertificateFromData bypasses type-specific validation to construct a KEY cert
+		// with a 2-byte payload, exercising the short-payload error path.
+		shortCert, _ := parseCertificateFromData([]byte{CERT_KEY, 0x00, 0x02, 0x00, 0x07})
+		sigType, err := GetSignatureTypeFromCertificate(shortCert)
 		require.Error(t, err)
 		assert.Equal(t, -1, sigType)
 	})

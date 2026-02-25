@@ -15,17 +15,19 @@ import (
 func TestCertificateTypeIsFirstByte(t *testing.T) {
 	assert := assert.New(t)
 
-	bytes := []byte{0x03, 0x00, 0x00}
+	// Use CERT_MULTIPLE (4) with a 2-byte payload — no type-specific length restriction.
+	bytes := []byte{0x04, 0x00, 0x02, 0xff, 0xff}
 	certificate, _, _ := ReadCertificate(bytes)
 	cert_type, typeErr := certificate.Type()
 	assert.Nil(typeErr, "certificate.Type() should not error for valid type")
-	assert.Equal(cert_type, 3, "certificate.Type() should be the first bytes in a certificate")
+	assert.Equal(cert_type, 4, "certificate.Type() should be the first byte in a certificate")
 }
 
 func TestCertificateLengthCorrect(t *testing.T) {
 	assert := assert.New(t)
 
-	bytes := []byte{0x03, 0x00, 0x02, 0xff, 0xff}
+	// Use CERT_MULTIPLE (4) which has no type-specific payload length restriction.
+	bytes := []byte{0x04, 0x00, 0x02, 0xff, 0xff}
 	certificate, _, _ := ReadCertificate(bytes)
 	cert_len, lenErr := certificate.Length()
 	assert.Nil(lenErr, "certificate.Length() should not error for valid length")
@@ -35,7 +37,8 @@ func TestCertificateLengthCorrect(t *testing.T) {
 func TestCertificateDataWhenCorrectSize(t *testing.T) {
 	assert := assert.New(t)
 
-	bytes := []byte{0x03, 0x00, 0x01, 0xaa}
+	// Use CERT_MULTIPLE (4) which has no type-specific payload length restriction.
+	bytes := []byte{0x04, 0x00, 0x01, 0xaa}
 	certificate, _, _ := ReadCertificate(bytes)
 	cert_data, dataErr := certificate.Data()
 	assert.Nil(dataErr, "certificate.Data() returned error with valid data")
@@ -47,7 +50,10 @@ func TestCertificateDataWhenCorrectSize(t *testing.T) {
 func TestCertificateDataWhenTooLong(t *testing.T) {
 	assert := assert.New(t)
 
-	bytes := []byte{0x03, 0x00, 0x02, 0xff, 0xff, 0xaa, 0xaa}
+	// Use CERT_MULTIPLE (4) which has no type-specific payload length restriction.
+	// Input has 4 bytes available but declared length is 2; remainder {0xAA, 0xAA}
+	// is returned by ReadCertificate, not stored in the certificate payload.
+	bytes := []byte{0x04, 0x00, 0x02, 0xff, 0xff, 0xaa, 0xaa}
 	certificate, _, _ := ReadCertificate(bytes)
 	cert_data, dataErr := certificate.Data()
 	assert.Nil(dataErr, "certificate.Data() should not error for valid length")
@@ -280,14 +286,16 @@ func TestBytesVsRawBytes(t *testing.T) {
 		assert.Equal(t, cert.Bytes(), cert.RawBytes())
 	})
 
-	t.Run("differ when payload has excess data", func(t *testing.T) {
-		wireData := []byte{CERT_KEY, 0x00, 0x02, 0x00, 0x07, 0x00, 0x04}
-		cert, _, _ := ReadCertificate(wireData)
-		require.NotNil(t, cert)
-
-		assert.Equal(t, CERT_MIN_SIZE+2, len(cert.Bytes()))
-		assert.Equal(t, CERT_MIN_SIZE+4, len(cert.RawBytes()))
-		assert.Greater(t, len(cert.RawBytes()), len(cert.Bytes()))
+	t.Run("identical after ReadCertificate because payload is trimmed to declared length", func(t *testing.T) {
+		// After the payload-capture fix, ReadCertificate stores only declared-length bytes.
+		// Bytes() and RawBytes() therefore produce the same output for any parsed cert.
+		wireData := []byte{CERT_KEY, 0x00, 0x04, 0x00, 0x07, 0x00, 0x04, 0xFF, 0xFF}
+		cert, remainder, err := ReadCertificate(wireData)
+		require.NoError(t, err)
+		assert.Equal(t, []byte{0xFF, 0xFF}, remainder)
+		assert.Equal(t, cert.Bytes(), cert.RawBytes(),
+			"Bytes() and RawBytes() must be identical when payload is trimmed to declared length")
+		assert.Equal(t, CERT_MIN_SIZE+4, len(cert.Bytes()))
 	})
 
 	t.Run("both nil on invalid certificate", func(t *testing.T) {
@@ -298,23 +306,34 @@ func TestBytesVsRawBytes(t *testing.T) {
 }
 
 func TestCertificateExcessBytes(t *testing.T) {
-	assert := assert.New(t)
+	// After the payload-capture fix, ReadCertificate stores only declared-length bytes.
+	// ExcessBytes() is therefore always nil for certificates parsed from the wire.
+	// Post-certificate stream bytes are returned as the remainder, not via ExcessBytes.
+	t.Run("parsed cert ExcessBytes is nil", func(t *testing.T) {
+		payload := make([]byte, CERT_SIGNED_PAYLOAD_SHORT)
+		cert, err := NewCertificateWithType(CERT_SIGNED, payload)
+		require.NoError(t, err)
+		assert.Nil(t, cert.ExcessBytes())
+	})
 
-	payload := []byte{0x01, 0x02}
-	extraBytes := []byte{0x03, 0x04}
-	certData := append(payload, extraBytes...)
+	t.Run("KEY cert parsed from wire ExcessBytes is nil", func(t *testing.T) {
+		certBytes := []byte{byte(CERT_KEY), 0x00, 0x04, 0x00, 0x07, 0x00, 0x04}
+		cert, remainder, err := ReadCertificate(certBytes)
+		require.NoError(t, err)
+		assert.Nil(t, cert.ExcessBytes())
+		assert.Nil(t, remainder)
+	})
 
-	certBytes := append([]byte{byte(CERT_SIGNED)}, []byte{0x00, byte(len(payload))}...)
-	certBytes = append(certBytes, certData...)
-
-	cert, _, err := ReadCertificate(certBytes)
-	assert.Nil(err)
-
-	excess := cert.ExcessBytes()
-	assert.Equal(extraBytes, excess)
-
-	data, _ := cert.Data()
-	assert.Equal(payload, data)
+	t.Run("post-certificate stream bytes returned as remainder, not ExcessBytes", func(t *testing.T) {
+		// MULTIPLE cert: declared 2 bytes, followed by 2 extra stream bytes.
+		certBytes := []byte{byte(CERT_MULTIPLE), 0x00, 0x02, 0xAA, 0xBB, 0xCC, 0xDD}
+		cert, remainder, err := ReadCertificate(certBytes)
+		require.NoError(t, err)
+		data, _ := cert.Data()
+		assert.Equal(t, []byte{0xAA, 0xBB}, data)
+		assert.Equal(t, []byte{0xCC, 0xDD}, remainder)
+		assert.Nil(t, cert.ExcessBytes(), "stream bytes after cert must not appear in ExcessBytes")
+	})
 }
 
 func TestLengthOptimized(t *testing.T) {
@@ -531,7 +550,7 @@ func TestGetSignatureTypeErrorSentinel(t *testing.T) {
 
 	cryptoType, err := GetCryptoTypeFromCertificate(*cert)
 	require.Error(t, err)
-	assert.Equal(t, 0, cryptoType)
+	assert.Equal(t, -1, cryptoType, "error sentinel must be -1 to not collide with ElGamal crypto type 0")
 }
 
 func TestNewCertificateWithType_KeyCertMinPayload(t *testing.T) {
@@ -593,13 +612,13 @@ func TestExcessBytes_ExactMatch_ReturnsNil(t *testing.T) {
 		assert.Nil(t, excess)
 	})
 
-	t.Run("cert with actual excess bytes returns non-nil", func(t *testing.T) {
-		wireData := []byte{CERT_KEY, 0x00, 0x02, 0x00, 0x07, 0x00, 0x04}
+	t.Run("payload matches declared length after ReadCertificate", func(t *testing.T) {
+		// KEY cert with exact 4-byte payload — ExcessBytes() must be nil.
+		wireData := []byte{CERT_KEY, 0x00, 0x04, 0x00, 0x07, 0x00, 0x04}
 		cert, _, err := ReadCertificate(wireData)
 		require.NoError(t, err)
 		excess := cert.ExcessBytes()
-		assert.NotNil(t, excess)
-		assert.Equal(t, []byte{0x00, 0x04}, excess)
+		assert.Nil(t, excess, "ExcessBytes() must be nil when payload equals declared length")
 	})
 }
 
@@ -696,4 +715,84 @@ func TestSliceIndexCorrectness(t *testing.T) {
 		cryptoType, _ := GetCryptoTypeFromCertificate(*cert)
 		assert.Equal(t, 4, cryptoType)
 	})
+}
+
+// TestRoundTripAllCertificateTypes verifies that every defined certificate type survives
+// a Bytes() → ReadCertificate() round-trip with identical field values.
+// Exercises HASHCASH and MULTIPLE which were not previously covered by round-trip tests.
+func TestRoundTripAllCertificateTypes(t *testing.T) {
+	tests := []struct {
+		name    string
+		build   func() (*Certificate, error)
+		wantLen int
+	}{
+		{
+			name:    "NULL",
+			build:   func() (*Certificate, error) { return NewCertificateWithType(CERT_NULL, []byte{}) },
+			wantLen: 0,
+		},
+		{
+			name: "HASHCASH",
+			build: func() (*Certificate, error) {
+				// Spec: ASCII colon-separated hashcash string.
+				return NewCertificateWithType(CERT_HASHCASH, []byte("1:20:000000:test@i2p::000000:000000"))
+			},
+			wantLen: len("1:20:000000:test@i2p::000000:000000"),
+		},
+		{
+			name:    "HIDDEN",
+			build:   func() (*Certificate, error) { return NewCertificateWithType(CERT_HIDDEN, []byte{}) },
+			wantLen: 0,
+		},
+		{
+			name: "SIGNED",
+			build: func() (*Certificate, error) {
+				return NewCertificateWithType(CERT_SIGNED, make([]byte, CERT_SIGNED_PAYLOAD_SHORT))
+			},
+			wantLen: CERT_SIGNED_PAYLOAD_SHORT,
+		},
+		{
+			name: "MULTIPLE",
+			build: func() (*Certificate, error) {
+				return NewCertificateWithType(CERT_MULTIPLE, []byte{0xDE, 0xAD, 0xBE, 0xEF})
+			},
+			wantLen: 4,
+		},
+		{
+			name: "KEY",
+			build: func() (*Certificate, error) {
+				return NewCertificateWithType(CERT_KEY, []byte{0x00, 0x07, 0x00, 0x04})
+			},
+			wantLen: 4,
+		},
+	}
+	for _, tc := range tests {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			original, err := tc.build()
+			require.NoError(t, err)
+			require.NotNil(t, original)
+
+			serialized := original.Bytes()
+			require.NotNil(t, serialized)
+
+			parsed, remainder, err := ReadCertificate(serialized)
+			require.NoError(t, err)
+			require.NotNil(t, parsed)
+			assert.Empty(t, remainder, "no remainder expected after exact serialization")
+
+			origType, _ := original.Type()
+			parsedType, _ := parsed.Type()
+			assert.Equal(t, origType, parsedType, "type must survive round-trip")
+
+			origLen, _ := original.Length()
+			parsedLen, _ := parsed.Length()
+			assert.Equal(t, origLen, parsedLen, "length must survive round-trip")
+			assert.Equal(t, tc.wantLen, parsedLen)
+
+			origData, _ := original.Data()
+			parsedData, _ := parsed.Data()
+			assert.Equal(t, origData, parsedData, "payload must survive round-trip")
+		})
+	}
 }
