@@ -22,6 +22,14 @@ func TestRoundTripSerialization(t *testing.T) {
 		{"P384_ElGamal", KEYCERT_SIGN_P384, KEYCERT_CRYPTO_ELG},
 		{"RedDSA_X25519", KEYCERT_SIGN_REDDSA_ED25519, KEYCERT_CRYPTO_X25519},
 		{"Ed25519ph_X25519", KEYCERT_SIGN_ED25519PH, KEYCERT_CRYPTO_X25519},
+		// P521 signing key (132 bytes) > KEYCERT_SPK_SIZE (128): payload includes 4 excess bytes.
+		// These exercise the excess-signing-data serialization path.
+		{"P521_ElGamal", KEYCERT_SIGN_P521, KEYCERT_CRYPTO_ELG},
+		// RSA types: signing keys exceed KEYCERT_SPK_SIZE by 128/256/384 bytes respectively.
+		// buildKeyCertificatePayload must include zero-filled excess bytes for round-trip to succeed.
+		{"RSA2048_ElGamal", KEYCERT_SIGN_RSA2048, KEYCERT_CRYPTO_ELG},
+		{"RSA3072_ElGamal", KEYCERT_SIGN_RSA3072, KEYCERT_CRYPTO_ELG},
+		{"RSA4096_ElGamal", KEYCERT_SIGN_RSA4096, KEYCERT_CRYPTO_ELG},
 	}
 
 	for _, tt := range tests {

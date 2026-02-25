@@ -68,8 +68,11 @@ func NewKeyCertificateWithTypes(signingType, cryptoType int) (*KeyCertificate, e
 	return keyCert, nil
 }
 
-// buildKeyCertificatePayload constructs the 4-byte payload for a key certificate.
-// The payload format is: [signing_type (2 bytes)] [crypto_type (2 bytes)]
+// buildKeyCertificatePayload constructs the minimal payload for a key certificate.
+// The payload format is: [signing_type (2 bytes)] [crypto_type (2 bytes)] [excess signing key bytes] [excess crypto key bytes]
+// For types where the key exceeds the standard KeysAndCert field size (KEYCERT_SPK_SIZE / KEYCERT_PUBKEY_SIZE),
+// zero-filled placeholder bytes are appended for the excess material (e.g. P521 adds 4 bytes, RSA-2048 adds 128 bytes).
+// Callers that have actual key material should populate those bytes after the fact.
 func buildKeyCertificatePayload(signingType, cryptoType int) []byte {
 	var payload bytes.Buffer
 
@@ -83,31 +86,34 @@ func buildKeyCertificatePayload(signingType, cryptoType int) []byte {
 	binary.BigEndian.PutUint16(cryptoBytes, uint16(cryptoType))
 	payload.Write(cryptoBytes)
 
+	// For large signing keys (P521, RSA-2048/3072/4096): append zero-filled excess bytes.
+	// Per I2P spec, excess signing key data beyond KEYCERT_SPK_SIZE (128 bytes) is stored
+	// in the certificate payload immediately after the 4-byte type fields.
+	if sigInfo, ok := SigningKeySizes[signingType]; ok && sigInfo.SigningPublicKeySize > KEYCERT_SPK_SIZE {
+		excess := make([]byte, sigInfo.SigningPublicKeySize-KEYCERT_SPK_SIZE)
+		payload.Write(excess)
+	}
+
+	// For large crypto keys (ECDH-P521): append zero-filled excess bytes.
+	if crypInfo, ok := CryptoKeySizes[cryptoType]; ok && crypInfo.CryptoPublicKeySize > KEYCERT_PUBKEY_SIZE {
+		excess := make([]byte, crypInfo.CryptoPublicKeySize-KEYCERT_PUBKEY_SIZE)
+		payload.Write(excess)
+	}
+
 	return payload.Bytes()
 }
 
 // validateSigningType validates that the signing type is a known value.
+// It derives validity from the authoritative SigningKeySizes map to prevent
+// silent drift between the two registries.
 func validateSigningType(signingType int) error {
-	// Check if it's a known signing type
-	validTypes := map[int]bool{
-		KEYCERT_SIGN_DSA_SHA1:       true,
-		KEYCERT_SIGN_P256:           true,
-		KEYCERT_SIGN_P384:           true,
-		KEYCERT_SIGN_P521:           true,
-		KEYCERT_SIGN_RSA2048:        true,
-		KEYCERT_SIGN_RSA3072:        true,
-		KEYCERT_SIGN_RSA4096:        true,
-		KEYCERT_SIGN_ED25519:        true,
-		KEYCERT_SIGN_ED25519PH:      true,
-		KEYCERT_SIGN_REDDSA_ED25519: true,
-	}
-
 	// Allow experimental range
 	if signingType >= KEYCERT_SIGN_EXPERIMENTAL_START && signingType <= KEYCERT_SIGN_EXPERIMENTAL_END {
 		return nil
 	}
 
-	if !validTypes[signingType] {
+	// Use the authoritative SigningKeySizes map to avoid duplicate, drifting registries.
+	if _, ok := SigningKeySizes[signingType]; !ok {
 		return oops.Errorf("invalid signing key type: %d", signingType)
 	}
 
@@ -115,22 +121,12 @@ func validateSigningType(signingType int) error {
 }
 
 // validateCryptoType validates that the crypto type is a known value.
+// It derives validity from the authoritative CryptoKeySizes map to prevent
+// silent drift between the two registries.
 func validateCryptoType(cryptoType int) error {
 	// Check for spec-reserved type with specific error
 	if cryptoType == KEYCERT_CRYPTO_RESERVED_NONE {
 		return oops.Errorf("reserved crypto key type: RESERVED_NONE (type %d) is not implemented", cryptoType)
-	}
-
-	// Check if it's a known crypto type
-	validTypes := map[int]bool{
-		KEYCERT_CRYPTO_ELG:              true,
-		KEYCERT_CRYPTO_P256:             true,
-		KEYCERT_CRYPTO_P384:             true,
-		KEYCERT_CRYPTO_P521:             true,
-		KEYCERT_CRYPTO_X25519:           true,
-		KEYCERT_CRYPTO_MLKEM512_X25519:  true,
-		KEYCERT_CRYPTO_MLKEM768_X25519:  true,
-		KEYCERT_CRYPTO_MLKEM1024_X25519: true,
 	}
 
 	// Allow experimental range
@@ -138,7 +134,8 @@ func validateCryptoType(cryptoType int) error {
 		return nil
 	}
 
-	if !validTypes[cryptoType] {
+	// Use the authoritative CryptoKeySizes map to avoid duplicate, drifting registries.
+	if _, ok := CryptoKeySizes[cryptoType]; !ok {
 		return oops.Errorf("invalid crypto key type: %d", cryptoType)
 	}
 

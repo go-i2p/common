@@ -108,18 +108,56 @@ var CryptoKeySizes = map[int]KeySizeInfo{
 		CryptoPublicKeySize:  32,
 		CryptoPrivateKeySize: 32,
 	},
+	// For MLKEM+X25519 hybrid types the CryptoPublicKeySize field records only the
+	// 32-byte X25519 component that fits in the standard KeysAndCert public key field.
+	// The full hybrid key (MLKEM + X25519) is larger; use GetMLKEMHybridKeySize to
+	// obtain the combined size for MLKEM key-material handling.
 	KEYCERT_CRYPTO_MLKEM512_X25519: {
-		CryptoPublicKeySize:  32,
+		CryptoPublicKeySize:  32, // X25519 component within KeysAndCert; full hybrid = 832 bytes
 		CryptoPrivateKeySize: 32,
 	},
 	KEYCERT_CRYPTO_MLKEM768_X25519: {
-		CryptoPublicKeySize:  32,
+		CryptoPublicKeySize:  32, // X25519 component within KeysAndCert; full hybrid = 1216 bytes
 		CryptoPrivateKeySize: 32,
 	},
 	KEYCERT_CRYPTO_MLKEM1024_X25519: {
-		CryptoPublicKeySize:  32,
+		CryptoPublicKeySize:  32, // X25519 component within KeysAndCert; full hybrid = 1600 bytes
 		CryptoPrivateKeySize: 32,
 	},
+}
+
+// MLKEM+X25519 hybrid public key total sizes (MLKEM component + 32-byte X25519 component).
+// These sizes apply to the full hybrid key material used outside the standard KeysAndCert
+// structure (e.g. in LeaseSet2 / EncryptedLeaseSet blocks).
+// Source: I2P Proposal 169 (Post-Quantum Cryptography).
+const (
+	// MLKEM512_X25519_HYBRID_SIZE is the full MLKEM-512+X25519 public key size (800 + 32 bytes).
+	MLKEM512_X25519_HYBRID_SIZE = 832
+	// MLKEM768_X25519_HYBRID_SIZE is the full MLKEM-768+X25519 public key size (1184 + 32 bytes).
+	MLKEM768_X25519_HYBRID_SIZE = 1216
+	// MLKEM1024_X25519_HYBRID_SIZE is the full MLKEM-1024+X25519 public key size (1568 + 32 bytes).
+	MLKEM1024_X25519_HYBRID_SIZE = 1600
+)
+
+// GetMLKEMHybridKeySize returns the total combined public key size (MLKEM + X25519)
+// for the given MLKEM+X25519 hybrid crypto type.
+//
+// Unlike CryptoKeySizes[type].CryptoPublicKeySize (which returns 32 bytes – the X25519
+// component stored in the fixed KeysAndCert public key field), this function returns the
+// full hybrid size needed when allocating buffers for MLKEM key-encapsulation operations.
+//
+// Returns an error for any non-MLKEM crypto type.
+func GetMLKEMHybridKeySize(cryptoType int) (int, error) {
+	switch cryptoType {
+	case KEYCERT_CRYPTO_MLKEM512_X25519:
+		return MLKEM512_X25519_HYBRID_SIZE, nil
+	case KEYCERT_CRYPTO_MLKEM768_X25519:
+		return MLKEM768_X25519_HYBRID_SIZE, nil
+	case KEYCERT_CRYPTO_MLKEM1024_X25519:
+		return MLKEM1024_X25519_HYBRID_SIZE, nil
+	default:
+		return 0, oops.Errorf("crypto type %d is not an MLKEM+X25519 hybrid type", cryptoType)
+	}
 }
 
 // Note: CryptoPublicKeySizes is defined in utils.go for backward compatibility.

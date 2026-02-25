@@ -448,3 +448,72 @@ func TestKeyCertificateFromCertificate_WithExcessPayload(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, 8, len(data))
 }
+
+// TestExcessPayloadRejected verifies that a Key Certificate whose payload is
+// longer than the exact expected size is rejected.
+// Per I2P spec: "implementers are cautioned to prohibit excess data in Certificates".
+// Trigger: Ed25519/X25519 expects exactly 4-byte payload; a 5-byte payload must fail.
+func TestExcessPayloadRejected(t *testing.T) {
+// Craft a valid Ed25519/X25519 key cert with one extra garbage byte in the payload.
+// Format: [type=0x05, len_hi, len_lo, spk_type_hi, spk_type_lo, cpk_type_hi, cpk_type_lo, garbage]
+// len = 5 (4 type bytes + 1 garbage byte)
+rawBytes := []byte{0x05, 0x00, 0x05, 0x00, 0x07, 0x00, 0x04, 0xFF}
+keyCert, _, err := NewKeyCertificate(rawBytes)
+assert.Error(t, err, "Certificate with excess payload must be rejected per I2P spec")
+assert.Nil(t, keyCert)
+assert.Contains(t, err.Error(), "too long",
+"Error message should indicate payload is too long, not just too short")
+}
+
+// TestExcessPayloadRejected_DSAElGamal verifies that a DSA/ElGamal Key Certificate
+// whose payload contains excess bytes is also rejected.
+func TestExcessPayloadRejected_DSAElGamal(t *testing.T) {
+// DSA signing key (128 bytes) = KEYCERT_SPK_SIZE, no excess expected.
+// ElGamal crypto key (256 bytes) = KEYCERT_PUBKEY_SIZE, no excess expected.
+// Expected payload length: 4 bytes. A 5-byte payload must fail.
+rawBytes := []byte{0x05, 0x00, 0x05, 0x00, 0x00, 0x00, 0x00, 0xFF}
+keyCert, _, err := NewKeyCertificate(rawBytes)
+assert.Error(t, err, "DSA/ElGamal cert with excess payload must be rejected")
+assert.Nil(t, keyCert)
+assert.Contains(t, err.Error(), "too long")
+}
+
+// TestMLKEMHybridKeySize verifies GetMLKEMHybridKeySize returns spec-correct sizes
+// and returns an error for non-MLKEM types.
+func TestMLKEMHybridKeySize(t *testing.T) {
+tests := []struct {
+name       string
+cryptoType int
+wantSize   int
+wantErr    bool
+}{
+{"MLKEM512_X25519", KEYCERT_CRYPTO_MLKEM512_X25519, MLKEM512_X25519_HYBRID_SIZE, false},
+{"MLKEM768_X25519", KEYCERT_CRYPTO_MLKEM768_X25519, MLKEM768_X25519_HYBRID_SIZE, false},
+{"MLKEM1024_X25519", KEYCERT_CRYPTO_MLKEM1024_X25519, MLKEM1024_X25519_HYBRID_SIZE, false},
+{"X25519_not_hybrid", KEYCERT_CRYPTO_X25519, 0, true},
+{"ElGamal_not_hybrid", KEYCERT_CRYPTO_ELG, 0, true},
+}
+for _, tt := range tests {
+t.Run(tt.name, func(t *testing.T) {
+size, err := GetMLKEMHybridKeySize(tt.cryptoType)
+if tt.wantErr {
+assert.Error(t, err)
+assert.Equal(t, 0, size)
+} else {
+assert.NoError(t, err)
+assert.Equal(t, tt.wantSize, size)
+}
+})
+}
+}
+
+// TestMLKEMHybridSizes_Spec verifies the hybrid size constants match I2P Proposal 169.
+// MLKEM-512 PK=800, MLKEM-768 PK=1184, MLKEM-1024 PK=1568; add 32 for X25519.
+func TestMLKEMHybridSizes_Spec(t *testing.T) {
+assert.Equal(t, 832, MLKEM512_X25519_HYBRID_SIZE,
+"MLKEM512+X25519 hybrid must be 800+32=832 bytes (Proposal 169)")
+assert.Equal(t, 1216, MLKEM768_X25519_HYBRID_SIZE,
+"MLKEM768+X25519 hybrid must be 1184+32=1216 bytes (Proposal 169)")
+assert.Equal(t, 1600, MLKEM1024_X25519_HYBRID_SIZE,
+"MLKEM1024+X25519 hybrid must be 1568+32=1600 bytes (Proposal 169)")
+}

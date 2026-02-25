@@ -153,6 +153,11 @@ func validatePayloadLengthAgainstKeyTypes(certData []byte, spkType, cpkType data
 		return oops.Errorf("key certificate payload too short: need %d bytes for types (sig=%d, crypto=%d), got %d",
 			expectedLen, sigType, crypType, len(certData))
 	}
+	// Per I2P spec: "implementers are cautioned to prohibit excess data in Certificates"
+	if len(certData) > expectedLen {
+		return oops.Errorf("key certificate payload too long: expected %d bytes for types (sig=%d, crypto=%d), got %d",
+			expectedLen, sigType, crypType, len(certData))
+	}
 	return nil
 }
 
@@ -325,7 +330,8 @@ func (keyCertificate KeyCertificate) CryptoPublicKeySize() (int, error) {
 }
 
 // SigningPublicKeySize returns the size of a signing public key for the certificate's signing type.
-// Returns 0 for unknown signing types (callers should treat 0 as an error).
+// Returns 0 for unknown signing types – callers must treat 0 as an error condition because no
+// valid signing key has size 0.  For an error-returning variant use SigningPublicKeySizeOrError.
 func (keyCertificate KeyCertificate) SigningPublicKeySize() int {
 	spkType := keyCertificate.SpkType.Int()
 	info, exists := SigningKeySizes[spkType]
@@ -336,6 +342,18 @@ func (keyCertificate KeyCertificate) SigningPublicKeySize() int {
 		return 0
 	}
 	return info.SigningPublicKeySize
+}
+
+// SigningPublicKeySizeOrError returns the size of a signing public key for the certificate's
+// signing type, or an error if the type is unknown.  Prefer this over SigningPublicKeySize
+// when callers need to distinguish "unknown type" from a hypothetical 0-byte key.
+func (keyCertificate KeyCertificate) SigningPublicKeySizeOrError() (int, error) {
+	spkType := keyCertificate.SpkType.Int()
+	info, exists := SigningKeySizes[spkType]
+	if !exists {
+		return 0, oops.Errorf("unknown signing key type: %d", spkType)
+	}
+	return info.SigningPublicKeySize, nil
 }
 
 // validateSigningKeyData validates that sufficient data is available for signing key construction.
@@ -534,6 +552,15 @@ func constructEd25519PHKey(data []byte) (types.SigningPublicKey, error) {
 
 // ConstructSigningPublicKey returns a SingingPublicKey constructed using any excess data that may be stored in the KeyCertificate.
 // Returns any errors encountered while parsing.
+//
+// The data parameter must be the combined byte slice used to reconstruct the signing key:
+//   - For types where the signing key fits within KEYCERT_SPK_SIZE (128 bytes) – e.g. Ed25519,
+//     DSA, P256, P384 – data is the full 128-byte SPK field from the KeysAndCert structure.
+//   - For types whose signing key exceeds KEYCERT_SPK_SIZE – P521 (132 bytes), RSA-2048 (256 bytes),
+//     RSA-3072 (384 bytes), RSA-4096 (512 bytes) – the caller MUST pre-concatenate the 128-byte
+//     inline SPK field from KeysAndCert with the excess bytes extracted from the key certificate
+//     payload (stored immediately after the 4-byte type fields in the certificate Data).
+//     Failure to include the excess bytes will result in a truncated / incorrect key.
 func (keyCertificate KeyCertificate) ConstructSigningPublicKey(data []byte) (signing_public_key types.SigningPublicKey, err error) {
 	log.WithFields(logger.Fields{
 		"input_length": len(data),
@@ -595,6 +622,7 @@ func selectSigningKeyConstructor(signing_key_type int, data []byte) (types.Signi
 // SignatureSize return the size of a Signature corresponding to the Key Certificate's signingPublicKey type.
 // This returns the actual signature size (not the signing public key size).
 // For signing public key sizes, use SigningPublicKeySize().
+// Returns 0 for unknown signing types – callers must treat 0 as an error condition.
 func (keyCertificate KeyCertificate) SignatureSize() (size int) {
 	key_type := keyCertificate.SigningPublicKeyType()
 	// Use the authoritative SigningKeySizes map which has correct signature sizes

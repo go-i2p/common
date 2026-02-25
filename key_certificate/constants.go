@@ -274,19 +274,22 @@ const (
 	// Curve25519 public key for high-performance Diffie-Hellman key exchange.
 	KEYCERT_CRYPTO_X25519_SIZE = 32
 
-	// KEYCERT_CRYPTO_MLKEM512_X25519_SIZE defines the size of MLKEM512+X25519 public keys (32 bytes).
-	// Hybrid post-quantum encryption key combining MLKEM-512 and X25519.
-	// The public key size remains 32 bytes for X25519 compatibility.
+	// KEYCERT_CRYPTO_MLKEM512_X25519_SIZE is the X25519-component size stored in the standard
+	// KeysAndCert public key field for MLKEM-512+X25519 hybrid encryption (32 bytes).
+	// The full hybrid key (MLKEM-512 PK + X25519 PK) is 832 bytes; use
+	// GetMLKEMHybridKeySize(KEYCERT_CRYPTO_MLKEM512_X25519) to obtain the full size.
 	KEYCERT_CRYPTO_MLKEM512_X25519_SIZE = 32
 
-	// KEYCERT_CRYPTO_MLKEM768_X25519_SIZE defines the size of MLKEM768+X25519 public keys (32 bytes).
-	// Hybrid post-quantum encryption key combining MLKEM-768 and X25519.
-	// The public key size remains 32 bytes for X25519 compatibility.
+	// KEYCERT_CRYPTO_MLKEM768_X25519_SIZE is the X25519-component size stored in the standard
+	// KeysAndCert public key field for MLKEM-768+X25519 hybrid encryption (32 bytes).
+	// The full hybrid key (MLKEM-768 PK + X25519 PK) is 1216 bytes; use
+	// GetMLKEMHybridKeySize(KEYCERT_CRYPTO_MLKEM768_X25519) to obtain the full size.
 	KEYCERT_CRYPTO_MLKEM768_X25519_SIZE = 32
 
-	// KEYCERT_CRYPTO_MLKEM1024_X25519_SIZE defines the size of MLKEM1024+X25519 public keys (32 bytes).
-	// Hybrid post-quantum encryption key combining MLKEM-1024 and X25519.
-	// The public key size remains 32 bytes for X25519 compatibility.
+	// KEYCERT_CRYPTO_MLKEM1024_X25519_SIZE is the X25519-component size stored in the standard
+	// KeysAndCert public key field for MLKEM-1024+X25519 hybrid encryption (32 bytes).
+	// The full hybrid key (MLKEM-1024 PK + X25519 PK) is 1600 bytes; use
+	// GetMLKEMHybridKeySize(KEYCERT_CRYPTO_MLKEM1024_X25519) to obtain the full size.
 	KEYCERT_CRYPTO_MLKEM1024_X25519_SIZE = 32
 )
 
@@ -314,6 +317,8 @@ const (
 	// CRYPTO_KEY_TYPE_ELGAMAL identifies ElGamal encryption for legacy compatibility (type 0).
 	// This constant maintains compatibility with older certificate parsing code
 	// that may reference the ElGamal algorithm by this alternative name.
+	//
+	// DEPRECATED alias: prefer KEYCERT_CRYPTO_ELG (= 0) to avoid duplicate-constant drift.
 	CRYPTO_KEY_TYPE_ELGAMAL = 0 // ElGamal
 
 	// Signature type constants for legacy compatibility and external integrations.
@@ -323,9 +328,13 @@ const (
 	// Signature Types
 	// SIGNATURE_TYPE_DSA_SHA1 identifies DSA-SHA1 signatures for legacy compatibility (type 0).
 	// Alternative constant name for DSA-SHA1 algorithm used in signature verification.
+	//
+	// DEPRECATED alias: prefer KEYCERT_SIGN_DSA_SHA1 (= 0) to avoid duplicate-constant drift.
 	SIGNATURE_TYPE_DSA_SHA1 = 0 // DSA-SHA1
 
 	// SIGNATURE_TYPE_ED25519_SHA512 identifies Ed25519-SHA512 signatures (type 7).
 	// Alternative constant name for Ed25519 algorithm used in modern I2P implementations.
+	//
+	// DEPRECATED alias: prefer KEYCERT_SIGN_ED25519 (= 7) to avoid duplicate-constant drift.
 	SIGNATURE_TYPE_ED25519_SHA512 = 7 // Ed25519
 )
