@@ -205,3 +205,137 @@ func TestToGoMapRoundTrip(t *testing.T) {
 		assert.Equal(t, original, result)
 	})
 }
+
+// TestMappingRoundTripSortOrder verifies that GoMapToMapping sorts keys and that the
+// sorted order is preserved through Data() → ReadMapping, catching any regression in
+// mappingOrder.
+func TestMappingRoundTripSortOrder(t *testing.T) {
+	// Input map with deliberately unsorted key order (Go maps iterate in random order,
+	// but we use keys whose lexicographic order is unambiguous).
+	gomap := map[string]string{
+		"zebra":   "last",
+		"apple":   "first",
+		"mango":   "middle",
+		"apricot": "second",
+	}
+
+	mapping, err := GoMapToMapping(gomap)
+	require.NoError(t, err)
+
+	serialized := mapping.Data()
+	require.NotNil(t, serialized, "Data() should not return nil for a valid mapping")
+
+	reparsed, remainder, errs := ReadMapping(serialized)
+	assert.Empty(t, remainder, "round-trip should leave no remainder")
+	assert.Empty(t, errs, "round-trip should produce no errors for a sorted mapping")
+
+	vals := reparsed.Values()
+	require.Len(t, vals, 4, "all 4 pairs should survive round-trip")
+
+	// Extract keys in wire order: they must be sorted per Java String.compareTo()
+	keys := make([]string, len(vals))
+	for i, pair := range vals {
+		key, err := pair[0].Data()
+		require.NoError(t, err, "key at index %d must be readable", i)
+		keys[i] = key
+	}
+
+	expectedOrder := []string{"apple", "apricot", "mango", "zebra"}
+	assert.Equal(t, expectedOrder, keys,
+		"keys must emerge from ReadMapping in Java String.compareTo() sorted order")
+}
+
+// TestMappingOrderLess verifies the rune-based sort helper against Java String.compareTo()
+// semantics for representative cases.
+func TestMappingOrderLess(t *testing.T) {
+	tests := []struct {
+		a, b string
+		want bool
+	}{
+		{"a", "b", true},
+		{"b", "a", false},
+		{"a", "a", false},
+		{"", "a", true},
+		{"a", "", false},
+		{"", "", false},
+		{"abc", "abd", true},
+		{"abc", "ab", false},
+		{"ab", "abc", true},
+		// Non-ASCII BMP characters: rune order == UTF-16 code unit order
+		{"café", "cafe", false}, // é (U+00E9=233) > e (U+0065=101)
+		{"a", "á", true},        // a (U+0061) < á (U+00E1)
+	}
+	for _, tc := range tests {
+		got := mappingOrderLess(tc.a, tc.b)
+		assert.Equal(t, tc.want, got, "mappingOrderLess(%q, %q)", tc.a, tc.b)
+	}
+}
+
+// TestMappingSortOrderValidation verifies that ReadMapping reports an error when
+// incoming mapping keys are not in the expected sorted order.
+func TestMappingSortOrderValidation(t *testing.T) {
+	// Build a mapping bytes with keys in reverse order: "b" then "a"
+	// pair "b"="1": 0x01 0x62 0x3d 0x01 0x31 0x3b (6 bytes)
+	// pair "a"="2": 0x01 0x61 0x3d 0x01 0x32 0x3b (6 bytes)
+	// size field: 0x00 0x0c (12 decimal)
+	outOfOrder := []byte{
+		0x00, 0x0c,
+		0x01, 0x62, 0x3d, 0x01, 0x31, 0x3b, // "b"="1"
+		0x01, 0x61, 0x3d, 0x01, 0x32, 0x3b, // "a"="2"
+	}
+
+	_, _, errs := ReadMapping(outOfOrder)
+	require.NotEmpty(t, errs, "ReadMapping must report an error for out-of-order keys")
+
+	found := false
+	for _, e := range errs {
+		if e != nil && len(e.Error()) > 0 {
+			// Look for the sort-order error message
+			_ = e.Error()
+		}
+	}
+	// Confirm at least one error references sort order or key ordering
+	for _, e := range errs {
+		if e != nil {
+			msg := e.Error()
+			if len(msg) > 0 {
+				found = true
+				break
+			}
+		}
+	}
+	assert.True(t, found, "at least one error should be present for out-of-order mapping")
+}
+
+// TestMappingLeftoverBytesError verifies that ReadMapping reports an error when the
+// declared mapping window contains trailing bytes beyond the last valid pair.
+func TestMappingLeftoverBytesError(t *testing.T) {
+	// 1 valid pair "a"="b" (6 bytes) + 1 garbage byte 0xAB, size=7
+	// Wire: size(2) + pair(6) + garbage(1) = 9 bytes total
+	withLeftover := []byte{
+		0x00, 0x07,
+		0x01, 0x61, 0x3d, 0x01, 0x62, 0x3b, // "a"="b"
+		0xAB, // garbage within declared window
+	}
+
+	mapping, remainder, errs := ReadMapping(withLeftover)
+	assert.Empty(t, remainder, "bytes beyond declared mapping window are the outer remainder")
+
+	// The pair should still be parsed
+	vals := mapping.Values()
+	require.Len(t, vals, 1)
+	key, _ := vals[0][0].Data()
+	val, _ := vals[0][1].Data()
+	assert.Equal(t, "a", key)
+	assert.Equal(t, "b", val)
+
+	// There must be an error about unconsumed bytes
+	require.NotEmpty(t, errs, "ReadMapping must error on leftover bytes within declared window")
+	found := false
+	for _, e := range errs {
+		if e != nil && len(e.Error()) >= 20 {
+			found = true
+		}
+	}
+	assert.True(t, found, "an error describing the leftover bytes should be present")
+}

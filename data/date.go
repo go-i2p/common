@@ -13,7 +13,7 @@ import (
 Accurate for version 0.9.67
 
 Description
-The number of milliseconds since midnight on Januyar 1, 1970 in the GMT timezone.
+The number of milliseconds since midnight on January 1, 1970 in the GMT timezone.
 If the number is 0, the date is undefined or null.
 
 Contents
@@ -31,6 +31,9 @@ func (i Date) Bytes() []byte {
 }
 
 // Int returns the Date as a Go integer.
+// WARNING: For Date values >= 2^63 ms since epoch, this method returns 0
+// because the unsigned I2P Date value exceeds Go's signed int range.
+// Use Date.Time() for reliable, full-range date handling.
 func (i Date) Int() int {
 	value, err := intFromBytes(i.Bytes())
 	if err != nil {

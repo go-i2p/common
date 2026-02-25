@@ -54,11 +54,17 @@ func (mapping Mapping) Values() MappingValues {
 }
 
 // Data returns a Mapping in its []byte form.
-// Returns nil if the mapping is not properly initialized.
+// Returns nil if the mapping is not properly initialized or any key-value pair is invalid.
+// Callers should check for nil to detect serialization failures; use Validate() for details.
 // The size field is recalculated from the serialized pairs to ensure consistency.
 func (mapping *Mapping) Data() []byte {
 	if mapping == nil || mapping.size == nil {
 		log.Error("Mapping.Data() called on nil or uninitialized mapping")
+		return nil
+	}
+	// Pre-validate all pairs so no entries are silently dropped from the output.
+	if err := mapping.Validate(); err != nil {
+		log.WithError(err).Error("Mapping.Data() aborted: mapping contains invalid key-value pairs")
 		return nil
 	}
 	payload := serializeMappingPairs(mapping.Values())
@@ -322,9 +328,20 @@ func processNormalMappingData(mapping Mapping, remainder []byte, size *Integer, 
 	map_bytes := remainder[:size.Int()]
 	remainder = remainder[size.Int():]
 
-	vals, _, mappingValueErrs := ReadMappingValues(map_bytes, *size)
+	vals, innerRemainder, mappingValueErrs := ReadMappingValues(map_bytes, *size)
 	err = append(err, mappingValueErrs...)
 	mapping.vals = vals
+
+	// Only report unconsumed bytes when the key-value parser completed cleanly.
+	// If mappingValueErrs is non-empty, remaining bytes are a consequence of the
+	// parse failure, not spec-prohibited excess data.
+	// Per spec: "Implementers are cautioned to prohibit excess data."
+	if len(mappingValueErrs) == 0 && len(innerRemainder) > 0 {
+		log.WithFields(logger.Fields{
+			"leftover_bytes": len(innerRemainder),
+		}).Warn("mapping format violation: unconsumed bytes within declared mapping window")
+		err = append(err, oops.Errorf("mapping format violation: %d unconsumed byte(s) within declared mapping window", len(innerRemainder)))
+	}
 
 	if len(mappingValueErrs) > 0 {
 		err = logAndAppendMappingValueErrors(err)

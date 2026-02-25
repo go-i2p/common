@@ -239,16 +239,35 @@ func ValuesToMapping(values MappingValues) (*Mapping, error) {
 	}, nil
 }
 
+// mappingOrderLess compares two key strings following Java String.compareTo() semantics:
+// character-by-character comparison using Unicode code-point (rune) values.
+// For the Basic Multilingual Plane (U+0000–U+FFFF) this is identical to Java's char comparison.
+// This ensures sort order matches what a Java I2P router expects for signature verification.
+func mappingOrderLess(a, b string) bool {
+	ra, rb := []rune(a), []rune(b)
+	minLen := len(ra)
+	if len(rb) < minLen {
+		minLen = len(rb)
+	}
+	for i := 0; i < minLen; i++ {
+		if ra[i] != rb[i] {
+			return ra[i] < rb[i]
+		}
+	}
+	return len(ra) < len(rb)
+}
+
 // I2P Mappings require consistent order in some cases for cryptographic signing, and sorting
-// by keys. The Mapping is sorted lexographically by keys. Duplicate keys are allowed in general,
-// but in implementations where they must be sorted like I2CP SessionConfig duplicate keys are not allowed.
+// by keys. The Mapping is sorted by keys using Java String.compareTo() semantics (Unicode
+// code-point order). Duplicate keys are allowed in general, but in implementations where they
+// must be sorted like I2CP SessionConfig duplicate keys are not allowed.
 // In practice routers do not seem to allow duplicate keys.
 func mappingOrder(values MappingValues) {
 	sort.SliceStable(values, func(i, j int) bool {
-		// Lexographic sort on keys only
+		// Sort keys using Java String.compareTo() Unicode code-point order
 		data1, _ := values[i][0].Data()
 		data2, _ := values[j][0].Data()
-		return data1 < data2
+		return mappingOrderLess(data1, data2)
 	})
 }
 
@@ -275,6 +294,14 @@ func ReadMappingValues(remainder []byte, map_length Integer) (values *MappingVal
 
 	var remainder_updated []byte
 	remainder_updated, map_values, errs = parseKeyValuePairs(remainder, map_values, errs)
+
+	// Validate that keys are in sorted order per I2P spec.
+	// Out-of-order keys cause signature verification failures in compliant routers.
+	if sortErr := validateMappingSortOrder(map_values); sortErr != nil {
+		log.WithError(sortErr).Warn("mapping format violation: keys not in sorted order")
+		errs = append(errs, sortErr)
+	}
+
 	values = &map_values
 
 	log.WithFields(logger.Fields{
@@ -283,7 +310,22 @@ func ReadMappingValues(remainder []byte, map_length Integer) (values *MappingVal
 		"error_count":      len(errs),
 	}).Debug("Finished reading MappingValues")
 
+	remainder_bytes = remainder_updated
 	return
+}
+
+// validateMappingSortOrder checks that keys in the parsed MappingValues are sorted
+// according to Java String.compareTo() order, as required by the I2P spec.
+// Failure to sort causes signature verification failures with compliant routers.
+func validateMappingSortOrder(values MappingValues) error {
+	for i := 1; i < len(values); i++ {
+		prev, _ := values[i-1][0].Data()
+		curr, _ := values[i][0].Data()
+		if !mappingOrderLess(prev, curr) && prev != curr {
+			return oops.Errorf("mapping keys not in sorted order: %q appears before %q", prev, curr)
+		}
+	}
+	return nil
 }
 
 // validateMappingInput checks if the input data is valid for mapping parsing.

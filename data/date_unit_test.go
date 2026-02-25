@@ -352,3 +352,41 @@ func TestDateTimeUnsignedDecoding(t *testing.T) {
 		assert.Equal(t, int64(86400), result.Unix())
 	})
 }
+
+// TestDateIntOverflow documents and locks in Date.Int() silent-zero behaviour for
+// values whose unsigned millisecond count exceeds math.MaxInt64.
+// Callers should use Date.Time() instead of Date.Int() for reliable full-range handling.
+func TestDateIntOverflow(t *testing.T) {
+	t.Run("high bit set returns 0 from Int()", func(t *testing.T) {
+		// 0x80_00_00_00_00_00_00_00 == 2^63, which overflows signed int64.
+		// Date.Int() silently returns 0 for this case; Date.Time() is the safe alternative.
+		var date Date
+		date[0] = 0x80
+		result := date.Int()
+		assert.Equal(t, 0, result,
+			"Date.Int() must return 0 for values >= 2^63 (overflow footgun - use Date.Time())")
+	})
+
+	t.Run("max uint64 returns 0 from Int()", func(t *testing.T) {
+		date := Date{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF}
+		result := date.Int()
+		assert.Equal(t, 0, result,
+			"Date.Int() must return 0 for max uint64 (overflow footgun - use Date.Time())")
+	})
+
+	t.Run("value below 2^63 returns correct integer", func(t *testing.T) {
+		// 86400000 ms = 1 day. Encoding: 0x00 0x00 0x00 0x00 0x05 0x26 0x5C 0x00
+		date := Date{0x00, 0x00, 0x00, 0x00, 0x05, 0x26, 0x5c, 0x00}
+		result := date.Int()
+		assert.Equal(t, 86400000, result,
+			"Date.Int() should return correct value for unsigned values below 2^63")
+	})
+
+	t.Run("Int() zero is ambiguous: could be overflow or valid zero date", func(t *testing.T) {
+		zeroDate := Date{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}
+		overflowDate := Date{0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}
+		// Both return 0 — callers cannot distinguish them; use Date.Time() instead.
+		assert.Equal(t, 0, zeroDate.Int())
+		assert.Equal(t, 0, overflowDate.Int())
+	})
+}
