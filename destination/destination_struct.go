@@ -49,7 +49,9 @@ func ReadDestination(data []byte) (Destination, []byte, error) {
 	d := Destination{keysAndCertObj}
 
 	if err := validateDestinationKeyTypes(d.KeysAndCert); err != nil {
-		return Destination{}, remainder, err
+		// Return nil remainder so callers cannot accidentally advance a stream
+		// past a rejected destination (spec violation in BUG finding).
+		return Destination{}, nil, err
 	}
 
 	log.WithFields(logger.Fields{

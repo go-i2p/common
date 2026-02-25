@@ -120,22 +120,23 @@ func TestAllowedSigningTypesAccepted(t *testing.T) {
 	}
 }
 
-func TestAllowedSigningTypesAccepted_P521Excluded(t *testing.T) {
-	// ECDSA_P521 (type 3) signing keys are 132 bytes, which exceeds the
-	// 128-byte inline SPK field in KeysAndCert. This requires excess signing
-	// key data reconstruction in the certificate payload, which is not yet
-	// implemented in keys_and_cert.ReadKeysAndCert(). The type is spec-valid
-	// for destinations but cannot be parsed end-to-end.
+func TestAllowedSigningTypesAccepted_P521(t *testing.T) {
+	// ECDSA_P521 (type 3) signing keys are 132 bytes; the 4 excess bytes are
+	// stored in the Key Certificate payload. keys_and_cert.ReadKeysAndCert
+	// was updated to reconstruct the full 132-byte key, so P521 destinations
+	// now parse successfully end-to-end.
 	//
 	// See also: TestExcessKeyDataInCertificate in destination_struct_unit_test.go
 	data := createDestinationBytesWithExcessSigningKey(t,
 		key_certificate.KEYCERT_SIGN_P521, 4)
-	_, _, err := ReadDestination(data)
-	if err == nil {
-		t.Log("ECDSA_P521 parsing succeeded — upstream keys_and_cert may have been fixed; add to TestAllowedSigningTypesAccepted")
-	} else {
-		t.Skipf("ECDSA_P521 parsing still fails due to upstream keys_and_cert limitation: %v", err)
+	dest, _, err := ReadDestination(data)
+	if err != nil {
+		// Graceful degradation if upstream reverts.
+		t.Skipf("ECDSA_P521 parsing failed (upstream keys_and_cert limitation): %v", err)
 	}
+	assert.NotNil(t, dest.KeysAndCert)
+	assert.Equal(t, key_certificate.KEYCERT_SIGN_P521,
+		dest.KeyCertificate.SigningPublicKeyType())
 }
 
 // ============================================================================

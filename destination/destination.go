@@ -4,6 +4,7 @@ package destination
 import (
 	"bytes"
 
+	"github.com/go-i2p/common/certificate"
 	"github.com/go-i2p/common/key_certificate"
 	"github.com/go-i2p/common/keys_and_cert"
 	"github.com/go-i2p/crypto/types"
@@ -29,7 +30,6 @@ func NewDestination(keysAndCert *keys_and_cert.KeysAndCert) (*Destination, error
 	}, nil
 }
 
-// NewDestinationFromBytes creates a Destination by parsing bytes.
 // NewDestinationFromBytes creates a Destination by parsing bytes.
 // Returns a pointer for consistency with NewDestination.
 // Returns the parsed Destination, remaining bytes, and any errors encountered.
@@ -150,4 +150,80 @@ func validateDestinationSigningType(kac *keys_and_cert.KeysAndCert) error {
 		)
 	}
 	return nil
+}
+
+// CanonicalizeDestination returns an equivalent Destination in canonical
+// wire form. Per the I2P spec, ElGamal+DSA-SHA1 Destinations must use a
+// NULL certificate (3 bytes) rather than a KEY(0,0) certificate (7 bytes).
+// Using the non-canonical form produces a different SHA256 address hash.
+//
+// For all other key types the original Destination is returned unchanged.
+// The caller is responsible for updating any cached hashes after
+// canonicalization.
+func CanonicalizeDestination(d *Destination) (*Destination, error) {
+	if d == nil || d.KeysAndCert == nil {
+		return nil, oops.Errorf("destination is nil or not initialized")
+	}
+	if d.KeysAndCert.KeyCertificate == nil {
+		return d, nil // already uses implicit NULL cert
+	}
+	sigType := d.KeysAndCert.KeyCertificate.SigningPublicKeyType()
+	cryptoType := d.KeysAndCert.KeyCertificate.PublicKeyType()
+	if sigType != key_certificate.KEYCERT_SIGN_DSA_SHA1 ||
+		cryptoType != key_certificate.KEYCERT_CRYPTO_ELG {
+		return d, nil // not ElGamal+DSA-SHA1; no canonicalization needed
+	}
+	// The wire bytes for ElGamal+DSA-SHA1 are exactly 384 bytes of key
+	// data followed by the cert.  Replace the cert with a 3-byte NULL cert.
+	b, err := d.KeysAndCert.Bytes()
+	if err != nil {
+		return nil, oops.Errorf("failed to serialize destination for canonicalization: %w", err)
+	}
+	if len(b) < keys_and_cert.KEYS_AND_CERT_DATA_SIZE {
+		return nil, oops.Errorf("destination bytes too short for canonicalization: %d < %d",
+			len(b), keys_and_cert.KEYS_AND_CERT_DATA_SIZE)
+	}
+	canonical := make([]byte, keys_and_cert.KEYS_AND_CERT_DATA_SIZE+3)
+	copy(canonical, b[:keys_and_cert.KEYS_AND_CERT_DATA_SIZE])
+	canonical[keys_and_cert.KEYS_AND_CERT_DATA_SIZE] = 0x00   // cert type = NULL
+	canonical[keys_and_cert.KEYS_AND_CERT_DATA_SIZE+1] = 0x00 // length high byte
+	canonical[keys_and_cert.KEYS_AND_CERT_DATA_SIZE+2] = 0x00 // length low byte
+	dest, _, readErr := ReadDestination(canonical)
+	if readErr != nil {
+		return nil, oops.Errorf("failed to parse canonical destination: %w", readErr)
+	}
+	return &dest, nil
+}
+
+// NewDestinationWithCompressiblePadding creates a new Destination and
+// auto-generates Proposal 161-compliant compressible padding from the key
+// certificate and key sizes. This is the recommended constructor for new
+// Destinations per I2P spec 0.9.57+.
+//
+// Each 32-byte padding block is derived deterministically from a single
+// random seed, allowing SSU2/I2NP Database Store messages to compress
+// the padding efficiently.
+func NewDestinationWithCompressiblePadding(
+	publicKey types.ReceivingPublicKey,
+	signingPublicKey types.SigningPublicKey,
+	cert *certificate.Certificate,
+) (*Destination, error) {
+	keyCert, err := key_certificate.KeyCertificateFromCertificate(cert)
+	if err != nil {
+		return nil, oops.Errorf("failed to create KeyCertificate from certificate: %w", err)
+	}
+	paddingSize := keys_and_cert.KEYS_AND_CERT_DATA_SIZE -
+		keyCert.CryptoSize() - keyCert.SigningPublicKeySize()
+	if paddingSize < 0 {
+		paddingSize = 0
+	}
+	padding, err := keys_and_cert.GenerateCompressiblePadding(paddingSize)
+	if err != nil {
+		return nil, oops.Errorf("failed to generate compressible padding: %w", err)
+	}
+	kac, err := keys_and_cert.NewKeysAndCert(keyCert, publicKey, padding, signingPublicKey)
+	if err != nil {
+		return nil, err
+	}
+	return NewDestination(kac)
 }
