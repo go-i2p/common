@@ -16,8 +16,8 @@
 //   - Type 6: RSA-SHA512-4096 (512 bytes)
 //   - Type 7: EdDSA-SHA512-Ed25519 (64 bytes) — RECOMMENDED
 //   - Type 8: EdDSA-SHA512-Ed25519ph (64 bytes)
-//   - Type 9: GOST R 34.10-2012-512 (64 bytes) — RESERVED (Proposal 134)
-//   - Type 10: GOST R 34.10-2012-1024 (128 bytes) — RESERVED (Proposal 134)
+//   - Type 9: GOST R 34.10-2012-512 — RESERVED (Proposal 134); size unconfirmed by Signature spec
+//   - Type 10: GOST R 34.10-2012-1024 — RESERVED (Proposal 134); size unconfirmed by Signature spec
 //   - Type 11: RedDSA-SHA512-Ed25519 (64 bytes)
 //   - Types 12-20: MLDSA post-quantum (RESERVED, Proposal 169)
 //   - Types 65280-65534: Experimental (RESERVED)

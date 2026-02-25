@@ -75,6 +75,9 @@ func TypeName(sigType int) string {
 		if sigType >= SIGNATURE_TYPE_EXPERIMENTAL_START && sigType <= SIGNATURE_TYPE_EXPERIMENTAL_END {
 			return "Experimental"
 		}
+		if sigType == SIGNATURE_TYPE_FUTURE_EXPANSION {
+			return "FutureExpansion (reserved)"
+		}
 		return "Unknown"
 	}
 }
@@ -125,10 +128,12 @@ func getSignatureLength(sigType int) (int, error) {
 
 // validateSignatureData validates that input data contains enough bytes for the signature.
 // This prevents buffer overflow and ensures data integrity during parsing.
+// Short-reads are a normal framing condition in streaming parsers; logged at Debug
+// level to avoid flooding the application error log with expected conditions.
 func validateSignatureData(data []byte, sigLength int) error {
 	if len(data) < sigLength {
 		err := oops.Errorf("insufficient data to read signature: need %d bytes, have %d", sigLength, len(data))
-		log.WithError(err).Error("Failed to read Signature")
+		log.WithError(err).Debug("Failed to read Signature")
 		return err
 	}
 	return nil

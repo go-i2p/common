@@ -234,3 +234,25 @@ func TestValueReceiverConsistency(t *testing.T) {
 	assert.NotEmpty(t, sig.String())
 	assert.NotNil(t, sig.Serialize())
 }
+
+// TestEqualZeroValue documents and tests the Fixed behavior for two zero-value
+// Signature{} instances: Equal() must return false because neither is a valid
+// signature. Previously this returned true (false positive).
+// Ref: AUDIT.md [BUG] Equal() zero-value false-positive.
+func TestEqualZeroValue(t *testing.T) {
+	var s1, s2 Signature
+
+	// Both are invalid (nil data) — must NOT be considered equal.
+	assert.False(t, s1.Equal(&s2),
+		"two zero-value Signature{} instances must not be equal")
+
+	// One valid, one zero-value — must NOT be equal.
+	data := make([]byte, EdDSA_SHA512_Ed25519_SIZE)
+	valid, err := NewSignatureFromBytes(data, SIGNATURE_TYPE_EDDSA_SHA512_ED25519)
+	require.NoError(t, err)
+
+	assert.False(t, valid.Equal(&s1),
+		"a valid Signature must not equal a zero-value Signature")
+	assert.False(t, s1.Equal(&valid),
+		"a zero-value Signature must not equal a valid Signature")
+}

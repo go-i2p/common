@@ -119,8 +119,16 @@ func (s Signature) Len() int {
 // Equal returns true if the other Signature has the same type and data.
 // Both the signature algorithm type and raw bytes must match for equality.
 // Uses constant-time comparison via crypto/subtle to prevent timing side-channels.
+//
+// Two zero-value Signature{} instances (nil data) are not considered equal.
+// Callers must validate signatures with Validate() before comparing.
 func (s Signature) Equal(other *Signature) bool {
 	if other == nil {
+		return false
+	}
+	// Guard: uninitialized signatures (nil data) are never equal.
+	// This prevents false positives when comparing two zero-value structs.
+	if s.data == nil || other.data == nil {
 		return false
 	}
 	if s.sigType != other.sigType {

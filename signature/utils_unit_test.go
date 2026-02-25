@@ -141,12 +141,17 @@ func TestTypeName_ReservedTypes(t *testing.T) {
 	assert.Equal(t, "Experimental", TypeName(SIGNATURE_TYPE_EXPERIMENTAL_START))
 	assert.Equal(t, "Experimental", TypeName(SIGNATURE_TYPE_EXPERIMENTAL_END))
 	assert.Equal(t, "Experimental", TypeName(65400))
+
+	// Future expansion (65535) — distinct from experimental range and "Unknown"
+	// Ref: AUDIT.md [SPEC] TypeName() FUTURE_EXPANSION fix
+	assert.Equal(t, "FutureExpansion (reserved)", TypeName(SIGNATURE_TYPE_FUTURE_EXPANSION))
 }
 
 func TestTypeName_Unknown(t *testing.T) {
 	assert.Equal(t, "Unknown", TypeName(100))
 	assert.Equal(t, "Unknown", TypeName(30000))
-	assert.Equal(t, "Unknown", TypeName(65535))
+	// 65535 is SIGNATURE_TYPE_FUTURE_EXPANSION — has its own label, not "Unknown"
+	assert.Equal(t, "FutureExpansion (reserved)", TypeName(65535))
 	assert.Equal(t, "Unknown", TypeName(-1))
 }
 
