@@ -94,7 +94,11 @@ func TestConstructPublicKey_X25519_NotEndAligned(t *testing.T) {
 
 // TestConstructPublicKey_UnknownTypeReturnsError verifies unknown crypto types get an error.
 func TestConstructPublicKey_UnknownTypeReturnsError(t *testing.T) {
-	keyCert, err := NewKeyCertificateWithTypes(KEYCERT_SIGN_ED25519, KEYCERT_CRYPTO_P256)
+	// Inject a key certificate with crypto type 200 (truly unknown) via raw payload.
+	payload := []byte{0x00, 0x07, 0x00, 0xC8} // signing=Ed25519(7), crypto=200
+	cert, err := certificate.NewCertificateWithType(certificate.CERT_KEY, payload)
+	require.NoError(t, err)
+	keyCert, err := KeyCertificateFromCertificate(cert)
 	require.NoError(t, err)
 
 	data := make([]byte, 256)
@@ -237,46 +241,52 @@ func TestKeyCertificateFromCertificate_NonKeyCertificateType(t *testing.T) {
 	}
 }
 
-// TestConstructPublicKey_P256_ReturnsUnimplemented verifies ECDH-P256 gives a
-// specific unimplemented error, not a generic "unsupported" message.
-func TestConstructPublicKey_P256_ReturnsUnimplemented(t *testing.T) {
+// TestConstructPublicKey_P256_ConstructsKey verifies ECDH-P256 key is constructed
+// successfully and NewEncrypter returns "not yet implemented" (ECIES-P256 pending).
+func TestConstructPublicKey_P256_ConstructsKey(t *testing.T) {
 	keyCert, err := NewKeyCertificateWithTypes(KEYCERT_SIGN_ED25519, KEYCERT_CRYPTO_P256)
 	require.NoError(t, err)
 
 	data := make([]byte, KEYCERT_PUBKEY_SIZE)
 	pk, err := keyCert.ConstructPublicKey(data)
-	assert.Error(t, err)
-	assert.Nil(t, pk)
-	assert.Contains(t, err.Error(), "unimplemented")
-	assert.Contains(t, err.Error(), "ECDH-P256")
+	assert.NoError(t, err)
+	require.NotNil(t, pk)
+	assert.Equal(t, KEYCERT_CRYPTO_P256_SIZE, pk.Len())
+	_, encErr := pk.NewEncrypter()
+	assert.Error(t, encErr, "NewEncrypter should return error: ECIES not yet implemented")
+	assert.Contains(t, encErr.Error(), "not yet implemented")
 }
 
-// TestConstructPublicKey_P384_ReturnsUnimplemented verifies ECDH-P384 gives a
-// specific unimplemented error.
-func TestConstructPublicKey_P384_ReturnsUnimplemented(t *testing.T) {
+// TestConstructPublicKey_P384_ConstructsKey verifies ECDH-P384 key is constructed
+// successfully and NewEncrypter returns "not yet implemented".
+func TestConstructPublicKey_P384_ConstructsKey(t *testing.T) {
 	keyCert, err := NewKeyCertificateWithTypes(KEYCERT_SIGN_ED25519, KEYCERT_CRYPTO_P384)
 	require.NoError(t, err)
 
 	data := make([]byte, KEYCERT_PUBKEY_SIZE)
 	pk, err := keyCert.ConstructPublicKey(data)
-	assert.Error(t, err)
-	assert.Nil(t, pk)
-	assert.Contains(t, err.Error(), "unimplemented")
-	assert.Contains(t, err.Error(), "ECDH-P384")
+	assert.NoError(t, err)
+	require.NotNil(t, pk)
+	assert.Equal(t, KEYCERT_CRYPTO_P384_SIZE, pk.Len())
+	_, encErr := pk.NewEncrypter()
+	assert.Error(t, encErr, "NewEncrypter should return error: ECIES not yet implemented")
+	assert.Contains(t, encErr.Error(), "not yet implemented")
 }
 
-// TestConstructPublicKey_P521_ReturnsUnimplemented verifies ECDH-P521 gives a
-// specific unimplemented error.
-func TestConstructPublicKey_P521_ReturnsUnimplemented(t *testing.T) {
+// TestConstructPublicKey_P521_ConstructsKey verifies ECDH-P521 key is constructed
+// successfully and NewEncrypter returns "not yet implemented".
+func TestConstructPublicKey_P521_ConstructsKey(t *testing.T) {
 	keyCert, err := NewKeyCertificateWithTypes(KEYCERT_SIGN_ED25519, KEYCERT_CRYPTO_P521)
 	require.NoError(t, err)
 
 	data := make([]byte, KEYCERT_PUBKEY_SIZE)
 	pk, err := keyCert.ConstructPublicKey(data)
-	assert.Error(t, err)
-	assert.Nil(t, pk)
-	assert.Contains(t, err.Error(), "unimplemented")
-	assert.Contains(t, err.Error(), "ECDH-P521")
+	assert.NoError(t, err)
+	require.NotNil(t, pk)
+	assert.Equal(t, KEYCERT_CRYPTO_P521_SIZE, pk.Len())
+	_, encErr := pk.NewEncrypter()
+	assert.Error(t, encErr, "NewEncrypter should return error: ECIES not yet implemented")
+	assert.Contains(t, encErr.Error(), "not yet implemented")
 }
 
 // TestConstructPublicKey_ReservedNone_ReturnsReservedError verifies that
@@ -297,17 +307,18 @@ func TestConstructPublicKey_ReservedNone_ReturnsReservedError(t *testing.T) {
 	assert.Contains(t, err.Error(), "RESERVED_NONE")
 }
 
-// TestConstructPublicKey_AllUnimplementedTypes covers all crypto types that
-// should return specific error messages.
+// TestConstructPublicKey_AllUnimplementedTypes covers P256/384/521 crypto types:
+// construction now succeeds (using ecdsa.NewECP* for byte validation),
+// while NewEncrypter correctly signals that ECIES encryption is not yet implemented.
 func TestConstructPublicKey_AllUnimplementedTypes(t *testing.T) {
 	tests := []struct {
 		name       string
 		cryptoType int
-		errSubstr  string
+		keySize    int
 	}{
-		{"P256", KEYCERT_CRYPTO_P256, "unimplemented"},
-		{"P384", KEYCERT_CRYPTO_P384, "unimplemented"},
-		{"P521", KEYCERT_CRYPTO_P521, "unimplemented"},
+		{"P256", KEYCERT_CRYPTO_P256, KEYCERT_CRYPTO_P256_SIZE},
+		{"P384", KEYCERT_CRYPTO_P384, KEYCERT_CRYPTO_P384_SIZE},
+		{"P521", KEYCERT_CRYPTO_P521, KEYCERT_CRYPTO_P521_SIZE},
 	}
 
 	for _, tt := range tests {
@@ -317,9 +328,12 @@ func TestConstructPublicKey_AllUnimplementedTypes(t *testing.T) {
 
 			data := make([]byte, KEYCERT_PUBKEY_SIZE)
 			pk, err := keyCert.ConstructPublicKey(data)
-			assert.Error(t, err)
-			assert.Nil(t, pk)
-			assert.Contains(t, err.Error(), tt.errSubstr)
+			assert.NoError(t, err)
+			require.NotNil(t, pk)
+			assert.Equal(t, tt.keySize, pk.Len())
+			_, encErr := pk.NewEncrypter()
+			assert.Error(t, encErr, "NewEncrypter should return error")
+			assert.Contains(t, encErr.Error(), "not yet implemented")
 		})
 	}
 }

@@ -275,14 +275,26 @@ func (keyCertificate KeyCertificate) ConstructPublicKey(data []byte) (public_key
 		public_key = elg_key
 		log.Debug("Constructed ElgPublicKey")
 	case KEYCERT_CRYPTO_P256:
-		log.Warn("ECDH-P256 crypto key type is spec-defined but not yet implemented")
-		err = oops.Errorf("unimplemented crypto key type: ECDH-P256 (type %d)", KEYCERT_CRYPTO_P256)
+		public_key, err = newECDHP256PublicKey(data)
+		if err != nil {
+			log.WithError(err).Warn("Failed to construct ECDH-P256 public key")
+		} else {
+			log.Debug("Constructed ECDH-P256 public key")
+		}
 	case KEYCERT_CRYPTO_P384:
-		log.Warn("ECDH-P384 crypto key type is spec-defined but not yet implemented")
-		err = oops.Errorf("unimplemented crypto key type: ECDH-P384 (type %d)", KEYCERT_CRYPTO_P384)
+		public_key, err = newECDHP384PublicKey(data)
+		if err != nil {
+			log.WithError(err).Warn("Failed to construct ECDH-P384 public key")
+		} else {
+			log.Debug("Constructed ECDH-P384 public key")
+		}
 	case KEYCERT_CRYPTO_P521:
-		log.Warn("ECDH-P521 crypto key type is spec-defined but not yet implemented")
-		err = oops.Errorf("unimplemented crypto key type: ECDH-P521 (type %d)", KEYCERT_CRYPTO_P521)
+		public_key, err = newECDHP521PublicKey(data)
+		if err != nil {
+			log.WithError(err).Warn("Failed to construct ECDH-P521 public key")
+		} else {
+			log.Debug("Constructed ECDH-P521 public key")
+		}
 	case KEYCERT_CRYPTO_X25519,
 		KEYCERT_CRYPTO_MLKEM512_X25519,
 		KEYCERT_CRYPTO_MLKEM768_X25519,
