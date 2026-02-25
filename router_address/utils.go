@@ -2,6 +2,8 @@
 package router_address
 
 import (
+	"errors"
+
 	"github.com/go-i2p/logger"
 	"github.com/samber/oops"
 
@@ -11,6 +13,8 @@ import (
 // ReadRouterAddress returns RouterAddress from a []byte.
 // The remaining bytes after the specified length are also returned.
 // Returns a list of errors that occurred during parsing.
+// ErrNonZeroExpiration may be returned together with a valid RouterAddress to
+// indicate a spec violation; callers should use errors.Is to test for it.
 func ReadRouterAddress(routerAddressData []byte) (ra RouterAddress, remainder []byte, err error) {
 	log.WithField("data_length", len(routerAddressData)).Debug("Reading RouterAddress from data")
 
@@ -23,9 +27,15 @@ func ReadRouterAddress(routerAddressData []byte) (ra RouterAddress, remainder []
 		return
 	}
 
+	// parseExpirationDate may return ErrNonZeroExpiration as a non-fatal warning.
+	var expirationWarning error
 	remainder, err = parseExpirationDate(&ra, remainder)
 	if err != nil {
-		return
+		if !errors.Is(err, ErrNonZeroExpiration) {
+			return // fatal parse error
+		}
+		expirationWarning = err
+		err = nil
 	}
 
 	remainder, err = parseTransportType(&ra, remainder)
@@ -34,6 +44,9 @@ func ReadRouterAddress(routerAddressData []byte) (ra RouterAddress, remainder []
 	}
 
 	remainder, err = parseTransportOptions(&ra, remainder)
+	if err == nil {
+		err = expirationWarning
+	}
 	return
 }
 
@@ -72,7 +85,8 @@ func parseTransportCost(ra *RouterAddress, routerData []byte) ([]byte, error) {
 
 // parseExpirationDate parses the expiration date field from data.
 // Per I2P spec, the expiration field MUST be all zeros.
-// Returns remaining data after parsing and any error encountered.
+// Returns ErrNonZeroExpiration (wrapped) as a non-fatal warning when non-zero;
+// callers should still parse the address but may signal the spec violation.
 func parseExpirationDate(ra *RouterAddress, routerData []byte) ([]byte, error) {
 	expirationDate, remainder, err := data.NewDate(routerData)
 	if err != nil {
@@ -82,10 +96,11 @@ func parseExpirationDate(ra *RouterAddress, routerData []byte) ([]byte, error) {
 		}).Error("error parsing RouterAddress")
 		return remainder, err
 	}
-	if !isAllZeros(expirationDate[:]) {
-		log.Warn("RouterAddress expiration is non-zero; spec requires all zeros")
-	}
 	ra.ExpirationDate = expirationDate
+	if !isAllZeros(expirationDate[:]) {
+		log.Warn("RouterAddress expiration is non-zero; spec requires all zeros (I2P 0.9.12+)")
+		return remainder, oops.Errorf("%w", ErrNonZeroExpiration)
+	}
 	return remainder, nil
 }
 
@@ -122,20 +137,24 @@ func parseTransportType(ra *RouterAddress, routerData []byte) ([]byte, error) {
 
 // parseTransportOptions parses the transport options mapping from data.
 // Returns remaining data after parsing and any error encountered.
-// Propagates errors only when the mapping cannot be parsed (nil result).
-// Warnings about trailing data are expected in RouterAddress context and logged only.
+// Errors from the mapping parser are logged as warnings when options is non-nil
+// (trailing-data warnings are normal in RouterAddress context); the mapping error
+// is only propagated as a hard failure when the mapping itself could not be parsed
+// (nil result).
 func parseTransportOptions(ra *RouterAddress, routerData []byte) ([]byte, error) {
 	transportOptions, remainder, errs := data.NewMapping(routerData)
-	for _, err := range errs {
-		log.WithFields(logger.Fields{
-			"at":     "(RouterAddress) parseTransportOptions",
-			"reason": "error parsing options",
-			"error":  err,
-		}).Error("error parsing RouterAddress")
-	}
 	ra.TransportOptions = transportOptions
-	if transportOptions == nil && len(errs) > 0 {
-		return remainder, oops.Errorf("error parsing RouterAddress options: %v", errs[0])
+	if len(errs) > 0 {
+		for _, mappingErr := range errs {
+			log.WithFields(logger.Fields{
+				"at":     "(RouterAddress) parseTransportOptions",
+				"reason": "error parsing options",
+				"error":  mappingErr,
+			}).Warn("non-fatal warning parsing RouterAddress options")
+		}
+		if transportOptions == nil {
+			return remainder, oops.Errorf("error parsing RouterAddress options: %v", errs[0])
+		}
 	}
 	return remainder, nil
 }

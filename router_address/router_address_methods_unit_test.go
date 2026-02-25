@@ -270,10 +270,11 @@ func TestHost_InvalidIP(t *testing.T) {
 		hostVal  string
 		errMatch string
 	}{
-		{"not an ip", "not-an-ip", "invalid IP address"},
-		{"invalid format", "999.999.999.999", "invalid IP address"},
-		{"hostname", "example.com", "invalid IP address"},
-		{"partial ip", "192.168.1", "invalid IP address"},
+		// These contain characters that are invalid in both IP literals and
+		// hostnames (RFC 1123): spaces, underscores, etc.
+		{"space in value", "not an ip", "invalid host"},
+		{"underscore", "bad_host", "invalid host"},
+		{"at-sign", "user@host", "invalid host"},
 	}
 
 	for _, tc := range testCases {
@@ -286,9 +287,8 @@ func TestHost_InvalidIP(t *testing.T) {
 			assert.NoError(err)
 
 			_, err = ra.Host()
-			assert.Error(err, "Host() should return error for invalid IP")
-			assert.Contains(err.Error(), tc.errMatch, "Error should indicate invalid IP")
-			assert.Contains(err.Error(), tc.hostVal, "Error should include the invalid value")
+			assert.Error(err, "Host() should return error for invalid host")
+			assert.Contains(err.Error(), tc.errMatch, "Error should indicate invalid host")
 		})
 	}
 }
@@ -338,18 +338,31 @@ func TestHost_ValidIPv6(t *testing.T) {
 	}
 }
 
-func TestHostRejectsHostnames(t *testing.T) {
-	t.Run("hostname rejected", func(t *testing.T) {
+// TestHostAcceptsHostnames verifies that Host() accepts valid hostname strings
+// per the I2P specification ("an IPv4 or IPv6 address or host name").
+func TestHostAcceptsHostnames(t *testing.T) {
+	t.Run("i2p hostname accepted", func(t *testing.T) {
 		ra, err := NewRouterAddress(5, time.Time{}, "NTCP2", map[string]string{
-			"host": "example.com",
+			"host": "example.i2p",
 		})
 		require.NoError(t, err)
-		_, err = ra.Host()
-		assert.Error(t, err, "Host() should reject hostnames")
-		assert.Contains(t, err.Error(), "invalid IP address")
+		host, err := ra.Host()
+		assert.NoError(t, err, "Host() should accept i2p hostnames per spec")
+		assert.Equal(t, "example.i2p", host.String())
+		assert.Equal(t, "host", host.Network())
 	})
 
-	t.Run("IP address accepted", func(t *testing.T) {
+	t.Run("dotted hostname accepted", func(t *testing.T) {
+		ra, err := NewRouterAddress(5, time.Time{}, "NTCP2", map[string]string{
+			"host": "router.example.com",
+		})
+		require.NoError(t, err)
+		host, err := ra.Host()
+		assert.NoError(t, err, "Host() should accept dotted hostnames per spec")
+		assert.Equal(t, "router.example.com", host.String())
+	})
+
+	t.Run("IP address still accepted", func(t *testing.T) {
 		ra, err := NewRouterAddress(5, time.Time{}, "NTCP2", map[string]string{
 			"host": "192.168.1.1",
 		})
@@ -357,6 +370,16 @@ func TestHostRejectsHostnames(t *testing.T) {
 		host, err := ra.Host()
 		assert.NoError(t, err)
 		assert.NotNil(t, host)
+		assert.Equal(t, "192.168.1.1", host.String())
+	})
+
+	t.Run("host with invalid characters rejected", func(t *testing.T) {
+		ra, err := NewRouterAddress(5, time.Time{}, "NTCP2", map[string]string{
+			"host": "not an ip",
+		})
+		require.NoError(t, err)
+		_, err = ra.Host()
+		assert.Error(t, err, "Host() should reject hosts with spaces")
 	})
 }
 

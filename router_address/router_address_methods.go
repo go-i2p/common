@@ -136,20 +136,41 @@ func (ra *RouterAddress) String() string {
 }
 
 // Bytes returns the router address as a []byte.
-// Returns nil if any required field is nil or empty.
+// Returns nil if any required field is nil or empty; use Serialize for
+// explicit error reporting.
 func (ra RouterAddress) Bytes() []byte {
-	log.Debug("Converting RouterAddress to bytes")
-	if ra.TransportCost == nil || ra.ExpirationDate == nil || ra.TransportType == nil || len(ra.TransportType) == 0 || ra.TransportOptions == nil {
-		log.Warn("Cannot serialize RouterAddress with nil fields")
-		return nil
+	b, _ := ra.Serialize()
+	return b
+}
+
+// Serialize returns the wire encoding of the RouterAddress together with any
+// serialization error.  Callers that need to distinguish a valid empty result
+// from a serialization failure should prefer this method over Bytes.
+func (ra RouterAddress) Serialize() ([]byte, error) {
+	log.Debug("Serializing RouterAddress")
+	if ra.TransportCost == nil {
+		log.Warn("Cannot serialize RouterAddress: TransportCost is nil")
+		return nil, oops.Errorf("%w", ErrMissingTransportCost)
+	}
+	if ra.ExpirationDate == nil {
+		log.Warn("Cannot serialize RouterAddress: ExpirationDate is nil")
+		return nil, oops.Errorf("%w", ErrMissingExpirationDate)
+	}
+	if ra.TransportType == nil || len(ra.TransportType) == 0 {
+		log.Warn("Cannot serialize RouterAddress: TransportType is nil or empty")
+		return nil, oops.Errorf("%w", ErrMissingTransportType)
+	}
+	if ra.TransportOptions == nil {
+		log.Warn("Cannot serialize RouterAddress: TransportOptions is nil")
+		return nil, oops.Errorf("%w", ErrMissingTransportOptions)
 	}
 	buf := make([]byte, 0)
 	buf = append(buf, ra.TransportCost.Bytes()...)
 	buf = append(buf, ra.ExpirationDate.Bytes()...)
 	buf = append(buf, ra.TransportType...)
 	buf = append(buf, ra.TransportOptions.Data()...)
-	log.WithField("bytes_length", len(buf)).Debug("Converted RouterAddress to bytes")
-	return buf
+	log.WithField("bytes_length", len(buf)).Debug("Serialized RouterAddress")
+	return buf, nil
 }
 
 // Cost returns the cost for this RouterAddress as a Go integer.
@@ -299,22 +320,56 @@ func extractOptionBytes(ra RouterAddress, key string, option data.I2PString) (st
 	return content, nil
 }
 
-// resolveHostIP parses a host string as an IP address and resolves it to a net.Addr.
+// HostAddr is a net.Addr implementation wrapping a hostname string.
+// It is returned by Host() when the host option contains a valid hostname
+// rather than an IP literal, per the I2P spec which permits host names.
+type HostAddr struct {
+	hostname string
+}
+
+// Network implements net.Addr; returns "host" for non-IP hostnames.
+func (h HostAddr) Network() string { return "host" }
+
+// String implements net.Addr; returns the raw hostname.
+func (h HostAddr) String() string { return h.hostname }
+
+// resolveHostIP parses a host string as an IP address or hostname and returns
+// a net.Addr.  Per the I2P spec the host option allows "an IPv4 or IPv6
+// address or host name", so valid hostnames are wrapped in a HostAddr.
 func resolveHostIP(hostBytes string) (net.Addr, error) {
+	// Try IP literal first.
 	ip := net.ParseIP(hostBytes)
-	if ip == nil {
-		log.WithField("hostBytes", hostBytes).Error("Failed to parse IP address")
-		return nil, oops.Errorf("RouterAddress '%s' option contains invalid IP address: %q", HOST_OPTION_KEY, hostBytes)
+	if ip != nil {
+		addr, err := net.ResolveIPAddr("", ip.String())
+		if err != nil {
+			log.WithError(err).WithField("ip", ip.String()).Error("Failed to resolve IP address")
+			return nil, oops.Wrapf(err, "failed to resolve IP address %s", ip.String())
+		}
+		log.WithField("addr", addr).Debug("Retrieved host from RouterAddress (IP)")
+		return addr, nil
 	}
-
-	addr, err := net.ResolveIPAddr("", ip.String())
-	if err != nil {
-		log.WithError(err).WithField("ip", ip.String()).Error("Failed to resolve IP address")
-		return nil, oops.Wrapf(err, "failed to resolve IP address %s", ip.String())
+	// Not an IP literal — check for valid hostname format (RFC 1123 character set).
+	if !isValidHostFormat(hostBytes) {
+		log.WithField("hostBytes", hostBytes).Error("Failed to parse host as IP or valid hostname")
+		return nil, oops.Errorf("RouterAddress '%s' option contains invalid host: %q", HOST_OPTION_KEY, hostBytes)
 	}
+	log.WithField("hostname", hostBytes).Debug("Retrieved host from RouterAddress (hostname)")
+	return HostAddr{hostname: hostBytes}, nil
+}
 
-	log.WithField("addr", addr).Debug("Retrieved host from RouterAddress")
-	return addr, nil
+// isValidHostFormat returns true when s is a syntactically valid hostname per
+// RFC 1123 (letters, digits, hyphens, and dots only; non-empty; ≤253 chars).
+func isValidHostFormat(s string) bool {
+	if len(s) == 0 || len(s) > 253 {
+		return false
+	}
+	for _, c := range s {
+		if !((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') ||
+			(c >= '0' && c <= '9') || c == '.' || c == '-') {
+			return false
+		}
+	}
+	return true
 }
 
 // Port returns the port number as a string
@@ -349,8 +404,8 @@ func validatePortValue(portBytes string) (string, error) {
 }
 
 // HasValidHost checks if the RouterAddress has a valid and usable host option.
-// This is useful for defensive programming to skip invalid addresses gracefully.
-// Returns true if the host option exists, is non-empty, and contains a valid IP address.
+// Per the I2P spec the host option may contain an IPv4/IPv6 address or a
+// hostname; this method returns true for all three valid forms.
 func (ra RouterAddress) HasValidHost() bool {
 	if !ra.CheckOption(HOST_OPTION_KEY) {
 		return false
@@ -366,8 +421,8 @@ func (ra RouterAddress) HasValidHost() bool {
 		return false
 	}
 
-	ip := net.ParseIP(hostBytes)
-	return ip != nil
+	// Valid if it's a parseable IP literal or a syntactically valid hostname.
+	return net.ParseIP(hostBytes) != nil || isValidHostFormat(hostBytes)
 }
 
 // HasValidPort checks if the RouterAddress has a valid and usable port option.

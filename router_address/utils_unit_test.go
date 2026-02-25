@@ -46,7 +46,7 @@ func TestReadRouterAddressAcceptsZeroExpiration(t *testing.T) {
 }
 
 func TestReadRouterAddressNonZeroExpiration(t *testing.T) {
-	t.Run("non-zero expiration parsed with warning but not rejected", func(t *testing.T) {
+	t.Run("non-zero expiration returns ErrNonZeroExpiration with valid address", func(t *testing.T) {
 		buf := []byte{0x05}
 		buf = append(buf, 0x00, 0x00, 0x01, 0x8F, 0x5C, 0xE4, 0x00, 0x00)
 		transportStr, _ := data.ToI2PString("NTCP2")
@@ -55,13 +55,16 @@ func TestReadRouterAddressNonZeroExpiration(t *testing.T) {
 		buf = append(buf, mapping.Data()...)
 
 		ra, _, err := ReadRouterAddress(buf)
-		assert.NoError(t, err, "ReadRouterAddress should accept non-zero expiration with warning")
+		// Non-zero expiration is a spec violation; ErrNonZeroExpiration is returned.
+		assert.Error(t, err, "ReadRouterAddress should return ErrNonZeroExpiration for non-zero expiration")
+		assert.True(t, errors.Is(err, ErrNonZeroExpiration), "error should be ErrNonZeroExpiration, got: %v", err)
+		// The address itself is still populated.
 		assert.Equal(t, 5, ra.Cost())
 		exp := ra.Expiration()
 		assert.False(t, isAllZeros(exp[:]), "Non-zero expiration should be preserved")
 	})
 
-	t.Run("zero expiration accepted cleanly", func(t *testing.T) {
+	t.Run("zero expiration accepted with no error", func(t *testing.T) {
 		buf := []byte{0x05}
 		buf = append(buf, make([]byte, 8)...)
 		transportStr, _ := data.ToI2PString("NTCP2")
@@ -85,7 +88,7 @@ func TestReadRouterAddressExpirationWarning(t *testing.T) {
 	buf = append(buf, mapping.Data()...)
 
 	ra, _, err := ReadRouterAddress(buf)
-	assert.NoError(t, err)
+	assert.True(t, errors.Is(err, ErrNonZeroExpiration), "should return ErrNonZeroExpiration for non-zero expiration, got: %v", err)
 	assert.Equal(t, 10, ra.Cost())
 
 	exp := ra.Expiration()

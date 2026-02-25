@@ -19,8 +19,13 @@ func TestHasValidHost(t *testing.T) {
 	}{
 		{"missing host key", map[string]string{"port": "12345"}, false},
 		{"empty host", map[string]string{"host": "", "port": "12345"}, false},
-		{"invalid IP - text", map[string]string{"host": "not-an-ip", "port": "12345"}, false},
-		{"invalid IP - malformed", map[string]string{"host": "999.999.999.999", "port": "12345"}, false},
+		// Hostnames with valid RFC 1123 chars are accepted per I2P spec.
+		{"valid hostname", map[string]string{"host": "not-an-ip", "port": "12345"}, true},
+		{"valid hostname - numeric labels", map[string]string{"host": "999.999.999.999", "port": "12345"}, true},
+		{"valid hostname - i2p", map[string]string{"host": "router.example.i2p", "port": "12345"}, true},
+		// Strings with invalid chars (spaces, @, etc.) are rejected.
+		{"invalid - spaces", map[string]string{"host": "not an ip", "port": "12345"}, false},
+		{"invalid - at-sign", map[string]string{"host": "user@host", "port": "12345"}, false},
 		{"valid IPv4", map[string]string{"host": "192.168.1.1", "port": "12345"}, true},
 		{"valid IPv4 - localhost", map[string]string{"host": "127.0.0.1", "port": "12345"}, true},
 		{"valid IPv6", map[string]string{"host": "::1", "port": "12345"}, true},
@@ -83,7 +88,8 @@ func TestDefensiveProgrammingPattern(t *testing.T) {
 
 	addresses := []map[string]string{
 		{"host": "192.168.1.1", "port": "9150"},
-		{"host": "bad-host", "port": "9150"},
+		// "bad host" has a space -> invalid hostname -> HasValidHost returns false
+		{"host": "bad host", "port": "9150"},
 		{"host": "192.168.1.2", "port": "abc"},
 		{"port": "9150"},
 		{"host": "192.168.1.3"},

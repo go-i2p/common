@@ -514,13 +514,24 @@ func TestSentinelErrors_ProgrammaticHandling(t *testing.T) {
 // =========================================================================
 
 func TestNewRouterAddress_OptionValidation(t *testing.T) {
-	t.Run("invalid host accepted at construction, rejected at accessor", func(t *testing.T) {
+	t.Run("hostname accepted at construction and at accessor (per I2P spec)", func(t *testing.T) {
 		ra, err := NewRouterAddress(5, time.Time{}, "NTCP2", map[string]string{
-			"host": "not-an-ip",
+			"host": "router.example.i2p",
+		})
+		require.NoError(t, err, "Construction should succeed")
+		host, hostErr := ra.Host()
+		// hostname is now accepted per spec
+		assert.NoError(t, hostErr, "Host() should accept valid hostnames per I2P spec")
+		assert.Equal(t, "router.example.i2p", host.String())
+	})
+
+	t.Run("host with spaces rejected at accessor (invalid host format)", func(t *testing.T) {
+		ra, err := NewRouterAddress(5, time.Time{}, "NTCP2", map[string]string{
+			"host": "not an ip",
 		})
 		require.NoError(t, err, "Construction should succeed")
 		_, hostErr := ra.Host()
-		assert.Error(t, hostErr, "Host() should reject invalid IP")
+		assert.Error(t, hostErr, "Host() should reject host string containing spaces")
 	})
 
 	t.Run("invalid port accepted at construction, rejected at accessor", func(t *testing.T) {

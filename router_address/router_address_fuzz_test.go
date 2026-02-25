@@ -13,11 +13,14 @@ func FuzzReadRouterAddress(f *testing.F) {
 	f.Add([]byte{0x05})
 	f.Add(make([]byte, 12))
 
-	valid := []byte{0x05}
-	valid = append(valid, make([]byte, 8)...)
-	valid = append(valid, 0x00)
-	valid = append(valid, 0x00, 0x00)
-	f.Add(valid)
+	// emptyTransportSeed has a zero-length I2PString transport_style (0x00 prefix byte),
+	// which parseTransportType rejects with ErrEmptyTransportStyle.  It is kept as a
+	// seed to exercise the empty-transport rejection path, but it is NOT a valid address.
+	emptyTransportSeed := []byte{0x05}
+	emptyTransportSeed = append(emptyTransportSeed, make([]byte, 8)...)
+	emptyTransportSeed = append(emptyTransportSeed, 0x00)
+	emptyTransportSeed = append(emptyTransportSeed, 0x00, 0x00)
+	f.Add(emptyTransportSeed)
 
 	withOpts := []byte{0x05}
 	withOpts = append(withOpts, make([]byte, 8)...)

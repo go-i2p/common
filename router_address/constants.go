@@ -1,8 +1,15 @@
 // Package router_address implements the I2P RouterAddress common data structure
 package router_address
 
-// ROUTER_ADDRESS_MIN_SIZE defines the minimum number of bytes in a valid RouterAddress.
-// 1 (cost) + 8 (expiration) + 1 (transport_style length byte) + 2 (mapping size field) = 12.
+// ROUTER_ADDRESS_MIN_SIZE is the pre-parse rejection threshold: data shorter
+// than this is rejected immediately without attempting to parse.
+// Breakdown: 1 (cost) + 8 (expiration) + 1 (transport_style length prefix) +
+// 2 (mapping size field) = 12 bytes.
+//
+// NOTE: 12 bytes is NOT sufficient for a successfully-parsed RouterAddress.
+// parseTransportType rejects a zero-length transport style, so the true
+// minimum for a parseable address is 13 bytes (adding ≥1 transport char).
+// This constant is intentionally kept as a fast early-reject gate only.
 const (
 	ROUTER_ADDRESS_MIN_SIZE = 12
 )
