@@ -7,9 +7,15 @@ package lease_set2
 const (
 	// LEASESET2_MIN_SIZE is the absolute minimum size for a LeaseSet2 structure.
 	// This assumes: LeaseSet2Header (395 bytes) + empty options (2 bytes) +
-	// 1 encryption key (5 bytes header + 32 bytes X25519) + 0 leases (1 byte) + signature (64 bytes EdDSA)
-	// = 395 + 2 + 5 + 32 + 1 + 64 = 499 bytes minimum
-	LEASESET2_MIN_SIZE = 499
+	// 1 encryption key (5 bytes header + 32 bytes X25519) + 1 lease (1 byte count + 40 bytes Lease2) + signature (64 bytes EdDSA)
+	// = 395 + 2 + 5 + 32 + 1 + 40 + 64 = 539 bytes minimum
+	// Per spec: "All LeaseSet2 variants require at least one Lease."
+	LEASESET2_MIN_SIZE = 539
+
+	// LEASESET2_DBSTORE_TYPE is the DatabaseStore type byte for LeaseSet2 (value 3).
+	// Per the I2P spec the signature is computed over the serialised body PREPENDED
+	// with this single byte: []byte{0x03} || Bytes()[:len-sigLen].
+	LEASESET2_DBSTORE_TYPE = 0x03
 
 	// LEASESET2_HEADER_MIN_SIZE is the minimum size of LeaseSet2Header without offline signature.
 	// Destination (387 bytes) + published (4 bytes) + expires (2 bytes) + flags (2 bytes)

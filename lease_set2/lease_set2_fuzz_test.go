@@ -2,9 +2,10 @@ package lease_set2
 
 import (
 	"crypto/ed25519"
-	"github.com/go-i2p/crypto/rand"
 	"encoding/binary"
 	"testing"
+
+	"github.com/go-i2p/crypto/rand"
 
 	common "github.com/go-i2p/common/data"
 	"github.com/go-i2p/common/key_certificate"
@@ -84,6 +85,9 @@ func FuzzReadLeaseSet2(f *testing.F) {
 		_ = ls2.Signature()
 		_ = ls2.Options()
 		_, _ = ls2.Bytes()
+		// Verify exercises the transient-key path and cryptographic code;
+		// it must not panic on any successfully-parsed structure.
+		_ = ls2.Verify()
 	})
 }
 

@@ -3,10 +3,13 @@ package lease_set2
 
 import (
 	"crypto/ed25519"
+	"crypto/sha512"
 	"encoding/binary"
 	"sort"
 	"strings"
 	"time"
+
+	"filippo.io/edwards25519"
 
 	common "github.com/go-i2p/common/data"
 	"github.com/go-i2p/common/destination"
@@ -16,6 +19,7 @@ import (
 	sig "github.com/go-i2p/common/signature"
 	signatureTypes "github.com/go-i2p/common/signature"
 	"github.com/go-i2p/crypto/ed25519ph"
+	cryptorand "github.com/go-i2p/crypto/rand"
 	"github.com/go-i2p/logger"
 	"github.com/samber/oops"
 )
@@ -135,6 +139,10 @@ func (ls2 *LeaseSet2) Signature() sig.Signature {
 //  7. Encryption keys with count (5+ bytes per key)
 //  8. Lease2 structures with count (40 bytes per lease)
 //  9. Signature (variable length)
+//
+// Note: the signature was computed over []byte{LEASESET2_DBSTORE_TYPE} || Bytes()[:len-sigLen],
+// i.e. a single 0x03 byte is prepended to all content before signing. External verifiers
+// must include this prefix when reconstructing the signed payload.
 //
 // Returns the serialized LeaseSet2 or error if serialization fails.
 func (ls2 *LeaseSet2) Bytes() ([]byte, error) {
@@ -491,6 +499,10 @@ func parseSingleEncryptionKey(ls2 *LeaseSet2, keyIndex int, data []byte) ([]byte
 
 	keyType, keyLen, rem := extractEncryptionKeyHeader(data)
 
+	if err := validateEncryptionKeyTypeLength(keyType, keyLen, keyIndex); err != nil {
+		return nil, err
+	}
+
 	if err := validateEncryptionKeyDataLength(len(rem), keyLen, keyIndex); err != nil {
 		return nil, err
 	}
@@ -562,27 +574,43 @@ func extractEncryptionKeyData(data []byte, keyLen uint16) ([]byte, []byte) {
 	return keyData, data
 }
 
+// validateEncryptionKeyTypeLength returns an error when the declared keyLen does not
+// match the spec-required size for a known encryption key type.
+// Per spec: "keylen: Must match the specified length of the encryption type."
+func validateEncryptionKeyTypeLength(keyType uint16, keyLen uint16, keyIndex int) error {
+	expectedSize, ok := key_certificate.CryptoPublicKeySizes[keyType]
+	if !ok {
+		// Unknown type – allow any length (forward compatibility).
+		return nil
+	}
+	if int(keyLen) != expectedSize {
+		err := oops.
+			Code("encryption_key_len_type_mismatch").
+			With("key_index", keyIndex).
+			With("key_type", keyType).
+			With("declared_len", keyLen).
+			With("expected_len", expectedSize).
+			Errorf("encryption key %d: declared keyLen %d does not match expected %d for type %d",
+				keyIndex, keyLen, expectedSize, keyType)
+		log.WithFields(logger.Fields{
+			"at":           "validateEncryptionKeyTypeLength",
+			"key_index":    keyIndex,
+			"key_type":     keyType,
+			"declared_len": keyLen,
+			"expected_len": expectedSize,
+		}).Error(err.Error())
+		return err
+	}
+	return nil
+}
+
 // storeEncryptionKey stores the parsed encryption key in the LeaseSet2 structure.
 // Logs the parsed key information at debug level.
-// Warns if the declared key length does not match the expected size for the key type.
 func storeEncryptionKey(ls2 *LeaseSet2, keyIndex int, keyType uint16, keyLen uint16, keyData []byte) {
 	ls2.encryptionKeys[keyIndex] = EncryptionKey{
 		KeyType: keyType,
 		KeyLen:  keyLen,
 		KeyData: keyData,
-	}
-
-	// Validate key type/length consistency per spec:
-	// "keylen: Must match the specified length of the encryption type."
-	if expectedSize, ok := key_certificate.CryptoPublicKeySizes[keyType]; ok {
-		if int(keyLen) != expectedSize {
-			log.WithFields(logger.Fields{
-				"key_index":    keyIndex,
-				"key_type":     keyType,
-				"declared_len": keyLen,
-				"expected_len": expectedSize,
-			}).Warn("Encryption key length does not match expected size for key type")
-		}
 	}
 
 	log.WithFields(logger.Fields{
@@ -609,9 +637,20 @@ func validateLeaseCountData(dataLen int) error {
 	return nil
 }
 
-// validateLeaseCount validates that the lease count is within allowed limits.
-// Returns error if lease count exceeds maximum.
+// validateLeaseCount validates that the lease count is within spec-required limits.
+// Returns error if the lease count is 0 (spec requires ≥1) or greater than the maximum.
 func validateLeaseCount(numLeases int) error {
+	if numLeases < 1 {
+		err := oops.
+			Code("invalid_lease_count").
+			With("num_leases", numLeases).
+			Errorf("invalid lease count: %d (spec requires at least 1 lease)", numLeases)
+		log.WithFields(logger.Fields{
+			"at":         "validateLeaseCount",
+			"num_leases": numLeases,
+		}).Error(err.Error())
+		return err
+	}
 	if numLeases > LEASESET2_MAX_LEASES {
 		err := oops.
 			Code("invalid_lease_count").
@@ -862,8 +901,9 @@ func validateExpiresOffset(expiresOffset uint16) error {
 	return nil
 }
 
-// validateOfflineSignatureFlags validates consistency between the offline keys flag and
-// the presence of an offline signature structure.
+// validateOfflineSignatureFlags validates consistency between the flags field and the
+// presence of an offline signature. Also enforces the spec co-implication:
+// BLINDED (bit 2) requires UNPUBLISHED (bit 1).
 func validateOfflineSignatureFlags(flags uint16, offlineSig *offline_signature.OfflineSignature) error {
 	if (flags&LEASESET2_FLAG_OFFLINE_KEYS) != 0 && offlineSig == nil {
 		return oops.
@@ -874,6 +914,12 @@ func validateOfflineSignatureFlags(flags uint16, offlineSig *offline_signature.O
 		return oops.
 			Code("unexpected_offline_signature").
 			Errorf("offline signature provided but OFFLINE_KEYS flag not set")
+	}
+	// Spec: "If [BLINDED] is set, bit 1 (UNPUBLISHED) should also be set."
+	if (flags&LEASESET2_FLAG_BLINDED) != 0 && (flags&LEASESET2_FLAG_UNPUBLISHED) == 0 {
+		return oops.
+			Code("blinded_requires_unpublished").
+			Errorf("BLINDED flag (bit 2) requires UNPUBLISHED flag (bit 1) to also be set")
 	}
 	return nil
 }
@@ -1069,17 +1115,85 @@ func signLeaseSet2Data(signingKey interface{}, data []byte, sigType uint16) ([]b
 	}
 
 	switch sigType {
-	case uint16(signatureTypes.SIGNATURE_TYPE_EDDSA_SHA512_ED25519),
-		uint16(signatureTypes.SIGNATURE_TYPE_REDDSA_SHA512_ED25519):
-		// Ed25519 and RedDSA both use standard Ed25519 signing.
-		// RedDSA verification is identical on the curve level;
-		// full RedDSA randomized nonces are a documented limitation.
+	case uint16(signatureTypes.SIGNATURE_TYPE_EDDSA_SHA512_ED25519):
 		return ed25519.Sign(privKey, data), nil
+	case uint16(signatureTypes.SIGNATURE_TYPE_REDDSA_SHA512_ED25519):
+		// RedDSA (Red25519) requires randomized nonces for unlinkability.
+		return signRedDSA(privKey, data)
 	case uint16(signatureTypes.SIGNATURE_TYPE_EDDSA_SHA512_ED25519PH):
 		return signEd25519ph(privKey, data)
 	default:
 		return nil, oops.Errorf("signing not implemented for signature type %d (modern crypto only: Ed25519, Ed25519ph, RedDSA)", sigType)
 	}
+}
+
+// signRedDSA signs data using Red25519 (RedDSA) with randomized per-signature nonces.
+//
+// Unlike deterministic Ed25519 (RFC 8032), RedDSA computes the nonce as
+//
+//	r = H(Z ‖ scalar ‖ M)  where Z is 80 freshly-generated random bytes
+//
+// This prevents an observer from linking two signatures made with the same key,
+// which is the core unlinkability guarantee of RedDSA. The resulting signature
+// is still verifiable with a standard Ed25519 verifier.
+func signRedDSA(privKey ed25519.PrivateKey, data []byte) ([]byte, error) {
+	if len(privKey) != ed25519.PrivateKeySize {
+		return nil, oops.Errorf("RedDSA: invalid private key size: %d", len(privKey))
+	}
+	// Expand private key per Ed25519 spec, then clamp.
+	expanded := sha512.Sum512(privKey[:32])
+	expanded[0] &= 248
+	expanded[31] &= 63
+	expanded[31] |= 64
+
+	scalar, err := edwards25519.NewScalar().SetBytesWithClamping(expanded[:32])
+	if err != nil {
+		return nil, oops.Errorf("RedDSA: failed to create private scalar: %w", err)
+	}
+
+	pubKey := privKey.Public().(ed25519.PublicKey)
+
+	// Generate 80 random bytes Z for RedDSA nonce randomization.
+	var Z [80]byte
+	if _, err := cryptorand.Read(Z[:]); err != nil {
+		return nil, oops.Errorf("RedDSA: failed to generate random nonce bytes: %w", err)
+	}
+
+	// Compute nonce r = H(Z ‖ scalar_bytes ‖ M), reduced uniformly mod l.
+	nonceH := sha512.New()
+	nonceH.Write(Z[:])
+	nonceH.Write(expanded[:32])
+	nonceH.Write(data)
+	nonceDigest := nonceH.Sum(nil) // 64 bytes
+
+	r, err := edwards25519.NewScalar().SetUniformBytes(nonceDigest)
+	if err != nil {
+		return nil, oops.Errorf("RedDSA: failed to create nonce scalar: %w", err)
+	}
+
+	// R = r·B
+	R := new(edwards25519.Point).ScalarBaseMult(r)
+
+	// k = H(R ‖ A ‖ M) mod l
+	challengeH := sha512.New()
+	challengeH.Write(R.Bytes())
+	challengeH.Write(pubKey)
+	challengeH.Write(data)
+	challengeDigest := challengeH.Sum(nil) // 64 bytes
+
+	k, err := edwards25519.NewScalar().SetUniformBytes(challengeDigest)
+	if err != nil {
+		return nil, oops.Errorf("RedDSA: failed to create challenge scalar: %w", err)
+	}
+
+	// S = r + k·a
+	S := edwards25519.NewScalar().MultiplyAdd(k, scalar, r)
+
+	// Signature = R ‖ S (64 bytes)
+	sig := make([]byte, 64)
+	copy(sig[:32], R.Bytes())
+	copy(sig[32:], S.Bytes())
+	return sig, nil
 }
 
 // signEd25519ph performs Ed25519ph (pre-hashed) signing per RFC 8032 Section 5.1.

@@ -8,8 +8,10 @@ import (
 
 // TestLeaseSet2MinSizeConstant verifies the minimum size constant
 func TestLeaseSet2MinSizeConstant(t *testing.T) {
-	// LEASESET2_MIN_SIZE = 499 (header 395 + options 2 + key-header 5 + key 32 + lease-count 1 + sig 64)
-	assert.Equal(t, 499, LEASESET2_MIN_SIZE)
+	// LEASESET2_MIN_SIZE = 539: header 395 + options 2 + key-header 5 + key 32 +
+	// lease-count 1 + 1 Lease2 (40 bytes) + sig 64 = 539
+	// Per spec: "All LeaseSet2 variants require at least one Lease."
+	assert.Equal(t, 539, LEASESET2_MIN_SIZE)
 }
 
 // TestLeaseSet2HeaderMinSizeConstant verifies the header minimum size

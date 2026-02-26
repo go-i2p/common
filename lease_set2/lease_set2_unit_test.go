@@ -2,11 +2,12 @@ package lease_set2
 
 import (
 	"crypto/ed25519"
-	"github.com/go-i2p/crypto/rand"
 	"encoding/binary"
 	"sort"
 	"testing"
 	"time"
+
+	"github.com/go-i2p/crypto/rand"
 
 	common "github.com/go-i2p/common/data"
 	"github.com/go-i2p/common/destination"
@@ -65,8 +66,17 @@ func TestReadLeaseSet2MinimalValid(t *testing.T) {
 	}
 	data = append(data, keyData...)
 
-	numLeases := byte(0)
+	numLeases := byte(1)
 	data = append(data, numLeases)
+	// One minimal Lease2: 32-byte gateway hash + 4-byte tunnel ID + 4-byte end date
+	leaseHash := make([]byte, 32)
+	data = append(data, leaseHash...)
+	tunnelID := make([]byte, 4)
+	binary.BigEndian.PutUint32(tunnelID, 12345)
+	data = append(data, tunnelID...)
+	endDate := make([]byte, 4)
+	binary.BigEndian.PutUint32(endDate, 1735690200)
+	data = append(data, endDate...)
 
 	signatureData := make([]byte, signature.EdDSA_SHA512_Ed25519_SIZE)
 	for i := 0; i < signature.EdDSA_SHA512_Ed25519_SIZE; i++ {
@@ -86,7 +96,7 @@ func TestReadLeaseSet2MinimalValid(t *testing.T) {
 	assert.False(t, ls2.IsBlinded())
 	assert.Nil(t, ls2.OfflineSignature())
 	assert.Equal(t, 1, ls2.EncryptionKeyCount())
-	assert.Equal(t, 0, ls2.LeaseCount())
+	assert.Equal(t, 1, ls2.LeaseCount())
 	destAddr, err := dest.Base32Address()
 	require.NoError(t, err)
 	ls2Addr, err := ls2.Destination().Base32Address()
@@ -203,8 +213,17 @@ func TestLeaseSet2Accessors(t *testing.T) {
 		data = append(data, keyData...)
 	}
 
-	numLeases := byte(0)
+	numLeases := byte(1)
 	data = append(data, numLeases)
+	// One Lease2: 32-byte gateway hash + 4-byte tunnel ID + 4-byte end date
+	leaseHash := make([]byte, 32)
+	data = append(data, leaseHash...)
+	tunnelIDBytes := make([]byte, 4)
+	binary.BigEndian.PutUint32(tunnelIDBytes, 99999)
+	data = append(data, tunnelIDBytes...)
+	endDateBytes := make([]byte, 4)
+	binary.BigEndian.PutUint32(endDateBytes, 1735690200)
+	data = append(data, endDateBytes...)
 
 	signatureData := make([]byte, signature.EdDSA_SHA512_Ed25519_SIZE)
 	for i := 0; i < signature.EdDSA_SHA512_Ed25519_SIZE; i++ {
@@ -222,7 +241,7 @@ func TestLeaseSet2Accessors(t *testing.T) {
 	assert.Len(t, encKeys, 2)
 
 	leases := ls2.Leases()
-	assert.Empty(t, leases)
+	assert.Len(t, leases, 1)
 
 	sig := ls2.Signature()
 	assert.NotNil(t, sig)

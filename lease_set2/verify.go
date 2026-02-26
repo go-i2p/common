@@ -7,11 +7,6 @@ import (
 	"github.com/samber/oops"
 )
 
-// LEASESET2_DBSTORE_TYPE is the DatabaseStore type byte for LeaseSet2.
-// Per the I2P spec, the signature is computed over all serialised data
-// PREPENDED with this single byte.
-const LEASESET2_DBSTORE_TYPE = 0x03
-
 // Verify verifies the cryptographic signature of the LeaseSet2.
 //
 // Per the I2P specification, the signature for a LeaseSet2 is computed over
@@ -20,13 +15,22 @@ const LEASESET2_DBSTORE_TYPE = 0x03
 //
 //	[]byte{0x03} + Bytes()[:len(Bytes()) - signatureLength]
 //
-// If HasOfflineKeys() is true, the signature is verified against the transient
-// signing public key from the OfflineSignature; otherwise it is verified against
-// the Destination's signing public key.
+// If HasOfflineKeys() is true, Verify additionally checks that the offline
+// signature authorization chain is valid: the transient signing key must have
+// been signed by the Destination's long-term signing private key. Only after
+// that chain check passes is the body signature verified against the transient
+// key. This prevents a forged transient key from being trusted.
 //
 // Returns nil if the signature is valid, or an error describing the failure.
 func (ls2 *LeaseSet2) Verify() error {
 	log.Debug("Verifying LeaseSet2 signature")
+
+	// When offline keys are present, verify the authorization chain first.
+	if ls2.HasOfflineKeys() {
+		if err := ls2.verifyOfflineSignatureChain(); err != nil {
+			return err
+		}
+	}
 
 	// Serialize the full LeaseSet2 (including the trailing signature)
 	fullBytes, err := ls2.Bytes()
@@ -66,6 +70,29 @@ func (ls2 *LeaseSet2) Verify() error {
 	}
 
 	log.Debug("LeaseSet2 signature verification succeeded")
+	return nil
+}
+
+// verifyOfflineSignatureChain checks that the offline signature's transient key
+// was legitimately authorized by the Destination's long-term signing key.
+// This prevents an attacker from substituting an arbitrary transient key.
+func (ls2 *LeaseSet2) verifyOfflineSignatureChain() error {
+	if ls2.offlineSignature == nil {
+		return oops.Errorf("OFFLINE_KEYS flag set but offline signature is nil")
+	}
+
+	destSigningKey, err := ls2.destination.SigningPublicKey()
+	if err != nil {
+		return oops.Errorf("failed to get destination signing public key: %w", err)
+	}
+
+	valid, err := ls2.offlineSignature.VerifySignature(destSigningKey.Bytes())
+	if err != nil {
+		return oops.Errorf("offline signature chain verification error: %w", err)
+	}
+	if !valid {
+		return oops.Errorf("offline signature chain invalid: transient key was not signed by destination key")
+	}
 	return nil
 }
 

@@ -3,10 +3,11 @@ package lease_set2
 import (
 	"bytes"
 	"crypto/ed25519"
-	"github.com/go-i2p/crypto/rand"
 	"encoding/binary"
 	"testing"
 	"time"
+
+	"github.com/go-i2p/crypto/rand"
 
 	common "github.com/go-i2p/common/data"
 	"github.com/go-i2p/common/destination"
@@ -754,4 +755,173 @@ func TestVerifyWithOfflineSignature(t *testing.T) {
 
 	err = ls2.Verify()
 	assert.NoError(t, err, "Verify should succeed using transient key from offline signature")
+}
+
+//
+// Audit-fix regression tests
+//
+
+// TestParserRejectsZeroLeases verifies that the parser enforces the spec's
+// minimum-lease constraint (≥1 Lease2). Previously accepted with Postel's law.
+func TestParserRejectsZeroLeases(t *testing.T) {
+	data := buildMinimalLeaseSet2Data(t, key_certificate.KEYCERT_SIGN_ED25519, 0, 0)
+	_, _, err := ReadLeaseSet2(data)
+	assert.Error(t, err, "ReadLeaseSet2 must reject structures with 0 leases")
+}
+
+// TestBlinedFlagRequiresUnpublished verifies that the BLINDED flag co-implication
+// with UNPUBLISHED is enforced: BLINDED alone (0x04) must be rejected.
+func TestBlinedFlagRequiresUnpublished(t *testing.T) {
+	_, priv, err := ed25519.GenerateKey(rand.Reader)
+	require.NoError(t, err)
+	dest := createTestDest(t)
+	l := createTestLease2(t, 0)
+	encKey := EncryptionKey{
+		KeyType: key_certificate.KEYCERT_CRYPTO_X25519,
+		KeyLen:  32,
+		KeyData: make([]byte, 32),
+	}
+	// BLINDED set without UNPUBLISHED — spec violation
+	_, err = NewLeaseSet2(
+		dest, uint32(time.Now().Unix()), 600, LEASESET2_FLAG_BLINDED, nil,
+		common.Mapping{}, []EncryptionKey{encKey}, []lease.Lease2{*l}, priv,
+	)
+	assert.Error(t, err, "NewLeaseSet2 must reject BLINDED flag without UNPUBLISHED")
+}
+
+// TestKnownEncryptionKeyTypeLengthMismatchRejected verifies that the parser returns
+// an error when a known key type is declared with the wrong length.
+// Previously silently stored the malformed key.
+func TestKnownEncryptionKeyTypeLengthMismatchRejected(t *testing.T) {
+	destData := createTestDestination(t, key_certificate.KEYCERT_SIGN_ED25519)
+	data := destData
+
+	publishedBytes := make([]byte, 4)
+	binary.BigEndian.PutUint32(publishedBytes, 1735689600)
+	data = append(data, publishedBytes...)
+	expiresBytes := make([]byte, 2)
+	binary.BigEndian.PutUint16(expiresBytes, 600)
+	data = append(data, expiresBytes...)
+	data = append(data, 0x00, 0x00) // flags
+	data = append(data, 0x00, 0x00) // empty options
+
+	// 1 X25519 key declared with WRONG length (256 instead of 32)
+	data = append(data, 0x01)
+	keyTypeBytes := make([]byte, 2)
+	binary.BigEndian.PutUint16(keyTypeBytes, key_certificate.KEYCERT_CRYPTO_X25519) // type 4
+	data = append(data, keyTypeBytes...)
+	keyLenBytes := make([]byte, 2)
+	binary.BigEndian.PutUint16(keyLenBytes, 256) // wrong: X25519 requires 32
+	data = append(data, keyLenBytes...)
+	data = append(data, make([]byte, 256)...)
+
+	data = append(data, 0x01)                // 1 lease
+	data = append(data, make([]byte, 32)...) // hash
+	tunnelID := make([]byte, 4)
+	binary.BigEndian.PutUint32(tunnelID, 12345)
+	data = append(data, tunnelID...)
+	endDate := make([]byte, 4)
+	binary.BigEndian.PutUint32(endDate, 1735690200)
+	data = append(data, endDate...)
+	data = append(data, make([]byte, signature.EdDSA_SHA512_Ed25519_SIZE)...)
+
+	_, _, err := ReadLeaseSet2(data)
+	assert.Error(t, err, "ReadLeaseSet2 must reject X25519 key with wrong declared length")
+}
+
+// TestVerifyRejectsForgedOfflineSignatureChain verifies that Verify() rejects a LeaseSet2
+// where the offline signature was *not* produced by the destination's private key.
+// An attacker constructing a forged transient key must not pass Verify().
+func TestVerifyRejectsForgedOfflineSignatureChain(t *testing.T) {
+	destPub, _, err := ed25519.GenerateKey(rand.Reader)
+	require.NoError(t, err)
+
+	// Attacker controls a different key pair
+	_, attackerTransientPriv, err := ed25519.GenerateKey(rand.Reader)
+	require.NoError(t, err)
+	attackerTransientPub := attackerTransientPriv.Public().(ed25519.PublicKey)
+
+	// Attacker also signs the offline sig with their OWN key (not destPriv)
+	_, attackerDestPriv, err := ed25519.GenerateKey(rand.Reader)
+	require.NoError(t, err)
+
+	dest := createTestDestWithKey(t, destPub)
+
+	offlineExpires := uint32(time.Now().Unix() + 86400)
+	forgedOffSig, err := offline_signature.CreateOfflineSignature(
+		offlineExpires,
+		key_certificate.KEYCERT_SIGN_ED25519,
+		attackerTransientPub,
+		attackerDestPriv, // wrong key — not destPriv
+		key_certificate.KEYCERT_SIGN_ED25519,
+	)
+	require.NoError(t, err)
+
+	l := createTestLease2(t, 0)
+	encKey := EncryptionKey{
+		KeyType: key_certificate.KEYCERT_CRYPTO_X25519,
+		KeyLen:  32,
+		KeyData: make([]byte, 32),
+	}
+
+	ls2, err := NewLeaseSet2(
+		dest, uint32(time.Now().Unix()), 600, LEASESET2_FLAG_OFFLINE_KEYS, &forgedOffSig,
+		common.Mapping{}, []EncryptionKey{encKey}, []lease.Lease2{*l}, attackerTransientPriv,
+	)
+	require.NoError(t, err)
+
+	err = ls2.Verify()
+	assert.Error(t, err, "Verify must reject LeaseSet2 with a forged offline signature chain")
+}
+
+// TestVerifyWithTamperedOptionsFailsSignature verifies the sorted-options invariance
+// that the I2P spec requires. The spec mandates sorted options "for signature invariance".
+// In this implementation the invariant is enforced at parse time: the parser refuses to
+// accept a LeaseSet2 payload whose option keys are not in sorted order, so a tampered
+// wire payload with swapped keys is already rejected before Verify() is ever called.
+// This test confirms:
+//  1. A freshly signed LeaseSet2 with sorted options passes Verify().
+//  2. Wire bytes with out-of-order options are rejected at parse time (error before Verify).
+func TestVerifyWithTamperedOptionsFailsSignature(t *testing.T) {
+	destPub, destPriv, err := ed25519.GenerateKey(rand.Reader)
+	require.NoError(t, err)
+
+	dest := createTestDestWithKey(t, destPub)
+
+	// Build a LeaseSet2 with sorted options {"aa"="v", "bb"="v"}
+	sortedMapping := buildMappingWithKeys(t, []string{"aa", "bb"})
+	l := createTestLease2(t, 0)
+	encKey := EncryptionKey{
+		KeyType: key_certificate.KEYCERT_CRYPTO_X25519,
+		KeyLen:  32,
+		KeyData: make([]byte, 32),
+	}
+
+	ls2, err := NewLeaseSet2(
+		dest, uint32(time.Now().Unix()), 600, 0, nil,
+		sortedMapping, []EncryptionKey{encKey}, []lease.Lease2{*l}, destPriv,
+	)
+	require.NoError(t, err)
+	require.NoError(t, ls2.Verify(), "freshly signed LeaseSet2 with sorted options must verify")
+
+	// Obtain the wire bytes and swap the two option entries to produce out-of-order options.
+	wireBytes, err := ls2.Bytes()
+	require.NoError(t, err)
+
+	original := []byte{0x02, 'a', 'a', '=', 0x01, 'v', ';', 0x02, 'b', 'b', '=', 0x01, 'v', ';'}
+	swapped := []byte{0x02, 'b', 'b', '=', 0x01, 'v', ';', 0x02, 'a', 'a', '=', 0x01, 'v', ';'}
+	idx := bytes.Index(wireBytes, original)
+	if idx == -1 {
+		t.Skip("options encoding format differs; skipping tamper test")
+		return
+	}
+	tampered := make([]byte, len(wireBytes))
+	copy(tampered, wireBytes)
+	copy(tampered[idx:], swapped)
+
+	// The parser enforces sort-order invariance: out-of-order options are rejected
+	// before Verify() is ever called, providing an even stronger guarantee.
+	_, _, parseErr := ReadLeaseSet2(tampered)
+	assert.Error(t, parseErr,
+		"ReadLeaseSet2 must reject wire bytes with out-of-order option keys (sort-order invariant)")
 }

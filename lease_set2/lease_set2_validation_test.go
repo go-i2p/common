@@ -2,10 +2,11 @@ package lease_set2
 
 import (
 	"crypto/ed25519"
-	"github.com/go-i2p/crypto/rand"
 	"encoding/binary"
 	"testing"
 	"time"
+
+	"github.com/go-i2p/crypto/rand"
 
 	common "github.com/go-i2p/common/data"
 	"github.com/go-i2p/common/destination"
@@ -434,14 +435,18 @@ func TestValidateRejectsTooManyLeases(t *testing.T) {
 //
 
 func TestParserAcceptsReservedFlagBits(t *testing.T) {
-	data := buildMinimalLeaseSet2Data(t, key_certificate.KEYCERT_SIGN_ED25519, 0, 0x0008)
+	// Use 1 lease so the payload meets the updated LEASESET2_MIN_SIZE = 539.
+	data := buildMinimalLeaseSet2Data(t, key_certificate.KEYCERT_SIGN_ED25519, 1, 0x0008)
 	ls2, _, err := ReadLeaseSet2(data)
 	assert.NoError(t, err)
 	assert.Equal(t, uint16(0x0008), ls2.Flags()&0xFFF8,
 		"Reserved flag bits should be preserved in parsed value")
 }
 
-func TestParserWarnsOnEncKeyTypeLenMismatch(t *testing.T) {
+// TestParserRejectsEncKeyTypeLenMismatch verifies that the parser errors
+// when a known key type is declared with a mismatched length.
+// (Previously only logged a warning; now spec-compliant — returns error.)
+func TestParserRejectsEncKeyTypeLenMismatch(t *testing.T) {
 	destData := createTestDestination(t, key_certificate.KEYCERT_SIGN_ED25519)
 	data := destData
 
@@ -466,19 +471,26 @@ func TestParserWarnsOnEncKeyTypeLenMismatch(t *testing.T) {
 	binary.BigEndian.PutUint16(keyLenBytes, 64) // wrong: X25519 should be 32
 	data = append(data, keyLenBytes...)
 	data = append(data, make([]byte, 64)...) // 64 bytes of key data
-	data = append(data, 0x00)                // 0 leases
+	data = append(data, 0x01)                // 1 lease
+	data = append(data, make([]byte, 32)...) // gateway hash
+	tunnelID := make([]byte, 4)
+	binary.BigEndian.PutUint32(tunnelID, 12345)
+	data = append(data, tunnelID...)
+	endDate := make([]byte, 4)
+	binary.BigEndian.PutUint32(endDate, 1735690200)
+	data = append(data, endDate...)
 	data = append(data, make([]byte, signature.EdDSA_SHA512_Ed25519_SIZE)...)
 
-	ls2, _, err := ReadLeaseSet2(data)
-	assert.NoError(t, err)
-	assert.Equal(t, uint16(64), ls2.EncryptionKeys()[0].KeyLen)
+	_, _, err := ReadLeaseSet2(data)
+	assert.Error(t, err, "ReadLeaseSet2 must reject X25519 key with wrong declared length")
 }
 
-func TestParserAcceptsZeroLeases(t *testing.T) {
+// TestParserRejectsZeroLeasesValidation verifies the parser enforces ≥1 lease.
+// (Previously a lenient "Postel's law" exception; now spec-compliant.)
+func TestParserRejectsZeroLeasesValidation(t *testing.T) {
 	data := buildMinimalLeaseSet2Data(t, key_certificate.KEYCERT_SIGN_ED25519, 0, 0)
-	ls2, _, err := ReadLeaseSet2(data)
-	assert.NoError(t, err, "Parser should accept 0 leases (lenient parsing)")
-	assert.Equal(t, 0, ls2.LeaseCount())
+	_, _, err := ReadLeaseSet2(data)
+	assert.Error(t, err, "Parser must reject 0 leases per I2P spec")
 }
 
 //
@@ -569,13 +581,12 @@ func TestValidateAcceptsOneLeaseMinCount(t *testing.T) {
 	assert.NoError(t, ls2.Validate())
 }
 
-func TestParserAcceptsZeroLeasesValidateRejects(t *testing.T) {
+// TestParserRejectsZeroLeasesParseAndValidate verifies that the spec-required
+// minimum-lease constraint is now enforced at parse time (not just at Validate()).
+// The previous "Postel's law" exception that allowed 0 leases through the parser
+// has been removed; ReadLeaseSet2 now returns an error for 0-lease structures.
+func TestParserRejectsZeroLeasesParseAndValidate(t *testing.T) {
 	data := buildMinimalLeaseSet2Data(t, key_certificate.KEYCERT_SIGN_ED25519, 0, 0)
-	ls2, _, err := ReadLeaseSet2(data)
-	assert.NoError(t, err, "Parser should accept 0 leases (lenient)")
-	assert.Equal(t, 0, ls2.LeaseCount())
-
-	err = ls2.Validate()
-	assert.Error(t, err, "Validate should reject 0 leases")
-	assert.Contains(t, err.Error(), "at least 1 lease")
+	_, _, err := ReadLeaseSet2(data)
+	assert.Error(t, err, "ReadLeaseSet2 must reject 0 leases per I2P spec")
 }
