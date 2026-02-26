@@ -1,6 +1,7 @@
 package offline_signature
 
 import (
+	"crypto/ed25519"
 	"encoding/binary"
 	"testing"
 
@@ -81,5 +82,107 @@ func FuzzReadOfflineSignature(f *testing.F) {
 
 		expectedConsumed := EXPIRES_SIZE + SIGTYPE_SIZE + len(offlineSig.TransientPublicKey()) + len(offlineSig.Signature())
 		assert.Equal(t, len(data)-expectedConsumed, len(remainder))
+	})
+}
+
+// FuzzNewOfflineSignature exercises the NewOfflineSignature constructor with
+// arbitrary input to detect panics or silent data corruption in validation logic.
+func FuzzNewOfflineSignature(f *testing.F) {
+	// Seed: valid Ed25519 parameters.
+	transientKey := make([]byte, key_certificate.KEYCERT_SIGN_ED25519_SIZE)
+	sig := make([]byte, signature.EdDSA_SHA512_Ed25519_SIZE)
+	f.Add(uint32(1735689600), uint16(key_certificate.KEYCERT_SIGN_ED25519), transientKey,
+		sig, uint16(signature.SIGNATURE_TYPE_EDDSA_SHA512_ED25519))
+
+	// Seed: zero expires (should return error from constructor).
+	f.Add(uint32(0), uint16(key_certificate.KEYCERT_SIGN_ED25519), transientKey,
+		sig, uint16(signature.SIGNATURE_TYPE_EDDSA_SHA512_ED25519))
+
+	// Seed: unknown transient type.
+	f.Add(uint32(1735689600), uint16(999), transientKey,
+		sig, uint16(signature.SIGNATURE_TYPE_EDDSA_SHA512_ED25519))
+
+	// Seed: P256 parameters.
+	p256Key := make([]byte, key_certificate.KEYCERT_SIGN_P256_SIZE)
+	p256Sig := make([]byte, signature.ECDSA_SHA256_P256_SIZE)
+	f.Add(uint32(1735689600), uint16(key_certificate.KEYCERT_SIGN_P256), p256Key,
+		p256Sig, uint16(signature.SIGNATURE_TYPE_ECDSA_SHA256_P256))
+
+	f.Fuzz(func(t *testing.T, expires uint32, transientSigType uint16,
+		transientPublicKey []byte, sig []byte, destinationSigType uint16,
+	) {
+		offlineSig, err := NewOfflineSignature(expires, transientSigType,
+			transientPublicKey, sig, destinationSigType)
+		if err != nil {
+			return // errors are expected for invalid inputs; no panic is the goal
+		}
+		// If construction succeeded, the object must round-trip losslessly.
+		serialized := offlineSig.Bytes()
+		parsed, _, parseErr := ReadOfflineSignature(serialized, destinationSigType)
+		if parseErr != nil {
+			return
+		}
+		if offlineSig.Expires() != parsed.Expires() ||
+			offlineSig.TransientSigType() != parsed.TransientSigType() {
+			t.Errorf("round-trip produced different expires/sigtype")
+		}
+	})
+}
+
+// FuzzCreateOfflineSignature exercises the CreateOfflineSignature construction path with
+// a fixed Ed25519 signer to detect panics on unexpected type/size combinations.
+func FuzzCreateOfflineSignature(f *testing.F) {
+	// Use a deterministic key seed so the corpus is reproducible.
+	seed := make([]byte, ed25519.SeedSize)
+	for i := range seed {
+		seed[i] = byte(i)
+	}
+	privKey := ed25519.NewKeyFromSeed(seed)
+
+	// Seed: valid Ed25519 destination.
+	transientKey := make([]byte, key_certificate.KEYCERT_SIGN_ED25519_SIZE)
+	f.Add(uint32(1735689600), uint16(key_certificate.KEYCERT_SIGN_ED25519),
+		transientKey, uint16(signature.SIGNATURE_TYPE_EDDSA_SHA512_ED25519))
+
+	// Seed: zero expires (must error).
+	f.Add(uint32(0), uint16(key_certificate.KEYCERT_SIGN_ED25519),
+		transientKey, uint16(signature.SIGNATURE_TYPE_EDDSA_SHA512_ED25519))
+
+	// Seed: Ed25519ph destination.
+	f.Add(uint32(1735689600), uint16(key_certificate.KEYCERT_SIGN_ED25519),
+		transientKey, uint16(signature.SIGNATURE_TYPE_EDDSA_SHA512_ED25519PH))
+
+	// Seed: RedDSA destination (must error — not implemented).
+	f.Add(uint32(1735689600), uint16(key_certificate.KEYCERT_SIGN_REDDSA_ED25519),
+		transientKey, uint16(signature.SIGNATURE_TYPE_REDDSA_SHA512_ED25519))
+
+	// Seed: unknown types.
+	f.Add(uint32(1735689600), uint16(999), transientKey, uint16(999))
+
+	f.Fuzz(func(t *testing.T, expires uint32, transientSigType uint16,
+		transientPublicKey []byte, destinationSigType uint16,
+	) {
+		offlineSig, err := CreateOfflineSignature(expires, transientSigType,
+			transientPublicKey, privKey, destinationSigType)
+		if err != nil {
+			return
+		}
+		// A successfully created signature must pass structural validation.
+		if structErr := offlineSig.ValidateStructure(); structErr != nil {
+			t.Errorf("CreateOfflineSignature returned object failing ValidateStructure: %v", structErr)
+		}
+		// Ed25519/Ed25519ph signatures must verify against the public key.
+		switch destinationSigType {
+		case signature.SIGNATURE_TYPE_EDDSA_SHA512_ED25519,
+			signature.SIGNATURE_TYPE_EDDSA_SHA512_ED25519PH:
+			pubKey := privKey.Public().(ed25519.PublicKey)
+			valid, vErr := offlineSig.VerifySignature(pubKey)
+			if vErr != nil {
+				t.Errorf("VerifySignature error for valid sig: %v", vErr)
+			}
+			if !valid {
+				t.Errorf("VerifySignature returned false for freshly created signature")
+			}
+		}
 	})
 }

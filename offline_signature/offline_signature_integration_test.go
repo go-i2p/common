@@ -1,8 +1,12 @@
 package offline_signature
 
 import (
+	"crypto/ecdsa"
 	"crypto/ed25519"
+	"crypto/elliptic"
+	cryptorand "crypto/rand"
 	"encoding/binary"
+	"fmt"
 	"testing"
 	"time"
 
@@ -127,18 +131,27 @@ func TestVerifySignatureRedDSA(t *testing.T) {
 	expires := uint32(time.Now().UTC().Add(24 * time.Hour).Unix())
 	transientKey := make([]byte, key_certificate.KEYCERT_SIGN_ED25519_SIZE)
 
-	offlineSig, err := CreateOfflineSignature(
+	// CreateOfflineSignature rejects RedDSA (type 11): standard Ed25519 signing is
+	// not spec-compliant for RedDSA (missing randomised nonces). Build signed data
+	// manually so we can confirm that VerifySignature still works on the correct path.
+	signedData := make([]byte, EXPIRES_SIZE+SIGTYPE_SIZE+len(transientKey))
+	binary.BigEndian.PutUint32(signedData[0:4], expires)
+	binary.BigEndian.PutUint16(signedData[4:6], key_certificate.KEYCERT_SIGN_REDDSA_ED25519)
+	copy(signedData[6:], transientKey)
+	sigBytes := ed25519.Sign(privKey, signedData)
+
+	offlineSig, err := NewOfflineSignature(
 		expires,
 		key_certificate.KEYCERT_SIGN_REDDSA_ED25519,
 		transientKey,
-		privKey,
+		sigBytes,
 		signature.SIGNATURE_TYPE_REDDSA_SHA512_ED25519,
 	)
 	require.NoError(t, err)
 
-	valid, err := offlineSig.VerifySignature(pubKey)
-	assert.NoError(t, err)
-	assert.True(t, valid, "RedDSA signature should verify with correct public key")
+	valid, vErr := offlineSig.VerifySignature(pubKey)
+	assert.NoError(t, vErr)
+	assert.True(t, valid, "RedDSA signature should verify: same curve as Ed25519")
 }
 
 func TestVerifySignatureUnsupportedType(t *testing.T) {
@@ -542,90 +555,78 @@ func TestVerifySignatureTamperedFields(t *testing.T) {
 }
 
 // =========================================================================
-// RedDSA signing produces Ed25519 signatures (documented limitation)
+// RedDSA signing returns explicit error (AUDIT BUG fix: was silently using Ed25519)
 // =========================================================================
 
-func TestRedDSASigningDocumentedLimitation(t *testing.T) {
-	pubKey, privKey, err := ed25519.GenerateKey(nil)
+func TestRedDSASigningReturnsError(t *testing.T) {
+	_, privKey, err := ed25519.GenerateKey(nil)
 	require.NoError(t, err)
 
 	expires := uint32(time.Now().UTC().Add(24 * time.Hour).Unix())
 	transientKey := make([]byte, key_certificate.KEYCERT_SIGN_ED25519_SIZE)
-	for i := range transientKey {
-		transientKey[i] = byte(i)
-	}
 
-	t.Run("reddsa_creates_verifiable_signature", func(t *testing.T) {
-		// RedDSA signing uses ed25519.Sign (standard Ed25519)
-		// Verification is identical to Ed25519 on the curve level
-		offlineSig, err := CreateOfflineSignature(
+	// CreateOfflineSignature must now REJECT RedDSA signing.  Standard Ed25519
+	// signatures are not spec-compliant for RedDSA (no randomised per-message nonces).
+	t.Run("reddsa_create_returns_error", func(t *testing.T) {
+		_, cerr := CreateOfflineSignature(
 			expires,
 			key_certificate.KEYCERT_SIGN_REDDSA_ED25519,
 			transientKey,
 			privKey,
 			signature.SIGNATURE_TYPE_REDDSA_SHA512_ED25519,
 		)
-		require.NoError(t, err)
-
-		valid, err := offlineSig.VerifySignature(pubKey)
-		assert.NoError(t, err)
-		assert.True(t, valid, "RedDSA signature should verify (uses same curve as Ed25519)")
+		require.Error(t, cerr, "CreateOfflineSignature should reject RedDSA type")
+		assert.Contains(t, cerr.Error(), "not implemented",
+			"error should mention 'not implemented' so callers use a dedicated RedDSA library")
 	})
 
-	t.Run("reddsa_signature_is_deterministic_ed25519", func(t *testing.T) {
-		// Standard Ed25519 is deterministic — signing the same message twice
-		// produces identical signatures. This confirms we're using Ed25519 signing.
-		sig1, err := CreateOfflineSignature(
+	t.Run("reddsa_verify_still_works_with_ed25519_sig", func(t *testing.T) {
+		// VerifySignature for RedDSA type 11 is valid: the curve is identical to
+		// Ed25519. Build a signed-data blob manually and sign with ed25519:
+		pubKey, priv2, keyErr := ed25519.GenerateKey(nil)
+		require.NoError(t, keyErr)
+		signedData := make([]byte, EXPIRES_SIZE+SIGTYPE_SIZE+len(transientKey))
+		binary.BigEndian.PutUint32(signedData[0:4], expires)
+		binary.BigEndian.PutUint16(signedData[4:6], key_certificate.KEYCERT_SIGN_REDDSA_ED25519)
+		copy(signedData[6:], transientKey)
+		sigBytes := ed25519.Sign(priv2, signedData)
+		offlineSig, newErr := NewOfflineSignature(
 			expires,
 			key_certificate.KEYCERT_SIGN_REDDSA_ED25519,
 			transientKey,
-			privKey,
+			sigBytes,
 			signature.SIGNATURE_TYPE_REDDSA_SHA512_ED25519,
 		)
-		require.NoError(t, err)
-
-		sig2, err := CreateOfflineSignature(
-			expires,
-			key_certificate.KEYCERT_SIGN_REDDSA_ED25519,
-			transientKey,
-			privKey,
-			signature.SIGNATURE_TYPE_REDDSA_SHA512_ED25519,
-		)
-		require.NoError(t, err)
-
-		assert.Equal(t, sig1.Signature(), sig2.Signature(),
-			"RedDSA signing is deterministic (standard Ed25519), confirming documented limitation")
+		require.NoError(t, newErr)
+		valid, vErr := offlineSig.VerifySignature(pubKey)
+		assert.NoError(t, vErr)
+		assert.True(t, valid, "RedDSA verification uses Ed25519 curve: should succeed")
 	})
 }
 
 // =========================================================================
-// VerifySignature unsupported type coverage (modern crypto only)
-// Per project constraint: "Modern crypto only. Ed25519, X25519, AES-256 are the targets"
+// VerifySignature type coverage
 // =========================================================================
 
-func TestVerifySignatureUnsupportedTypesDocumented(t *testing.T) {
-	// Per "modern crypto only" constraint, only Ed25519-family verification is implemented.
-	// Non-Ed25519 types return clear "not implemented" errors.
-	unsupportedTypes := []struct {
+// TestVerifySignatureLegacyTypes confirms that DSA-SHA1 and RSA destination types
+// return explicit "not implemented" errors (legacy algorithms are not supported).
+func TestVerifySignatureLegacyTypes(t *testing.T) {
+	legacyTypes := []struct {
 		name    string
 		sigType uint16
 		keySize int
 		sigSize int
 	}{
 		{"DSA_SHA1", signature.SIGNATURE_TYPE_DSA_SHA1, 128, signature.DSA_SHA1_SIZE},
-		{"ECDSA_P256", signature.SIGNATURE_TYPE_ECDSA_SHA256_P256, 64, signature.ECDSA_SHA256_P256_SIZE},
-		{"ECDSA_P384", signature.SIGNATURE_TYPE_ECDSA_SHA384_P384, 96, signature.ECDSA_SHA384_P384_SIZE},
-		{"ECDSA_P521", signature.SIGNATURE_TYPE_ECDSA_SHA512_P521, 132, signature.ECDSA_SHA512_P521_SIZE},
 		{"RSA_2048", signature.SIGNATURE_TYPE_RSA_SHA256_2048, 256, signature.RSA_SHA256_2048_SIZE},
 		{"RSA_3072", signature.SIGNATURE_TYPE_RSA_SHA384_3072, 384, signature.RSA_SHA384_3072_SIZE},
 		{"RSA_4096", signature.SIGNATURE_TYPE_RSA_SHA512_4096, 512, signature.RSA_SHA512_4096_SIZE},
 	}
 
-	for _, tc := range unsupportedTypes {
+	for _, tc := range legacyTypes {
 		t.Run(tc.name, func(t *testing.T) {
 			key := make([]byte, tc.keySize)
 			sig := make([]byte, tc.sigSize)
-
 			offlineSig, err := NewOfflineSignature(
 				uint32(time.Now().UTC().Add(24*time.Hour).Unix()),
 				key_certificate.KEYCERT_SIGN_DSA_SHA1,
@@ -634,32 +635,63 @@ func TestVerifySignatureUnsupportedTypesDocumented(t *testing.T) {
 				tc.sigType,
 			)
 			require.NoError(t, err)
-
-			_, err = offlineSig.VerifySignature(key)
-			assert.Error(t, err, "unsupported type %d should return error", tc.sigType)
-			assert.Contains(t, err.Error(), "not implemented",
-				"error for unsupported type %d should mention 'not implemented'", tc.sigType)
+			_, verr := offlineSig.VerifySignature(key)
+			assert.Error(t, verr, "legacy type %d should return error", tc.sigType)
+			assert.Contains(t, verr.Error(), "not implemented",
+				"error for legacy type %d should mention 'not implemented'", tc.sigType)
 		})
 	}
 }
 
-func TestCreateOfflineSignatureUnsupportedDestTypes(t *testing.T) {
+// TestVerifySignatureECDSAInvalidKey confirms that ECDSA types return a meaningful
+// error when the supplied public key is not a valid curve point (e.g. all-zero bytes).
+func TestVerifySignatureECDSAInvalidKey(t *testing.T) {
+	type ecdsaCase struct {
+		name    string
+		sigType uint16
+		keySize int
+		sigSize int
+	}
+	cases := []ecdsaCase{
+		{"ECDSA_P256", signature.SIGNATURE_TYPE_ECDSA_SHA256_P256, 64, signature.ECDSA_SHA256_P256_SIZE},
+		{"ECDSA_P384", signature.SIGNATURE_TYPE_ECDSA_SHA384_P384, 96, signature.ECDSA_SHA384_P384_SIZE},
+		{"ECDSA_P521", signature.SIGNATURE_TYPE_ECDSA_SHA512_P521, 132, signature.ECDSA_SHA512_P521_SIZE},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			sig := make([]byte, tc.sigSize)
+			offlineSig, err := NewOfflineSignature(
+				uint32(time.Now().UTC().Add(24*time.Hour).Unix()),
+				key_certificate.KEYCERT_SIGN_DSA_SHA1,
+				make([]byte, key_certificate.KEYCERT_SIGN_DSA_SHA1_SIZE),
+				sig,
+				tc.sigType,
+			)
+			require.NoError(t, err)
+			// All-zero key bytes are not on any curve — expect an error.
+			_, verr := offlineSig.VerifySignature(make([]byte, tc.keySize))
+			assert.Error(t, verr, "ECDSA type %d with invalid key should return error", tc.sigType)
+		})
+	}
+}
+
+// TestCreateOfflineSignatureLegacyDestTypes confirms that DSA-SHA1 and RSA destination
+// types return explicit errors when passed any signer (legacy algorithms unsupported).
+func TestCreateOfflineSignatureLegacyDestTypes(t *testing.T) {
 	_, privKey, _ := ed25519.GenerateKey(nil)
 	transientKey := make([]byte, key_certificate.KEYCERT_SIGN_DSA_SHA1_SIZE)
 	expires := uint32(time.Now().UTC().Add(24 * time.Hour).Unix())
 
-	unsupportedTypes := []uint16{
+	legacyTypes := []uint16{
 		signature.SIGNATURE_TYPE_DSA_SHA1,
-		signature.SIGNATURE_TYPE_ECDSA_SHA256_P256,
-		signature.SIGNATURE_TYPE_ECDSA_SHA384_P384,
-		signature.SIGNATURE_TYPE_ECDSA_SHA512_P521,
 		signature.SIGNATURE_TYPE_RSA_SHA256_2048,
 		signature.SIGNATURE_TYPE_RSA_SHA384_3072,
 		signature.SIGNATURE_TYPE_RSA_SHA512_4096,
 	}
 
-	for _, destType := range unsupportedTypes {
-		t.Run("dest_type_"+string(rune('0'+destType)), func(t *testing.T) {
+	for _, destType := range legacyTypes {
+		t.Run(fmt.Sprintf("legacy_dest_type_%d", destType), func(t *testing.T) {
 			_, err := CreateOfflineSignature(
 				expires,
 				key_certificate.KEYCERT_SIGN_DSA_SHA1,
@@ -667,8 +699,34 @@ func TestCreateOfflineSignatureUnsupportedDestTypes(t *testing.T) {
 				privKey,
 				destType,
 			)
-			assert.Error(t, err, "unsupported destination type %d should return error", destType)
-			assert.Contains(t, err.Error(), "not implemented")
+			assert.Error(t, err, "legacy destination type %d should return error", destType)
+			assert.Contains(t, err.Error(), "not implemented",
+				"error for legacy type %d should mention 'not implemented'", destType)
+		})
+	}
+}
+
+// TestCreateOfflineSignatureECDSAWrongKey confirms that passing an ed25519.PrivateKey for
+// an ECDSA destination type returns an error (wrong key type), not a silent corruption.
+func TestCreateOfflineSignatureECDSAWrongKey(t *testing.T) {
+	_, privKey, _ := ed25519.GenerateKey(nil)
+	transientKey := make([]byte, key_certificate.KEYCERT_SIGN_DSA_SHA1_SIZE)
+	expires := uint32(time.Now().UTC().Add(24 * time.Hour).Unix())
+
+	for _, destType := range []uint16{
+		signature.SIGNATURE_TYPE_ECDSA_SHA256_P256,
+		signature.SIGNATURE_TYPE_ECDSA_SHA384_P384,
+		signature.SIGNATURE_TYPE_ECDSA_SHA512_P521,
+	} {
+		t.Run(fmt.Sprintf("ecdsa_dest_type_%d_wrong_key", destType), func(t *testing.T) {
+			_, err := CreateOfflineSignature(
+				expires,
+				key_certificate.KEYCERT_SIGN_DSA_SHA1,
+				transientKey,
+				privKey, // ed25519.PrivateKey — wrong type for ECDSA destination
+				destType,
+			)
+			assert.Error(t, err, "ECDSA destination with ed25519 signer should fail")
 		})
 	}
 }
@@ -743,4 +801,118 @@ func TestEd25519AndEd25519phNotInterchangeable(t *testing.T) {
 	valid, err := fakePhSig.VerifySignature(pubKey)
 	assert.NoError(t, err)
 	assert.False(t, valid, "Ed25519 signature must not verify when treated as Ed25519ph")
+}
+
+// =========================================================================
+// ECDSA end-to-end tests (AUDIT SPEC fix: ECDSA P256/P384/P521 now supported)
+// =========================================================================
+
+func TestCreateAndVerifyECDSAOfflineSignature(t *testing.T) {
+	type ecdsaConfig struct {
+		name           string
+		curve          elliptic.Curve
+		destSigType    uint16
+		transientType  uint16
+		transientKSize int
+	}
+
+	configs := []ecdsaConfig{
+		{
+			name:           "P256",
+			curve:          elliptic.P256(),
+			destSigType:    signature.SIGNATURE_TYPE_ECDSA_SHA256_P256,
+			transientType:  key_certificate.KEYCERT_SIGN_ED25519,
+			transientKSize: key_certificate.KEYCERT_SIGN_ED25519_SIZE,
+		},
+		{
+			name:           "P384",
+			curve:          elliptic.P384(),
+			destSigType:    signature.SIGNATURE_TYPE_ECDSA_SHA384_P384,
+			transientType:  key_certificate.KEYCERT_SIGN_ED25519,
+			transientKSize: key_certificate.KEYCERT_SIGN_ED25519_SIZE,
+		},
+		{
+			name:           "P521",
+			curve:          elliptic.P521(),
+			destSigType:    signature.SIGNATURE_TYPE_ECDSA_SHA512_P521,
+			transientType:  key_certificate.KEYCERT_SIGN_ED25519,
+			transientKSize: key_certificate.KEYCERT_SIGN_ED25519_SIZE,
+		},
+	}
+
+	for _, cfg := range configs {
+		t.Run(cfg.name, func(t *testing.T) {
+			privKey, err := ecdsa.GenerateKey(cfg.curve, cryptorand.Reader)
+			require.NoError(t, err)
+
+			expires := uint32(time.Now().UTC().Add(24 * time.Hour).Unix())
+			transientKey := make([]byte, cfg.transientKSize)
+			for i := range transientKey {
+				transientKey[i] = byte(i + 1)
+			}
+
+			offlineSig, err := CreateOfflineSignature(
+				expires,
+				cfg.transientType,
+				transientKey,
+				privKey,
+				cfg.destSigType,
+			)
+			require.NoError(t, err, "CreateOfflineSignature should succeed for %s", cfg.name)
+
+			// Extract raw uncompressed public key bytes: x || y, zero-padded to coordSize.
+			coordSize := (cfg.curve.Params().BitSize + 7) / 8
+			pubKeyBytes := make([]byte, 2*coordSize)
+			xBytes := privKey.PublicKey.X.Bytes()
+			yBytes := privKey.PublicKey.Y.Bytes()
+			copy(pubKeyBytes[coordSize-len(xBytes):coordSize], xBytes)
+			copy(pubKeyBytes[2*coordSize-len(yBytes):], yBytes)
+
+			t.Run("valid_signature_verifies", func(t *testing.T) {
+				valid, vErr := offlineSig.VerifySignature(pubKeyBytes)
+				assert.NoError(t, vErr)
+				assert.True(t, valid, "%s signature should verify with correct public key", cfg.name)
+			})
+
+			t.Run("wrong_public_key_fails", func(t *testing.T) {
+				otherPriv, keyErr := ecdsa.GenerateKey(cfg.curve, cryptorand.Reader)
+				require.NoError(t, keyErr)
+				otherPub := make([]byte, 2*coordSize)
+				ox := otherPriv.PublicKey.X.Bytes()
+				oy := otherPriv.PublicKey.Y.Bytes()
+				copy(otherPub[coordSize-len(ox):coordSize], ox)
+				copy(otherPub[2*coordSize-len(oy):], oy)
+				valid, vErr := offlineSig.VerifySignature(otherPub)
+				assert.NoError(t, vErr)
+				assert.False(t, valid, "%s signature should not verify with wrong public key", cfg.name)
+			})
+
+			t.Run("round_trip_serialization", func(t *testing.T) {
+				serialized := offlineSig.Bytes()
+				parsed, rem, pErr := ReadOfflineSignature(serialized, cfg.destSigType)
+				require.NoError(t, pErr)
+				assert.Empty(t, rem)
+				valid, vErr := parsed.VerifySignature(pubKeyBytes)
+				assert.NoError(t, vErr)
+				assert.True(t, valid, "%s round-tripped signature should still verify", cfg.name)
+			})
+		})
+	}
+}
+
+// TestNewOfflineSignatureZeroExpiresRejected verifies the AUDIT BUG fix:
+// NewOfflineSignature must reject expires==0 instead of returning a poisoned object.
+func TestNewOfflineSignatureZeroExpiresRejected(t *testing.T) {
+	transientKey := make([]byte, key_certificate.KEYCERT_SIGN_ED25519_SIZE)
+	sig := make([]byte, signature.EdDSA_SHA512_Ed25519_SIZE)
+
+	_, err := NewOfflineSignature(
+		0,
+		key_certificate.KEYCERT_SIGN_ED25519,
+		transientKey, sig,
+		signature.SIGNATURE_TYPE_EDDSA_SHA512_ED25519,
+	)
+	require.Error(t, err, "NewOfflineSignature(expires=0) must return an error")
+	assert.Contains(t, err.Error(), "non-zero",
+		"error message should direct callers toward the valid range")
 }

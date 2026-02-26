@@ -16,11 +16,22 @@
 package offline_signature
 
 import (
+	"crypto"
+	"crypto/ecdsa"
 	"crypto/ed25519"
+	"crypto/elliptic"
+	"encoding/asn1"
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"math/big"
 	"time"
+
+	// Register SHA-256, SHA-384, SHA-512 so crypto.SHA*.New() works at runtime.
+	_ "crypto/sha256"
+	_ "crypto/sha512"
+
+	cryptorand "github.com/go-i2p/crypto/rand"
 
 	"github.com/go-i2p/common/data"
 	"github.com/go-i2p/common/signature"
@@ -197,6 +208,11 @@ func extractSignature(data []byte, signatureSize int) ([]byte, []byte) {
 func NewOfflineSignature(expires uint32, transientSigType uint16, transientPublicKey []byte,
 	signature []byte, destinationSigType uint16,
 ) (OfflineSignature, error) {
+	// Reject zero expiration — ValidateStructure() enforces the same rule.
+	if expires == 0 {
+		return OfflineSignature{}, errors.New("expires must be non-zero")
+	}
+
 	// Validate transient signature type
 	expectedKeySize := SigningPublicKeySize(transientSigType)
 	if expectedKeySize == 0 {
@@ -446,10 +462,17 @@ func (o *OfflineSignature) SignedData() []byte {
 // VerifySignature verifies the offline signature against the destination's long-term
 // signing public key. This confirms that the destination authorized the transient key.
 //
-// Currently supports:
-//   - Ed25519 (type 7): standard Ed25519 verification via crypto/ed25519
+// Supported destination types:
+//   - Ed25519 (type 7): standard Ed25519 verification
 //   - Ed25519ph (type 8): prehashed Ed25519 verification
-//   - RedDSA (type 11): same verification as Ed25519 (curve is identical)
+//   - RedDSA (type 11): verified as Ed25519 (curves are identical)
+//   - ECDSA-P256 (type 1), ECDSA-P384 (type 2), ECDSA-P521 (type 3): full ECDSA verification
+//
+// Legacy types (DSA-SHA1 type 0, RSA types 4-6) return explicit "not supported" errors.
+//
+// NOTE: This function does NOT check expiration. A (true, nil) return means the
+// cryptographic signature is valid, not that the transient key is still current.
+// Call Validate() separately to reject expired structures.
 //
 // Returns (true, nil) if the signature is valid, (false, nil) if it is invalid,
 // or (false, error) if verification cannot be performed (unsupported type, wrong key size).
@@ -469,9 +492,45 @@ func verifyWithDestinationType(destSigType uint16, pubKey, message, sig []byte) 
 		return verifyEd25519(pubKey, message, sig)
 	case signature.SIGNATURE_TYPE_EDDSA_SHA512_ED25519PH:
 		return verifyEd25519ph(pubKey, message, sig)
+	case signature.SIGNATURE_TYPE_ECDSA_SHA256_P256:
+		return verifyECDSA(elliptic.P256(), crypto.SHA256, 32, pubKey, message, sig)
+	case signature.SIGNATURE_TYPE_ECDSA_SHA384_P384:
+		return verifyECDSA(elliptic.P384(), crypto.SHA384, 48, pubKey, message, sig)
+	case signature.SIGNATURE_TYPE_ECDSA_SHA512_P521:
+		return verifyECDSA(elliptic.P521(), crypto.SHA512, 66, pubKey, message, sig)
+	case signature.SIGNATURE_TYPE_DSA_SHA1,
+		signature.SIGNATURE_TYPE_RSA_SHA256_2048,
+		signature.SIGNATURE_TYPE_RSA_SHA384_3072,
+		signature.SIGNATURE_TYPE_RSA_SHA512_4096:
+		return false, fmt.Errorf("signature verification not implemented for legacy destination type %d", destSigType)
 	default:
 		return false, fmt.Errorf("signature verification not implemented for destination type %d", destSigType)
 	}
+}
+
+// verifyECDSA verifies a raw (r||s) ECDSA signature against an uncompressed public
+// key (x||y with coordSize bytes each) using the specified curve and hash.
+func verifyECDSA(curve elliptic.Curve, hashFunc crypto.Hash, coordSize int, pubKey, message, sig []byte) (bool, error) {
+	if len(pubKey) != 2*coordSize {
+		return false, fmt.Errorf("invalid ECDSA public key size: expected %d, got %d",
+			2*coordSize, len(pubKey))
+	}
+	if len(sig) != 2*coordSize {
+		return false, fmt.Errorf("invalid ECDSA signature size: expected %d, got %d",
+			2*coordSize, len(sig))
+	}
+	x := new(big.Int).SetBytes(pubKey[:coordSize])
+	y := new(big.Int).SetBytes(pubKey[coordSize:])
+	if !curve.IsOnCurve(x, y) {
+		return false, fmt.Errorf("ECDSA public key is not a valid point on the curve")
+	}
+	h := hashFunc.New()
+	h.Write(message)
+	digest := h.Sum(nil)
+	r := new(big.Int).SetBytes(sig[:coordSize])
+	s := new(big.Int).SetBytes(sig[coordSize:])
+	ecPub := &ecdsa.PublicKey{Curve: curve, X: x, Y: y}
+	return ecdsa.Verify(ecPub, digest, r, s), nil
 }
 
 // verifyEd25519 performs standard Ed25519 signature verification.
@@ -501,29 +560,31 @@ func verifyEd25519ph(pubKey, message, sig []byte) (bool, error) {
 }
 
 // CreateOfflineSignature generates a complete OfflineSignature by signing the appropriate
-// data with the destination's Ed25519 private key. This function implements the spec
+// data with the destination's private key. This function implements the spec
 // recommendation that offline signatures "can, and should, be generated offline."
 //
 // Parameters:
 //   - expires: Unix timestamp (seconds since epoch) when the transient key expires
 //   - transientSigType: Signature type of the transient signing public key
 //   - transientPublicKey: Raw bytes of the transient signing public key
-//   - destinationPrivateKey: The destination's Ed25519 private key for signing
-//   - destinationSigType: Signature type of the destination (7=Ed25519, 8=Ed25519ph, 11=RedDSA)
+//   - signer: A crypto.Signer holding the destination's private key.
+//     Ed25519 (type 7/8), ECDSA-P256/P384/P521 (types 1-3) are supported.
+//     RedDSA (type 11) and legacy types (DSA, RSA) return errors.
+//   - destinationSigType: Signature type of the destination key
 //
 // Returns the signed OfflineSignature, or an error if parameters are invalid.
 func CreateOfflineSignature(
 	expires uint32,
 	transientSigType uint16,
 	transientPublicKey []byte,
-	destinationPrivateKey ed25519.PrivateKey,
+	signer crypto.Signer,
 	destinationSigType uint16,
 ) (OfflineSignature, error) {
 	if err := validateCreateParams(expires, transientSigType, transientPublicKey, destinationSigType); err != nil {
 		return OfflineSignature{}, err
 	}
 	signedData := buildSignedData(expires, transientSigType, transientPublicKey)
-	sig, err := signWithDestinationType(destinationSigType, destinationPrivateKey, signedData)
+	sig, err := signWithDestinationType(destinationSigType, signer, signedData)
 	if err != nil {
 		return OfflineSignature{}, fmt.Errorf("failed to sign: %w", err)
 	}
@@ -560,27 +621,96 @@ func buildSignedData(expires uint32, sigtype uint16, transientPublicKey []byte) 
 }
 
 // signWithDestinationType signs the data using the appropriate algorithm for the destination type.
-// For Ed25519ph (type 8), the message is pre-hashed with SHA-512 per RFC 8032 Section 5.1.
-// This delegates to the go-i2p/crypto/ed25519ph package which handles pre-hashing internally.
-// For RedDSA (type 11), standard Ed25519 signing is used. RedDSA verification is identical
-// to Ed25519; however, the produced signatures lack the nonce randomization that a full
-// RedDSA implementation would provide. This is documented as a known limitation.
-func signWithDestinationType(destSigType uint16, privKey ed25519.PrivateKey, message []byte) ([]byte, error) {
+// Supported types: Ed25519 (7), Ed25519ph (8), ECDSA-P256/P384/P521 (1-3).
+// RedDSA (11) returns an explicit error — standard Ed25519 signing produces non-spec-compliant
+// RedDSA signatures. Legacy types (DSA-SHA1, RSA) return "not implemented" errors.
+func signWithDestinationType(destSigType uint16, signer crypto.Signer, message []byte) ([]byte, error) {
 	switch destSigType {
-	case signature.SIGNATURE_TYPE_EDDSA_SHA512_ED25519,
-		signature.SIGNATURE_TYPE_REDDSA_SHA512_ED25519:
-		return ed25519.Sign(privKey, message), nil
+	case signature.SIGNATURE_TYPE_EDDSA_SHA512_ED25519:
+		return ed25519Sign(signer, message)
+	case signature.SIGNATURE_TYPE_REDDSA_SHA512_ED25519:
+		return nil, errors.New(
+			"RedDSA signing (type 11) is not implemented: standard Ed25519 signatures " +
+				"are not spec-compliant for RedDSA; use a dedicated RedDSA library")
 	case signature.SIGNATURE_TYPE_EDDSA_SHA512_ED25519PH:
-		pk, err := ed25519ph.NewEd25519phPrivateKey([]byte(privKey))
-		if err != nil {
-			return nil, fmt.Errorf("invalid Ed25519ph private key: %w", err)
-		}
-		signer, err := pk.NewSigner()
-		if err != nil {
-			return nil, fmt.Errorf("failed to create Ed25519ph signer: %w", err)
-		}
-		return signer.Sign(message)
+		return ed25519phSign(signer, message)
+	case signature.SIGNATURE_TYPE_ECDSA_SHA256_P256:
+		return ecdsaSign(signer, message, crypto.SHA256, 32)
+	case signature.SIGNATURE_TYPE_ECDSA_SHA384_P384:
+		return ecdsaSign(signer, message, crypto.SHA384, 48)
+	case signature.SIGNATURE_TYPE_ECDSA_SHA512_P521:
+		return ecdsaSign(signer, message, crypto.SHA512, 66)
+	case signature.SIGNATURE_TYPE_DSA_SHA1,
+		signature.SIGNATURE_TYPE_RSA_SHA256_2048,
+		signature.SIGNATURE_TYPE_RSA_SHA384_3072,
+		signature.SIGNATURE_TYPE_RSA_SHA512_4096:
+		return nil, fmt.Errorf("signing not implemented for legacy destination type %d", destSigType)
 	default:
 		return nil, fmt.Errorf("signing not implemented for destination type %d", destSigType)
 	}
+}
+
+// ed25519Sign signs message with an Ed25519 private key via the crypto.Signer interface.
+// Ed25519 does not pre-hash; passing crypto.Hash(0) signals direct signing.
+func ed25519Sign(signer crypto.Signer, message []byte) ([]byte, error) {
+	sig, err := signer.Sign(nil, message, crypto.Hash(0))
+	if err != nil {
+		return nil, fmt.Errorf("Ed25519 signing failed: %w", err)
+	}
+	return sig, nil
+}
+
+// ed25519phSign signs message with Ed25519ph (pre-hashed) using the ed25519ph package.
+// The signer must be an ed25519.PrivateKey; other key types return an error.
+func ed25519phSign(signer crypto.Signer, message []byte) ([]byte, error) {
+	privKey, ok := signer.(ed25519.PrivateKey)
+	if !ok {
+		return nil, errors.New("Ed25519ph signing requires an ed25519.PrivateKey signer")
+	}
+	pk, err := ed25519ph.NewEd25519phPrivateKey([]byte(privKey))
+	if err != nil {
+		return nil, fmt.Errorf("invalid Ed25519ph private key: %w", err)
+	}
+	phSigner, err := pk.NewSigner()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create Ed25519ph signer: %w", err)
+	}
+	return phSigner.Sign(message)
+}
+
+// ecdsaSignature is an ASN.1 structure used to decode DER-encoded ECDSA signatures
+// returned by crypto.Signer implementations.
+type ecdsaSignature struct {
+	R, S *big.Int
+}
+
+// ecdsaSign hashes message with hashFunc, signs the digest via signer, then converts
+// the DER-encoded (r,s) output to the fixed-width raw r||s format used by I2P.
+func ecdsaSign(signer crypto.Signer, message []byte, hashFunc crypto.Hash, coordSize int) ([]byte, error) {
+	h := hashFunc.New()
+	h.Write(message)
+	digest := h.Sum(nil)
+	derSig, err := signer.Sign(cryptorand.Reader, digest, hashFunc)
+	if err != nil {
+		return nil, fmt.Errorf("ECDSA signing failed: %w", err)
+	}
+	return derToRawECDSA(derSig, coordSize)
+}
+
+// derToRawECDSA converts a DER-encoded ECDSA (r,s) pair to the fixed-width raw
+// big-endian r||s format used by I2P.  Each value is zero-padded to coordSize bytes.
+func derToRawECDSA(der []byte, coordSize int) ([]byte, error) {
+	var sig ecdsaSignature
+	if _, err := asn1.Unmarshal(der, &sig); err != nil {
+		return nil, fmt.Errorf("failed to parse DER ECDSA signature: %w", err)
+	}
+	rBytes := sig.R.Bytes()
+	sBytes := sig.S.Bytes()
+	if len(rBytes) > coordSize || len(sBytes) > coordSize {
+		return nil, fmt.Errorf("ECDSA signature coordinate exceeds expected size %d", coordSize)
+	}
+	raw := make([]byte, 2*coordSize)
+	copy(raw[coordSize-len(rBytes):coordSize], rBytes)
+	copy(raw[2*coordSize-len(sBytes):], sBytes)
+	return raw, nil
 }

@@ -17,10 +17,16 @@ const (
 	OFFLINE_SIGNATURE_EDDSA_SIZE = 102
 
 	// OFFLINE_SIGNATURE_MIN_SIZE is the byte length of an EdDSA-only OfflineSignature (102 bytes).
-	// Deprecated: This name is misleading because smaller valid OfflineSignatures exist when
-	// mixing signature types (e.g., Ed25519 transient + DSA_SHA1 destination = 78 bytes).
-	// Use OFFLINE_SIGNATURE_EDDSA_SIZE for the EdDSA-specific size, or
-	// OFFLINE_SIGNATURE_HEADER_SIZE for the true structural minimum.
+	//
+	// Deprecated: The name is misleading. Valid OfflineSignature structures can be smaller than
+	// 102 bytes when mixing signature types (e.g., Ed25519 transient key + DSA_SHA1 destination
+	// = 78 bytes). Using this constant to gate incoming data will cause false-positive rejections
+	// of valid non-EdDSA structures.
+	//
+	// Use OFFLINE_SIGNATURE_EDDSA_SIZE when you specifically need the EdDSA-only size.
+	// Use OFFLINE_SIGNATURE_HEADER_SIZE (6 bytes) as the structural minimum before parsing.
+	//
+	// This constant is retained for backward compatibility only. Do not use in new code.
 	OFFLINE_SIGNATURE_MIN_SIZE = OFFLINE_SIGNATURE_EDDSA_SIZE
 
 	// OFFLINE_SIGNATURE_HEADER_SIZE is the fixed-size header portion of an OfflineSignature:

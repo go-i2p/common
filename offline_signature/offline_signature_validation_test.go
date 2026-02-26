@@ -112,17 +112,16 @@ func TestOfflineSignatureValidateZeroExpiration(t *testing.T) {
 	transientKey := make([]byte, key_certificate.KEYCERT_SIGN_ED25519_SIZE)
 	sig := make([]byte, signature.EdDSA_SHA512_Ed25519_SIZE)
 
-	offlineSig, err := NewOfflineSignature(
+	// AUDIT BUG fix: NewOfflineSignature now rejects expires==0 at construction
+	// time, preventing callers from holding an object that always fails Validate().
+	_, err := NewOfflineSignature(
 		0,
 		key_certificate.KEYCERT_SIGN_ED25519,
 		transientKey, sig,
 		signature.SIGNATURE_TYPE_EDDSA_SHA512_ED25519,
 	)
-	assert.NoError(t, err)
-
-	err = offlineSig.Validate()
-	assert.Error(t, err, "offline signature with zero expiration should fail validation")
-	assert.Contains(t, err.Error(), "zero expiration", "error message should mention zero expiration")
+	assert.Error(t, err, "NewOfflineSignature with zero expiration must return an error")
+	assert.Contains(t, err.Error(), "non-zero", "error should mention non-zero requirement")
 }
 
 func TestOfflineSignatureValidateNil(t *testing.T) {
