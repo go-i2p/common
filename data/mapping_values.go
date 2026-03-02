@@ -201,16 +201,24 @@ func (m MappingValues) Get(key I2PString) I2PString {
 // The values are sorted in the order defined in mappingOrder.
 // Returns error if the total mapping data exceeds the maximum size (65535 bytes).
 func ValuesToMapping(values MappingValues) (*Mapping, error) {
-	mappingOrder(values)
+	// Validate all input I2PStrings before processing to ensure stored size
+	// matches what Data() would serialize. Without this check, internally-inconsistent
+	// I2PStrings (where declared length doesn't match actual data) would cause the
+	// computed mapping.size to diverge from the serialized output.
+	if err := values.Validate(); err != nil {
+		return nil, oops.Wrapf(err, "ValuesToMapping: invalid input")
+	}
+
+	sortedValues := mappingOrder(values)
 
 	// Default length to 2 * len
 	// 1 byte for ';'
 	// 1 byte for '='
 	log.WithFields(logger.Fields{
-		"values_count": len(values),
+		"values_count": len(sortedValues),
 	}).Debug("Converting MappingValues to Mapping")
-	baseLength := 2 * len(values)
-	for _, mappingVals := range values {
+	baseLength := 2 * len(sortedValues)
+	for _, mappingVals := range sortedValues {
 		for _, keyOrVal := range mappingVals {
 			baseLength += len(keyOrVal)
 		}
@@ -235,7 +243,7 @@ func ValuesToMapping(values MappingValues) (*Mapping, error) {
 	}
 	return &Mapping{
 		size: mappingSize,
-		vals: &values,
+		vals: &sortedValues,
 	}, nil
 }
 
@@ -262,13 +270,19 @@ func mappingOrderLess(a, b string) bool {
 // code-point order). Duplicate keys are allowed in general, but in implementations where they
 // must be sorted like I2CP SessionConfig duplicate keys are not allowed.
 // In practice routers do not seem to allow duplicate keys.
-func mappingOrder(values MappingValues) {
-	sort.SliceStable(values, func(i, j int) bool {
+//
+// Note: This function makes a defensive copy of the input slice before sorting
+// so that the caller's original slice is not mutated.
+func mappingOrder(values MappingValues) MappingValues {
+	sorted := make(MappingValues, len(values))
+	copy(sorted, values)
+	sort.SliceStable(sorted, func(i, j int) bool {
 		// Sort keys using Java String.compareTo() Unicode code-point order
-		data1, _ := values[i][0].Data()
-		data2, _ := values[j][0].Data()
+		data1, _ := sorted[i][0].Data()
+		data2, _ := sorted[j][0].Data()
 		return mappingOrderLess(data1, data2)
 	})
+	return sorted
 }
 
 // ReadMappingValues returns *MappingValues from a []byte.

@@ -46,7 +46,8 @@ func EncodeUint64(value uint64) [8]byte {
 }
 
 // EncodeInt16 encodes an int16 value to a 2-byte big-endian array.
-// This is a convenience function for creating fixed-size integers without error handling.
+// This is a Go interop convenience function; I2P uses unsigned integers exclusively.
+// Callers should ensure the value is non-negative when targeting I2P wire formats.
 //
 // Example:
 //
@@ -56,7 +57,8 @@ func EncodeInt16(value int16) [2]byte {
 }
 
 // EncodeInt32 encodes an int32 value to a 4-byte big-endian array.
-// This is a convenience function for creating fixed-size integers without error handling.
+// This is a Go interop convenience function; I2P uses unsigned integers exclusively.
+// Callers should ensure the value is non-negative when targeting I2P wire formats.
 //
 // Example:
 //
@@ -66,7 +68,8 @@ func EncodeInt32(value int32) [4]byte {
 }
 
 // EncodeInt64 encodes an int64 value to an 8-byte big-endian array.
-// This is a convenience function for creating fixed-size integers without error handling.
+// This is a Go interop convenience function; I2P uses unsigned integers exclusively.
+// Callers should ensure the value is non-negative when targeting I2P wire formats.
 //
 // Example:
 //

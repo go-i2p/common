@@ -343,3 +343,37 @@ func BenchmarkHasDuplicateKeys(b *testing.B) {
 		_, _ = mapping.HasDuplicateKeys()
 	}
 }
+
+// TestReadMappingEarlyReturnOnSizeError verifies that ReadMapping returns immediately
+// when parseMappingSize fails, rather than continuing with a nil size (QUALITY-2 fix).
+func TestReadMappingEarlyReturnOnSizeError(t *testing.T) {
+	// Empty input should trigger validateMappingInputData guard and return early
+	mapping, remainder, errs := ReadMapping([]byte{})
+	assert.NotEmpty(t, errs, "ReadMapping should return errors for empty input")
+	assert.Nil(t, remainder, "ReadMapping should return nil remainder for empty input")
+	assert.Nil(t, mapping.size, "Mapping size should be nil for empty input")
+
+	// Single byte (less than MAPPING_SIZE_FIELD_LENGTH) should also return early
+	mapping2, _, errs2 := ReadMapping([]byte{0x00})
+	assert.NotEmpty(t, errs2, "ReadMapping should return errors for too-short input")
+	assert.Nil(t, mapping2.size, "Mapping size should be nil for too-short input")
+}
+
+// TestSerializeOnePairRoundTrip verifies that the simplified serializeOnePair
+// produces correct wire format (QUALITY-1 fix).
+func TestSerializeOnePairRoundTrip(t *testing.T) {
+	key, err := ToI2PString("host")
+	require.NoError(t, err)
+	val, err := ToI2PString("127.0.0.1")
+	require.NoError(t, err)
+
+	pair := [2]I2PString{key, val}
+	result, serErr := serializeOnePair(pair)
+	require.NoError(t, serErr)
+
+	// Expected: [len_byte(4)] + "host" + '=' + [len_byte(9)] + "127.0.0.1" + ';'
+	// len(key) = 1+4=5, len(val) = 1+9=10, plus '=' and ';' = 17
+	assert.Equal(t, 17, len(result), "serialized pair has wrong length")
+	assert.Equal(t, byte('='), result[5], "missing equals delimiter")
+	assert.Equal(t, byte(';'), result[16], "missing semicolon delimiter")
+}

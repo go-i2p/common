@@ -239,7 +239,7 @@ func TestIsZero(t *testing.T) {
 
 	t.Run("empty integer", func(t *testing.T) {
 		integer := Integer([]byte{})
-		assert.True(integer.IsZero(), "IsZero should return true for empty integer")
+		assert.False(integer.IsZero(), "IsZero should return false for empty integer (invalid per I2P spec)")
 	})
 
 	t.Run("single non-zero byte", func(t *testing.T) {
@@ -473,5 +473,61 @@ func TestNewIntegerErrorHandling(t *testing.T) {
 		require.NotNil(t, integer)
 		assert.Equal(t, Integer([]byte{0x01, 0x02}), *integer)
 		assert.Equal(t, []byte{0x03, 0x04}, remainder)
+	})
+}
+
+// TestIsZeroNilAndEmpty verifies that IsZero returns false for nil/empty Integers (GAP-3 fix).
+func TestIsZeroNilAndEmpty(t *testing.T) {
+	t.Run("nil integer", func(t *testing.T) {
+		var i Integer
+		assert.False(t, i.IsZero(), "IsZero should return false for nil Integer")
+	})
+
+	t.Run("empty integer", func(t *testing.T) {
+		i := Integer([]byte{})
+		assert.False(t, i.IsZero(), "IsZero should return false for empty Integer")
+	})
+
+	t.Run("valid zero 1-byte", func(t *testing.T) {
+		i := Integer([]byte{0x00})
+		assert.True(t, i.IsZero(), "IsZero should return true for valid single-byte zero")
+	})
+
+	t.Run("valid zero multi-byte", func(t *testing.T) {
+		i := Integer([]byte{0x00, 0x00, 0x00, 0x00})
+		assert.True(t, i.IsZero(), "IsZero should return true for valid multi-byte zero")
+	})
+
+	t.Run("non-zero", func(t *testing.T) {
+		i := Integer([]byte{0x00, 0x01})
+		assert.False(t, i.IsZero(), "IsZero should return false for non-zero Integer")
+	})
+}
+
+// TestIsValid verifies the IsValid method for Integer (GAP-3 fix).
+func TestIsValid(t *testing.T) {
+	t.Run("nil is invalid", func(t *testing.T) {
+		var i Integer
+		assert.False(t, i.IsValid(), "nil Integer should be invalid")
+	})
+
+	t.Run("empty is invalid", func(t *testing.T) {
+		i := Integer([]byte{})
+		assert.False(t, i.IsValid(), "empty Integer should be invalid")
+	})
+
+	t.Run("1 byte is valid", func(t *testing.T) {
+		i := Integer([]byte{0x01})
+		assert.True(t, i.IsValid(), "1-byte Integer should be valid")
+	})
+
+	t.Run("8 bytes is valid", func(t *testing.T) {
+		i := Integer(make([]byte, 8))
+		assert.True(t, i.IsValid(), "8-byte Integer should be valid")
+	})
+
+	t.Run("9 bytes is invalid", func(t *testing.T) {
+		i := Integer(make([]byte, 9))
+		assert.False(t, i.IsValid(), "9-byte Integer should be invalid")
 	})
 }

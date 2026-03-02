@@ -12,8 +12,26 @@ import (
 // TestMappingOrderSortsValuesThenKeys verifies that mappingOrder sorts values lexicographically by key.
 func TestMappingOrderSortsValuesThenKeys(t *testing.T) {
 	values := createTestMappingValues()
-	mappingOrder(values)
-	verifyMappingOrder(t, values)
+	sorted := mappingOrder(values)
+	verifyMappingOrder(t, sorted)
+}
+
+// TestMappingOrderDoesNotMutateInput verifies that mappingOrder returns a sorted copy
+// and does not mutate the caller's original slice (QUALITY-3 fix).
+func TestMappingOrderDoesNotMutateInput(t *testing.T) {
+	values := createTestMappingValues()
+	// Record original first key before sorting
+	origFirstKey, _ := values[0][0].Data()
+
+	sorted := mappingOrder(values)
+
+	// The sorted result should have "a" first
+	sortedFirstKey, _ := sorted[0][0].Data()
+	assert.Equal(t, "a", sortedFirstKey, "sorted result should start with 'a'")
+
+	// The original should be unmodified — first key should still be "b"
+	afterFirstKey, _ := values[0][0].Data()
+	assert.Equal(t, origFirstKey, afterFirstKey, "mappingOrder must not mutate the caller's input slice")
 }
 
 // createTestMappingValues constructs test data for mapping order verification.
@@ -375,5 +393,38 @@ func TestReadMappingValuesMinimalPairs(t *testing.T) {
 			assert.NotContains(t, err.Error(), "expected =")
 			assert.NotContains(t, err.Error(), "expected ;")
 		}
+	})
+}
+
+// TestValuesToMappingRejectsInvalidI2PStrings verifies that ValuesToMapping
+// rejects MappingValues containing internally-inconsistent I2PStrings (GAP-1 fix).
+func TestValuesToMappingRejectsInvalidI2PStrings(t *testing.T) {
+	t.Run("valid strings accepted", func(t *testing.T) {
+		mv := NewMappingValues(0)
+		mv, err := mv.Add("key", "value")
+		require.NoError(t, err)
+		m, err := ValuesToMapping(mv)
+		require.NoError(t, err)
+		assert.NotNil(t, m)
+	})
+
+	t.Run("invalid key rejected", func(t *testing.T) {
+		// Construct an I2PString with mismatched length prefix:
+		// length byte says 5, but only 2 data bytes follow
+		badKey := I2PString([]byte{0x05, 'a', 'b'})
+		goodVal, _ := ToI2PString("ok")
+		mv := MappingValues{[2]I2PString{badKey, goodVal}}
+		_, err := ValuesToMapping(mv)
+		assert.Error(t, err, "ValuesToMapping should reject invalid I2PStrings")
+		assert.Contains(t, err.Error(), "invalid",
+			"error should mention invalid input")
+	})
+
+	t.Run("empty I2PString rejected", func(t *testing.T) {
+		goodKey, _ := ToI2PString("key")
+		badVal := I2PString([]byte{})
+		mv := MappingValues{[2]I2PString{goodKey, badVal}}
+		_, err := ValuesToMapping(mv)
+		assert.Error(t, err, "ValuesToMapping should reject empty I2PStrings")
 	})
 }

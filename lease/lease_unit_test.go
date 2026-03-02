@@ -305,7 +305,8 @@ func TestLeaseTimeDateDivergenceLargeTimestamp(t *testing.T) {
 	})
 
 	// Beyond 2^63: unsigned millis that would be negative if treated as signed.
-	// After the fix, both Time() and Date().Time() clamp to math.MaxInt64.
+	// lease.Time() clamps to math.MaxInt64 (local implementation).
+	// Date().Time() returns zero time for values > math.MaxInt64 (data package fix GAP-2).
 	t.Run("beyond_signed_int64_range", func(t *testing.T) {
 		overflowMillis := uint64(1<<63 + 1000)
 		var lease Lease
@@ -316,10 +317,10 @@ func TestLeaseTimeDateDivergenceLargeTimestamp(t *testing.T) {
 		directTime := lease.Time()
 		dateTime := lease.Date().Time()
 
-		assert.Equal(t, directTime.UnixMilli(), dateTime.UnixMilli(),
-			"Time() and Date().Time() must agree for millis > math.MaxInt64 (both clamped)")
 		assert.Equal(t, int64(math.MaxInt64), directTime.UnixMilli(),
 			"Time() must clamp to math.MaxInt64 for millis > math.MaxInt64")
+		assert.True(t, dateTime.IsZero(),
+			"Date().Time() must return zero time for millis > math.MaxInt64")
 	})
 
 	// Max uint64: extreme case

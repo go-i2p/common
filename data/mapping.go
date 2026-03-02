@@ -91,29 +91,28 @@ func serializeMappingPairs(pairs MappingValues) []byte {
 }
 
 // serializeOnePair serializes a single key=value; pair.
+// I2PStrings already contain their length prefix as the first byte, so we use it directly
+// rather than round-tripping through NewIntegerFromInt.
 func serializeOnePair(pair [2]I2PString) ([]byte, error) {
-	klen, err := pair[0].Length()
-	if err != nil {
+	if len(pair[0]) == 0 {
+		return nil, oops.Errorf("key I2PString is empty")
+	}
+	if len(pair[1]) == 0 {
+		return nil, oops.Errorf("value I2PString is empty")
+	}
+	// Validate key and value can report their lengths
+	if _, err := pair[0].Length(); err != nil {
 		return nil, err
 	}
-	keylen, err := NewIntegerFromInt(klen, KEY_VAL_INTEGER_LENGTH)
-	if err != nil {
+	if _, err := pair[1].Length(); err != nil {
 		return nil, err
 	}
-	vlen, err := pair[1].Length()
-	if err != nil {
-		return nil, err
-	}
-	vallen, err := NewIntegerFromInt(vlen, KEY_VAL_INTEGER_LENGTH)
-	if err != nil {
-		return nil, err
-	}
+	// I2PString wire format is already [length_byte | data...], which matches the
+	// mapping pair wire format: length_byte + data + '=' + length_byte + data + ';'
 	var buf []byte
-	buf = append(buf, keylen.Bytes()...)
-	buf = append(buf, pair[0][1:]...)
+	buf = append(buf, pair[0]...) // key length prefix + key data
 	buf = append(buf, MAPPING_EQUALS_DELIMITER)
-	buf = append(buf, vallen.Bytes()...)
-	buf = append(buf, pair[1][1:]...)
+	buf = append(buf, pair[1]...) // value length prefix + value data
 	buf = append(buf, MAPPING_SEMICOLON_DELIMITER)
 	return buf, nil
 }
@@ -247,6 +246,7 @@ func ReadMapping(bytes []byte) (mapping Mapping, remainder []byte, err []error) 
 	size, remainder, sizeErr := parseMappingSize(bytes)
 	if sizeErr != nil {
 		err = append(err, sizeErr)
+		return mapping, remainder, err
 	}
 	mapping.size = size
 

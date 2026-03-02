@@ -190,13 +190,25 @@ func (i Integer) UintSafe() (uint64, error) {
 	return binary.BigEndian.Uint64(number), nil
 }
 
-// IsZero returns true if the integer represents zero.
+// IsZero returns true if the integer represents a valid zero value.
 // All bytes in the integer must be 0x00 for this to return true.
+// Returns false for nil or empty Integers, since a zero-length Integer is invalid
+// per the I2P spec (Integers must be 1–8 bytes). Use IsValid() to check whether
+// an Integer has valid length before calling IsZero().
 func (i Integer) IsZero() bool {
+	if len(i) == 0 {
+		return false
+	}
 	for _, b := range i {
 		if b != 0 {
 			return false
 		}
 	}
 	return true
+}
+
+// IsValid returns true if the Integer has a valid byte length per the I2P spec.
+// Valid Integers are 1–8 bytes (inclusive). Nil or empty Integers are invalid.
+func (i Integer) IsValid() bool {
+	return len(i) >= 1 && len(i) <= MAX_INTEGER_SIZE
 }

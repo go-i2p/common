@@ -328,22 +328,22 @@ func TestDateFromTimeUsesUnixMilli(t *testing.T) {
 // TestDateTimeUnsignedDecoding verifies that Date.Time() uses unsigned decoding
 // to handle the full range of I2P Date values.
 func TestDateTimeUnsignedDecoding(t *testing.T) {
-	t.Run("value above signed int64 range returns far future", func(t *testing.T) {
+	t.Run("value above signed int64 range returns zero time", func(t *testing.T) {
 		// Set high bit: this is > 2^63 milliseconds
 		var date Date
 		date[0] = 0x80
 		result := date.Time()
-		// Should return a far-future time (clamped to MaxInt64 millis), not epoch
-		assert.True(t, result.After(time.Date(2200, 1, 1, 0, 0, 0, 0, time.UTC)),
-			"Date with high bit set should be far future, got %v", result)
+		// Should return zero time since the unsigned value exceeds math.MaxInt64
+		assert.True(t, result.IsZero(),
+			"Date with high bit set should return zero time, got %v", result)
 	})
 
-	t.Run("max uint64 value returns max time", func(t *testing.T) {
+	t.Run("max uint64 value returns zero time", func(t *testing.T) {
 		date := Date{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF}
 		result := date.Time()
-		// Should be clamped to MaxInt64 millis, not wrap to epoch
-		assert.True(t, result.After(time.Date(2200, 1, 1, 0, 0, 0, 0, time.UTC)),
-			"Max date should be far future, got %v", result)
+		// Should return zero time since the unsigned value exceeds math.MaxInt64
+		assert.True(t, result.IsZero(),
+			"Max date should return zero time, got %v", result)
 	})
 
 	t.Run("normal values still work", func(t *testing.T) {
@@ -389,4 +389,27 @@ func TestDateIntOverflow(t *testing.T) {
 		assert.Equal(t, 0, zeroDate.Int())
 		assert.Equal(t, 0, overflowDate.Int())
 	})
+}
+
+// TestDateTimeHighBitReturnsZeroTime verifies that Date.Time() returns zero time
+// for dates with the high bit set (unsigned value > math.MaxInt64), instead of
+// silently saturating to math.MaxInt64 (GAP-2 fix).
+func TestDateTimeHighBitReturnsZeroTime(t *testing.T) {
+	// Date with high bit set: 0x80 0x00 ... 0x00 => unsigned value = 2^63
+	highBitDate := Date{0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}
+	result := highBitDate.Time()
+	assert.True(t, result.IsZero(),
+		"Date.Time() should return zero time for dates exceeding math.MaxInt64")
+
+	// All-FF date: max unsigned value
+	allFFDate := Date{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF}
+	result2 := allFFDate.Time()
+	assert.True(t, result2.IsZero(),
+		"Date.Time() should return zero time for max unsigned date")
+
+	// Normal date should still work
+	normalDate := Date{0x00, 0x00, 0x00, 0x00, 0x05, 0x26, 0x5c, 0x00}
+	result3 := normalDate.Time()
+	assert.False(t, result3.IsZero(), "Normal date should not return zero time")
+	assert.Equal(t, int64(86400), result3.Unix(), "Normal date should parse correctly")
 }

@@ -47,6 +47,10 @@ func (i Date) Int() int {
 // Time takes the value stored in date as an 8 byte big-endian integer representing the
 // number of milliseconds since the beginning of unix time and converts it to a Go time.Time
 // struct. Uses unsigned decoding to correctly handle the full range of I2P Date values.
+//
+// If the unsigned millisecond value exceeds math.MaxInt64 (high bit set), Time returns
+// the zero time.Time{}, since Go's time.UnixMilli cannot represent such large values.
+// Callers should check for zero time if working with dates that may have the high bit set.
 func (date Date) Time() (date_time time.Time) {
 	millis := Integer(date[:])
 	uval, err := millis.UintSafe()
@@ -54,7 +58,8 @@ func (date Date) Time() (date_time time.Time) {
 		return time.Time{}
 	}
 	if uval > uint64(math.MaxInt64) {
-		return time.UnixMilli(math.MaxInt64)
+		log.Warn("Date.Time(): unsigned millisecond value exceeds math.MaxInt64, returning zero time")
+		return time.Time{}
 	}
 	date_time = time.UnixMilli(int64(uval))
 	return
