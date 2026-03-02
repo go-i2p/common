@@ -39,7 +39,7 @@ func TestCertificateBuilder_WithKeyTypes(t *testing.T) {
 }
 
 func TestCertificateBuilder_WithCustomPayload(t *testing.T) {
-	customPayload := []byte{0x01, 0x02, 0x03, 0x04, 0x05}
+	customPayload := []byte("hello")
 
 	builder := NewCertificateBuilder()
 	builder, _ = builder.WithType(CERT_HASHCASH)
@@ -126,6 +126,18 @@ func TestCertificateBuilder_AllTypes(t *testing.T) {
 				builder, err = builder.WithType(certType)
 				require.NoError(t, err)
 				builder, err = builder.WithPayload(make([]byte, CERT_SIGNED_PAYLOAD_SHORT))
+				require.NoError(t, err)
+				cert, err = builder.Build()
+			} else if certType == CERT_HASHCASH {
+				builder, err = builder.WithType(certType)
+				require.NoError(t, err)
+				builder, err = builder.WithPayload([]byte("1:20:000000:test@i2p::000000:000000"))
+				require.NoError(t, err)
+				cert, err = builder.Build()
+			} else if certType == CERT_MULTIPLE {
+				builder, err = builder.WithType(certType)
+				require.NoError(t, err)
+				builder, err = builder.WithPayload([]byte{0x00, 0x00, 0x00}) // minimal sub-cert (NULL)
 				require.NoError(t, err)
 				cert, err = builder.Build()
 			} else {

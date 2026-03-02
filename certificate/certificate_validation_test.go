@@ -39,9 +39,9 @@ func TestReadCertificateWithDataTooShort(t *testing.T) {
 }
 
 func TestReadCertificateWithRemainder(t *testing.T) {
-	// MULTIPLE cert (no payload length restriction) declared 2-byte payload, 1 extra stream byte.
-	cert, remainder, err := ReadCertificate([]byte{CERT_MULTIPLE, 0x00, 0x02, 0xff, 0xff, 0x01})
-	assert.Equal(t, 5, cert.length())
+	// MULTIPLE cert with a 3-byte payload (minimum valid), plus 1 extra stream byte.
+	cert, remainder, err := ReadCertificate([]byte{CERT_MULTIPLE, 0x00, 0x03, 0x00, 0x00, 0x00, 0x01})
+	assert.Equal(t, 6, cert.length())
 	assert.Equal(t, 1, len(remainder))
 	assert.Nil(t, err)
 }
@@ -331,11 +331,11 @@ func TestReadCertificateWithoutNormalize(t *testing.T) {
 	})
 
 	t.Run("MULTIPLE cert with stream bytes returns correct remainder", func(t *testing.T) {
-		// MULTIPLE has no type-specific payload restriction. Declared 2 bytes, 2 extra.
-		cert, remainder, err := ReadCertificate([]byte{CERT_MULTIPLE, 0x00, 0x02, 0xAA, 0xBB, 0xCC, 0xDD})
+		// MULTIPLE requires at least 3-byte payload (one sub-certificate). Declared 3 bytes, 2 extra.
+		cert, remainder, err := ReadCertificate([]byte{CERT_MULTIPLE, 0x00, 0x03, 0xAA, 0xBB, 0xCC, 0xDD, 0xEE})
 		require.NoError(t, err)
 		require.NotNil(t, cert)
-		assert.Equal(t, []byte{0xCC, 0xDD}, remainder)
+		assert.Equal(t, []byte{0xDD, 0xEE}, remainder)
 	})
 
 	t.Run("short data returns error", func(t *testing.T) {
@@ -589,4 +589,18 @@ func BenchmarkReadCertificate(b *testing.B) {
 			ReadCertificate(data)
 		}
 	})
+}
+
+// TestValidateCertificatePayloadLengthNoInfoLeak verifies the fix for AUDIT QUALITY:
+// validateCertificatePayloadLength no longer logs raw binary data via string(bytes),
+// which could produce garbage output and leak sensitive payloads.
+func TestValidateCertificatePayloadLengthNoInfoLeak(t *testing.T) {
+	// Trigger the short-data error path. The important part is that the code
+	// does NOT log `string(bytes)` anymore — the test verifies the error path
+	// still works correctly.
+	data := []byte{CERT_KEY, 0x00, 0x10, 0xAA, 0xBB} // declares 16-byte payload but only 2 available
+	cert, _, err := ReadCertificate(data)
+	require.Error(t, err, "should error when payload is shorter than declared")
+	assert.Nil(t, cert)
+	assert.Contains(t, err.Error(), "shorter than specified")
 }

@@ -132,7 +132,7 @@ func validateCertificatePayloadLength(certificate Certificate, bytes []byte, pay
 			"at":                         "(Certificate) ReadCertificate",
 			"certificate_bytes_length":   certificate.len.Int(),
 			"certificate_payload_length": payloadLength,
-			"data_bytes:":                string(bytes),
+			"input_length":               len(bytes),
 			"kind_bytes":                 bytes[0:CERT_TYPE_FIELD_END],
 			"len_bytes":                  bytes[CERT_LENGTH_FIELD_START:CERT_LENGTH_FIELD_END],
 			"reason":                     err.Error(),
@@ -155,6 +155,16 @@ func validateTypeSpecificPayload(cert Certificate) error {
 		if payloadLen != 0 {
 			return oops.Errorf("certificate type %d should have empty payload, got %d bytes", certType, payloadLen)
 		}
+	case CERT_HASHCASH:
+		// I2P spec: HASHCASH payload "contains an ASCII colon-separated hashcash string."
+		// A zero-length payload is invalid per spec. We validate basic structure here:
+		// the payload must be non-empty and contain only printable ASCII characters.
+		if payloadLen == 0 {
+			return oops.Errorf("HASHCASH certificate payload must not be empty per spec")
+		}
+		if err := validateHashcashPayload(cert.payload[:payloadLen]); err != nil {
+			return err
+		}
 	case CERT_SIGNED:
 		// I2P spec: SIGNED payload is exactly 40 bytes (DSA signature) or
 		// 72 bytes (40-byte signature + 32-byte Hash of signing Destination).
@@ -163,6 +173,14 @@ func validateTypeSpecificPayload(cert Certificate) error {
 				"SIGNED certificate payload must be %d or %d bytes, got %d",
 				CERT_SIGNED_PAYLOAD_SHORT, CERT_SIGNED_PAYLOAD_LONG, payloadLen,
 			)
+		}
+	case CERT_MULTIPLE:
+		// I2P spec: MULTIPLE certificate "contains multiple certificates" in its payload.
+		// The payload must contain at least one complete sub-certificate (minimum 3 bytes).
+		// MULTIPLE is deprecated/unused but we validate structural minimums.
+		if payloadLen < CERT_MIN_SIZE {
+			return oops.Errorf("MULTIPLE certificate payload must contain at least one sub-certificate (%d bytes minimum), got %d",
+				CERT_MIN_SIZE, payloadLen)
 		}
 	case CERT_KEY:
 		if payloadLen < CERT_MIN_KEY_PAYLOAD_SIZE {
@@ -174,6 +192,18 @@ func validateTypeSpecificPayload(cert Certificate) error {
 			log.WithFields(logger.Fields{
 				"cert_type": certType,
 			}).Warn("unknown certificate type")
+		}
+	}
+	return nil
+}
+
+// validateHashcashPayload checks that a HASHCASH certificate payload contains valid
+// ASCII characters per the I2P spec requirement of "an ASCII colon-separated hashcash string."
+// The payload must be non-empty and contain only printable ASCII (0x20-0x7E).
+func validateHashcashPayload(payload []byte) error {
+	for i, b := range payload {
+		if b < 0x20 || b > 0x7E {
+			return oops.Errorf("HASHCASH certificate payload contains non-printable ASCII byte 0x%02x at offset %d", b, i)
 		}
 	}
 	return nil

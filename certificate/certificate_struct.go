@@ -106,10 +106,22 @@ func validateCertPayload(certType uint8, payload []byte) error {
 		return oops.Errorf("KEY certificates require at least %d bytes payload, got %d",
 			CERT_MIN_KEY_PAYLOAD_SIZE, len(payload))
 	}
-	// CERT_HASHCASH: per spec the payload must be an ASCII colon-separated hashcash
-	// string. A zero-length payload is technically invalid per spec, but is accepted
-	// here for backward compatibility. Callers requiring strict HASHCASH validation
-	// should verify the payload format externally.
+	if certType == CERT_HASHCASH {
+		// I2P spec: HASHCASH payload "contains an ASCII colon-separated hashcash string."
+		// A zero-length payload is invalid per spec.
+		if len(payload) == 0 {
+			return oops.Errorf("HASHCASH certificates must have non-empty payload per spec")
+		}
+		if err := validateHashcashPayload(payload); err != nil {
+			return err
+		}
+	}
+	if certType == CERT_MULTIPLE && len(payload) < CERT_MIN_SIZE {
+		// I2P spec: MULTIPLE certificate "contains multiple certificates."
+		// Payload must contain at least one complete sub-certificate (3 bytes minimum).
+		return oops.Errorf("MULTIPLE certificates must contain at least one sub-certificate (%d bytes minimum), got %d",
+			CERT_MIN_SIZE, len(payload))
+	}
 	return nil
 }
 
@@ -126,7 +138,7 @@ func buildCertificate(certType uint8, payload []byte) (*Certificate, error) {
 		payload: make([]byte, len(payload)),
 	}
 
-	if len(payload) > CERT_EMPTY_PAYLOAD_SIZE {
+	if len(payload) > 0 {
 		copy(cert.payload, payload)
 	}
 
@@ -256,24 +268,30 @@ func (c *Certificate) Length() (length int, err error) {
 	return length, nil
 }
 
-// Data returns the payload of a Certificate, trimmed to the declared length.
+// Data returns a copy of the payload of a Certificate, trimmed to the declared length.
+// The returned slice is a defensive copy — callers may mutate it without affecting
+// the certificate's internal state.
 // Returns error if length is invalid.
-func (c *Certificate) Data() (data []byte, err error) {
+func (c *Certificate) Data() ([]byte, error) {
 	length, lenErr := c.Length()
 	if lenErr != nil {
 		log.WithFields(logger.Fields{"at": "Certificate.Data", "reason": "invalid length"}).Error(lenErr.Error())
 		return nil, lenErr
 	}
+	var src []byte
 	if length > len(c.payload) {
-		data = c.payload
+		src = c.payload
 		log.Warn("Certificate payload shorter than specified length")
 	} else {
-		data = c.payload[0:length]
+		src = c.payload[0:length]
 	}
+	// Defensive copy to prevent callers from mutating internal state.
+	result := make([]byte, len(src))
+	copy(result, src)
 	log.WithFields(logger.Fields{
-		"data_length": len(data),
+		"data_length": len(result),
 	}).Debug("Retrieved certificate data")
-	return data, nil
+	return result, nil
 }
 
 // IsValid returns true if the certificate is fully initialized and valid.

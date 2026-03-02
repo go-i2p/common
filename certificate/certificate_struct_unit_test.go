@@ -15,52 +15,52 @@ import (
 func TestCertificateTypeIsFirstByte(t *testing.T) {
 	assert := assert.New(t)
 
-	// Use CERT_MULTIPLE (4) with a 2-byte payload — no type-specific length restriction.
-	bytes := []byte{0x04, 0x00, 0x02, 0xff, 0xff}
+	// Use CERT_KEY (5) with a 4-byte payload — a valid KEY certificate.
+	bytes := []byte{0x05, 0x00, 0x04, 0x00, 0x07, 0x00, 0x04}
 	certificate, _, _ := ReadCertificate(bytes)
 	cert_type, typeErr := certificate.Type()
 	assert.Nil(typeErr, "certificate.Type() should not error for valid type")
-	assert.Equal(cert_type, 4, "certificate.Type() should be the first byte in a certificate")
+	assert.Equal(cert_type, 5, "certificate.Type() should be the first byte in a certificate")
 }
 
 func TestCertificateLengthCorrect(t *testing.T) {
 	assert := assert.New(t)
 
-	// Use CERT_MULTIPLE (4) which has no type-specific payload length restriction.
-	bytes := []byte{0x04, 0x00, 0x02, 0xff, 0xff}
+	// Use CERT_KEY (5) with a 4-byte payload — a valid KEY certificate.
+	bytes := []byte{0x05, 0x00, 0x04, 0x00, 0x07, 0x00, 0x04}
 	certificate, _, _ := ReadCertificate(bytes)
 	cert_len, lenErr := certificate.Length()
 	assert.Nil(lenErr, "certificate.Length() should not error for valid length")
-	assert.Equal(cert_len, 2, "certificate.Length() should return integer from second two bytes")
+	assert.Equal(cert_len, 4, "certificate.Length() should return integer from second two bytes")
 }
 
 func TestCertificateDataWhenCorrectSize(t *testing.T) {
 	assert := assert.New(t)
 
-	// Use CERT_MULTIPLE (4) which has no type-specific payload length restriction.
-	bytes := []byte{0x04, 0x00, 0x01, 0xaa}
+	// Use CERT_KEY (5) with a 4-byte payload — a valid KEY certificate.
+	bytes := []byte{0x05, 0x00, 0x04, 0x00, 0x07, 0x00, 0x04}
 	certificate, _, _ := ReadCertificate(bytes)
 	cert_data, dataErr := certificate.Data()
 	assert.Nil(dataErr, "certificate.Data() returned error with valid data")
 	cert_len := len(cert_data)
-	assert.Equal(cert_len, 1, "certificate.Data() did not return indicated length when data was valid")
-	assert.Equal(170, int(cert_data[0]), "certificate.Data() returned incorrect data")
+	assert.Equal(cert_len, 4, "certificate.Data() did not return indicated length when data was valid")
+	assert.Equal(0x00, int(cert_data[0]), "certificate.Data() returned incorrect data")
 }
 
 func TestCertificateDataWhenTooLong(t *testing.T) {
 	assert := assert.New(t)
 
-	// Use CERT_MULTIPLE (4) which has no type-specific payload length restriction.
-	// Input has 4 bytes available but declared length is 2; remainder {0xAA, 0xAA}
-	// is returned by ReadCertificate, not stored in the certificate payload.
-	bytes := []byte{0x04, 0x00, 0x02, 0xff, 0xff, 0xaa, 0xaa}
+	// Use CERT_KEY (5) with a 4-byte payload followed by extra stream bytes.
+	// Input has extra bytes beyond the declared payload; ReadCertificate returns
+	// those as remainder, not stored in the certificate payload.
+	bytes := []byte{0x05, 0x00, 0x04, 0x00, 0x07, 0x00, 0x04, 0xaa, 0xaa}
 	certificate, _, _ := ReadCertificate(bytes)
 	cert_data, dataErr := certificate.Data()
 	assert.Nil(dataErr, "certificate.Data() should not error for valid length")
 	cert_len, lenErr := certificate.Length()
 	assert.Nil(lenErr, "certificate.Length() should not error for valid length")
-	assert.Equal(cert_len, 2, "certificate.Length() did not return indicated length when data was too long")
-	if cert_data[0] != 0xff || cert_data[1] != 0xff {
+	assert.Equal(cert_len, 4, "certificate.Length() did not return indicated length when data was too long")
+	if cert_data[0] != 0x00 || cert_data[1] != 0x07 {
 		t.Fatal("certificate.Data() returned incorrect data when data was too long")
 	}
 }
@@ -188,11 +188,17 @@ func TestCertificateFieldsAfterCreation(t *testing.T) {
 }
 
 func TestCertificateWithZeroLengthPayload(t *testing.T) {
-	cert, err := NewCertificateWithType(uint8(CERT_HASHCASH), []byte{})
+	// HASHCASH now requires non-empty ASCII payload per spec.
+	// Zero-length HASHCASH should be rejected.
+	_, err := NewCertificateWithType(uint8(CERT_HASHCASH), []byte{})
+	assert.NotNil(t, err, "HASHCASH with empty payload should be rejected per spec")
+
+	// NULL cert has a zero-length payload and should work.
+	cert, err := NewCertificateWithType(uint8(CERT_NULL), []byte{})
 	assert.Nil(t, err)
 
 	typ, _ := cert.Type()
-	assert.Equal(t, CERT_HASHCASH, typ)
+	assert.Equal(t, CERT_NULL, typ)
 	length, _ := cert.Length()
 	assert.Equal(t, 0, length)
 }
@@ -325,13 +331,13 @@ func TestCertificateExcessBytes(t *testing.T) {
 	})
 
 	t.Run("post-certificate stream bytes returned as remainder, not ExcessBytes", func(t *testing.T) {
-		// MULTIPLE cert: declared 2 bytes, followed by 2 extra stream bytes.
-		certBytes := []byte{byte(CERT_MULTIPLE), 0x00, 0x02, 0xAA, 0xBB, 0xCC, 0xDD}
+		// MULTIPLE cert: declared 3 bytes, followed by 2 extra stream bytes.
+		certBytes := []byte{byte(CERT_MULTIPLE), 0x00, 0x03, 0xAA, 0xBB, 0xCC, 0xDD, 0xEE}
 		cert, remainder, err := ReadCertificate(certBytes)
 		require.NoError(t, err)
 		data, _ := cert.Data()
-		assert.Equal(t, []byte{0xAA, 0xBB}, data)
-		assert.Equal(t, []byte{0xCC, 0xDD}, remainder)
+		assert.Equal(t, []byte{0xAA, 0xBB, 0xCC}, data)
+		assert.Equal(t, []byte{0xDD, 0xEE}, remainder)
 		assert.Nil(t, cert.ExcessBytes(), "stream bytes after cert must not appear in ExcessBytes")
 	})
 }
@@ -795,4 +801,130 @@ func TestRoundTripAllCertificateTypes(t *testing.T) {
 			assert.Equal(t, origData, parsedData, "payload must survive round-trip")
 		})
 	}
+}
+
+// TestBuildCertificateGuardUsesLenPayload verifies the fix for AUDIT BUG:
+// buildCertificate now uses `len(payload) > 0` instead of `len(payload) > CERT_EMPTY_PAYLOAD_SIZE`,
+// ensuring the copy always happens when there are bytes to copy.
+func TestBuildCertificateGuardUsesLenPayload(t *testing.T) {
+	// CERT_KEY with a 4-byte payload: verify the payload is actually copied into the certificate.
+	payload := []byte{0x00, 0x07, 0x00, 0x04}
+	cert, err := NewCertificateWithType(CERT_KEY, payload)
+	require.NoError(t, err)
+
+	data, err := cert.Data()
+	require.NoError(t, err)
+	assert.Equal(t, payload, data, "payload should be faithfully copied into certificate")
+
+	// Mutate original payload — should not affect the certificate (defensive copy in buildCertificate).
+	payload[0] = 0xFF
+	data2, _ := cert.Data()
+	assert.NotEqual(t, payload, data2, "mutating original payload should not affect certificate")
+}
+
+// TestDataReturnsDefensiveCopy verifies the fix for AUDIT GAP:
+// Data() now returns a defensive copy, not a sub-slice of internal storage.
+func TestDataReturnsDefensiveCopy(t *testing.T) {
+	payload := []byte{0x00, 0x07, 0x00, 0x04}
+	cert, err := NewCertificateWithType(CERT_KEY, payload)
+	require.NoError(t, err)
+
+	data1, err := cert.Data()
+	require.NoError(t, err)
+
+	// Mutate the returned data
+	data1[0] = 0xFF
+
+	// Get Data() again — should not reflect the mutation
+	data2, err := cert.Data()
+	require.NoError(t, err)
+	assert.Equal(t, byte(0x00), data2[0], "mutating Data() return value must not corrupt internal state")
+
+	// Verify data2 is a fresh copy (not the same slice header)
+	data2[1] = 0xFF
+	data3, _ := cert.Data()
+	assert.Equal(t, byte(0x07), data3[1], "each Data() call must return an independent copy")
+}
+
+// TestHashcashValidation verifies the fix for AUDIT SPEC:
+// HASHCASH certificates must have non-empty ASCII printable payloads per spec.
+func TestHashcashValidation(t *testing.T) {
+	t.Run("empty payload rejected", func(t *testing.T) {
+		_, err := NewCertificateWithType(CERT_HASHCASH, []byte{})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "non-empty")
+	})
+
+	t.Run("non-ASCII payload rejected", func(t *testing.T) {
+		_, err := NewCertificateWithType(CERT_HASHCASH, []byte{0x01, 0x02, 0x03})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "non-printable ASCII")
+	})
+
+	t.Run("valid ASCII hashcash accepted", func(t *testing.T) {
+		hashcash := []byte("1:20:060408:adam@cypherspace.org::1QTjaYd7niiQA/sc:ePa")
+		cert, err := NewCertificateWithType(CERT_HASHCASH, hashcash)
+		require.NoError(t, err)
+		data, _ := cert.Data()
+		assert.Equal(t, hashcash, data)
+	})
+
+	t.Run("ReadCertificate rejects non-ASCII HASHCASH from wire", func(t *testing.T) {
+		// Construct wire bytes: type=1 (HASHCASH), length=3, payload=[0x01, 0x02, 0x03]
+		wireBytes := []byte{CERT_HASHCASH, 0x00, 0x03, 0x01, 0x02, 0x03}
+		cert, _, err := ReadCertificate(wireBytes)
+		require.Error(t, err)
+		assert.Nil(t, cert)
+	})
+
+	t.Run("ReadCertificate rejects empty HASHCASH from wire", func(t *testing.T) {
+		wireBytes := []byte{CERT_HASHCASH, 0x00, 0x00}
+		cert, _, err := ReadCertificate(wireBytes)
+		require.Error(t, err)
+		assert.Nil(t, cert)
+	})
+}
+
+// TestMultipleValidation verifies the fix for AUDIT SPEC:
+// MULTIPLE certificates must have at least CERT_MIN_SIZE (3) bytes of payload.
+func TestMultipleValidation(t *testing.T) {
+	t.Run("empty payload rejected for construction", func(t *testing.T) {
+		_, err := NewCertificateWithType(CERT_MULTIPLE, []byte{})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "sub-certificate")
+	})
+
+	t.Run("1-byte payload rejected for construction", func(t *testing.T) {
+		_, err := NewCertificateWithType(CERT_MULTIPLE, []byte{0x01})
+		require.Error(t, err)
+	})
+
+	t.Run("2-byte payload rejected for construction", func(t *testing.T) {
+		_, err := NewCertificateWithType(CERT_MULTIPLE, []byte{0x01, 0x02})
+		require.Error(t, err)
+	})
+
+	t.Run("3-byte payload accepted (minimal sub-cert)", func(t *testing.T) {
+		// A NULL sub-certificate is exactly 3 bytes: type=0, length=0x0000
+		cert, err := NewCertificateWithType(CERT_MULTIPLE, []byte{0x00, 0x00, 0x00})
+		require.NoError(t, err)
+		typ, _ := cert.Type()
+		assert.Equal(t, CERT_MULTIPLE, typ)
+	})
+
+	t.Run("ReadCertificate rejects 2-byte MULTIPLE from wire", func(t *testing.T) {
+		wireBytes := []byte{CERT_MULTIPLE, 0x00, 0x02, 0xAA, 0xBB}
+		cert, _, err := ReadCertificate(wireBytes)
+		require.Error(t, err)
+		assert.Nil(t, cert)
+	})
+
+	t.Run("ReadCertificate accepts 3-byte MULTIPLE from wire", func(t *testing.T) {
+		wireBytes := []byte{CERT_MULTIPLE, 0x00, 0x03, 0x00, 0x00, 0x00}
+		cert, _, err := ReadCertificate(wireBytes)
+		require.NoError(t, err)
+		require.NotNil(t, cert)
+		typ, _ := cert.Type()
+		assert.Equal(t, CERT_MULTIPLE, typ)
+	})
 }
