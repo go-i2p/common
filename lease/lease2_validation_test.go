@@ -209,3 +209,75 @@ func TestReadLease2ErrorMessageFormat(t *testing.T) {
 		})
 	}
 }
+
+// TestLease2ValidateNullDateDistinctFromExpired verifies that end_date=0 returns
+// ErrNullDate and NOT ErrExpiredLease, per spec "Date == 0 is undefined or null".
+func TestLease2ValidateNullDateDistinctFromExpired(t *testing.T) {
+	gateway := createTestHash(t, "l2_null_date_gw_hash____32_bytes")
+
+	// Construct a Lease2 with end_date = 0 directly (epoch time)
+	epochTime := time.Unix(0, 0).UTC()
+	lease2, err := NewLease2(gateway, 1, epochTime)
+	require.NoError(t, err)
+	require.NotNil(t, lease2)
+
+	// end_date bytes must be all-zero to confirm the null sentinel was stored
+	require.Equal(t, uint32(0), lease2.EndDate(), "epoch-time lease2 should encode end_date=0")
+
+	validationErr := lease2.Validate()
+	require.Error(t, validationErr)
+	assert.ErrorIs(t, validationErr, ErrNullDate,
+		"end_date=0 must produce ErrNullDate, not ErrExpiredLease")
+	assert.False(t, errors.Is(validationErr, ErrExpiredLease),
+		"end_date=0 must NOT produce ErrExpiredLease; it is null, not merely expired")
+}
+
+// TestLease2ValidateNullDateMultipleErrors verifies ErrNullDate combines with other errors.
+func TestLease2ValidateNullDateMultipleErrors(t *testing.T) {
+	epochTime := time.Unix(0, 0).UTC()
+	lease2, err := NewLease2(data.Hash{}, 1, epochTime)
+	require.NoError(t, err)
+
+	validationErr := lease2.Validate()
+	require.Error(t, validationErr)
+	assert.ErrorIs(t, validationErr, ErrZeroGatewayHash)
+	assert.ErrorIs(t, validationErr, ErrNullDate)
+	assert.False(t, errors.Is(validationErr, ErrExpiredLease))
+}
+
+// TestLease2ValidateNullDateSymmetryWithLease verifies Lease and Lease2
+// produce the same error (ErrNullDate) for end_date=0.
+func TestLease2ValidateNullDateSymmetryWithLease(t *testing.T) {
+	gateway := createTestHash(t, "l2_null_symmetry_gw_____32_bytes")
+	epochTime := time.Unix(0, 0).UTC()
+
+	lease, err := NewLease(gateway, 1, epochTime)
+	require.NoError(t, err)
+	lease2, err := NewLease2(gateway, 1, epochTime)
+	require.NoError(t, err)
+
+	leaseErr := lease.Validate()
+	lease2Err := lease2.Validate()
+
+	assert.ErrorIs(t, leaseErr, ErrNullDate, "Lease should report ErrNullDate")
+	assert.ErrorIs(t, lease2Err, ErrNullDate, "Lease2 should report ErrNullDate")
+	assert.False(t, errors.Is(leaseErr, ErrExpiredLease), "Lease should not report ErrExpiredLease")
+	assert.False(t, errors.Is(lease2Err, ErrExpiredLease), "Lease2 should not report ErrExpiredLease")
+}
+
+// TestLease2DateInt_EpochZeroRoundTrip verifies that a zero end_date round-trips and confirms null.
+func TestLease2DateInt_EpochZeroRoundTrip(t *testing.T) {
+	epochTime := time.Unix(0, 0).UTC()
+	gateway := createTestHash(t, "l2_date_epoch_gw_hash___32_bytes")
+
+	lease2, err := NewLease2(gateway, 1, epochTime)
+	require.NoError(t, err)
+
+	assert.Equal(t, uint32(0), lease2.EndDate(),
+		"EndDate() should return 0 for epoch-zero (null) end_date")
+
+	// Verify via raw bytes
+	endDateBytes := lease2[LEASE_TUNNEL_GW_SIZE+LEASE_TUNNEL_ID_SIZE:]
+	assert.Equal(t, uint32(0), binary.BigEndian.Uint32(endDateBytes),
+		"raw bytes of end_date should be all-zero")
+}

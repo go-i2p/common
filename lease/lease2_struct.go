@@ -3,6 +3,7 @@ package lease
 import (
 	"encoding/binary"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/go-i2p/common/data"
@@ -111,7 +112,8 @@ func (lease2 Lease2) Equal(other Lease2) bool {
 
 // Validate performs semantic validation on the lease2.
 // Returns a combined error (via errors.Join) if multiple issues are found:
-// zero gateway hash, zero tunnel ID (advisory per spec), or expired lease.
+// zero gateway hash, zero tunnel ID (advisory per spec), null end_date (per spec
+// "Date == 0 is undefined or null"), or expired lease.
 // Use errors.Is to check for specific error conditions.
 // This is separate from construction to allow representing arbitrary wire-format data.
 func (lease2 Lease2) Validate() error {
@@ -123,10 +125,19 @@ func (lease2 Lease2) Validate() error {
 	if lease2.TunnelID() == 0 {
 		errs = append(errs, ErrZeroTunnelID)
 	}
-	if lease2.IsExpired() {
+	if lease2.EndDate() == 0 {
+		errs = append(errs, ErrNullDate)
+	} else if lease2.IsExpired() {
 		errs = append(errs, ErrExpiredLease)
 	}
 	return errors.Join(errs...)
+}
+
+// String returns a human-readable representation of the Lease2 for debugging and logging.
+func (lease2 Lease2) String() string {
+	gw := lease2.TunnelGateway()
+	return fmt.Sprintf("Lease2{gw=%x..., tid=%d, exp=%s}",
+		gw[:4], lease2.TunnelID(), lease2.Time().Format(time.RFC3339))
 }
 
 // Bytes returns the complete Lease2 structure as a byte slice.

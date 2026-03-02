@@ -3,6 +3,7 @@ package lease
 import (
 	"encoding/binary"
 	"errors"
+	"fmt"
 	"math"
 	"time"
 
@@ -43,7 +44,7 @@ end_date :: Date
             length -> 8 bytes
 */
 
-// Lease is the represenation of an I2P Lease.
+// Lease is the representation of an I2P Lease.
 //
 // https://geti2p.net/spec/common-structures#lease
 type Lease [LEASE_SIZE]byte
@@ -121,6 +122,13 @@ func (lease Lease) Validate() error {
 		errs = append(errs, ErrExpiredLease)
 	}
 	return errors.Join(errs...)
+}
+
+// String returns a human-readable representation of the Lease for debugging and logging.
+func (lease Lease) String() string {
+	gw := lease.TunnelGateway()
+	return fmt.Sprintf("Lease{gw=%x..., tid=%d, exp=%s}",
+		gw[:4], lease.TunnelID(), lease.Time().Format(time.RFC3339))
 }
 
 // Bytes returns the complete Lease structure as a byte slice.

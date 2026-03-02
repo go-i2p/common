@@ -357,3 +357,15 @@ func BenchmarkLeaseTime(b *testing.B) {
 		_ = lease.Time()
 	}
 }
+
+// TestLeaseString verifies the String() method returns a human-readable representation.
+func TestLeaseString(t *testing.T) {
+	gateway := createTestHash(t, "string_test_gateway_hash32_bytes")
+	lease, err := NewLease(gateway, 99, time.Date(2025, 6, 15, 12, 0, 0, 0, time.UTC))
+	require.NoError(t, err)
+
+	s := lease.String()
+	assert.Contains(t, s, "Lease{")
+	assert.Contains(t, s, "tid=99")
+	assert.Contains(t, s, "2025")
+}
