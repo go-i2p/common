@@ -2,8 +2,6 @@
 package router_info
 
 import (
-	"crypto/ed25519"
-
 	"github.com/go-i2p/common/signature"
 	"github.com/go-i2p/logger"
 	"github.com/samber/oops"
@@ -13,11 +11,12 @@ var log = logger.GetGoI2PLogger()
 
 // VerifySignature verifies the RouterInfo signature against the serialized data
 // using the signing public key from the router identity.
-// Currently supports Ed25519 (type 7) signature verification.
+// Supports all modern signature types (Ed25519, ECDSA P256/P384/P521, Ed25519ph,
+// RedDSA) via the generic types.Verifier interface. Legacy types (DSA_SHA1, RSA)
+// return explicit "legacy unsupported" errors.
 //
-// This implementation uses standard Ed25519 verification (RFC 8032 PureEdDSA),
-// passing data directly to ed25519.Verify which performs its own internal
-// SHA-512 hashing. This is consistent with Java I2P and i2pd.
+// This implementation delegates to SigningPublicKey.NewVerifier().Verify(),
+// which is consistent with the I2P specification's algorithm-agnostic design.
 func (ri *RouterInfo) VerifySignature() (bool, error) {
 	if err := validateSignaturePrerequisites(ri); err != nil {
 		return false, err
@@ -47,7 +46,9 @@ func validateSignaturePrerequisites(ri *RouterInfo) error {
 }
 
 // verifyRouterInfoSignature performs the actual cryptographic signature verification
-// based on the signature type. Currently supports Ed25519 (type 7).
+// using the SigningPublicKey interface. Supports all modern signature types
+// (Ed25519, ECDSA P256/P384/P521, Ed25519ph, RedDSA) via the generic Verifier
+// interface. Legacy types (DSA_SHA1, RSA) return explicit "legacy unsupported" errors.
 func verifyRouterInfoSignature(ri *RouterInfo, dataBytes []byte) (bool, error) {
 	sigBytes := ri.signature.Bytes()
 	signingKey, err := ri.router_identity.SigningPublicKey()
@@ -59,15 +60,40 @@ func verifyRouterInfoSignature(ri *RouterInfo, dataBytes []byte) (bool, error) {
 	}
 
 	sigType := ri.signature.Type()
+
+	if err := checkLegacySignatureType(sigType); err != nil {
+		return false, err
+	}
+
+	verifier, err := signingKey.NewVerifier()
+	if err != nil {
+		return false, oops.Errorf("failed to create verifier for signature type %d: %w", sigType, err)
+	}
+
+	err = verifier.Verify(dataBytes, sigBytes)
+	if err != nil {
+		log.WithFields(logger.Fields{
+			"sig_type": sigType,
+			"error":    err,
+		}).Debug("Signature verification failed")
+		return false, nil
+	}
+	return true, nil
+}
+
+// checkLegacySignatureType returns an error for legacy signature types that are
+// intentionally unsupported (DSA_SHA1, RSA variants). These types are deprecated
+// since I2P 0.9.58 (the Ed25519 mandate release). Returns nil for modern types.
+func checkLegacySignatureType(sigType int) error {
 	switch sigType {
-	case signature.SIGNATURE_TYPE_EDDSA_SHA512_ED25519:
-		keyBytes := signingKey.Bytes()
-		if len(keyBytes) != ed25519.PublicKeySize {
-			return false, oops.Errorf("invalid Ed25519 public key size: %d", len(keyBytes))
-		}
-		return ed25519.Verify(keyBytes, dataBytes, sigBytes), nil
+	case signature.SIGNATURE_TYPE_DSA_SHA1:
+		return oops.Errorf("legacy unsupported signature type: DSA_SHA1 (type %d) is deprecated since 0.9.58", sigType)
+	case signature.SIGNATURE_TYPE_RSA_SHA256_2048,
+		signature.SIGNATURE_TYPE_RSA_SHA384_3072,
+		signature.SIGNATURE_TYPE_RSA_SHA512_4096:
+		return oops.Errorf("legacy unsupported signature type: RSA (type %d) is deprecated since 0.9.58", sigType)
 	default:
-		return false, oops.Errorf("unsupported signature type for verification: %d", sigType)
+		return nil
 	}
 }
 

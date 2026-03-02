@@ -225,33 +225,41 @@ func assembleRouterInfoWithoutSignature(
 }
 
 // createSignerFromPrivateKey validates the private key and creates an appropriate signer.
+// Supports Ed25519 (type 7). Legacy types (DSA_SHA1, RSA) return explicit
+// "legacy unsupported" errors per the deprecation in I2P 0.9.58.
 func createSignerFromPrivateKey(signingPrivateKey types.SigningPrivateKey, sigType int) (types.Signer, error) {
 	if signingPrivateKey == nil {
 		return nil, oops.Errorf("signing private key is nil")
 	}
 
-	var signer types.Signer
-	var err error
-
 	switch sigType {
+	case signature.SIGNATURE_TYPE_DSA_SHA1:
+		return nil, oops.Errorf("legacy unsupported signature type: DSA_SHA1 (type %d) is deprecated since 0.9.58", sigType)
+	case signature.SIGNATURE_TYPE_RSA_SHA256_2048,
+		signature.SIGNATURE_TYPE_RSA_SHA384_3072,
+		signature.SIGNATURE_TYPE_RSA_SHA512_4096:
+		return nil, oops.Errorf("legacy unsupported signature type: RSA (type %d) is deprecated since 0.9.58", sigType)
 	case signature.SIGNATURE_TYPE_EDDSA_SHA512_ED25519:
-		ed25519Key, ok := signingPrivateKey.(*ed25519.Ed25519PrivateKey)
-		if !ok {
-			return nil, oops.Errorf("expected *Ed25519PrivateKey but got %T", signingPrivateKey)
-		}
-		if len(*ed25519Key) != ED25519_PRIVATE_KEY_SIZE {
-			return nil, oops.Errorf("invalid Ed25519 private key size: got %d, want %d", len(*ed25519Key), ED25519_PRIVATE_KEY_SIZE)
-		}
-		signer, err = ed25519Key.NewSigner()
+		return createEd25519Signer(signingPrivateKey)
 	default:
 		return nil, oops.Errorf("unsupported signature type: %d", sigType)
 	}
+}
 
+// createEd25519Signer validates and creates an Ed25519 signer from the private key.
+func createEd25519Signer(signingPrivateKey types.SigningPrivateKey) (types.Signer, error) {
+	ed25519Key, ok := signingPrivateKey.(*ed25519.Ed25519PrivateKey)
+	if !ok {
+		return nil, oops.Errorf("expected *Ed25519PrivateKey but got %T", signingPrivateKey)
+	}
+	if len(*ed25519Key) != ED25519_PRIVATE_KEY_SIZE {
+		return nil, oops.Errorf("invalid Ed25519 private key size: got %d, want %d", len(*ed25519Key), ED25519_PRIVATE_KEY_SIZE)
+	}
+	signer, err := ed25519Key.NewSigner()
 	if err != nil {
-		log.WithError(err).Error("Failed to create signer")
+		log.WithError(err).Error("Failed to create Ed25519 signer")
 		return nil, oops.Errorf("failed to create signer: %v", err)
 	}
-
 	return signer, nil
 }
 
@@ -459,6 +467,9 @@ func (router_info *RouterInfo) AddAddress(address *router_address.RouterAddress)
 	}
 	router_info.addresses = append(router_info.addresses, address)
 	router_info.size = newSize
+	// Invalidate the existing signature since the data has changed.
+	// Callers must re-sign the RouterInfo after adding addresses.
+	router_info.signature = nil
 	return nil
 }
 
@@ -578,7 +589,7 @@ func validateMinorVersion(minorStr string, majorVersion int, version string) (in
 
 	if pos1 != 9 {
 		log.WithField("version", version).Debug("Invalid version at position 1:", minorStr)
-		return 0, oops.Errorf("Invalid version at position 0: %s", minorStr)
+		return 0, oops.Errorf("Invalid version at position 1: %s", minorStr)
 	}
 
 	return pos1, nil

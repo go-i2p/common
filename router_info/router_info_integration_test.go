@@ -90,6 +90,34 @@ func TestVerifySignaturePreHashRoundTrip(t *testing.T) {
 	assert.True(t, valid)
 }
 
+// TestVerifySignatureRoundTrip creates a RouterInfo, serializes it via Bytes(),
+// parses it via ReadRouterInfo(), and verifies the signature on the parsed result.
+// This is the most security-critical code path in the package.
+func TestVerifySignatureRoundTrip(t *testing.T) {
+	ri, err := generateTestRouterInfo(t, time.Now())
+	require.NoError(t, err)
+
+	// Step 1: Verify signature on original
+	valid, err := ri.VerifySignature()
+	require.NoError(t, err)
+	require.True(t, valid, "signature should be valid on original RouterInfo")
+
+	// Step 2: Serialize to bytes
+	riBytes, err := ri.Bytes()
+	require.NoError(t, err)
+	require.NotEmpty(t, riBytes)
+
+	// Step 3: Parse from bytes
+	parsed, remainder, err := ReadRouterInfo(riBytes)
+	require.NoError(t, err)
+	assert.Empty(t, remainder, "should have no remaining bytes")
+
+	// Step 4: Verify signature on parsed result
+	valid, err = parsed.VerifySignature()
+	assert.NoError(t, err)
+	assert.True(t, valid, "signature should be valid on parsed RouterInfo")
+}
+
 //
 // Bytes() options serialization consistency
 //

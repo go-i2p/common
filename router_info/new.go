@@ -8,6 +8,6 @@ import "github.com/go-i2p/common/key_certificate"
 // Callers MUST check the return value for nil to avoid nil pointer panics.
 // Use NewRouterInfo() for full RouterInfo construction with signing.
 func OwnedRouterInfo(keyCertificate key_certificate.KeyCertificate) *RouterInfo {
-	log.Warn("OwnedRouterInfo is a deprecated stub; use NewRouterInfo for full construction")
+	log.Error("OwnedRouterInfo is a deprecated unimplemented stub; use NewRouterInfo for full construction")
 	return nil
 }

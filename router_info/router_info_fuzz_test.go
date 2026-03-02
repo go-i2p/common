@@ -1,8 +1,9 @@
 package router_info
 
 import (
-	"github.com/go-i2p/crypto/rand"
 	"testing"
+
+	"github.com/go-i2p/crypto/rand"
 )
 
 func FuzzReadRouterInfo(f *testing.F) {
@@ -34,6 +35,8 @@ func FuzzReadRouterInfo(f *testing.F) {
 			_ = info.Network()
 			_ = info.String()
 			_, _ = info.Bytes()
+			// Exercise VerifySignature to detect panics on malformed key data
+			_, _ = info.VerifySignature()
 		}
 	})
 }

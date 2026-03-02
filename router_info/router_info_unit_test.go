@@ -2,10 +2,11 @@ package router_info
 
 import (
 	"bytes"
-	"github.com/go-i2p/crypto/rand"
 	"os"
 	"testing"
 	"time"
+
+	"github.com/go-i2p/crypto/rand"
 
 	"github.com/go-i2p/common/certificate"
 	"github.com/go-i2p/common/data"
@@ -333,6 +334,11 @@ func TestAddAddressUpdatesSize(t *testing.T) {
 	originalCount := len(ri.addresses)
 	assert.Equal(t, originalSize, originalCount)
 
+	// Verify signature is valid before mutation
+	valid, err := ri.VerifySignature()
+	require.NoError(t, err)
+	assert.True(t, valid, "signature should be valid before AddAddress")
+
 	options := map[string]string{}
 	newAddr, err := router_address.NewRouterAddress(3, <-time.After(1*time.Second), "SSU2", options)
 	require.NoError(t, err)
@@ -344,6 +350,9 @@ func TestAddAddressUpdatesSize(t *testing.T) {
 	newCount := len(ri.addresses)
 	assert.Equal(t, originalCount+1, newCount)
 	assert.Equal(t, newSize, newCount)
+
+	// After AddAddress, signature should be invalidated (set to nil)
+	assert.Nil(t, ri.signature, "signature should be nil after AddAddress mutation")
 }
 
 //

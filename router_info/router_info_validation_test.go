@@ -406,6 +406,80 @@ func TestParseRouterInfoSignatureNULLCert(t *testing.T) {
 }
 
 //
+// checkLegacySignatureType
+//
+
+func TestCheckLegacySignatureType(t *testing.T) {
+	t.Run("DSA_SHA1 returns legacy unsupported error", func(t *testing.T) {
+		err := checkLegacySignatureType(signature.SIGNATURE_TYPE_DSA_SHA1)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "legacy unsupported")
+		assert.Contains(t, err.Error(), "DSA_SHA1")
+	})
+	t.Run("RSA_2048 returns legacy unsupported error", func(t *testing.T) {
+		err := checkLegacySignatureType(signature.SIGNATURE_TYPE_RSA_SHA256_2048)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "legacy unsupported")
+		assert.Contains(t, err.Error(), "RSA")
+	})
+	t.Run("RSA_3072 returns legacy unsupported error", func(t *testing.T) {
+		err := checkLegacySignatureType(signature.SIGNATURE_TYPE_RSA_SHA384_3072)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "legacy unsupported")
+	})
+	t.Run("RSA_4096 returns legacy unsupported error", func(t *testing.T) {
+		err := checkLegacySignatureType(signature.SIGNATURE_TYPE_RSA_SHA512_4096)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "legacy unsupported")
+	})
+	t.Run("Ed25519 returns nil", func(t *testing.T) {
+		err := checkLegacySignatureType(signature.SIGNATURE_TYPE_EDDSA_SHA512_ED25519)
+		assert.NoError(t, err)
+	})
+	t.Run("ECDSA_P256 returns nil", func(t *testing.T) {
+		err := checkLegacySignatureType(signature.SIGNATURE_TYPE_ECDSA_SHA256_P256)
+		assert.NoError(t, err)
+	})
+	t.Run("ECDSA_P384 returns nil", func(t *testing.T) {
+		err := checkLegacySignatureType(signature.SIGNATURE_TYPE_ECDSA_SHA384_P384)
+		assert.NoError(t, err)
+	})
+	t.Run("RedDSA returns nil", func(t *testing.T) {
+		err := checkLegacySignatureType(signature.SIGNATURE_TYPE_REDDSA_SHA512_ED25519)
+		assert.NoError(t, err)
+	})
+}
+
+//
+// validateMinorVersion error message correctness
+//
+
+func TestValidateMinorVersionErrorMessage(t *testing.T) {
+	_, err := validateMinorVersion("8", 0, "0.8.64")
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "position 1", "error message should reference position 1 for minor version")
+	assert.NotContains(t, err.Error(), "position 0", "error message should NOT reference position 0 for minor version")
+}
+
+//
+// createSignerFromPrivateKey legacy type errors
+//
+
+func TestCreateSignerFromPrivateKeyLegacyErrors(t *testing.T) {
+	keyPair := generateTestKeyPair(t)
+	t.Run("DSA_SHA1 returns legacy unsupported", func(t *testing.T) {
+		_, err := createSignerFromPrivateKey(&keyPair.ed25519PrivKey, signature.SIGNATURE_TYPE_DSA_SHA1)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "legacy unsupported")
+	})
+	t.Run("RSA_2048 returns legacy unsupported", func(t *testing.T) {
+		_, err := createSignerFromPrivateKey(&keyPair.ed25519PrivKey, signature.SIGNATURE_TYPE_RSA_SHA256_2048)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "legacy unsupported")
+	})
+}
+
+//
 // ReadRouterInfo minimum length validation
 //
 
