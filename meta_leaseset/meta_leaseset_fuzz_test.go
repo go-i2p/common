@@ -62,7 +62,7 @@ func FuzzReadMetaLeaseSet(f *testing.F) {
 	seed2 = append(seed2, 0x02)
 	seed2 = append(seed2, entry...)
 	seed2 = append(seed2, entry2...)
-	seed2 = append(seed2, 0x01)  // numr
+	seed2 = append(seed2, 0x01) // numr
 	seed2 = append(seed2, rev...)
 	seed2 = append(seed2, make([]byte, 64)...)
 	f.Add(seed2)

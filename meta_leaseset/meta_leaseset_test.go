@@ -396,13 +396,13 @@ func TestReadMetaLeaseSetInvalidEntryType(t *testing.T) {
 	unknownEntry := createTestEntry(7, 10)
 	data = append(data, unknownEntry...)
 
-	data = append(data, 0x00)               // 0 revocations
+	data = append(data, 0x00) // 0 revocations
 	sigBytes := make([]byte, 64)
-	data = append(data, sigBytes...)        // dummy Ed25519 signature
+	data = append(data, sigBytes...) // dummy Ed25519 signature
 
 	mls, _, err := ReadMetaLeaseSet(data)
 	// Forward-compatible: must NOT fail on unknown entry type.
-	require	.NoError(t, err)
+	require.NoError(t, err)
 	require.Equal(t, 1, mls.NumEntries())
 	// The raw type bits should still be preserved in the entry flags.
 	assert.Equal(t, uint8(7), mls.Entries()[0].Type())
@@ -1010,6 +1010,7 @@ func TestReadMetaLeaseSetAllEntryTypes(t *testing.T) {
 		assert.Equal(t, META_LEASESET_ENTRY_SIZE, len(b), "entry %d must be exactly 40 bytes", i)
 	}
 }
+
 // TestBytesNilDestinationReturnsError verifies that Bytes() returns an error
 // (rather than panicking) when the embedded Destination has a nil KeysAndCert.
 // This covers the AUDIT BUG fix: Bytes() now calls mls.destination.Bytes()
@@ -1083,15 +1084,15 @@ func TestBytesOptionsSorted(t *testing.T) {
 	require.NoError(t, err)
 
 	mls := MetaLeaseSet{
-		destination:  dest,
-		published:    1700000000,
-		expires:      600,
-		flags:        0,
-		options:      *opts,
-		numEntries:   1,
-		entries:      []MetaLeaseSetEntry{createTestEntryStruct(META_LEASESET_ENTRY_TYPE_LEASESET2, 5)},
+		destination:    dest,
+		published:      1700000000,
+		expires:        600,
+		flags:          0,
+		options:        *opts,
+		numEntries:     1,
+		entries:        []MetaLeaseSetEntry{createTestEntryStruct(META_LEASESET_ENTRY_TYPE_LEASESET2, 5)},
 		numRevocations: 0,
-		signature:    createTestSignature(),
+		signature:      createTestSignature(),
 	}
 
 	serialized, err := mls.Bytes()

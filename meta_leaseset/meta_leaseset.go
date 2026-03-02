@@ -29,6 +29,7 @@ var log = logger.GetGoI2PLogger()
 //  7. Parse number of entries (1 byte, 1-16)
 //  8. Parse entries (40+ bytes each)
 //  9. Parse number of revocations (1 byte) and revocation hashes (32 bytes each)
+//
 // 10. Parse signature (variable length based on signature type)
 //
 // Returns error if:
