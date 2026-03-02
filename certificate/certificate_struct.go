@@ -331,6 +331,45 @@ func certTypeName(certType int) string {
 	}
 }
 
+// Equals returns true if the two certificates are identical in type, length, and payload.
+// Two nil or uninitialized certificates are considered equal.
+// A nil certificate and a valid certificate are never equal.
+func (c *Certificate) Equals(other *Certificate) bool {
+	cValid := c.IsValid()
+	oValid := other.IsValid()
+
+	if !cValid && !oValid {
+		return true
+	}
+	if !cValid || !oValid {
+		return false
+	}
+
+	cType, _ := c.Type()
+	oType, _ := other.Type()
+	if cType != oType {
+		return false
+	}
+
+	cLen, _ := c.Length()
+	oLen, _ := other.Length()
+	if cLen != oLen {
+		return false
+	}
+
+	cData, _ := c.Data()
+	oData, _ := other.Data()
+	if len(cData) != len(oData) {
+		return false
+	}
+	for i := range cData {
+		if cData[i] != oData[i] {
+			return false
+		}
+	}
+	return true
+}
+
 // String returns a human-readable representation of the Certificate.
 // Returns "Certificate{invalid}" for nil or uninitialized certificates.
 func (c *Certificate) String() string {

@@ -452,6 +452,104 @@ func TestGetExcessKeyData(t *testing.T) {
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "payload too short")
 	})
+
+	t.Run("combined excess signing and crypto key data", func(t *testing.T) {
+		// Signing key size 256 bytes: excess signing = 256-128 = 128 bytes.
+		// Crypto key size 512 bytes: excess crypto = 512-256 = 256 bytes.
+		excessSigningData := make([]byte, 128)
+		for i := range excessSigningData {
+			excessSigningData[i] = byte(i)
+		}
+		excessCryptoData := make([]byte, 256)
+		for i := range excessCryptoData {
+			excessCryptoData[i] = byte(i + 128)
+		}
+		// payload: [sigType 2B][cryptoType 2B][excessSigning 128B][excessCrypto 256B]
+		payload := []byte{0x00, 0x09, 0x00, 0x06} // sigType=9, cryptoType=6
+		payload = append(payload, excessSigningData...)
+		payload = append(payload, excessCryptoData...)
+		cert, err := NewCertificateWithType(CERT_KEY, payload)
+		require.NoError(t, err)
+
+		sigResult, err := GetExcessSigningPublicKeyData(*cert, 256)
+		require.NoError(t, err)
+		assert.Equal(t, excessSigningData, sigResult)
+
+		cryptoResult, err := GetExcessCryptoPublicKeyData(*cert, 512, 128)
+		require.NoError(t, err)
+		assert.Equal(t, excessCryptoData, cryptoResult)
+	})
+}
+
+// TestReadCertificateReturnsOriginalDataOnError verifies that ReadCertificate returns
+// the original input as remainder on every error path.
+func TestReadCertificateReturnsOriginalDataOnError(t *testing.T) {
+	errorCases := []struct {
+		name string
+		data []byte
+	}{
+		{"empty input", []byte{}},
+		{"1-byte input", []byte{0x00}},
+		{"2-byte input", []byte{0x00, 0x00}},
+		{"declared length exceeds available", []byte{CERT_KEY, 0x00, 0x10, 0xAA}},
+		{"NULL with non-empty payload", []byte{CERT_NULL, 0x00, 0x01, 0xAA}},
+		{"HASHCASH with empty payload", []byte{CERT_HASHCASH, 0x00, 0x00}},
+		{"MULTIPLE with 2-byte payload", []byte{CERT_MULTIPLE, 0x00, 0x02, 0xAA, 0xBB}},
+	}
+
+	for _, tc := range errorCases {
+		t.Run(tc.name, func(t *testing.T) {
+			cert, remainder, err := ReadCertificate(tc.data)
+			require.Error(t, err)
+			assert.Nil(t, cert, "cert should be nil on error")
+			assert.Equal(t, tc.data, remainder, "remainder should be original data on error")
+		})
+	}
+}
+
+// TestCertificateEquals verifies the Equals() method for Certificate comparison.
+func TestCertificateEquals(t *testing.T) {
+	t.Run("two identical KEY certificates are equal", func(t *testing.T) {
+		cert1, _ := NewCertificateWithType(CERT_KEY, []byte{0x00, 0x07, 0x00, 0x04})
+		cert2, _ := NewCertificateWithType(CERT_KEY, []byte{0x00, 0x07, 0x00, 0x04})
+		assert.True(t, cert1.Equals(cert2))
+	})
+
+	t.Run("different type makes unequal", func(t *testing.T) {
+		cert1, _ := NewCertificateWithType(CERT_NULL, []byte{})
+		cert2, _ := NewCertificateWithType(CERT_HIDDEN, []byte{})
+		assert.False(t, cert1.Equals(cert2))
+	})
+
+	t.Run("different payload makes unequal", func(t *testing.T) {
+		cert1, _ := NewCertificateWithType(CERT_KEY, []byte{0x00, 0x07, 0x00, 0x04})
+		cert2, _ := NewCertificateWithType(CERT_KEY, []byte{0x00, 0x01, 0x00, 0x04})
+		assert.False(t, cert1.Equals(cert2))
+	})
+
+	t.Run("nil and nil are equal", func(t *testing.T) {
+		var cert1 *Certificate
+		var cert2 *Certificate
+		assert.True(t, cert1.Equals(cert2))
+	})
+
+	t.Run("nil and valid are not equal", func(t *testing.T) {
+		var cert1 *Certificate
+		cert2, _ := NewCertificateWithType(CERT_NULL, []byte{})
+		assert.False(t, cert1.Equals(cert2))
+	})
+
+	t.Run("valid and nil are not equal", func(t *testing.T) {
+		cert1, _ := NewCertificateWithType(CERT_NULL, []byte{})
+		var cert2 *Certificate
+		assert.False(t, cert1.Equals(cert2))
+	})
+
+	t.Run("round-trip preserves equality", func(t *testing.T) {
+		cert1, _ := NewCertificateWithType(CERT_KEY, []byte{0x00, 0x07, 0x00, 0x04})
+		cert2, _, _ := ReadCertificate(cert1.Bytes())
+		assert.True(t, cert1.Equals(cert2))
+	})
 }
 
 func FuzzReadCertificate(f *testing.F) {

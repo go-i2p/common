@@ -29,11 +29,7 @@
 //
 //	// Create a KEY certificate with validation
 //	builder := certificate.NewCertificateBuilder()
-//	builder, err := builder.WithType(certificate.CERT_KEY)
-//	if err != nil {
-//	    return err
-//	}
-//	builder, err = builder.WithKeyTypes(7, 4)  // Ed25519/X25519
+//	builder, err := builder.WithKeyTypes(7, 4)  // Ed25519/X25519
 //	if err != nil {
 //	    return err
 //	}

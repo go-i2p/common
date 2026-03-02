@@ -53,40 +53,19 @@ func parseCertificateFromData(bytes []byte) (Certificate, error) {
 
 // handleEmptyCertificateData processes the case where no data is provided.
 func handleEmptyCertificateData(certificate Certificate) (Certificate, error) {
-	certificate.kind = data.Integer([]byte{0})         // type: 0 (NULL)
-	certificate.len = data.Integer([]byte{0x00, 0x00}) // length: 0 (2 bytes per spec)
 	log.WithFields(logger.Fields{
-		"at":                       "(Certificate) ReadCertificate",
-		"certificate_bytes_length": CERT_EMPTY_PAYLOAD_SIZE,
-		"reason":                   "too short (len < CERT_MIN_SIZE)" + fmt.Sprintf("%d", certificate.kind.Int()),
+		"at":     "(Certificate) ReadCertificate",
+		"reason": "too short (len < CERT_MIN_SIZE), empty input",
 	}).Error("invalid certificate, empty")
 	return certificate, oops.Errorf("error parsing certificate: certificate is empty")
 }
 
 // handleShortCertificateData processes the case where insufficient data is provided.
 func handleShortCertificateData(certificate Certificate, bytes []byte) (Certificate, error) {
-	// For insufficient data, create a certificate that reflects the available data
-	if len(bytes) >= 1 {
-		// We have at least the type byte
-		certificate.kind = data.Integer(bytes[:1])
-	} else {
-		// No data at all, use zero type
-		certificate.kind = data.Integer([]byte{0})
-	}
-
-	// Always set a proper 2-byte zero length field per spec.
-	// Even with 2-byte input (1 type + 1 partial length), we use zeros
-	// because a 1-byte length field would be malformed and confuse
-	// downstream logging/debugging.
-	certificate.len = data.Integer([]byte{0x00, 0x00})
-
-	// No payload for short certificates
-	certificate.payload = []byte{}
-
 	log.WithFields(logger.Fields{
 		"at":                       "(Certificate) ReadCertificate",
 		"certificate_bytes_length": len(bytes),
-		"reason":                   "too short (len < CERT_MIN_SIZE), kind=" + fmt.Sprintf("%d", certificate.kind.Int()),
+		"reason":                   fmt.Sprintf("too short (len < CERT_MIN_SIZE), got %d bytes", len(bytes)),
 	}).Error("invalid certificate, too short")
 	return certificate, oops.Errorf("error parsing certificate: certificate is too short")
 }
