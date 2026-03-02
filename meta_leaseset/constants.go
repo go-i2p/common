@@ -83,6 +83,11 @@ const (
 	// META_LEASESET_FLAG_UNPUBLISHED indicates this is an unpublished meta leaseset (bit 1).
 	// Unpublished meta leasesets should not be flooded, published, or sent in response to queries.
 	META_LEASESET_FLAG_UNPUBLISHED = 1 << 1 // 0x0002
+
+	// META_LEASESET_FLAG_BLINDED indicates that this is a blinded meta leaseset (bit 2).
+	// Per the I2P LeaseSet2Header spec, bit 2 signals that the destination is blinded.
+	// Consumers MUST check this flag before making routing or netdb storage decisions.
+	META_LEASESET_FLAG_BLINDED = 1 << 2 // 0x0004
 )
 
 // MetaLeaseSet Expiration Constants

@@ -2,6 +2,23 @@
 
 A comprehensive Go library implementing I2P (Invisible Internet Project) network protocol common data structures and utilities. This library provides type-safe implementations of the I2P specification common structures, factored out from the main I2P router to enable reusable components for parsing, encoding, and manipulating I2P network data.
 
+## Notes on scope:
+
+go-i2p theoretically has strictly scoped packages for low-level operations.
+This package is strictly scoped to common data structures only and properly structured.
+
+ - [go-i2p/common](https://github.com/go-i2p/common): I2P Common datastructures
+
+This package MAY use any of the following libraries, and SHOULD use them where possible.
+
+ - [go-i2p/crypto](https://github.com/go-i2p/crypto): Cryptographic primitives only
+
+This package MUST NOT use any of the following libraries.
+
+ - [go-i2p/noise](https://github.com/go-i2p/noise): Noise handshake implementations
+ - [go-i2p/go-noise](https://github.com/go-i2p/go-noise): Noise handshake modifications and router interface
+ - [go-i2p/go-i2p](https://github.com/go-i2p/go-i2p): I2P router implementation
+
 ---
 
 ## Installation

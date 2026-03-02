@@ -89,6 +89,32 @@ func TestMetaLeaseSetFlags(t *testing.T) {
 	if META_LEASESET_FLAG_UNPUBLISHED != 0x0002 {
 		t.Errorf("META_LEASESET_FLAG_UNPUBLISHED = 0x%04x, want 0x0002", META_LEASESET_FLAG_UNPUBLISHED)
 	}
+
+	if META_LEASESET_FLAG_BLINDED != 0x0004 {
+		t.Errorf("META_LEASESET_FLAG_BLINDED = 0x%04x, want 0x0004", META_LEASESET_FLAG_BLINDED)
+	}
+}
+
+// TestIsBlinded verifies the IsBlinded() accessor against the LeaseSet2Header bit 2 spec.
+func TestIsBlinded(t *testing.T) {
+	tests := []struct {
+		name     string
+		flags    uint16
+		expected bool
+	}{
+		{"no flags", 0x0000, false},
+		{"offline keys only", META_LEASESET_FLAG_OFFLINE_KEYS, false},
+		{"unpublished only", META_LEASESET_FLAG_UNPUBLISHED, false},
+		{"blinded only", META_LEASESET_FLAG_BLINDED, true},
+		{"blinded + unpublished", META_LEASESET_FLAG_BLINDED | META_LEASESET_FLAG_UNPUBLISHED, true},
+		{"all three flags", META_LEASESET_FLAG_OFFLINE_KEYS | META_LEASESET_FLAG_UNPUBLISHED | META_LEASESET_FLAG_BLINDED, true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mls := &MetaLeaseSet{flags: tt.flags}
+			assert.Equal(t, tt.expected, mls.IsBlinded(), "IsBlinded() mismatch for flags=0x%04x", tt.flags)
+		})
+	}
 }
 
 // createTestDestination creates a minimal valid destination for testing
@@ -340,6 +366,10 @@ func TestReadMetaLeaseSetInvalidEntryCount(t *testing.T) {
 }
 
 // TestReadMetaLeaseSetInvalidEntryType tests error handling for invalid entry type
+// TestReadMetaLeaseSetInvalidEntryType verifies forward-compatible handling of unknown
+// MetaLease entry types. Per the AUDIT fix, unrecognised type values (e.g. 2, 4, 7)
+// must no longer cause a hard parse failure; they are accepted with a warning so that
+// future spec revisions or non-conforming peers do not break parsing.
 func TestReadMetaLeaseSetInvalidEntryType(t *testing.T) {
 	destData := createTestDestination(t, key_certificate.KEYCERT_SIGN_ED25519)
 	data := destData
@@ -362,17 +392,20 @@ func TestReadMetaLeaseSetInvalidEntryType(t *testing.T) {
 	data = append(data, 0x00, 0x00) // Empty options
 	data = append(data, byte(1))    // 1 entry
 
-	// Create entry with invalid type (7 is not valid, only 1, 3, 5)
-	invalidEntry := createTestEntry(7, 10)
-	data = append(data, invalidEntry...)
+	// Type 7 is currently undefined in the spec — must be accepted for forward compatibility.
+	unknownEntry := createTestEntry(7, 10)
+	data = append(data, unknownEntry...)
 
-	// Add signature (64 bytes for Ed25519)
+	data = append(data, 0x00)               // 0 revocations
 	sigBytes := make([]byte, 64)
-	data = append(data, sigBytes...)
+	data = append(data, sigBytes...)        // dummy Ed25519 signature
 
-	_, _, err := ReadMetaLeaseSet(data)
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "invalid lease set type")
+	mls, _, err := ReadMetaLeaseSet(data)
+	// Forward-compatible: must NOT fail on unknown entry type.
+	require	.NoError(t, err)
+	require.Equal(t, 1, mls.NumEntries())
+	// The raw type bits should still be preserved in the entry flags.
+	assert.Equal(t, uint8(7), mls.Entries()[0].Type())
 }
 
 // TestMetaLeaseSetFindEntriesByType tests filtering entries by type
@@ -721,6 +754,8 @@ func TestMetaLeaseSetBytesWithRevocations(t *testing.T) {
 
 // TestMetaLeaseSetValidateEntryTypes tests that validateEntryType accepts all spec-valid
 // types (0, 1, 3, 5) and rejects invalid ones.
+// TestMetaLeaseSetValidateEntryTypes verifies that validateEntryType accepts known
+// types without error and accepts unknown types with a warning (forward-compatible).
 func TestMetaLeaseSetValidateEntryTypes(t *testing.T) {
 	validTypes := []struct {
 		name    string
@@ -739,11 +774,14 @@ func TestMetaLeaseSetValidateEntryTypes(t *testing.T) {
 		})
 	}
 
-	// Invalid types should be rejected
-	invalidTypes := []uint8{2, 4, 6, 7, 8, 15}
-	for _, it := range invalidTypes {
-		err := validateEntryType(it, 0)
-		assert.Error(t, err, "type %d must be rejected", it)
+	// Unrecognised/reserved types must also be accepted for forward compatibility.
+	// The previous behaviour (hard error) broke parsing against future spec revisions.
+	reservedTypes := []uint8{2, 4, 6, 7, 8, 15}
+	for _, it := range reservedTypes {
+		t.Run(fmt.Sprintf("reserved_%d", it), func(t *testing.T) {
+			err := validateEntryType(it, 0)
+			assert.NoError(t, err, "reserved type %d must be forwarded-compatible (no error)", it)
+		})
 	}
 }
 
@@ -971,4 +1009,109 @@ func TestReadMetaLeaseSetAllEntryTypes(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, META_LEASESET_ENTRY_SIZE, len(b), "entry %d must be exactly 40 bytes", i)
 	}
+}
+// TestBytesNilDestinationReturnsError verifies that Bytes() returns an error
+// (rather than panicking) when the embedded Destination has a nil KeysAndCert.
+// This covers the AUDIT BUG fix: Bytes() now calls mls.destination.Bytes()
+// which guards against nil, instead of mls.destination.KeysAndCert.Bytes().
+func TestBytesNilDestinationReturnsError(t *testing.T) {
+	mls := MetaLeaseSet{
+		// destination is zero-value: KeysAndCert is nil
+		published: 1700000000,
+		expires:   600,
+		flags:     0,
+	}
+	_, err := mls.Bytes()
+	assert.Error(t, err, "Bytes() must return an error, not panic, when Destination.KeysAndCert is nil")
+}
+
+// TestVerifyReturnsMismatchErrorForZeroSignature verifies that Verify() returns
+// an error when the stored signature does not match the data (tampered/zero sig).
+// This provides the minimum required test coverage for verify.go.
+func TestVerifyReturnsMismatchErrorForZeroSignature(t *testing.T) {
+	// Build a syntactically valid MetaLeaseSet from bytes, then call Verify().
+	// The signature is all-zeros, which will not verify against any real key.
+	destData := createTestDestination(t, key_certificate.KEYCERT_SIGN_ED25519)
+	data := destData
+
+	published := uint32(1700000000)
+	publishedBytes := make([]byte, 4)
+	binary.BigEndian.PutUint32(publishedBytes, published)
+	data = append(data, publishedBytes...)
+
+	data = append(data, 0x02, 0x58) // expires = 600
+	data = append(data, 0x00, 0x00) // flags = 0
+	data = append(data, 0x00, 0x00) // empty options
+
+	data = append(data, 0x01) // 1 entry
+	data = append(data, createTestEntry(META_LEASESET_ENTRY_TYPE_LEASESET2, 5)...)
+	data = append(data, 0x00) // 0 revocations
+
+	// All-zero Ed25519 signature — will not verify.
+	sigBytes := make([]byte, 64)
+	data = append(data, sigBytes...)
+
+	mls, _, err := ReadMetaLeaseSet(data)
+	require.NoError(t, err, "parsing must succeed with a syntactically valid byte stream")
+
+	verifyErr := mls.Verify()
+	assert.Error(t, verifyErr, "Verify() must return an error when the signature is zeros (not a valid sig)")
+}
+
+// TestVerifyNilDestinationErrors verifies that Verify() returns an error rather
+// than panicking when called on a zero-value MetaLeaseSet with nil fields.
+func TestVerifyNilDestinationErrors(t *testing.T) {
+	mls := MetaLeaseSet{}
+	err := mls.Verify()
+	assert.Error(t, err, "Verify() must return an error for an uninitialised MetaLeaseSet")
+}
+
+// TestBytesOptionsSorted verifies that Bytes() serialises the options mapping in
+// canonical key order (Java String.compareTo() Unicode code-point order) as
+// required by the I2P spec for signature invariance.
+func TestBytesOptionsSorted(t *testing.T) {
+	// Build a MetaLeaseSet with options intentionally added out of order.
+	dest := createTestDestinationStruct(t)
+
+	// Create an options mapping with keys out of alphabetical order.
+	goMap := map[string]string{
+		"z-key": "v1",
+		"a-key": "v2",
+		"m-key": "v3",
+	}
+	opts, err := common.GoMapToMapping(goMap)
+	require.NoError(t, err)
+
+	mls := MetaLeaseSet{
+		destination:  dest,
+		published:    1700000000,
+		expires:      600,
+		flags:        0,
+		options:      *opts,
+		numEntries:   1,
+		entries:      []MetaLeaseSetEntry{createTestEntryStruct(META_LEASESET_ENTRY_TYPE_LEASESET2, 5)},
+		numRevocations: 0,
+		signature:    createTestSignature(),
+	}
+
+	serialized, err := mls.Bytes()
+	require.NoError(t, err)
+
+	// Re-parse the serialized form and extract option keys.
+	mls2, _, err := ReadMetaLeaseSet(serialized)
+	require.NoError(t, err)
+
+	vals := mls2.Options().Values()
+	require.Len(t, vals, 3)
+
+	keys := make([]string, len(vals))
+	for i, pair := range vals {
+		k, kErr := pair[0].Data()
+		require.NoError(t, kErr)
+		keys[i] = k
+	}
+
+	// Keys must be in ascending Unicode code-point order.
+	assert.Equal(t, []string{"a-key", "m-key", "z-key"}, keys,
+		"Bytes() must output options in sorted key order for signature invariance")
 }

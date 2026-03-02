@@ -28,7 +28,8 @@ var log = logger.GetGoI2PLogger()
 //  6. Parse options mapping (2+ bytes)
 //  7. Parse number of entries (1 byte, 1-16)
 //  8. Parse entries (40+ bytes each)
-//  9. Parse signature (variable length based on signature type)
+//  9. Parse number of revocations (1 byte) and revocation hashes (32 bytes each)
+// 10. Parse signature (variable length based on signature type)
 //
 // Returns error if:
 //   - Data is too short for minimum MetaLeaseSet size
@@ -350,8 +351,11 @@ func logParsedEntry(entryIndex int, entry *MetaLeaseSetEntry) {
 	}).Debug("Parsed MetaLeaseSet entry")
 }
 
-// validateEntryType validates that the entry type (from flags bits 3-0) is a known type.
-// Per spec, valid types are: 0 (unknown), 1 (LeaseSet), 3 (LeaseSet2), 5 (MetaLeaseSet)
+// validateEntryType validates the entry type (from flags bits 3-0).
+// Per the I2P spec, defined types are: 0 (unknown), 1 (LeaseSet), 3 (LeaseSet2),
+// 5 (MetaLeaseSet). Values 2, 4, and 6–15 are currently reserved. To maintain
+// forward compatibility with future spec revisions, unrecognised values are
+// accepted with a warning rather than causing a hard parse failure.
 func validateEntryType(leaseType uint8, entryIndex int) error {
 	switch leaseType {
 	case META_LEASESET_ENTRY_TYPE_UNKNOWN,
@@ -360,17 +364,15 @@ func validateEntryType(leaseType uint8, entryIndex int) error {
 		META_LEASESET_ENTRY_TYPE_META_LEASESET:
 		return nil
 	default:
-		err := oops.
-			Code("invalid_entry_type").
-			With("entry_index", entryIndex).
-			With("lease_type", leaseType).
-			Errorf("invalid lease set type %d in entry %d (valid: 0, 1, 3, 5)", leaseType, entryIndex)
+		// Treat unrecognised entry types as forward-compatible unknowns.
+		// Returning an error here would break parsing of MetaLeaseSets
+		// produced by implementations that use future reserved type values.
 		log.WithFields(logger.Fields{
 			"at":          "validateEntryType",
 			"entry_index": entryIndex,
 			"lease_type":  leaseType,
-		}).Error(err.Error())
-		return err
+		}).Warn("unrecognised MetaLease entry type; treating as unknown (forward-compatible)")
+		return nil
 	}
 }
 
@@ -455,6 +457,13 @@ func (mls *MetaLeaseSet) HasOfflineKeys() bool {
 // IsUnpublished returns true if the unpublished flag is set (bit 1).
 func (mls *MetaLeaseSet) IsUnpublished() bool {
 	return (mls.flags & META_LEASESET_FLAG_UNPUBLISHED) != 0
+}
+
+// IsBlinded returns true if the blinded flag is set (bit 2).
+// A blinded MetaLeaseSet MUST NOT be flooded or returned in response to normal
+// netdb queries; consumers must route through the blinding protocol.
+func (mls *MetaLeaseSet) IsBlinded() bool {
+	return (mls.flags & META_LEASESET_FLAG_BLINDED) != 0
 }
 
 // OfflineSignature returns the optional offline signature structure.
@@ -579,7 +588,8 @@ func (mls *MetaLeaseSet) Bytes() ([]byte, error) {
 	result := make([]byte, 0)
 
 	// Add destination
-	destBytes, err := mls.destination.KeysAndCert.Bytes()
+	// Use Destination.Bytes() to guard against a nil KeysAndCert pointer.
+	destBytes, err := mls.destination.Bytes()
 	if err != nil {
 		return nil, oops.Errorf("failed to serialize destination: %w", err)
 	}
@@ -605,9 +615,16 @@ func (mls *MetaLeaseSet) Bytes() ([]byte, error) {
 		result = append(result, mls.offlineSignature.Bytes()...)
 	}
 
-	// Add options mapping
+	// Add options mapping, sorted by key for signature invariance.
+	// ValuesToMapping applies the canonical Java String.compareTo() key order
+	// required by the I2P spec so that signature verification succeeds on all
+	// conforming receivers.
 	if len(mls.options.Values()) > 0 {
-		result = append(result, mls.options.Data()...)
+		sortedOpts, sortErr := common.ValuesToMapping(mls.options.Values())
+		if sortErr != nil {
+			return nil, oops.Errorf("failed to sort options mapping: %w", sortErr)
+		}
+		result = append(result, sortedOpts.Data()...)
 	} else {
 		// Empty mapping (2 bytes of zero)
 		result = append(result, 0x00, 0x00)
