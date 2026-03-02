@@ -4,6 +4,7 @@ package meta_leaseset
 import (
 	"encoding/binary"
 	"sort"
+	"strings"
 	"time"
 
 	common "github.com/go-i2p/common/data"
@@ -209,18 +210,34 @@ func parseOfflineSignature(mls *MetaLeaseSet, data []byte) ([]byte, error) {
 }
 
 // parseOptionsMapping parses the options mapping containing service record options.
-// Returns remaining data after parsing or error if parsing fails.
+// ReadMapping returns a non-fatal warning ("data exists beyond length of mapping")
+// whenever the input slice extends past the declared mapping size. This is
+// expected here because the options mapping is always embedded in the larger
+// MetaLeaseSet structure. We therefore treat that specific warning as non-fatal
+// and only propagate genuine parse failures.
 func parseOptionsMapping(mls *MetaLeaseSet, data []byte) ([]byte, error) {
 	mapping, rem, errs := common.ReadMapping(data)
 	if len(errs) > 0 {
-		err := oops.
-			Code("options_parse_failed").
-			Wrapf(errs[0], "failed to parse options mapping in MetaLeaseSet")
-		log.WithFields(logger.Fields{
-			"at":     "parseOptionsMapping",
-			"reason": "options mapping parse failed",
-		}).Error(err.Error())
-		return nil, err
+		// Filter: the "data exists beyond length" warning is expected when
+		// a mapping is embedded inside a larger byte stream.
+		var fatal []error
+		for _, e := range errs {
+			if strings.Contains(e.Error(), "data exists beyond length of mapping") {
+				log.Debug("options mapping: ignoring 'data beyond length' warning (expected in embedded context)")
+				continue
+			}
+			fatal = append(fatal, e)
+		}
+		if len(fatal) > 0 {
+			err := oops.
+				Code("options_parse_failed").
+				Wrapf(fatal[0], "failed to parse options mapping in MetaLeaseSet")
+			log.WithFields(logger.Fields{
+				"at":     "parseOptionsMapping",
+				"reason": "options mapping parse failed",
+			}).Error(err.Error())
+			return nil, err
+		}
 	}
 	mls.options = mapping
 	log.Debug("Parsed options mapping")

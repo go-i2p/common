@@ -166,8 +166,12 @@ type MetaLeaseSet struct {
 //
 // https://geti2p.net/spec/common-structures#metalease
 type MetaLeaseSetEntry struct {
-	hash    [32]byte // Hash of the referenced lease set (32 bytes, SHA256)
-	flags   [3]byte  // Flags (3 bytes): bits 3-0 = entry type, bits 23-4 reserved
-	cost    uint8    // Cost metric for load balancing (1 byte, lower is better)
-	endDate uint32   // Expiration timestamp (4 bytes, seconds since epoch)
+	// hash is the SHA256 hash of the referenced lease set (32 bytes).
+	// The I2P spec names this field "tunnel_gw" (inherited from Lease2), but in
+	// MetaLease it is repurposed to identify the referenced lease set rather
+	// than a gateway router.
+	hash    [32]byte
+	flags   [3]byte // Flags (3 bytes): bits 3-0 = entry type, bits 23-4 reserved
+	cost    uint8   // Cost metric for load balancing (1 byte, lower is better)
+	endDate uint32  // Expiration timestamp (4 bytes, seconds since epoch)
 }
