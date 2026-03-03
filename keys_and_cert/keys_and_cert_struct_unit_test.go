@@ -897,3 +897,117 @@ func TestExtractPaddingDataDefensiveCopy(t *testing.T) {
 		assert.Equal(t, data[100:200], padding)
 	})
 }
+
+// ============================================================================
+// RSA signing key round-trip tests
+// ============================================================================
+
+func TestReadKeysAndCert_RSA2048RoundTrip(t *testing.T) {
+	wireData, fullSigningKey := buildRSA2048WireData(t)
+
+	kac, remainder, err := ReadKeysAndCert(wireData)
+	require.NoError(t, err, "should parse RSA-2048 wire data without error")
+	assert.Empty(t, remainder)
+	require.NotNil(t, kac)
+
+	t.Run("signing key is 256 bytes", func(t *testing.T) {
+		assert.Equal(t, 256, kac.SigningPublic.Len())
+	})
+
+	t.Run("signing key matches input", func(t *testing.T) {
+		assert.Equal(t, fullSigningKey, kac.SigningPublic.Bytes(),
+			"full RSA-2048 signing key should be reconstructed from inline + excess cert bytes")
+	})
+
+	t.Run("crypto key is 256 bytes (ElGamal)", func(t *testing.T) {
+		assert.Equal(t, 256, kac.ReceivingPublic.Len())
+	})
+
+	t.Run("round-trip serialization", func(t *testing.T) {
+		serialized, err := kac.Bytes()
+		require.NoError(t, err)
+		assert.Equal(t, wireData, serialized,
+			"round-trip serialization must match original wire data exactly")
+	})
+}
+
+func TestReadKeysAndCert_RSA3072RoundTrip(t *testing.T) {
+	wireData, fullSigningKey := buildRSA3072WireData(t)
+
+	kac, remainder, err := ReadKeysAndCert(wireData)
+	require.NoError(t, err, "should parse RSA-3072 wire data without error")
+	assert.Empty(t, remainder)
+	require.NotNil(t, kac)
+
+	assert.Equal(t, 384, kac.SigningPublic.Len())
+	assert.Equal(t, fullSigningKey, kac.SigningPublic.Bytes())
+
+	serialized, err := kac.Bytes()
+	require.NoError(t, err)
+	assert.Equal(t, wireData, serialized)
+}
+
+func TestReadKeysAndCert_RSA4096RoundTrip(t *testing.T) {
+	wireData, fullSigningKey := buildRSA4096WireData(t)
+
+	kac, remainder, err := ReadKeysAndCert(wireData)
+	require.NoError(t, err, "should parse RSA-4096 wire data without error")
+	assert.Empty(t, remainder)
+	require.NotNil(t, kac)
+
+	assert.Equal(t, 512, kac.SigningPublic.Len())
+	assert.Equal(t, fullSigningKey, kac.SigningPublic.Bytes())
+
+	serialized, err := kac.Bytes()
+	require.NoError(t, err)
+	assert.Equal(t, wireData, serialized)
+}
+
+// ============================================================================
+// MLKEM hybrid crypto type round-trip tests
+// ============================================================================
+
+func TestReadKeysAndCert_MLKEMTypes(t *testing.T) {
+	mlkemTypes := []struct {
+		name       string
+		cryptoType int
+	}{
+		{"MLKEM512_X25519", key_certificate.KEYCERT_CRYPTO_MLKEM512_X25519},
+		{"MLKEM768_X25519", key_certificate.KEYCERT_CRYPTO_MLKEM768_X25519},
+		{"MLKEM1024_X25519", key_certificate.KEYCERT_CRYPTO_MLKEM1024_X25519},
+	}
+	for _, tt := range mlkemTypes {
+		t.Run(tt.name+"_parses_successfully", func(t *testing.T) {
+			wireData := buildMLKEMWireData(t, tt.cryptoType)
+			kac, remainder, err := ReadKeysAndCert(wireData)
+			require.NoError(t, err, "should parse %s wire data without error", tt.name)
+			assert.Empty(t, remainder)
+			require.NotNil(t, kac)
+
+			assert.Equal(t, 32, kac.ReceivingPublic.Len(), "MLKEM X25519 component is 32 bytes")
+			assert.Equal(t, 32, kac.SigningPublic.Len(), "Ed25519 signing key is 32 bytes")
+		})
+
+		t.Run(tt.name+"_round_trip", func(t *testing.T) {
+			wireData := buildMLKEMWireData(t, tt.cryptoType)
+			kac, _, err := ReadKeysAndCert(wireData)
+			require.NoError(t, err)
+
+			serialized, err := kac.Bytes()
+			require.NoError(t, err)
+			assert.Equal(t, wireData, serialized,
+				"round-trip serialization must match original wire data")
+		})
+	}
+}
+
+// ============================================================================
+// KEYS_AND_CERT_MIN_SIZE constant validation
+// ============================================================================
+
+func TestKeysAndCertMinSizeConstant(t *testing.T) {
+	assert.Equal(t, 387, KEYS_AND_CERT_MIN_SIZE,
+		"KEYS_AND_CERT_MIN_SIZE should be 384 + 3 = 387")
+	assert.Equal(t, KEYS_AND_CERT_DATA_SIZE+3, KEYS_AND_CERT_MIN_SIZE,
+		"KEYS_AND_CERT_MIN_SIZE should equal KEYS_AND_CERT_DATA_SIZE + CERT_MIN_SIZE")
+}

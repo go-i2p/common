@@ -68,7 +68,7 @@ certificate :: Certificate
 total length: 387+ bytes
 */
 
-// KeysAndCert is the represenation of an I2P KeysAndCert.
+// KeysAndCert is the representation of an I2P KeysAndCert.
 //
 // https://geti2p.net/spec/common-structures#keysandcert
 type KeysAndCert struct {
@@ -182,27 +182,39 @@ func validateRequiredFields(kac *KeysAndCert) error {
 // the sizes declared by the KeyCertificate, and that the Padding field has the
 // expected size.  Validate() closes the gap between direct struct construction
 // and NewKeysAndCert: both paths enforce the same invariants.
+//
+// When CryptoSize() or SigningPublicKeySize() returns 0 the key type is unknown
+// or unsupported.  Rather than silently skipping validation (which would allow
+// buildKeysAndCertBlock to compute incorrect padding offsets), we return an
+// error immediately.
 func validateKeySizes(kac *KeysAndCert) error {
 	expectedCryptoSize := kac.KeyCertificate.CryptoSize()
-	if expectedCryptoSize > 0 && kac.ReceivingPublic.Len() != expectedCryptoSize {
+	if expectedCryptoSize == 0 {
+		return oops.Errorf(
+			"unknown or unsupported crypto key type: CryptoSize() returned 0",
+		)
+	}
+	if kac.ReceivingPublic.Len() != expectedCryptoSize {
 		return oops.Errorf(
 			"ReceivingPublic key size mismatch: certificate declares %d bytes, key has %d bytes",
 			expectedCryptoSize, kac.ReceivingPublic.Len(),
 		)
 	}
 	expectedSigSize := kac.KeyCertificate.SigningPublicKeySize()
-	if expectedSigSize > 0 && kac.SigningPublic.Len() != expectedSigSize {
+	if expectedSigSize == 0 {
+		return oops.Errorf(
+			"unknown or unsupported signing key type: SigningPublicKeySize() returned 0",
+		)
+	}
+	if kac.SigningPublic.Len() != expectedSigSize {
 		return oops.Errorf(
 			"SigningPublic key size mismatch: certificate declares %d bytes, key has %d bytes",
 			expectedSigSize, kac.SigningPublic.Len(),
 		)
 	}
-	// Validate padding size when both key sizes are known.  This catches
-	// directly-constructed structs with nil or wrong-sized Padding.
-	if expectedCryptoSize > 0 && expectedSigSize > 0 {
-		if err := validatePaddingSize(kac.Padding, expectedCryptoSize, expectedSigSize); err != nil {
-			return err
-		}
+	// Validate padding size — both key sizes are known at this point.
+	if err := validatePaddingSize(kac.Padding, expectedCryptoSize, expectedSigSize); err != nil {
+		return err
 	}
 	return nil
 }
@@ -267,21 +279,21 @@ func validatePaddingSize(padding []byte, pubKeySize, sigKeySize int) error {
 // Bytes returns the entire keyCertificate in []byte form as wire-format bytes.
 // Crypto keys are start-aligned and signing keys are right-justified per the I2P specification.
 // Returns an error if the KeysAndCert is not fully initialized.
-func (keys_and_cert *KeysAndCert) Bytes() ([]byte, error) {
-	if err := keys_and_cert.Validate(); err != nil {
+func (kac *KeysAndCert) Bytes() ([]byte, error) {
+	if err := kac.Validate(); err != nil {
 		return nil, err
 	}
 
-	block := buildKeysAndCertBlock(keys_and_cert)
+	block := buildKeysAndCertBlock(kac)
 
-	certBytes := keys_and_cert.KeyCertificate.Bytes()
+	certBytes := kac.KeyCertificate.Bytes()
 	result := append(block, certBytes...)
 
 	log.WithFields(logger.Fields{
 		"bytes_length":         len(result),
-		"pk_bytes_length":      len(keys_and_cert.ReceivingPublic.Bytes()),
-		"padding_bytes_length": len(keys_and_cert.Padding),
-		"spk_bytes_length":     len(keys_and_cert.SigningPublic.Bytes()),
+		"pk_bytes_length":      len(kac.ReceivingPublic.Bytes()),
+		"padding_bytes_length": len(kac.Padding),
+		"spk_bytes_length":     len(kac.SigningPublic.Bytes()),
 		"cert_bytes_length":    len(certBytes),
 	}).Debug("Retrieved bytes from KeysAndCert")
 	return result, nil
@@ -330,29 +342,29 @@ func buildKeysAndCertBlock(kac *KeysAndCert) []byte {
 
 // PublicKey returns the public key as a types.publicKey.
 // Returns an error if the KeysAndCert is not fully initialized.
-func (keys_and_cert *KeysAndCert) PublicKey() (types.ReceivingPublicKey, error) {
-	if err := keys_and_cert.Validate(); err != nil {
+func (kac *KeysAndCert) PublicKey() (types.ReceivingPublicKey, error) {
+	if err := kac.Validate(); err != nil {
 		return nil, err
 	}
-	return keys_and_cert.ReceivingPublic, nil
+	return kac.ReceivingPublic, nil
 }
 
 // SigningPublicKey returns the signing public key.
 // Returns an error if the KeysAndCert is not fully initialized.
-func (keys_and_cert *KeysAndCert) SigningPublicKey() (types.SigningPublicKey, error) {
-	if err := keys_and_cert.Validate(); err != nil {
+func (kac *KeysAndCert) SigningPublicKey() (types.SigningPublicKey, error) {
+	if err := kac.Validate(); err != nil {
 		return nil, err
 	}
-	return keys_and_cert.SigningPublic, nil
+	return kac.SigningPublic, nil
 }
 
 // Certificate returns the Certificate embedded within the KeyCertificate.
 // Returns nil if the receiver is nil or KeyCertificate has not been set.
-func (keys_and_cert *KeysAndCert) Certificate() *certificate.Certificate {
-	if keys_and_cert == nil || keys_and_cert.KeyCertificate == nil {
+func (kac *KeysAndCert) Certificate() *certificate.Certificate {
+	if kac == nil || kac.KeyCertificate == nil {
 		return nil
 	}
-	return &keys_and_cert.KeyCertificate.Certificate
+	return &kac.KeyCertificate.Certificate
 }
 
 // validateKeysAndCertDataSize validates that data meets minimum KeysAndCert size requirements.
@@ -505,8 +517,10 @@ func ReadKeysAndCert(data []byte) (*KeysAndCert, []byte, error) {
 		return nil, nil, err
 	}
 
-	// Check certificate type before full parsing.
-	// NULL certificates (type 0) imply ElGamal + DSA-SHA1 and need special handling.
+	// Peek at the certificate type byte to determine the parsing strategy.
+	// The certificate type byte is the first byte after the 384-byte data block,
+	// corresponding to the Certificate wire format (type byte + 2-byte length + payload).
+	// NULL certificates (type 0) imply ElGamal + DSA-SHA1 defaults.
 	certType := int(data[KEYS_AND_CERT_DATA_SIZE])
 	if certType != certificate.CERT_KEY {
 		return readKeysAndCertNonKeyCert(data, certType)

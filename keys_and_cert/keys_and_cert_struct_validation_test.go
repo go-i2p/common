@@ -1,12 +1,14 @@
 package keys_and_cert
 
 import (
-	"github.com/go-i2p/crypto/rand"
 	"encoding/binary"
 	"testing"
 
 	"github.com/go-i2p/common/certificate"
 	"github.com/go-i2p/common/key_certificate"
+	"github.com/go-i2p/crypto/curve25519"
+	"github.com/go-i2p/crypto/rand"
+	"github.com/go-i2p/crypto/types"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -477,4 +479,114 @@ func TestValidateSpecializedReaderCertTypes(t *testing.T) {
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "signing type mismatch")
 	})
+}
+
+// ============================================================================
+// validateKeySizes – unknown key type rejection (BUG-1 fix)
+// ============================================================================
+
+func TestValidateKeySizesRejectsUnknownKeyTypes(t *testing.T) {
+	t.Run("unknown crypto type returns error", func(t *testing.T) {
+		// Create a keyCert with an unknown crypto type that returns CryptoSize()=0.
+		// We use type 99 which is not defined in the spec.
+		keyCert := &key_certificate.KeyCertificate{}
+		keyCert.SpkType = []byte{0x00, 0x07} // Ed25519 signing
+		keyCert.CpkType = []byte{0x00, 0x63} // type 99, unknown
+		keyCert.Certificate = *buildCertForType(t, 7, 99)
+
+		kac := &KeysAndCert{
+			KeyCertificate:  keyCert,
+			ReceivingPublic: createDummyReceivingKey(),
+			SigningPublic:   createDummySigningKey(),
+		}
+		err := kac.Validate()
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "unknown or unsupported crypto key type")
+	})
+
+	t.Run("unknown signing type returns error", func(t *testing.T) {
+		keyCert := &key_certificate.KeyCertificate{}
+		keyCert.SpkType = []byte{0x00, 0x63} // type 99, unknown
+		keyCert.CpkType = []byte{0x00, 0x04} // X25519
+		keyCert.Certificate = *buildCertForType(t, 99, 4)
+
+		kac := &KeysAndCert{
+			KeyCertificate:  keyCert,
+			ReceivingPublic: createDummyReceivingKey(),
+			SigningPublic:   createDummySigningKey(),
+		}
+		err := kac.Validate()
+		require.Error(t, err)
+		// Should fail on crypto first (size check) or signing depending on type
+		assert.Error(t, err)
+	})
+}
+
+// buildCertForType creates a certificate.Certificate with the given type fields.
+func buildCertForType(t *testing.T, sigType, cryptoType int) *certificate.Certificate {
+	t.Helper()
+	payload := make([]byte, 4)
+	binary.BigEndian.PutUint16(payload[0:2], uint16(sigType))
+	binary.BigEndian.PutUint16(payload[2:4], uint16(cryptoType))
+	cert, err := certificate.NewCertificateWithType(certificate.CERT_KEY, payload)
+	require.NoError(t, err)
+	return cert
+}
+
+// ============================================================================
+// ReadKeysAndCertElgAndEd25519 with NULL certificate input
+// ============================================================================
+
+func TestReadKeysAndCertElgAndEd25519_NullCertInput(t *testing.T) {
+	t.Run("rejects NULL certificate", func(t *testing.T) {
+		wireData := buildNullCertData(t)
+		_, _, err := ReadKeysAndCertElgAndEd25519(wireData)
+		require.Error(t, err)
+		// Should fail on cert type validation: expects Ed25519(7) but gets DSA-SHA1(0)
+	})
+}
+
+// ============================================================================
+// buildKeysAndCertBlock with nil Padding
+// ============================================================================
+
+func TestBuildKeysAndCertBlockNilPadding(t *testing.T) {
+	t.Run("nil padding produces zero-filled padding region", func(t *testing.T) {
+		keyCert := buildTestKeyCert(t,
+			key_certificate.KEYCERT_SIGN_ED25519,
+			key_certificate.KEYCERT_CRYPTO_X25519,
+		)
+		kac := &KeysAndCert{
+			KeyCertificate:  keyCert,
+			ReceivingPublic: createDummyX25519Key(),
+			Padding:         nil, // intentionally nil
+			SigningPublic:   createDummySigningKey(),
+		}
+		block := buildKeysAndCertBlock(kac)
+		assert.Equal(t, KEYS_AND_CERT_DATA_SIZE, len(block))
+
+		// The crypto key should be at the start
+		assert.Equal(t, kac.ReceivingPublic.Bytes(), block[:32])
+
+		// Padding region should be all zeros since Padding is nil
+		paddingRegion := block[32:352]
+		for i, b := range paddingRegion {
+			if b != 0 {
+				t.Errorf("expected zero at padding offset %d, got %d", i, b)
+				break
+			}
+		}
+
+		// Signing key should be at the end
+		assert.Equal(t, kac.SigningPublic.Bytes(), block[352:384])
+	})
+}
+
+// createDummyX25519Key creates a 32-byte X25519 key for testing.
+func createDummyX25519Key() types.ReceivingPublicKey {
+	key := make(curve25519.Curve25519PublicKey, 32)
+	for i := range key {
+		key[i] = byte(i % 256)
+	}
+	return key
 }

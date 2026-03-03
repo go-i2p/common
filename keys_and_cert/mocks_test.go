@@ -282,3 +282,121 @@ func buildP521WireData(t *testing.T) (wireData []byte, fullSigningKey []byte) {
 	wireData = append(block, certBytes...)
 	return
 }
+
+// buildRSA2048WireData builds valid wire data for RSA-2048 (sigKeySize=256) + ElGamal.
+// RSA-2048 signing key: 256 bytes. 128 bytes inline + 128 bytes excess in cert payload.
+// Returns the wire bytes and the full 256-byte RSA-2048 signing key for assertion.
+func buildRSA2048WireData(t *testing.T) (wireData []byte, fullSigningKey []byte) {
+	t.Helper()
+
+	block := make([]byte, KEYS_AND_CERT_DATA_SIZE)
+
+	// Random ElGamal key
+	_, err := rand.Read(block[0:256])
+	require.NoError(t, err)
+
+	// Generate a random 256-byte RSA-2048 signing key
+	fullSigningKey = make([]byte, 256)
+	_, err = rand.Read(fullSigningKey)
+	require.NoError(t, err)
+
+	// First 128 bytes inline in SPK field (right-justified = fills bytes 256..383)
+	copy(block[256:384], fullSigningKey[0:128])
+
+	// cert payload: SpkType(RSA2048=4) || CpkType(ElGamal=0) || excess(128 bytes)
+	excess := fullSigningKey[128:256]
+	certPayload := make([]byte, 4+len(excess))
+	binary.BigEndian.PutUint16(certPayload[0:2], uint16(key_certificate.KEYCERT_SIGN_RSA2048))
+	binary.BigEndian.PutUint16(certPayload[2:4], uint16(key_certificate.KEYCERT_CRYPTO_ELG))
+	copy(certPayload[4:], excess)
+
+	certBytes := []byte{certificate.CERT_KEY}
+	lenBytes := make([]byte, 2)
+	binary.BigEndian.PutUint16(lenBytes, uint16(len(certPayload)))
+	certBytes = append(certBytes, lenBytes...)
+	certBytes = append(certBytes, certPayload...)
+
+	wireData = append(block, certBytes...)
+	return
+}
+
+// buildRSA3072WireData builds valid wire data for RSA-3072 (sigKeySize=384) + ElGamal.
+func buildRSA3072WireData(t *testing.T) (wireData []byte, fullSigningKey []byte) {
+	t.Helper()
+	block := make([]byte, KEYS_AND_CERT_DATA_SIZE)
+	_, err := rand.Read(block[0:256])
+	require.NoError(t, err)
+
+	fullSigningKey = make([]byte, 384)
+	_, err = rand.Read(fullSigningKey)
+	require.NoError(t, err)
+	copy(block[256:384], fullSigningKey[0:128])
+
+	excess := fullSigningKey[128:384]
+	certPayload := make([]byte, 4+len(excess))
+	binary.BigEndian.PutUint16(certPayload[0:2], uint16(key_certificate.KEYCERT_SIGN_RSA3072))
+	binary.BigEndian.PutUint16(certPayload[2:4], uint16(key_certificate.KEYCERT_CRYPTO_ELG))
+	copy(certPayload[4:], excess)
+
+	certBytes := []byte{certificate.CERT_KEY}
+	lenBytes := make([]byte, 2)
+	binary.BigEndian.PutUint16(lenBytes, uint16(len(certPayload)))
+	certBytes = append(certBytes, lenBytes...)
+	certBytes = append(certBytes, certPayload...)
+
+	wireData = append(block, certBytes...)
+	return
+}
+
+// buildRSA4096WireData builds valid wire data for RSA-4096 (sigKeySize=512) + ElGamal.
+func buildRSA4096WireData(t *testing.T) (wireData []byte, fullSigningKey []byte) {
+	t.Helper()
+	block := make([]byte, KEYS_AND_CERT_DATA_SIZE)
+	_, err := rand.Read(block[0:256])
+	require.NoError(t, err)
+
+	fullSigningKey = make([]byte, 512)
+	_, err = rand.Read(fullSigningKey)
+	require.NoError(t, err)
+	copy(block[256:384], fullSigningKey[0:128])
+
+	excess := fullSigningKey[128:512]
+	certPayload := make([]byte, 4+len(excess))
+	binary.BigEndian.PutUint16(certPayload[0:2], uint16(key_certificate.KEYCERT_SIGN_RSA4096))
+	binary.BigEndian.PutUint16(certPayload[2:4], uint16(key_certificate.KEYCERT_CRYPTO_ELG))
+	copy(certPayload[4:], excess)
+
+	certBytes := []byte{certificate.CERT_KEY}
+	lenBytes := make([]byte, 2)
+	binary.BigEndian.PutUint16(lenBytes, uint16(len(certPayload)))
+	certBytes = append(certBytes, lenBytes...)
+	certBytes = append(certBytes, certPayload...)
+
+	wireData = append(block, certBytes...)
+	return
+}
+
+// buildMLKEMWireData builds valid wire data for MLKEM+X25519 crypto + Ed25519 signing.
+// MLKEM crypto types report size 32 (X25519 component), same wire layout as X25519+Ed25519.
+func buildMLKEMWireData(t *testing.T, cryptoType int) []byte {
+	t.Helper()
+	block := make([]byte, KEYS_AND_CERT_DATA_SIZE)
+
+	x25519Key := make([]byte, 32)
+	_, err := rand.Read(x25519Key)
+	require.NoError(t, err)
+	copy(block[0:32], x25519Key)
+
+	ed25519Key := make([]byte, 32)
+	_, err = rand.Read(ed25519Key)
+	require.NoError(t, err)
+	copy(block[KEYS_AND_CERT_DATA_SIZE-32:KEYS_AND_CERT_DATA_SIZE], ed25519Key)
+
+	certPayload := buildKeyCertPayload(key_certificate.KEYCERT_SIGN_ED25519, cryptoType)
+	certBytes := []byte{certificate.CERT_KEY}
+	lenBytes := make([]byte, 2)
+	binary.BigEndian.PutUint16(lenBytes, uint16(len(certPayload)))
+	certBytes = append(certBytes, lenBytes...)
+	certBytes = append(certBytes, certPayload...)
+	return append(block, certBytes...)
+}
