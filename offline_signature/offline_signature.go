@@ -11,6 +11,18 @@
 //   - Signature verification using destination's long-term key
 //   - Complete I2P specification 0.9.67 compliance
 //
+// # RedDSA Signing Limitation
+//
+// CreateOfflineSignature supports Ed25519, Ed25519ph, and ECDSA-P256/P384/P521 destination
+// types. RedDSA (type 11) signing is NOT supported because standard Ed25519 signatures use
+// deterministic nonces while RedDSA requires randomized per-message nonces — silently using
+// ed25519.Sign() would produce non-spec-compliant signatures.
+//
+// Workaround for RedDSA destinations: generate the signature externally using a dedicated
+// RedDSA library, then construct the OfflineSignature via NewOfflineSignature() with the
+// raw signature bytes. VerifySignature() supports RedDSA verification (since verification
+// is mathematically identical to Ed25519 on the same curve).
+//
 // Specification: https://geti2p.net/spec/common-structures#offlinesignature
 // Introduced: I2P version 0.9.38 (Proposal 123)
 package offline_signature
@@ -300,6 +312,11 @@ func (o *OfflineSignature) IsExpired() bool {
 //   - variable: transient_public_key (length determined by sigtype)
 //   - variable: signature (length determined by destination signature type)
 //
+// The returned bytes do NOT include the destination signature type (destinationSigType),
+// which is contextual information inferred from the Destination that precedes this structure.
+// When re-parsing the output via ReadOfflineSignature, callers must re-supply the
+// destinationSigType parameter externally.
+//
 // Returns the complete binary representation suitable for network transmission or storage.
 func (o *OfflineSignature) Bytes() []byte {
 	totalSize := EXPIRES_SIZE + SIGTYPE_SIZE + len(o.transientPublicKey) + len(o.signature)
@@ -451,11 +468,20 @@ func (o *OfflineSignature) IsValid() bool {
 // The returned byte layout is: expires(4) || sigtype(2) || transient_public_key(variable).
 // This is the exact message that must be signed or verified.
 func (o *OfflineSignature) SignedData() []byte {
-	dataLen := EXPIRES_SIZE + SIGTYPE_SIZE + len(o.transientPublicKey)
+	return computeSignedData(o.expires, o.sigtype, o.transientPublicKey)
+}
+
+// computeSignedData constructs the byte sequence to be signed or verified:
+// expires(4) || sigtype(2) || transient_public_key(variable).
+// This is the single source of truth for the signed data format, used by both
+// SignedData() (method on existing OfflineSignature) and CreateOfflineSignature
+// (construction of new OfflineSignatures).
+func computeSignedData(expires uint32, sigtype uint16, transientPublicKey []byte) []byte {
+	dataLen := EXPIRES_SIZE + SIGTYPE_SIZE + len(transientPublicKey)
 	result := make([]byte, dataLen)
-	binary.BigEndian.PutUint32(result[0:4], o.expires)
-	binary.BigEndian.PutUint16(result[4:6], o.sigtype)
-	copy(result[EXPIRES_SIZE+SIGTYPE_SIZE:], o.transientPublicKey)
+	binary.BigEndian.PutUint32(result[0:4], expires)
+	binary.BigEndian.PutUint16(result[4:6], sigtype)
+	copy(result[EXPIRES_SIZE+SIGTYPE_SIZE:], transientPublicKey)
 	return result
 }
 
@@ -487,6 +513,10 @@ func (o *OfflineSignature) VerifySignature(destinationPublicKey []byte) (bool, e
 // verifyWithDestinationType dispatches signature verification based on destination type.
 func verifyWithDestinationType(destSigType uint16, pubKey, message, sig []byte) (bool, error) {
 	switch destSigType {
+	// RedDSA (type 11) verification is identical to Ed25519 (type 7): both operate on
+	// the same Edwards curve (Ed25519) and share the same verification equation.
+	// The distinction between Ed25519 and RedDSA lies only in nonce generation during
+	// *signing* (deterministic vs. randomized), which does not affect verification.
 	case signature.SIGNATURE_TYPE_EDDSA_SHA512_ED25519,
 		signature.SIGNATURE_TYPE_REDDSA_SHA512_ED25519:
 		return verifyEd25519(pubKey, message, sig)
@@ -583,7 +613,7 @@ func CreateOfflineSignature(
 	if err := validateCreateParams(expires, transientSigType, transientPublicKey, destinationSigType); err != nil {
 		return OfflineSignature{}, err
 	}
-	signedData := buildSignedData(expires, transientSigType, transientPublicKey)
+	signedData := computeSignedData(expires, transientSigType, transientPublicKey)
 	sig, err := signWithDestinationType(destinationSigType, signer, signedData)
 	if err != nil {
 		return OfflineSignature{}, fmt.Errorf("failed to sign: %w", err)
@@ -608,16 +638,6 @@ func validateCreateParams(expires uint32, transientSigType uint16, transientPubl
 		return fmt.Errorf("%w: destination signature type %d", ErrUnknownSignatureType, destSigType)
 	}
 	return nil
-}
-
-// buildSignedData constructs the byte sequence to be signed: expires || sigtype || transient_public_key.
-func buildSignedData(expires uint32, sigtype uint16, transientPublicKey []byte) []byte {
-	dataLen := EXPIRES_SIZE + SIGTYPE_SIZE + len(transientPublicKey)
-	result := make([]byte, dataLen)
-	binary.BigEndian.PutUint32(result[0:4], expires)
-	binary.BigEndian.PutUint16(result[4:6], sigtype)
-	copy(result[EXPIRES_SIZE+SIGTYPE_SIZE:], transientPublicKey)
-	return result
 }
 
 // signWithDestinationType signs the data using the appropriate algorithm for the destination type.

@@ -482,3 +482,92 @@ func TestMaxSizeOfflineSignature(t *testing.T) {
 		assert.NoError(t, offlineSig.ValidateStructure(), "RSA4096 OfflineSignature should pass structural validation")
 	})
 }
+
+// =========================================================================
+// computeSignedData Tests (QUALITY-1: single source of truth)
+// =========================================================================
+
+func TestComputeSignedDataEquivalence(t *testing.T) {
+	// Verify that SignedData() method and CreateOfflineSignature use the same
+	// computeSignedData function, producing identical byte sequences.
+	expires := uint32(1735689600)
+	sigtype := uint16(key_certificate.KEYCERT_SIGN_ED25519)
+	transientKey := make([]byte, key_certificate.KEYCERT_SIGN_ED25519_SIZE)
+	for i := range transientKey {
+		transientKey[i] = byte(i + 1)
+	}
+
+	// Call computeSignedData directly
+	direct := computeSignedData(expires, sigtype, transientKey)
+
+	// Build an OfflineSignature and call SignedData()
+	sig := make([]byte, signature.EdDSA_SHA512_Ed25519_SIZE)
+	offlineSig, err := NewOfflineSignature(expires, sigtype, transientKey, sig,
+		signature.SIGNATURE_TYPE_EDDSA_SHA512_ED25519)
+	require.NoError(t, err)
+	method := offlineSig.SignedData()
+
+	assert.Equal(t, direct, method,
+		"computeSignedData and SignedData() should produce identical byte sequences")
+	assert.Equal(t, EXPIRES_SIZE+SIGTYPE_SIZE+len(transientKey), len(direct),
+		"signed data length should be header + key size")
+}
+
+func TestComputeSignedDataFormat(t *testing.T) {
+	expires := uint32(0x12345678)
+	sigtype := uint16(key_certificate.KEYCERT_SIGN_P256)
+	transientKey := make([]byte, key_certificate.KEYCERT_SIGN_P256_SIZE)
+	for i := range transientKey {
+		transientKey[i] = byte(i)
+	}
+
+	result := computeSignedData(expires, sigtype, transientKey)
+
+	// Verify expires (big-endian)
+	assert.Equal(t, byte(0x12), result[0])
+	assert.Equal(t, byte(0x34), result[1])
+	assert.Equal(t, byte(0x56), result[2])
+	assert.Equal(t, byte(0x78), result[3])
+
+	// Verify sigtype (big-endian)
+	parsedSigtype := binary.BigEndian.Uint16(result[4:6])
+	assert.Equal(t, sigtype, parsedSigtype)
+
+	// Verify transient key
+	assert.True(t, bytes.Equal(transientKey, result[6:]))
+}
+
+// =========================================================================
+// SigningPublicKeySize Delegation Tests (QUALITY-2)
+// =========================================================================
+
+func TestSigningPublicKeySizeDelegation(t *testing.T) {
+	// Verify that SigningPublicKeySize returns correct values for all supported types
+	// by cross-referencing with key_certificate.GetSigningKeySize (the source of truth).
+	testCases := []struct {
+		name     string
+		sigType  uint16
+		expected int
+	}{
+		{"DSA_SHA1", key_certificate.KEYCERT_SIGN_DSA_SHA1, key_certificate.KEYCERT_SIGN_DSA_SHA1_SIZE},
+		{"P256", key_certificate.KEYCERT_SIGN_P256, key_certificate.KEYCERT_SIGN_P256_SIZE},
+		{"P384", key_certificate.KEYCERT_SIGN_P384, key_certificate.KEYCERT_SIGN_P384_SIZE},
+		{"P521", key_certificate.KEYCERT_SIGN_P521, key_certificate.KEYCERT_SIGN_P521_SIZE},
+		{"RSA2048", key_certificate.KEYCERT_SIGN_RSA2048, key_certificate.KEYCERT_SIGN_RSA2048_SIZE},
+		{"RSA3072", key_certificate.KEYCERT_SIGN_RSA3072, key_certificate.KEYCERT_SIGN_RSA3072_SIZE},
+		{"RSA4096", key_certificate.KEYCERT_SIGN_RSA4096, key_certificate.KEYCERT_SIGN_RSA4096_SIZE},
+		{"Ed25519", key_certificate.KEYCERT_SIGN_ED25519, key_certificate.KEYCERT_SIGN_ED25519_SIZE},
+		{"Ed25519ph", key_certificate.KEYCERT_SIGN_ED25519PH, key_certificate.KEYCERT_SIGN_ED25519PH_SIZE},
+		{"RedDSA", key_certificate.KEYCERT_SIGN_REDDSA_ED25519, key_certificate.KEYCERT_SIGN_ED25519_SIZE},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			got := SigningPublicKeySize(tc.sigType)
+			assert.Equal(t, tc.expected, got, "size mismatch for %s (type %d)", tc.name, tc.sigType)
+		})
+	}
+
+	t.Run("unknown_type_returns_zero", func(t *testing.T) {
+		assert.Equal(t, 0, SigningPublicKeySize(9999))
+	})
+}

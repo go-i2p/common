@@ -35,7 +35,8 @@ signature :: Signature
              Signature of expires timestamp, transient sig type, and public key,
              by the destination public key.
 
-Total minimum size: 102 bytes (with EdDSA keys)
+Total minimum size: varies by signature types. Typical size: 102 bytes (EdDSA transient +
+EdDSA destination). See OFFLINE_SIGNATURE_HEADER_SIZE (6 bytes) for the true structural minimum.
 Maximum size: varies based on signature types
 
 https://geti2p.net/spec/common-structures#offlinesignature

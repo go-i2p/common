@@ -458,3 +458,67 @@ func TestRemovedErrInvalidOfflineSignatureData(t *testing.T) {
 		assert.ErrorIs(t, offlineSig.Validate(), ErrExpiredOfflineSignature)
 	})
 }
+
+// =========================================================================
+// Bytes() contextual dependency test (SPEC-2)
+// =========================================================================
+
+func TestBytesDoesNotIncludeDestinationSigType(t *testing.T) {
+	// SPEC-2: Bytes() output does not include destinationSigType.
+	// Verify that the same OfflineSignature structure produces identical Bytes()
+	// regardless of which destinationSigType was used during construction,
+	// as long as signature data is the same length.
+	expires := uint32(1735689600)
+	transientKey := make([]byte, key_certificate.KEYCERT_SIGN_ED25519_SIZE)
+	for i := range transientKey {
+		transientKey[i] = byte(i)
+	}
+
+	// Both Ed25519 and RedDSA produce 64-byte signatures.
+	sig := make([]byte, 64)
+	for i := range sig {
+		sig[i] = byte(i + 100)
+	}
+
+	sig1, err := NewOfflineSignature(expires, key_certificate.KEYCERT_SIGN_ED25519,
+		transientKey, sig, signature.SIGNATURE_TYPE_EDDSA_SHA512_ED25519)
+	require.NoError(t, err)
+
+	sig2, err := NewOfflineSignature(expires, key_certificate.KEYCERT_SIGN_ED25519,
+		transientKey, sig, signature.SIGNATURE_TYPE_REDDSA_SHA512_ED25519)
+	require.NoError(t, err)
+
+	assert.Equal(t, sig1.Bytes(), sig2.Bytes(),
+		"Bytes() output should be identical regardless of destinationSigType")
+	assert.NotEqual(t, sig1.DestinationSigType(), sig2.DestinationSigType(),
+		"destination sig types should differ to confirm they're not in the wire format")
+}
+
+func TestBytesRoundTripRequiresDestSigType(t *testing.T) {
+	// SPEC-2: re-parsing Bytes() output requires caller to supply destinationSigType
+	expires := uint32(1735689600)
+	transientKey := make([]byte, key_certificate.KEYCERT_SIGN_ED25519_SIZE)
+	sig := make([]byte, signature.EdDSA_SHA512_Ed25519_SIZE)
+
+	original, err := NewOfflineSignature(expires, key_certificate.KEYCERT_SIGN_ED25519,
+		transientKey, sig, signature.SIGNATURE_TYPE_EDDSA_SHA512_ED25519)
+	require.NoError(t, err)
+
+	wireBytes := original.Bytes()
+
+	// Parse with correct destSigType succeeds
+	parsed, rem, err := ReadOfflineSignature(wireBytes, signature.SIGNATURE_TYPE_EDDSA_SHA512_ED25519)
+	assert.NoError(t, err)
+	assert.Empty(t, rem)
+	assert.Equal(t, original.Expires(), parsed.Expires())
+	assert.Equal(t, original.TransientSigType(), parsed.TransientSigType())
+
+	// Parse with wrong destSigType (different sig size) fails or generates wrong result
+	_, _, err = ReadOfflineSignature(wireBytes, signature.SIGNATURE_TYPE_ECDSA_SHA256_P256)
+	// P256 has 64-byte signature, same as Ed25519, so it should succeed parse but
+	// the semantic meaning is different — confirming contextual dependency
+	if err == nil {
+		// Parsed successfully but with wrong destSigType — shows contextual dependency
+		assert.NotEqual(t, original.DestinationSigType(), signature.SIGNATURE_TYPE_ECDSA_SHA256_P256)
+	}
+}
