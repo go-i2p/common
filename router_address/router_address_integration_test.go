@@ -131,8 +131,10 @@ func TestBytesTransportTypeValidation(t *testing.T) {
 			TransportType:    data.I2PString("NTCP2"),
 			TransportOptions: mapping,
 		}
-		serialized := ra.Bytes()
-		assert.NotNil(t, serialized, "Bytes() should still produce output")
+		// A manually constructed I2PString without a proper length prefix
+		// will be rejected by Serialize() because the content check fails.
+		_, err := ra.Serialize()
+		assert.Error(t, err, "Serialize() should reject malformed I2PString TransportType")
 	})
 }
 
@@ -180,7 +182,7 @@ func TestRouterAddressEquals(t *testing.T) {
 	t.Run("nil bytes addresses both nil", func(t *testing.T) {
 		ra1 := RouterAddress{}
 		ra2 := RouterAddress{}
-		assert.True(t, ra1.Equals(ra2), "Both nil-bytes addresses should be equal")
+		assert.False(t, ra1.Equals(ra2), "Invalid addresses with nil bytes should not be considered equal")
 	})
 }
 

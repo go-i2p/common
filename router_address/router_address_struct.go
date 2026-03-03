@@ -51,7 +51,7 @@ transport_style :: String
 options :: Mapping
 */
 
-// RouterAddress is the represenation of an I2P RouterAddress.
+// RouterAddress is the representation of an I2P RouterAddress.
 //
 // https://geti2p.net/spec/common-structures#routeraddress
 //

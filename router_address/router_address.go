@@ -12,11 +12,17 @@ import (
 
 var log = logger.GetGoI2PLogger()
 
-// ex_addr is a package-level variable used to verify RouterAddress implements net.Addr
-var ex_addr net.Addr = &RouterAddress{}
+// Compile-time assertion that RouterAddress implements net.Addr.
+var _ net.Addr = (*RouterAddress)(nil)
 
 // NewRouterAddress creates a new RouterAddress with the provided parameters.
 // Validates that the transport type is not empty and that required options are provided.
+//
+// The expiration parameter is accepted for API compatibility but is always ignored;
+// per the I2P spec (0.9.12+), the expiration field MUST be all zeros. Callers should
+// pass time.Time{} (zero value). A non-zero value will produce a log warning but is
+// otherwise silently discarded.
+//
 // Returns a pointer to RouterAddress.
 func NewRouterAddress(cost uint8, expiration time.Time, transportType string, options map[string]string) (*RouterAddress, error) {
 	log.Debug("Creating new RouterAddress")
@@ -83,6 +89,12 @@ func validateRouterAddressFields(ra *RouterAddress) error {
 	}
 	if ra.TransportType == nil || len(ra.TransportType) == 0 {
 		return ErrMissingTransportType
+	}
+	// Check that the I2PString content is non-empty, not just the raw slice.
+	// An I2PString like {0x00} has a raw length of 1 but declares zero content bytes,
+	// which would pass the above check but fail round-trip parsing.
+	if content, err := ra.TransportType.Data(); err != nil || len(content) == 0 {
+		return ErrEmptyTransportStyle
 	}
 	if ra.TransportOptions == nil {
 		return ErrMissingTransportOptions

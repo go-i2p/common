@@ -73,7 +73,8 @@ func (ra *RouterAddress) ipVersionFromHost() string {
 
 // ipVersionFromCaps determines IP version from the caps option suffix.
 // This is a Java router convention, not mandated by the I2P spec.
-// Returns "" if the caps string is empty or unrecognized.
+// Caps strings ending in "4" indicate IPv4; those ending in "6" indicate IPv6.
+// Returns "" if the caps string is empty, missing, or has no recognized IP suffix.
 func (ra *RouterAddress) ipVersionFromCaps() string {
 	caps := ra.CapsString()
 	if caps == nil {
@@ -90,8 +91,12 @@ func (ra *RouterAddress) ipVersionFromCaps() string {
 		log.Debug("IP version is IPv6 (from caps)")
 		return IPV6_VERSION_STRING
 	}
-	log.Debug("IP version is IPv4 (from caps)")
-	return IPV4_VERSION_STRING
+	if strings.HasSuffix(str, IPV4_VERSION_STRING) {
+		log.Debug("IP version is IPv4 (from caps)")
+		return IPV4_VERSION_STRING
+	}
+	log.Debug("IP version cannot be determined from caps")
+	return ""
 }
 
 // UDP checks if the RouterAddress is UDP-based
@@ -160,11 +165,17 @@ func (ra RouterAddress) Serialize() ([]byte, error) {
 		log.Warn("Cannot serialize RouterAddress: TransportType is nil or empty")
 		return nil, oops.Errorf("%w", ErrMissingTransportType)
 	}
+	// Verify the I2PString content is non-empty (catches {0x00} — a valid I2PString
+	// encoding that declares zero content bytes).
+	if content, err := ra.TransportType.Data(); err != nil || len(content) == 0 {
+		log.Warn("Cannot serialize RouterAddress: TransportType content is empty")
+		return nil, oops.Errorf("%w", ErrEmptyTransportStyle)
+	}
 	if ra.TransportOptions == nil {
 		log.Warn("Cannot serialize RouterAddress: TransportOptions is nil")
 		return nil, oops.Errorf("%w", ErrMissingTransportOptions)
 	}
-	buf := make([]byte, 0)
+	var buf []byte
 	buf = append(buf, ra.TransportCost.Bytes()...)
 	buf = append(buf, ra.ExpirationDate.Bytes()...)
 	buf = append(buf, ra.TransportType...)
@@ -495,9 +506,14 @@ func (ra RouterAddress) InitializationVector() ([16]byte, error) {
 	return result, nil
 }
 
-// ProtocolVersion returns the protocol version as a string
+// ProtocolVersion returns the protocol version as a string.
+// Returns ("", error) if the "v" option is not set.
 func (ra RouterAddress) ProtocolVersion() (string, error) {
-	return ra.ProtocolVersionString().Data()
+	pvs := ra.ProtocolVersionString()
+	if pvs == nil {
+		return "", oops.Errorf("protocol version option %q not set", PROTOCOL_VERSION_OPTION_KEY)
+	}
+	return pvs.Data()
 }
 
 // Options returns the options for this RouterAddress as an I2P Mapping.
@@ -509,27 +525,29 @@ func (ra RouterAddress) Options() data.Mapping {
 	return *ra.TransportOptions
 }
 
-// checkValid checks if the RouterAddress is empty or if it is too small to contain valid data.
-func (ra RouterAddress) checkValid() (err error, exit bool) {
+// checkValid checks if the RouterAddress has the minimum required fields set.
+// Returns a non-nil error if the address is missing critical fields.
+func (ra RouterAddress) checkValid() error {
 	if ra.TransportType == nil {
-		return oops.Errorf("invalid router address: nil transport type"), true
+		return oops.Errorf("invalid router address: nil transport type")
 	}
 	if ra.TransportOptions == nil {
-		return oops.Errorf("invalid router address: nil transport options"), true
+		return oops.Errorf("invalid router address: nil transport options")
 	}
-	return nil, false
+	return nil
 }
 
 // Equals compares two RouterAddress instances for equality.
 // Two addresses are equal if they have the same cost, expiration, transport style, and options.
+// Returns false if either address cannot be serialized (nil fields).
 func (ra RouterAddress) Equals(other RouterAddress) bool {
-	if ra.Cost() != other.Cost() {
+	aBytes := ra.Bytes()
+	bBytes := other.Bytes()
+	// If either address fails serialization, they are not meaningfully comparable.
+	if aBytes == nil || bBytes == nil {
 		return false
 	}
-	if ra.Expiration() != other.Expiration() {
-		return false
-	}
-	return compareBytesContent(ra.Bytes(), other.Bytes())
+	return bytes.Equal(aBytes, bBytes)
 }
 
 // compareBytesContent checks whether two byte slices are identical, treating two
@@ -574,4 +592,74 @@ func (ra RouterAddress) HasNonZeroExpiration() bool {
 		}
 	}
 	return false
+}
+
+// GoString returns a detailed, labeled representation of the RouterAddress
+// suitable for debugging with fmt.Sprintf("%#v"). Unlike String() (which
+// implements net.Addr with a compact format), GoString includes field labels.
+func (ra RouterAddress) GoString() string {
+	if ra.TransportType == nil {
+		return "RouterAddress{<invalid: nil transport type>}"
+	}
+	var sb strings.Builder
+	sb.WriteString("RouterAddress{")
+
+	if ts, err := ra.TransportType.Data(); err == nil {
+		sb.WriteString("type=")
+		sb.WriteString(ts)
+	}
+
+	sb.WriteString(", cost=")
+	sb.WriteString(strconv.Itoa(ra.Cost()))
+
+	if hs := ra.HostString(); hs != nil {
+		if h, err := hs.Data(); err == nil && len(h) > 0 {
+			sb.WriteString(", host=")
+			sb.WriteString(h)
+		}
+	}
+	if ps := ra.PortString(); ps != nil {
+		if p, err := ps.Data(); err == nil && len(p) > 0 {
+			sb.WriteString(", port=")
+			sb.WriteString(p)
+		}
+	}
+	if pvs := ra.ProtocolVersionString(); pvs != nil {
+		if v, err := pvs.Data(); err == nil && len(v) > 0 {
+			sb.WriteString(", v=")
+			sb.WriteString(v)
+		}
+	}
+
+	sb.WriteString("}")
+	return sb.String()
+}
+
+// SetOption sets or replaces a transport option in the RouterAddress.
+// Both key and value are provided as Go strings and converted to I2PStrings.
+// If TransportOptions is nil, a new Mapping is created.
+func (ra *RouterAddress) SetOption(key, value string) error {
+	if ra == nil {
+		return oops.Errorf("cannot set option on nil RouterAddress")
+	}
+
+	// Rebuild options map from current state, set the new key, and reconstruct.
+	opts := make(map[string]string)
+	if ra.TransportOptions != nil {
+		for _, pair := range ra.Options().Values() {
+			k, kErr := pair[0].Data()
+			v, vErr := pair[1].Data()
+			if kErr == nil && vErr == nil {
+				opts[k] = v
+			}
+		}
+	}
+	opts[key] = value
+
+	newMapping, err := data.GoMapToMapping(opts)
+	if err != nil {
+		return oops.Wrapf(err, "failed to create mapping with option %q=%q", key, value)
+	}
+	ra.TransportOptions = newMapping
+	return nil
 }

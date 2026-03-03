@@ -94,11 +94,13 @@ PROTOCOL_VERSION_OPTION_KEY is the mapping key for the protocol version option
 
 ```go
 const (
-	ROUTER_ADDRESS_MIN_SIZE = 9
+	ROUTER_ADDRESS_MIN_SIZE = 12
 )
 ```
-ROUTER_ADDRESS_MIN_SIZE defines the minimum number of bytes in a valid
-RouterAddress
+ROUTER_ADDRESS_MIN_SIZE is the pre-parse rejection threshold: data shorter than
+this is rejected immediately without attempting to parse. Breakdown: 1 (cost) + 8
+(expiration) + 1 (transport_style length prefix) + 2 (mapping size field) = 12
+bytes.
 
 ```go
 const SSU_TRANSPORT_PREFIX = "ssu"
@@ -126,7 +128,7 @@ type RouterAddress struct {
 }
 ```
 
-RouterAddress is the represenation of an I2P RouterAddress.
+RouterAddress is the representation of an I2P RouterAddress.
 
 https://geti2p.net/spec/common-structures#routeraddress
 

@@ -28,9 +28,8 @@ func TestReadRouterAddressReturnsCorrectRemainderWithoutError(t *testing.T) {
 	assert.Nil(err, "ReadRouterAddress() reported error with valid data:")
 	assert.Equal(0, len(remainder)-3)
 
-	err, exit := router_address.checkValid()
+	err = router_address.checkValid()
 	assert.Nil(err, "checkValid() on address from ReadRouterAddress() reported error with valid data")
-	assert.Equal(exit, false, "checkValid() on address from ReadRouterAddress() indicated to stop parsing valid data")
 }
 
 func TestReadRouterAddressAcceptsZeroExpiration(t *testing.T) {
@@ -203,5 +202,51 @@ func TestReadRouterAddress_SentinelErrors(t *testing.T) {
 		_, _, err := ReadRouterAddress([]byte{0x05, 0x00, 0x00})
 		assert.Error(t, err)
 		assert.True(t, errors.Is(err, ErrDataTooSmall), "Should be ErrDataTooSmall, got: %v", err)
+	})
+}
+
+// =========================================================================
+// ReadRouterAddress with truncated data at field boundaries
+// =========================================================================
+
+func TestReadRouterAddressTruncatedAtFieldBoundaries(t *testing.T) {
+	// Build a valid wire-format RouterAddress for reference.
+	ra, err := NewRouterAddress(5, time.Time{}, "NTCP2", map[string]string{"host": "127.0.0.1", "port": "9150"})
+	require.NoError(t, err)
+	full := ra.Bytes()
+	require.NotNil(t, full)
+
+	t.Run("truncated mid-expiration (5 bytes: cost + 4 of 8 expiration bytes)", func(t *testing.T) {
+		_, _, err := ReadRouterAddress(full[:5])
+		assert.Error(t, err, "Truncated mid-expiration should error")
+	})
+
+	t.Run("truncated after expiration, before transport length (9 bytes)", func(t *testing.T) {
+		// 1 cost + 8 expiration = 9 bytes, but ROUTER_ADDRESS_MIN_SIZE is 12
+		_, _, err := ReadRouterAddress(full[:9])
+		assert.Error(t, err, "Truncated before transport style should error")
+	})
+
+	t.Run("truncated between transport-length and transport-data", func(t *testing.T) {
+		// 1 cost + 8 exp + 1 transport length = 10 bytes
+		// The transport length byte says 5 (for "NTCP2"), but only 0 transport chars follow
+		truncated := make([]byte, 10)
+		copy(truncated, full[:10])
+		_, _, err := ReadRouterAddress(truncated)
+		assert.Error(t, err, "Truncated between transport length and data should error")
+	})
+
+	t.Run("truncated mid-mapping", func(t *testing.T) {
+		// Include full cost + expiration + transport type but truncate the mapping.
+		// Note: parseTransportOptions treats mapping parse errors as non-fatal
+		// warnings when a partial mapping is returned, so this may succeed
+		// with a partially-parsed mapping. We verify it doesn't panic.
+		transportEnd := 1 + 8 + 1 + 5 // cost + exp + len_prefix + "NTCP2"
+		if transportEnd+2 < len(full) {
+			truncated := full[:transportEnd+1] // just 1 byte into the mapping
+			assert.NotPanics(t, func() {
+				_, _, _ = ReadRouterAddress(truncated)
+			}, "Truncated mid-mapping should not panic")
+		}
 	})
 }

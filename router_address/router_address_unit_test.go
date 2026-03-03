@@ -328,24 +328,21 @@ func TestCheckValidReturnsBehavior(t *testing.T) {
 	t.Run("valid address", func(t *testing.T) {
 		ra, err := NewRouterAddress(5, time.Time{}, "NTCP2", map[string]string{"host": "127.0.0.1"})
 		require.NoError(t, err)
-		err, exit := ra.checkValid()
+		err = ra.checkValid()
 		assert.NoError(t, err)
-		assert.False(t, exit)
 	})
 
 	t.Run("nil transport type", func(t *testing.T) {
 		ra := &RouterAddress{TransportType: nil}
-		err, exit := ra.checkValid()
+		err := ra.checkValid()
 		assert.Error(t, err)
-		assert.True(t, exit)
 	})
 
 	t.Run("nil transport options", func(t *testing.T) {
 		transportType, _ := data.ToI2PString("NTCP2")
 		ra := &RouterAddress{TransportType: transportType, TransportOptions: nil}
-		err, exit := ra.checkValid()
+		err := ra.checkValid()
 		assert.Error(t, err)
-		assert.True(t, exit)
 	})
 }
 
@@ -353,9 +350,8 @@ func TestCheckValidSignature(t *testing.T) {
 	ra, err := NewRouterAddress(5, time.Time{}, "NTCP2", map[string]string{"host": "127.0.0.1"})
 	require.NoError(t, err)
 
-	e, exit := ra.checkValid()
+	e := ra.checkValid()
 	assert.NoError(t, e)
-	assert.False(t, exit)
 }
 
 // =========================================================================
@@ -369,10 +365,9 @@ func TestCheckRouterAddressValidNoErrWithValidData(t *testing.T) {
 	mapping, err := data.GoMapToMapping(map[string]string{"host": "127.0.0.1", "port": "4567"})
 	assert.Nil(err, "GoMapToMapping() returned error with valid data")
 	router_address.TransportOptions = mapping
-	err, exit := router_address.checkValid()
+	err = router_address.checkValid()
 
 	assert.Nil(err, "checkValid() reported error with valid data")
-	assert.Equal(exit, false, "checkValid() indicated to stop parsing valid data")
 }
 
 // =========================================================================
@@ -572,5 +567,52 @@ func TestCreateExpirationDate_IgnoresParameter(t *testing.T) {
 		ra, err := NewRouterAddress(5, pastTime, "NTCP2", map[string]string{})
 		require.NoError(t, err)
 		assert.False(t, ra.HasNonZeroExpiration())
+	})
+}
+
+// =========================================================================
+// BUG-1: Validate() rejects zero-content-length I2PString TransportType
+// =========================================================================
+
+func TestValidateRejectsZeroContentLengthTransportType(t *testing.T) {
+	cost, _ := data.NewIntegerFromInt(5, 1)
+	expDate, _, _ := data.NewDate(make([]byte, data.DATE_SIZE))
+	mapping, _ := data.GoMapToMapping(map[string]string{})
+
+	t.Run("I2PString{0x00} rejected by Validate", func(t *testing.T) {
+		ra := &RouterAddress{
+			TransportCost:    cost,
+			ExpirationDate:   expDate,
+			TransportType:    data.I2PString{0x00}, // zero-content I2PString
+			TransportOptions: mapping,
+		}
+		err := ra.Validate()
+		assert.Error(t, err)
+		assert.ErrorIs(t, err, ErrEmptyTransportStyle)
+	})
+
+	t.Run("I2PString{0x00} rejected by Serialize", func(t *testing.T) {
+		ra := &RouterAddress{
+			TransportCost:    cost,
+			ExpirationDate:   expDate,
+			TransportType:    data.I2PString{0x00},
+			TransportOptions: mapping,
+		}
+		b, err := ra.Serialize()
+		assert.Nil(t, b)
+		assert.Error(t, err)
+		assert.ErrorIs(t, err, ErrEmptyTransportStyle)
+	})
+
+	t.Run("well-formed I2PString passes Validate", func(t *testing.T) {
+		ts, _ := data.ToI2PString("NTCP2")
+		ra := &RouterAddress{
+			TransportCost:    cost,
+			ExpirationDate:   expDate,
+			TransportType:    ts,
+			TransportOptions: mapping,
+		}
+		err := ra.Validate()
+		assert.NoError(t, err)
 	})
 }

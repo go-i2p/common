@@ -132,7 +132,7 @@ func TestIPVersionFromHost(t *testing.T) {
 
 	t.Run("falls back to caps IPv4 when no host", func(t *testing.T) {
 		ra, err := NewRouterAddress(5, time.Time{}, "NTCP2", map[string]string{
-			"caps": "BC",
+			"caps": "BC4",
 		})
 		require.NoError(t, err)
 		assert.Equal(t, IPV4_VERSION_STRING, ra.IPVersion())
@@ -568,8 +568,9 @@ func TestProtocolVersion(t *testing.T) {
 			"host": "127.0.0.1",
 		})
 		require.NoError(t, err)
-		_, err = ra.ProtocolVersion()
-		_ = err
+		ver, err := ra.ProtocolVersion()
+		assert.Error(t, err, "ProtocolVersion() should return error when 'v' option is not set")
+		assert.Equal(t, "", ver, "ProtocolVersion() should return empty string when not set")
 	})
 }
 
@@ -928,12 +929,12 @@ func TestIPVersionFromCaps_EmptyAndUnrecognized(t *testing.T) {
 		assert.Equal(t, IPV6_VERSION_STRING, ra.ipVersionFromCaps())
 	})
 
-	t.Run("caps without 6 suffix returns IPv4", func(t *testing.T) {
+	t.Run("caps without recognized suffix returns empty string", func(t *testing.T) {
 		ra, err := NewRouterAddress(5, time.Time{}, "NTCP2", map[string]string{
 			"caps": "BC",
 		})
 		require.NoError(t, err)
-		assert.Equal(t, IPV4_VERSION_STRING, ra.ipVersionFromCaps())
+		assert.Equal(t, "", ra.ipVersionFromCaps(), "Unrecognized caps suffix should return empty string")
 	})
 }
 
@@ -976,10 +977,10 @@ func TestEquals_AsymmetricNilFields(t *testing.T) {
 		assert.False(t, ra1.Equals(ra2), "Address with nil bytes should not equal valid address")
 	})
 
-	t.Run("both nil bytes are equal", func(t *testing.T) {
+	t.Run("both nil bytes are not equal", func(t *testing.T) {
 		ra1 := RouterAddress{}
 		ra2 := RouterAddress{}
-		assert.True(t, ra1.Equals(ra2), "Two addresses with nil bytes should be equal")
+		assert.False(t, ra1.Equals(ra2), "Invalid addresses with nil bytes should not be considered equal")
 	})
 
 	t.Run("same address is equal", func(t *testing.T) {
@@ -1060,4 +1061,155 @@ func TestStaticKey_JavaRouterFormat(t *testing.T) {
 	result, err := ra.StaticKey()
 	assert.NoError(t, err, "StaticKey() should handle I2P base64-encoded key")
 	assert.Equal(t, keyBytes, result[:], "Decoded key should match original bytes")
+}
+
+// =========================================================================
+// BUG-2: Equals() false positive for differently-invalid addresses
+// =========================================================================
+
+func TestEqualsFalsePositiveForDifferentInvalidAddresses(t *testing.T) {
+	cost, _ := data.NewIntegerFromInt(5, 1)
+	expDate, _, _ := data.NewDate(make([]byte, data.DATE_SIZE))
+	mapping, _ := data.GoMapToMapping(map[string]string{})
+	ts, _ := data.ToI2PString("NTCP2")
+
+	t.Run("nil TransportCost vs nil TransportOptions", func(t *testing.T) {
+		ra1 := RouterAddress{
+			TransportCost:    nil,
+			ExpirationDate:   expDate,
+			TransportType:    ts,
+			TransportOptions: mapping,
+		}
+		ra2 := RouterAddress{
+			TransportCost:    cost,
+			ExpirationDate:   expDate,
+			TransportType:    ts,
+			TransportOptions: nil,
+		}
+		assert.False(t, ra1.Equals(ra2), "Differently-invalid addresses must not be considered equal")
+	})
+
+	t.Run("nil ExpirationDate vs nil TransportType", func(t *testing.T) {
+		ra1 := RouterAddress{
+			TransportCost:    cost,
+			ExpirationDate:   nil,
+			TransportType:    ts,
+			TransportOptions: mapping,
+		}
+		ra2 := RouterAddress{
+			TransportCost:    cost,
+			ExpirationDate:   expDate,
+			TransportType:    nil,
+			TransportOptions: mapping,
+		}
+		assert.False(t, ra1.Equals(ra2))
+	})
+
+	t.Run("both completely empty", func(t *testing.T) {
+		ra1 := RouterAddress{}
+		ra2 := RouterAddress{}
+		assert.False(t, ra1.Equals(ra2), "Two zero-value addresses should not be equal (both have nil Bytes)")
+	})
+}
+
+// =========================================================================
+// GoString() Tests
+// =========================================================================
+
+func TestGoString(t *testing.T) {
+	t.Run("valid address with host and port", func(t *testing.T) {
+		ra, err := NewRouterAddress(5, time.Time{}, "NTCP2", map[string]string{
+			"host": "127.0.0.1",
+			"port": "9150",
+			"v":    "2",
+		})
+		require.NoError(t, err)
+		s := ra.GoString()
+		assert.Contains(t, s, "RouterAddress{")
+		assert.Contains(t, s, "type=NTCP2")
+		assert.Contains(t, s, "cost=5")
+		assert.Contains(t, s, "host=127.0.0.1")
+		assert.Contains(t, s, "port=9150")
+		assert.Contains(t, s, "v=2")
+		assert.True(t, strings.HasSuffix(s, "}"))
+	})
+
+	t.Run("nil transport type", func(t *testing.T) {
+		ra := RouterAddress{}
+		s := ra.GoString()
+		assert.Contains(t, s, "<invalid: nil transport type>")
+	})
+}
+
+// =========================================================================
+// SetOption() Tests
+// =========================================================================
+
+func TestSetOption(t *testing.T) {
+	t.Run("set new option", func(t *testing.T) {
+		ra, err := NewRouterAddress(5, time.Time{}, "NTCP2", map[string]string{"host": "127.0.0.1"})
+		require.NoError(t, err)
+
+		err = ra.SetOption("port", "9150")
+		assert.NoError(t, err)
+		assert.True(t, ra.HasValidPort(), "Port should be valid after SetOption")
+
+		port, err := ra.Port()
+		assert.NoError(t, err)
+		assert.Equal(t, "9150", port)
+	})
+
+	t.Run("replace existing option", func(t *testing.T) {
+		ra, err := NewRouterAddress(5, time.Time{}, "NTCP2", map[string]string{"host": "127.0.0.1"})
+		require.NoError(t, err)
+
+		err = ra.SetOption("host", "10.0.0.1")
+		assert.NoError(t, err)
+
+		addr, err := ra.Host()
+		assert.NoError(t, err)
+		assert.Equal(t, "10.0.0.1", addr.String())
+	})
+
+	t.Run("set option on nil RouterAddress", func(t *testing.T) {
+		var ra *RouterAddress
+		err := ra.SetOption("key", "value")
+		assert.Error(t, err)
+	})
+}
+
+// =========================================================================
+// String() with SSU2 introducer options
+// =========================================================================
+
+func TestStringWithSSU2Introducers(t *testing.T) {
+	ra, err := NewRouterAddress(5, time.Time{}, "SSU2", map[string]string{
+		"host":  "10.0.0.1",
+		"port":  "9150",
+		"ih0":   "hash0",
+		"iexp0": "1234567890",
+		"itag0": "tag0",
+	})
+	require.NoError(t, err)
+
+	s := ra.String()
+	assert.NotEmpty(t, s)
+	assert.Contains(t, s, "SSU2")
+	assert.Contains(t, s, "10.0.0.1")
+	// Introducer option values should appear in the string output.
+	assert.Contains(t, s, "hash0")
+	assert.Contains(t, s, "1234567890")
+	assert.Contains(t, s, "tag0")
+}
+
+// =========================================================================
+// ipVersionFromCaps with explicit IPv4 suffix
+// =========================================================================
+
+func TestIPVersionFromCaps_ExplicitIPv4Suffix(t *testing.T) {
+	ra, err := NewRouterAddress(5, time.Time{}, "NTCP2", map[string]string{
+		"caps": "BC4",
+	})
+	require.NoError(t, err)
+	assert.Equal(t, IPV4_VERSION_STRING, ra.ipVersionFromCaps())
 }
