@@ -512,3 +512,182 @@ func TestEd25519_InputConsistency(t *testing.T) {
 		})
 	}
 }
+
+// TestCryptoPublicKeySizeReturnsCorrectSizes verifies the error-returning
+// CryptoPublicKeySize() method returns correct sizes for all known crypto types
+// and returns an error for unknown types.
+func TestCryptoPublicKeySizeReturnsCorrectSizes(t *testing.T) {
+	tests := []struct {
+		name       string
+		cryptoType int
+		wantSize   int
+		wantErr    bool
+	}{
+		{"ElGamal", KEYCERT_CRYPTO_ELG, KEYCERT_CRYPTO_ELG_SIZE, false},
+		{"P256", KEYCERT_CRYPTO_P256, KEYCERT_CRYPTO_P256_SIZE, false},
+		{"P384", KEYCERT_CRYPTO_P384, KEYCERT_CRYPTO_P384_SIZE, false},
+		{"P521", KEYCERT_CRYPTO_P521, KEYCERT_CRYPTO_P521_SIZE, false},
+		{"X25519", KEYCERT_CRYPTO_X25519, KEYCERT_CRYPTO_X25519_SIZE, false},
+		{"MLKEM512_X25519", KEYCERT_CRYPTO_MLKEM512_X25519, KEYCERT_CRYPTO_MLKEM512_X25519_SIZE, false},
+		{"MLKEM768_X25519", KEYCERT_CRYPTO_MLKEM768_X25519, KEYCERT_CRYPTO_MLKEM768_X25519_SIZE, false},
+		{"MLKEM1024_X25519", KEYCERT_CRYPTO_MLKEM1024_X25519, KEYCERT_CRYPTO_MLKEM1024_X25519_SIZE, false},
+		{"Unknown_type_999", 999, 0, true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			keyCert, err := NewKeyCertificateWithTypes(KEYCERT_SIGN_ED25519, tt.cryptoType)
+			if tt.wantErr {
+				// Unknown type won't construct; test via manual struct
+				keyCert = &KeyCertificate{}
+				keyCert.CpkType = []byte{0x03, 0xe7} // type 999
+			} else {
+				require.NoError(t, err)
+			}
+			size, sizeErr := keyCert.CryptoPublicKeySize()
+			if tt.wantErr {
+				assert.Error(t, sizeErr)
+				assert.Equal(t, 0, size)
+			} else {
+				assert.NoError(t, sizeErr)
+				assert.Equal(t, tt.wantSize, size)
+			}
+		})
+	}
+}
+
+// TestSigningPublicKeySizeOrErrorReturnsCorrectSizes verifies the error-returning
+// SigningPublicKeySizeOrError() method returns correct sizes for all known signing
+// types and returns an error for unknown types.
+func TestSigningPublicKeySizeOrErrorReturnsCorrectSizes(t *testing.T) {
+	tests := []struct {
+		name        string
+		signingType int
+		wantSize    int
+		wantErr     bool
+	}{
+		{"DSA_SHA1", KEYCERT_SIGN_DSA_SHA1, KEYCERT_SIGN_DSA_SHA1_SIZE, false},
+		{"P256", KEYCERT_SIGN_P256, KEYCERT_SIGN_P256_SIZE, false},
+		{"P384", KEYCERT_SIGN_P384, KEYCERT_SIGN_P384_SIZE, false},
+		{"P521", KEYCERT_SIGN_P521, KEYCERT_SIGN_P521_SIZE, false},
+		{"RSA2048", KEYCERT_SIGN_RSA2048, KEYCERT_SIGN_RSA2048_SIZE, false},
+		{"RSA3072", KEYCERT_SIGN_RSA3072, KEYCERT_SIGN_RSA3072_SIZE, false},
+		{"RSA4096", KEYCERT_SIGN_RSA4096, KEYCERT_SIGN_RSA4096_SIZE, false},
+		{"Ed25519", KEYCERT_SIGN_ED25519, KEYCERT_SIGN_ED25519_SIZE, false},
+		{"Ed25519ph", KEYCERT_SIGN_ED25519PH, KEYCERT_SIGN_ED25519PH_SIZE, false},
+		{"RedDSA", KEYCERT_SIGN_REDDSA_ED25519, KEYCERT_SIGN_REDDSA_ED25519_SIZE, false},
+		{"Unknown_type_999", 999, 0, true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			keyCert, err := NewKeyCertificateWithTypes(tt.signingType, KEYCERT_CRYPTO_X25519)
+			if tt.wantErr {
+				// Unknown type won't construct; test via manual struct
+				keyCert = &KeyCertificate{}
+				keyCert.SpkType = []byte{0x03, 0xe7} // type 999
+			} else {
+				require.NoError(t, err)
+			}
+			size, sizeErr := keyCert.SigningPublicKeySizeOrError()
+			if tt.wantErr {
+				assert.Error(t, sizeErr)
+				assert.Equal(t, 0, size)
+			} else {
+				assert.NoError(t, sizeErr)
+				assert.Equal(t, tt.wantSize, size)
+			}
+		})
+	}
+}
+
+// TestEcdhPublicKeyBytesReturnCorrectData verifies that ecdhPublicKey.Bytes()
+// returns the correct key bytes for ECDH-P256, P384, and P521 types.
+func TestEcdhPublicKeyBytesReturnCorrectData(t *testing.T) {
+	tests := []struct {
+		name    string
+		newFunc func([]byte) (*ecdhPublicKey, error)
+		size    int
+	}{
+		{"ECDH-P256", func(d []byte) (*ecdhPublicKey, error) {
+			k, err := newECDHP256PublicKey(d)
+			if err != nil {
+				return nil, err
+			}
+			return k.(*ecdhPublicKey), nil
+		}, KEYCERT_CRYPTO_P256_SIZE},
+		{"ECDH-P384", func(d []byte) (*ecdhPublicKey, error) {
+			k, err := newECDHP384PublicKey(d)
+			if err != nil {
+				return nil, err
+			}
+			return k.(*ecdhPublicKey), nil
+		}, KEYCERT_CRYPTO_P384_SIZE},
+		{"ECDH-P521", func(d []byte) (*ecdhPublicKey, error) {
+			k, err := newECDHP521PublicKey(d)
+			if err != nil {
+				return nil, err
+			}
+			return k.(*ecdhPublicKey), nil
+		}, KEYCERT_CRYPTO_P521_SIZE},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			data := makeTestBytes(tt.size, 1)
+			key, err := tt.newFunc(data)
+			require.NoError(t, err)
+			require.NotNil(t, key)
+
+			got := key.Bytes()
+			assert.Equal(t, tt.size, len(got), "Bytes() length mismatch")
+			assert.Equal(t, data, got, "Bytes() content mismatch")
+		})
+	}
+}
+
+// TestConstructEd25519PHKeyFailurePath verifies that constructEd25519PHKey
+// returns an error when given insufficient data.
+func TestConstructEd25519PHKeyFailurePath(t *testing.T) {
+	tests := []struct {
+		name    string
+		data    []byte
+		wantErr string
+	}{
+		{"nil_data", nil, "insufficient data for Ed25519ph key"},
+		{"empty_data", []byte{}, "insufficient data for Ed25519ph key"},
+		{"too_short", makeTestBytes(KEYCERT_SIGN_ED25519PH_SIZE-1, 1), "insufficient data for Ed25519ph key"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			key, err := constructEd25519PHKey(tt.data)
+			assert.Error(t, err)
+			assert.Nil(t, key)
+			assert.Contains(t, err.Error(), tt.wantErr)
+		})
+	}
+}
+
+// TestDerivedLegacyMapsMatchCanonical verifies that the derived CryptoPublicKeySizes
+// and SignaturePublicKeySizes maps contain the same entries as the canonical
+// CryptoKeySizes and SigningKeySizes maps.
+func TestDerivedLegacyMapsMatchCanonical(t *testing.T) {
+	t.Run("CryptoPublicKeySizes_derived_from_CryptoKeySizes", func(t *testing.T) {
+		assert.Equal(t, len(CryptoKeySizes), len(CryptoPublicKeySizes),
+			"CryptoPublicKeySizes should have same number of entries as CryptoKeySizes")
+		for typ, info := range CryptoKeySizes {
+			got, exists := CryptoPublicKeySizes[uint16(typ)]
+			assert.True(t, exists, "CryptoPublicKeySizes missing type %d", typ)
+			assert.Equal(t, info.CryptoPublicKeySize, got,
+				"CryptoPublicKeySizes[%d] mismatch", typ)
+		}
+	})
+
+	t.Run("SignaturePublicKeySizes_derived_from_SigningKeySizes", func(t *testing.T) {
+		assert.Equal(t, len(SigningKeySizes), len(SignaturePublicKeySizes),
+			"SignaturePublicKeySizes should have same number of entries as SigningKeySizes")
+		for typ, info := range SigningKeySizes {
+			got, exists := SignaturePublicKeySizes[uint16(typ)]
+			assert.True(t, exists, "SignaturePublicKeySizes missing type %d", typ)
+			assert.Equal(t, info.SigningPublicKeySize, got,
+				"SignaturePublicKeySizes[%d] mismatch", typ)
+		}
+	})
+}

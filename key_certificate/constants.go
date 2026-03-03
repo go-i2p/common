@@ -158,18 +158,27 @@ const (
 	// Combines MLKEM-512 post-quantum KEM with X25519 for quantum-resistant encryption.
 	// Provides NIST security level 1 (equivalent to AES-128) with 32-byte public keys.
 	// Only supported for LeaseSet encryption as of I2P 0.9.67.
+	//
+	// NOTE: This type is defined by I2P Proposal 169 (Post-Quantum Cryptography)
+	// and is not yet in the mainline common structures spec as of 0.9.67.
 	KEYCERT_CRYPTO_MLKEM512_X25519 = 5
 
 	// KEYCERT_CRYPTO_MLKEM768_X25519 identifies MLKEM768+X25519 hybrid encryption (type 6).
 	// Combines MLKEM-768 post-quantum KEM with X25519 for enhanced quantum resistance.
 	// Provides NIST security level 3 (equivalent to AES-192) with 32-byte public keys.
 	// Only supported for LeaseSet encryption as of I2P 0.9.67.
+	//
+	// NOTE: This type is defined by I2P Proposal 169 (Post-Quantum Cryptography)
+	// and is not yet in the mainline common structures spec as of 0.9.67.
 	KEYCERT_CRYPTO_MLKEM768_X25519 = 6
 
 	// KEYCERT_CRYPTO_MLKEM1024_X25519 identifies MLKEM1024+X25519 hybrid encryption (type 7).
 	// Combines MLKEM-1024 post-quantum KEM with X25519 for maximum quantum resistance.
 	// Provides NIST security level 5 (equivalent to AES-256) with 32-byte public keys.
 	// Only supported for LeaseSet encryption as of I2P 0.9.67.
+	//
+	// NOTE: This type is defined by I2P Proposal 169 (Post-Quantum Cryptography)
+	// and is not yet in the mainline common structures spec as of 0.9.67.
 	KEYCERT_CRYPTO_MLKEM1024_X25519 = 7
 
 	// KEYCERT_CRYPTO_RESERVED_NONE is reserved for future use (type 255).
@@ -188,6 +197,11 @@ const (
 	// KEYCERT_CRYPTO_EXPERIMENTAL_END marks the end of the experimental encryption type range (type 65534).
 	// Experimental types should not be used in production I2P networks.
 	KEYCERT_CRYPTO_EXPERIMENTAL_END = 65534
+
+	// KEYCERT_CRYPTO_FUTURE_EXPANSION is reserved for future encryption algorithm expansion (type 65535).
+	// This type is reserved but not currently defined in the I2P specification.
+	// Symmetric with KEYCERT_SIGN_FUTURE_EXPANSION.
+	KEYCERT_CRYPTO_FUTURE_EXPANSION = 65535
 )
 
 // Minimum size constants define the minimum byte requirements

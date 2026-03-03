@@ -31,12 +31,11 @@ func buildKeyCertPayload(sigType, cryptoType int) []byte {
 }
 
 // buildTestKeyCert creates a KEY certificate for the given types.
+// Uses NewKeyCertificateWithTypes which generates correctly-sized payloads
+// including excess bytes for large key types (P521, RSA-2048/3072/4096).
 func buildTestKeyCert(t *testing.T, sigType, cryptoType int) *key_certificate.KeyCertificate {
 	t.Helper()
-	payload := buildKeyCertPayload(sigType, cryptoType)
-	cert, err := certificate.NewCertificateWithType(certificate.CERT_KEY, payload)
-	require.NoError(t, err)
-	keyCert, err := key_certificate.KeyCertificateFromCertificate(cert)
+	keyCert, err := key_certificate.NewKeyCertificateWithTypes(sigType, cryptoType)
 	require.NoError(t, err)
 	return keyCert
 }

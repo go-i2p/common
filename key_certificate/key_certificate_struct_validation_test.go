@@ -517,3 +517,67 @@ func TestMLKEMHybridSizes_Spec(t *testing.T) {
 	assert.Equal(t, 1600, MLKEM1024_X25519_HYBRID_SIZE,
 		"MLKEM1024+X25519 hybrid must be 1568+32=1600 bytes (Proposal 169)")
 }
+
+// TestKeyCertificateFromCertificateValidatesPayloadLength verifies that
+// KeyCertificateFromCertificate now performs payload length validation,
+// rejecting certificates with excess or insufficient payload bytes.
+// This closes the validation bypass bug where KeyCertificateFromCertificate
+// accepted payloads that NewKeyCertificate would reject.
+func TestKeyCertificateFromCertificateValidatesPayloadLength(t *testing.T) {
+	t.Run("rejects_excess_payload", func(t *testing.T) {
+		// Ed25519/X25519 expects exactly 4-byte payload. Construct a cert with 5 bytes.
+		rawBytes := []byte{0x05, 0x00, 0x05, 0x00, 0x07, 0x00, 0x04, 0xFF}
+		cert, _, err := certificate.ReadCertificate(rawBytes)
+		require.NoError(t, err)
+
+		keyCert, err := KeyCertificateFromCertificate(cert)
+		assert.Error(t, err, "Must reject certificate with excess payload via KeyCertificateFromCertificate")
+		assert.Nil(t, keyCert)
+		assert.Contains(t, err.Error(), "too long")
+	})
+
+	t.Run("rejects_short_payload_for_P521", func(t *testing.T) {
+		// P521/X25519 expects 4+4=8 byte payload. Construct cert with only 4 bytes.
+		rawBytes := []byte{0x05, 0x00, 0x04, 0x00, 0x03, 0x00, 0x04}
+		cert, _, err := certificate.ReadCertificate(rawBytes)
+		require.NoError(t, err)
+
+		keyCert, err := KeyCertificateFromCertificate(cert)
+		assert.Error(t, err, "Must reject P521 cert with insufficient payload")
+		assert.Nil(t, keyCert)
+		assert.Contains(t, err.Error(), "too short")
+	})
+
+	t.Run("accepts_valid_payload", func(t *testing.T) {
+		// Ed25519/X25519 with exactly 4-byte payload
+		rawBytes := testKeyCertBytesEd25519X25519
+		cert, _, err := certificate.ReadCertificate(rawBytes)
+		require.NoError(t, err)
+
+		keyCert, err := KeyCertificateFromCertificate(cert)
+		assert.NoError(t, err)
+		assert.NotNil(t, keyCert)
+		assert.Equal(t, KEYCERT_SIGN_ED25519, keyCert.SigningPublicKeyType())
+		assert.Equal(t, KEYCERT_CRYPTO_X25519, keyCert.PublicKeyType())
+	})
+
+	t.Run("accepts_valid_P521_payload", func(t *testing.T) {
+		keyCert, err := NewKeyCertificateWithTypes(KEYCERT_SIGN_P521, KEYCERT_CRYPTO_X25519)
+		require.NoError(t, err)
+
+		// Round-trip through KeyCertificateFromCertificate
+		keyCert2, err := KeyCertificateFromCertificate(&keyCert.Certificate)
+		assert.NoError(t, err)
+		assert.NotNil(t, keyCert2)
+		assert.Equal(t, KEYCERT_SIGN_P521, keyCert2.SigningPublicKeyType())
+	})
+}
+
+// TestCryptoFutureExpansionConstant verifies KEYCERT_CRYPTO_FUTURE_EXPANSION
+// exists and is symmetric with KEYCERT_SIGN_FUTURE_EXPANSION.
+func TestCryptoFutureExpansionConstant(t *testing.T) {
+	assert.Equal(t, 65535, KEYCERT_CRYPTO_FUTURE_EXPANSION,
+		"KEYCERT_CRYPTO_FUTURE_EXPANSION should be 65535")
+	assert.Equal(t, KEYCERT_SIGN_FUTURE_EXPANSION, KEYCERT_CRYPTO_FUTURE_EXPANSION,
+		"Crypto and signing future expansion constants should be symmetric")
+}

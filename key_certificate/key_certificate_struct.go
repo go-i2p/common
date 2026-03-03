@@ -20,7 +20,7 @@ import (
 
 // KeyCertificate represents an I2P Key Certificate structure
 // https://geti2p.net/spec/common-structures#certificate
-// Accurate for version 0.9.24
+// Accurate for version 0.9.67
 //
 // +----+----+----+----+----+-//
 // |type| length  | payload
@@ -206,6 +206,11 @@ func KeyCertificateFromCertificate(cert *certificate.Certificate) (*KeyCertifica
 	spkType, cpkType := extractKeyTypes(certData)
 	logExtractedKeyTypes(certData, spkType, cpkType)
 
+	if validationErr := validatePayloadLengthAgainstKeyTypes(certData, spkType, cpkType); validationErr != nil {
+		log.WithError(validationErr).Error("Key certificate payload length mismatch in KeyCertificateFromCertificate")
+		return nil, validationErr
+	}
+
 	keyCert := buildKeyCertificate(cert, spkType, cpkType)
 	return keyCert, nil
 }
@@ -373,20 +378,20 @@ func validateSigningKeyData(dataLen, requiredSize int) error {
 
 // constructDSAKey constructs a DSA-SHA1 signing public key from certificate data.
 // Legacy DSA-SHA1 signing key construction for backwards compatibility.
-// Accepts either padded data (128 bytes, key at end) or raw key data (128 bytes exact).
+//
+// Note: KEYCERT_SIGN_DSA_SHA1_SIZE == KEYCERT_SPK_SIZE (both 128 bytes), so the
+// DSA key always occupies the entire SPK field. The key is extracted from the end
+// of the 128-byte field for consistency with other signing key constructors that
+// use end-alignment.
 func constructDSAKey(data []byte) (types.SigningPublicKey, error) {
 	if len(data) < KEYCERT_SIGN_DSA_SHA1_SIZE {
 		return nil, oops.Errorf("insufficient data for DSA key: expected at least %d bytes, got %d",
 			KEYCERT_SIGN_DSA_SHA1_SIZE, len(data))
 	}
 	var dsa_key dsa.DSAPublicKey
-	if len(data) >= KEYCERT_SPK_SIZE {
-		// Padded format: extract key from the end of the 128-byte field
-		copy(dsa_key[:], data[KEYCERT_SPK_SIZE-KEYCERT_SIGN_DSA_SHA1_SIZE:KEYCERT_SPK_SIZE])
-	} else {
-		// Raw key data
-		copy(dsa_key[:], data[:KEYCERT_SIGN_DSA_SHA1_SIZE])
-	}
+	// DSA key size == SPK field size (128 bytes), so the key fills the entire field.
+	// Use end-alignment for consistency: data[SPK_SIZE-DSA_SIZE : SPK_SIZE] == data[0:128].
+	copy(dsa_key[:], data[KEYCERT_SPK_SIZE-KEYCERT_SIGN_DSA_SHA1_SIZE:KEYCERT_SPK_SIZE])
 	log.Debug("Constructed DSAPublicKey")
 	return dsa_key, nil
 }

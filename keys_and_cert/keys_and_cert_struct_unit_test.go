@@ -614,16 +614,22 @@ func TestExtractPaddingFromData(t *testing.T) {
 func TestConstructSigningKeyFromCert_LargeKeySize(t *testing.T) {
 	keyCert := buildTestKeyCert(t, key_certificate.KEYCERT_SIGN_RSA4096, key_certificate.KEYCERT_CRYPTO_ELG)
 
-	t.Run("RSA4096 with short cert payload returns error not panic", func(t *testing.T) {
+	t.Run("RSA4096 with valid cert and sufficient inline data", func(t *testing.T) {
+		// Fill with non-zero data so the RSA key constructor accepts it
 		dummyData := make([]byte, KEYS_AND_CERT_DATA_SIZE)
+		for i := range dummyData {
+			dummyData[i] = byte(i + 1)
+		}
 		sigKeySize := keyCert.SigningPublicKeySize() // 512
 		assert.Greater(t, sigKeySize, KEYS_AND_CERT_SPK_SIZE)
 
-		// keyCert was built with a 4-byte payload (no excess bytes), so
-		// constructLargeSigningKey will detect the shortage and return an error.
-		// The important guarantee is no panic.
-		_, err := constructSigningKeyFromCert(keyCert, dummyData, sigKeySize)
-		require.Error(t, err)
+		// RSA4096 requires 512 bytes total: 128 bytes from the inline SPK field
+		// plus 384 bytes excess from the cert payload. constructSigningKeyFromCert
+		// must successfully concatenate both sources without panicking.
+		key, err := constructSigningKeyFromCert(keyCert, dummyData, sigKeySize)
+		require.NoError(t, err)
+		require.NotNil(t, key)
+		assert.Equal(t, sigKeySize, key.Len())
 	})
 
 	t.Run("negative size returns error", func(t *testing.T) {
