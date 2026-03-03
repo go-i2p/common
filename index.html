@@ -13,7 +13,7 @@
         <a href="index.html">go-i2p/common</a>
       </h2>
       <div class="repo-meta">
-        📝 255 commits
+        📝 308 commits
          • 📜 MIT License
       </div>
     </div>
@@ -46,12 +46,12 @@
       <div class="repo-stats">
         
         <div class="repo-stat">
-          <span>📝</span> <span>255 commits</span>
+          <span>📝</span> <span>308 commits</span>
         </div>
         
         
         <div class="repo-stat">
-          <span>📅</span> <span>Last updated: February 19, 2026</span>
+          <span>📅</span> <span>Last updated: March 3, 2026</span>
         </div>
         
         
@@ -70,6 +70,29 @@
           <h1 id="go-i2p-common">go-i2p/common</h1>
 
 <p>A comprehensive Go library implementing I2P (Invisible Internet Project) network protocol common data structures and utilities. This library provides type-safe implementations of the I2P specification common structures, factored out from the main I2P router to enable reusable components for parsing, encoding, and manipulating I2P network data.</p>
+
+<h2 id="notes-on-scope">Notes on scope:</h2>
+
+<p>go-i2p theoretically has strictly scoped packages for low-level operations.
+This package is strictly scoped to common data structures only and properly structured.</p>
+
+<ul>
+<li><a href="https://github.com/go-i2p/common" target="_blank">go-i2p/common</a>: I2P Common datastructures</li>
+</ul>
+
+<p>This package MAY use any of the following libraries, and SHOULD use them where possible.</p>
+
+<ul>
+<li><a href="https://github.com/go-i2p/crypto" target="_blank">go-i2p/crypto</a>: Cryptographic primitives only</li>
+</ul>
+
+<p>This package MUST NOT use any of the following libraries.</p>
+
+<ul>
+<li><a href="https://github.com/go-i2p/noise" target="_blank">go-i2p/noise</a>: Noise handshake implementations</li>
+<li><a href="https://github.com/go-i2p/go-noise" target="_blank">go-i2p/go-noise</a>: Noise handshake modifications and router interface</li>
+<li><a href="https://github.com/go-i2p/go-i2p" target="_blank">go-i2p/go-i2p</a>: I2P router implementation</li>
+</ul>
 
 <hr>
 
@@ -159,21 +182,39 @@ import (
 )
 
 func main() {
-    // Build a key certificate using fluent interface
-    cert, err := certificate.NewCertificateBuilder().
-        WithKeyTypes(certificate.KEYCERT_SIGN_ED25519, certificate.KEYCERT_CRYPTO_X25519).
-        Build()
+    // Build a KEY certificate (7=Ed25519 signing, 4=X25519 crypto)
+    builder := certificate.NewCertificateBuilder()
+    builder, err := builder.WithKeyTypes(7, 4)
     if err != nil {
         fmt.Printf(&quot;Error: %v\n&quot;, err)
         return
     }
-    
-    // Or build a certificate with custom payload
+    cert, err := builder.Build()
+    if err != nil {
+        fmt.Printf(&quot;Error: %v\n&quot;, err)
+        return
+    }
+    _ = cert
+
+    // Or build a certificate with a custom payload
     customPayload := []byte{0x01, 0x02, 0x03, 0x04}
-    cert, err = certificate.NewCertificateBuilder().
-        WithType(certificate.CERT_SIGNED).
-        WithPayload(customPayload).
-        Build()
+    builder2 := certificate.NewCertificateBuilder()
+    builder2, err = builder2.WithType(certificate.CERT_HASHCASH)
+    if err != nil {
+        fmt.Printf(&quot;Error: %v\n&quot;, err)
+        return
+    }
+    builder2, err = builder2.WithPayload(customPayload)
+    if err != nil {
+        fmt.Printf(&quot;Error: %v\n&quot;, err)
+        return
+    }
+    cert, err = builder2.Build()
+    if err != nil {
+        fmt.Printf(&quot;Error: %v\n&quot;, err)
+        return
+    }
+    _ = cert
 }
 </code></pre>
 
@@ -230,8 +271,18 @@ func main() {
         return
     }
     
-    fmt.Printf(&quot;Certificate type: %d\n&quot;, cert.Type())
-    fmt.Printf(&quot;Certificate length: %d\n&quot;, cert.Length())
+    certType, err := cert.Type()
+    if err != nil {
+        fmt.Printf(&quot;Error: %v\n&quot;, err)
+        return
+    }
+    certLen, err := cert.Length()
+    if err != nil {
+        fmt.Printf(&quot;Error: %v\n&quot;, err)
+        return
+    }
+    fmt.Printf(&quot;Certificate type: %d\n&quot;, certType)
+    fmt.Printf(&quot;Certificate length: %d\n&quot;, certLen)
     fmt.Printf(&quot;Remaining bytes: %d\n&quot;, len(remainder))
 }
 </code></pre>
@@ -253,11 +304,17 @@ func main() {
         fmt.Printf(&quot;Error: %v\n&quot;, err)
         return
     }
-    
-    // Generate I2P addresses
-    base32Address := dest.Base32Address()
-    base64Address := dest.Base64()
-    
+    _ = remainder
+    base32Address, err := dest.Base32Address()
+    if err != nil {
+        fmt.Printf(&quot;Error: %v\n&quot;, err)
+        return
+    }
+    base64Address, err := dest.Base64()
+    if err != nil {
+        fmt.Printf(&quot;Error: %v\n&quot;, err)
+        return
+    }
     fmt.Printf(&quot;Base32 address: %s\n&quot;, base32Address)
     fmt.Printf(&quot;Base64 address: %s\n&quot;, base64Address)
 }
@@ -280,8 +337,7 @@ func main() {
         fmt.Printf(&quot;Error: %v\n&quot;, err)
         return
     }
-    
-    // Access router information
+    _ = remainder
     identity := routerInfo.RouterIdentity()
     addresses := routerInfo.RouterAddresses()
     capabilities := routerInfo.RouterCapabilities()
@@ -328,15 +384,14 @@ func main() {
 <h2 id="requirements">Requirements</h2>
 
 <ul>
-<li><strong>Go Version</strong>: 1.24.2 or later</li>
+<li><strong>Go Version</strong>: 1.24.5 or later</li>
 <li><strong>I2P Specification</strong>: 0.9.67 (June 2025)</li>
 <li><strong>Dependencies</strong>:
 
 <ul>
-<li><code>github.com/go-i2p/go-i2p</code> - Core I2P library</li>
+<li><code>github.com/go-i2p/crypto</code> - I2P cryptographic primitives</li>
 <li><code>github.com/go-i2p/logger</code> - Structured logging wrapper</li>
 <li><code>github.com/samber/oops</code> - Enhanced error handling</li>
-<li><code>github.com/sirupsen/logrus</code> - Logging framework</li>
 <li><code>github.com/stretchr/testify</code> - Testing utilities</li>
 </ul></li>
 </ul>
@@ -386,7 +441,7 @@ go test -fuzz=FuzzCertificate ./certificate/
                 eyedeekay
               </div>
               <div class="contributor-commits">
-                255 commits
+                308 commits
               </div>
             </div>
           </div>
@@ -398,7 +453,7 @@ go test -fuzz=FuzzCertificate ./certificate/
     </main>
     
     <footer class="page-footer">
-      <p>Generated on 2026-03-03 21:27:10 • <a href="https://github.com/go-i2p/common" target="_blank">View on GitHub</a></p>
+      <p>Generated on 2026-03-03 21:51:50 • <a href="https://github.com/go-i2p/common" target="_blank">View on GitHub</a></p>
     </footer>
   </div>
 </body>
