@@ -38,6 +38,10 @@ func NewCertificateBuilder() *CertificateBuilder {
 // Valid types are: CERT_NULL, CERT_HASHCASH, CERT_HIDDEN, CERT_SIGNED, CERT_MULTIPLE, CERT_KEY.
 // Returns error if the certificate type is invalid.
 //
+// On error, the builder retains its previous state and remains usable.
+// Callers must check the returned error; ignoring it will silently proceed
+// with the previously-set certificate type.
+//
 // Example:
 //
 //	builder.WithType(certificate.CERT_KEY)
@@ -61,7 +65,10 @@ func (cb *CertificateBuilder) WithType(certType uint8) (*CertificateBuilder, err
 //   - signingType: The signing key type (e.g., 7 for Ed25519)
 //   - cryptoType: The crypto key type (e.g., 4 for X25519)
 //
-// Returns error if the key types are invalid (negative values).
+// Returns error if the key types are invalid (negative values or exceed uint16 range).
+// On error, the builder retains its previous state and remains usable.
+// Callers must check the returned error; ignoring it will silently proceed
+// with the previously-set key types.
 //
 // Example:
 //
@@ -95,6 +102,9 @@ func (cb *CertificateBuilder) WithKeyTypes(signingType, cryptoType int) (*Certif
 // WithPayload sets custom payload data.
 // This overrides any payload that would be generated from key types.
 // Returns error if the payload exceeds the maximum allowed size.
+// On error, the builder retains its previous state and remains usable.
+// Callers must check the returned error; ignoring it will silently proceed
+// with the previously-set payload.
 //
 // Example:
 //

@@ -160,17 +160,21 @@ func (c *Certificate) RawBytes() []byte {
 	return bytes
 }
 
-// ExcessBytes returns payload bytes beyond the declared certificate length, or nil if
+// excessBytes returns payload bytes beyond the declared certificate length, or nil if
 // the payload exactly matches the declared length.
 //
-// After ReadCertificate, the payload is trimmed to the declared length, so ExcessBytes()
+// After ReadCertificate, the payload is trimmed to the declared length, so excessBytes()
 // always returns nil for normally-parsed certificates. This method is relevant only for
 // certificates whose payload field was set larger than the declared length by direct
 // struct construction (e.g., unit tests).
 //
 // Note: bytes that follow a certificate in the wire stream are returned by ReadCertificate
-// as the "remainder" slice, not via ExcessBytes. The two values do not overlap.
-func (c *Certificate) ExcessBytes() []byte {
+// as the "remainder" slice, not via excessBytes. The two values do not overlap.
+//
+// This method is unexported because it is effectively dead code for production usage:
+// ReadCertificate always trims the payload to the declared length, so this always returns nil
+// for any certificate obtained through the normal parsing path.
+func (c *Certificate) excessBytes() []byte {
 	if !c.IsValid() {
 		return nil
 	}

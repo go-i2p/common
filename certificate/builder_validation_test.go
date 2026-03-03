@@ -244,3 +244,56 @@ func TestWithPayload_ReturnsError(t *testing.T) {
 		require.NoError(t, err)
 	})
 }
+
+func TestBuilderRetainsPreviousStateOnError(t *testing.T) {
+	t.Run("WithType error retains previous type", func(t *testing.T) {
+		builder := NewCertificateBuilder()
+		// Set a valid type first
+		builder, err := builder.WithKeyTypes(7, 4)
+		require.NoError(t, err)
+
+		// Attempt invalid type — should error but keep CERT_KEY
+		_, err = builder.WithType(99)
+		assert.Error(t, err)
+
+		// Builder should still produce CERT_KEY certificate
+		cert, err := builder.Build()
+		require.NoError(t, err)
+		certType, _ := cert.Type()
+		assert.Equal(t, CERT_KEY, certType)
+	})
+
+	t.Run("WithKeyTypes error retains previous key types", func(t *testing.T) {
+		builder := NewCertificateBuilder()
+		builder, err := builder.WithKeyTypes(7, 4)
+		require.NoError(t, err)
+
+		// Attempt negative signing type — should error but keep previous key types
+		_, err = builder.WithKeyTypes(-1, 0)
+		assert.Error(t, err)
+
+		cert, err := builder.Build()
+		require.NoError(t, err)
+		payload, _ := cert.Data()
+		assert.Equal(t, []byte{0x00, 0x07, 0x00, 0x04}, payload,
+			"previous key types should be retained after error")
+	})
+
+	t.Run("WithPayload error retains previous payload", func(t *testing.T) {
+		builder := NewCertificateBuilder()
+		builder, _ = builder.WithType(CERT_HASHCASH)
+		originalPayload := []byte("1:20:060408:adam@cypherspace.org::McMybZIhxKXu57jd:ckvi")
+		builder, err := builder.WithPayload(originalPayload)
+		require.NoError(t, err)
+
+		// Attempt oversized payload — should error but keep original
+		_, err = builder.WithPayload(make([]byte, CERT_MAX_PAYLOAD_SIZE+1))
+		assert.Error(t, err)
+
+		cert, err := builder.Build()
+		require.NoError(t, err)
+		data, _ := cert.Data()
+		assert.Equal(t, originalPayload, data,
+			"previous payload should be retained after error")
+	})
+}

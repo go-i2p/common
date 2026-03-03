@@ -234,8 +234,8 @@ func TestNilReceiverSafety(t *testing.T) {
 	t.Run("RawBytes returns nil on nil receiver", func(t *testing.T) {
 		assert.NotPanics(t, func() { assert.Nil(t, cert.RawBytes()) })
 	})
-	t.Run("ExcessBytes returns nil on nil receiver", func(t *testing.T) {
-		assert.NotPanics(t, func() { assert.Nil(t, cert.ExcessBytes()) })
+	t.Run("excessBytes returns nil on nil receiver", func(t *testing.T) {
+		assert.NotPanics(t, func() { assert.Nil(t, cert.excessBytes()) })
 	})
 	t.Run("length returns 0 on nil receiver", func(t *testing.T) {
 		assert.NotPanics(t, func() { assert.Equal(t, 0, cert.length()) })
@@ -251,8 +251,8 @@ func TestZeroValueReceiverSafety(t *testing.T) {
 	t.Run("RawBytes returns nil on zero-value receiver", func(t *testing.T) {
 		assert.NotPanics(t, func() { assert.Nil(t, cert.RawBytes()) })
 	})
-	t.Run("ExcessBytes returns nil on zero-value receiver", func(t *testing.T) {
-		assert.NotPanics(t, func() { assert.Nil(t, cert.ExcessBytes()) })
+	t.Run("excessBytes returns nil on zero-value receiver", func(t *testing.T) {
+		assert.NotPanics(t, func() { assert.Nil(t, cert.excessBytes()) })
 	})
 	t.Run("length returns 0 on zero-value receiver", func(t *testing.T) {
 		assert.NotPanics(t, func() { assert.Equal(t, 0, cert.length()) })
@@ -313,24 +313,24 @@ func TestBytesVsRawBytes(t *testing.T) {
 
 func TestCertificateExcessBytes(t *testing.T) {
 	// After the payload-capture fix, ReadCertificate stores only declared-length bytes.
-	// ExcessBytes() is therefore always nil for certificates parsed from the wire.
-	// Post-certificate stream bytes are returned as the remainder, not via ExcessBytes.
-	t.Run("parsed cert ExcessBytes is nil", func(t *testing.T) {
+	// excessBytes() is therefore always nil for certificates parsed from the wire.
+	// Post-certificate stream bytes are returned as the remainder, not via excessBytes.
+	t.Run("parsed cert excessBytes is nil", func(t *testing.T) {
 		payload := make([]byte, CERT_SIGNED_PAYLOAD_SHORT)
 		cert, err := NewCertificateWithType(CERT_SIGNED, payload)
 		require.NoError(t, err)
-		assert.Nil(t, cert.ExcessBytes())
+		assert.Nil(t, cert.excessBytes())
 	})
 
-	t.Run("KEY cert parsed from wire ExcessBytes is nil", func(t *testing.T) {
+	t.Run("KEY cert parsed from wire excessBytes is nil", func(t *testing.T) {
 		certBytes := []byte{byte(CERT_KEY), 0x00, 0x04, 0x00, 0x07, 0x00, 0x04}
 		cert, remainder, err := ReadCertificate(certBytes)
 		require.NoError(t, err)
-		assert.Nil(t, cert.ExcessBytes())
+		assert.Nil(t, cert.excessBytes())
 		assert.Nil(t, remainder)
 	})
 
-	t.Run("post-certificate stream bytes returned as remainder, not ExcessBytes", func(t *testing.T) {
+	t.Run("post-certificate stream bytes returned as remainder, not excessBytes", func(t *testing.T) {
 		// MULTIPLE cert: declared 3 bytes, followed by 2 extra stream bytes.
 		certBytes := []byte{byte(CERT_MULTIPLE), 0x00, 0x03, 0xAA, 0xBB, 0xCC, 0xDD, 0xEE}
 		cert, remainder, err := ReadCertificate(certBytes)
@@ -338,7 +338,7 @@ func TestCertificateExcessBytes(t *testing.T) {
 		data, _ := cert.Data()
 		assert.Equal(t, []byte{0xAA, 0xBB, 0xCC}, data)
 		assert.Equal(t, []byte{0xDD, 0xEE}, remainder)
-		assert.Nil(t, cert.ExcessBytes(), "stream bytes after cert must not appear in ExcessBytes")
+		assert.Nil(t, cert.excessBytes(), "stream bytes after cert must not appear in excessBytes")
 	})
 }
 
@@ -381,7 +381,7 @@ func TestAllMethodsUsePointerReceivers(t *testing.T) {
 		cert.Data()
 		cert.Bytes()
 		cert.RawBytes()
-		cert.ExcessBytes()
+		cert.excessBytes()
 		cert.length()
 		cert.IsValid()
 	})
@@ -607,24 +607,24 @@ func TestExcessBytes_ExactMatch_ReturnsNil(t *testing.T) {
 	t.Run("payload exactly matches declared length returns nil", func(t *testing.T) {
 		payload := []byte{0x00, 0x07, 0x00, 0x04}
 		cert, _ := NewCertificateWithType(CERT_KEY, payload)
-		excess := cert.ExcessBytes()
+		excess := cert.excessBytes()
 		assert.Nil(t, excess,
-			"ExcessBytes should return nil (not empty slice) when payload matches declared length")
+			"excessBytes should return nil (not empty slice) when payload matches declared length")
 	})
 
 	t.Run("NULL cert with no payload returns nil", func(t *testing.T) {
 		cert := NewCertificate()
-		excess := cert.ExcessBytes()
+		excess := cert.excessBytes()
 		assert.Nil(t, excess)
 	})
 
 	t.Run("payload matches declared length after ReadCertificate", func(t *testing.T) {
-		// KEY cert with exact 4-byte payload — ExcessBytes() must be nil.
+		// KEY cert with exact 4-byte payload — excessBytes() must be nil.
 		wireData := []byte{CERT_KEY, 0x00, 0x04, 0x00, 0x07, 0x00, 0x04}
 		cert, _, err := ReadCertificate(wireData)
 		require.NoError(t, err)
-		excess := cert.ExcessBytes()
-		assert.Nil(t, excess, "ExcessBytes() must be nil when payload equals declared length")
+		excess := cert.excessBytes()
+		assert.Nil(t, excess, "excessBytes() must be nil when payload equals declared length")
 	})
 }
 

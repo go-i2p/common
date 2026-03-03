@@ -643,7 +643,7 @@ func getElgEd25519KeySizes() (pubKeySize, sigKeySize, totalKeySize, paddingSize,
 	sigKeySize = 32
 	totalKeySize = 384
 	paddingSize = totalKeySize - pubKeySize - sigKeySize
-	minDataLength = totalKeySize + 3
+	minDataLength = totalKeySize + certificate.CERT_MIN_SIZE
 	return
 }
 
@@ -787,7 +787,7 @@ func getX25519Ed25519KeySizes() (pubKeySize, sigKeySize, totalKeySize, paddingSi
 	sigKeySize = 32
 	totalKeySize = 384
 	paddingSize = totalKeySize - pubKeySize - sigKeySize
-	minDataLength = totalKeySize + 3
+	minDataLength = totalKeySize + certificate.CERT_MIN_SIZE
 	return
 }
 
