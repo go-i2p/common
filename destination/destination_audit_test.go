@@ -102,11 +102,11 @@ func TestCanonicalizeDestination_NilInputReturnsError(t *testing.T) {
 	require.Error(t, err)
 }
 
-// TestCanonicalizeDestination_HashDivergence checks that a KEY(0,0) destination
-// and its canonical NULL-cert form produce different SHA256 hashes, which is the
-// root cause of the spec violation.
-func TestCanonicalizeDestination_HashDivergence(t *testing.T) {
-	data := createValidDestinationBytes(t) // KEY(0,0)
+// TestCanonicalizeDestination_HashConvergence verifies that ReadDestination
+// auto-canonicalizes ElGamal+DSA-SHA1 destinations, so both KEY(0,0) and
+// NULL cert wire forms produce the same SHA-256 hash.
+func TestCanonicalizeDestination_HashConvergence(t *testing.T) {
+	data := createValidDestinationBytes(t) // KEY(0,0) wire form
 	dest, _, err := ReadDestination(data)
 	require.NoError(t, err)
 
@@ -118,8 +118,8 @@ func TestCanonicalizeDestination_HashDivergence(t *testing.T) {
 	canonHash, err := canonical.Hash()
 	require.NoError(t, err)
 
-	assert.NotEqual(t, origHash, canonHash,
-		"KEY(0,0) and canonical NULL-cert forms must have different SHA256 hashes")
+	assert.Equal(t, origHash, canonHash,
+		"ReadDestination auto-canonicalizes, so hashes must be equal")
 }
 
 // ============================================================================
@@ -128,8 +128,10 @@ func TestCanonicalizeDestination_HashDivergence(t *testing.T) {
 // ============================================================================
 
 func TestNewDestinationWithCompressiblePadding(t *testing.T) {
-	t.Skip("requires concrete types.ReceivingPublicKey and types.SigningPublicKey implementations; " +
-		"NewDestinationWithCompressiblePadding function exists and compiles — see constructor smoke test below")
+	// Superseded by TestNewDestinationWithCompressiblePadding_Concrete in
+	// destination_unit_test.go, which tests with concrete mock key implementations.
+	// Kept for audit traceability.
+	t.Skip("see TestNewDestinationWithCompressiblePadding_Concrete in destination_unit_test.go")
 }
 
 // ============================================================================

@@ -3,6 +3,7 @@ package destination
 import (
 	"testing"
 
+	"github.com/go-i2p/common/keys_and_cert"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -13,8 +14,12 @@ import (
 
 func TestDestinationRoundTrip(t *testing.T) {
 	t.Run("NewDestination -> Bytes -> NewDestinationFromBytes", func(t *testing.T) {
-		keysAndCert := createValidKeysAndCert(t)
-		dest1, err := NewDestination(keysAndCert)
+		// Use Ed25519+X25519 to avoid canonicalization side-effects on byte comparison.
+		data := createEd25519X25519DestinationBytes(t)
+		kac, _, err := keys_and_cert.ReadKeysAndCert(data)
+		require.NoError(t, err)
+
+		dest1, err := NewDestination(kac)
 		require.NoError(t, err)
 
 		b, err := dest1.Bytes()

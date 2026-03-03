@@ -77,7 +77,10 @@ func (d *Destination) Hash() ([32]byte, error) {
 	return types.SHA256(b), nil
 }
 
-// Equals returns true if two Destinations are byte-for-byte identical.
+// Equals returns true if two Destinations are logically identical.
+// For ElGamal+DSA-SHA1 destinations, both are canonicalized to the
+// NULL certificate form before comparison, so a KEY(0,0) encoded destination
+// and a NULL cert encoded destination will correctly compare as equal.
 // Returns false if either destination is nil or not properly initialized.
 func (d *Destination) Equals(other *Destination) bool {
 	if d == nil || other == nil {
@@ -86,11 +89,20 @@ func (d *Destination) Equals(other *Destination) bool {
 	if d.KeysAndCert == nil || other.KeysAndCert == nil {
 		return false
 	}
-	dBytes, err := d.KeysAndCert.Bytes()
+	// Canonicalize both for consistent comparison.
+	dCanon, err := CanonicalizeDestination(d)
 	if err != nil {
 		return false
 	}
-	otherBytes, err := other.KeysAndCert.Bytes()
+	otherCanon, err := CanonicalizeDestination(other)
+	if err != nil {
+		return false
+	}
+	dBytes, err := dCanon.KeysAndCert.Bytes()
+	if err != nil {
+		return false
+	}
+	otherBytes, err := otherCanon.KeysAndCert.Bytes()
 	if err != nil {
 		return false
 	}
@@ -115,7 +127,17 @@ func validateDestinationKeyTypes(kac *keys_and_cert.KeysAndCert) error {
 	return validateDestinationSigningType(kac)
 }
 
-// validateDestinationCryptoType rejects crypto types prohibited for Destinations.
+// validateDestinationCryptoType rejects crypto types prohibited for Destinations
+// and warns about reserved/TBD types.
+//
+// MLKEM types (5-7) are explicitly prohibited: "for Leasesets only, not for
+// RIs or Destinations."
+//
+// ECDH-P256 (1), ECDH-P384 (2), ECDH-P521 (3) are listed as "Reserved, see
+// proposal 145" in the I2P spec crypto public key types table. They are not
+// prohibited for destinations, but their specification is not yet finalized.
+// A warning is logged for these types to alert callers without breaking
+// forward compatibility.
 func validateDestinationCryptoType(kac *keys_and_cert.KeysAndCert) error {
 	cryptoType := kac.KeyCertificate.PublicKeyType()
 	switch cryptoType {
@@ -126,6 +148,11 @@ func validateDestinationCryptoType(kac *keys_and_cert.KeysAndCert) error {
 			"crypto type %d is not permitted for Destinations (LeaseSet only)",
 			cryptoType,
 		)
+	case key_certificate.KEYCERT_CRYPTO_P256,
+		key_certificate.KEYCERT_CRYPTO_P384,
+		key_certificate.KEYCERT_CRYPTO_P521:
+		log.WithField("crypto_type", cryptoType).Warn(
+			"ECDH crypto type is reserved (proposal 145) and not yet finalized in the I2P spec")
 	}
 	return nil
 }
@@ -188,7 +215,7 @@ func CanonicalizeDestination(d *Destination) (*Destination, error) {
 	canonical[keys_and_cert.KEYS_AND_CERT_DATA_SIZE] = 0x00   // cert type = NULL
 	canonical[keys_and_cert.KEYS_AND_CERT_DATA_SIZE+1] = 0x00 // length high byte
 	canonical[keys_and_cert.KEYS_AND_CERT_DATA_SIZE+2] = 0x00 // length low byte
-	dest, _, readErr := ReadDestination(canonical)
+	dest, _, readErr := readDestinationRaw(canonical)
 	if readErr != nil {
 		return nil, oops.Errorf("failed to parse canonical destination: %w", readErr)
 	}
@@ -203,6 +230,10 @@ func CanonicalizeDestination(d *Destination) (*Destination, error) {
 // Each 32-byte padding block is derived deterministically from a single
 // random seed, allowing SSU2/I2NP Database Store messages to compress
 // the padding efficiently.
+//
+// Returns an error if the certificate specifies unknown key types (where
+// CryptoPublicKeySize or SigningPublicKeySizeOrError return 0/error),
+// or if the certificate is not a valid KEY certificate.
 func NewDestinationWithCompressiblePadding(
 	publicKey types.ReceivingPublicKey,
 	signingPublicKey types.SigningPublicKey,
@@ -212,8 +243,15 @@ func NewDestinationWithCompressiblePadding(
 	if err != nil {
 		return nil, oops.Errorf("failed to create KeyCertificate from certificate: %w", err)
 	}
-	paddingSize := keys_and_cert.KEYS_AND_CERT_DATA_SIZE -
-		keyCert.CryptoSize() - keyCert.SigningPublicKeySize()
+	cryptoSize, err := keyCert.CryptoPublicKeySize()
+	if err != nil {
+		return nil, oops.Errorf("unknown crypto key type for padding calculation: %w", err)
+	}
+	sigSize, err := keyCert.SigningPublicKeySizeOrError()
+	if err != nil {
+		return nil, oops.Errorf("unknown signing key type for padding calculation: %w", err)
+	}
+	paddingSize := keys_and_cert.KEYS_AND_CERT_DATA_SIZE - cryptoSize - sigSize
 	if paddingSize < 0 {
 		paddingSize = 0
 	}

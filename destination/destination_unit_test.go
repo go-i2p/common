@@ -4,7 +4,10 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/go-i2p/common/certificate"
+	"github.com/go-i2p/common/key_certificate"
 	"github.com/go-i2p/common/keys_and_cert"
+	"github.com/go-i2p/crypto/types"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -319,5 +322,118 @@ func TestDestinationString(t *testing.T) {
 		addr, err := dest.Base32Address()
 		require.NoError(t, err)
 		assert.Equal(t, addr, dest.String())
+	})
+}
+
+// ============================================================================
+// Mock types for NewDestinationWithCompressiblePadding tests
+// ============================================================================
+
+// mockReceivingPublicKey implements types.ReceivingPublicKey with configurable size.
+type mockReceivingPublicKey struct {
+	data []byte
+}
+
+func (m *mockReceivingPublicKey) Len() int      { return len(m.data) }
+func (m *mockReceivingPublicKey) Bytes() []byte { return m.data }
+func (m *mockReceivingPublicKey) NewEncrypter() (types.Encrypter, error) {
+	return nil, fmt.Errorf("mock: not implemented")
+}
+
+// mockSigningPublicKey implements types.SigningPublicKey with configurable size.
+type mockSigningPublicKey struct {
+	data []byte
+}
+
+func (m *mockSigningPublicKey) Len() int      { return len(m.data) }
+func (m *mockSigningPublicKey) Bytes() []byte { return m.data }
+func (m *mockSigningPublicKey) NewVerifier() (types.Verifier, error) {
+	return nil, fmt.Errorf("mock: not implemented")
+}
+
+// ============================================================================
+// NewDestinationWithCompressiblePadding
+// Finding: [GAP] No test exercises it with concrete key material
+// Finding: [TEST] No negative test with invalid or non-Key certificate
+// Finding: [BUG] Unknown key types silently produce incorrect padding
+// ============================================================================
+
+func TestNewDestinationWithCompressiblePadding_Concrete(t *testing.T) {
+	t.Run("Ed25519_X25519_produces_valid_destination", func(t *testing.T) {
+		// Build a KEY certificate for Ed25519 signing + X25519 crypto
+		builder := certificate.NewCertificateBuilder()
+		builder, err := builder.WithType(certificate.CERT_KEY)
+		require.NoError(t, err)
+		builder, err = builder.WithKeyTypes(
+			key_certificate.KEYCERT_SIGN_ED25519,
+			key_certificate.KEYCERT_CRYPTO_X25519,
+		)
+		require.NoError(t, err)
+		cert, err := builder.Build()
+		require.NoError(t, err)
+
+		// Ed25519 signing key: 32 bytes
+		sigKeyData := make([]byte, 32)
+		for i := range sigKeyData {
+			sigKeyData[i] = byte(i + 1)
+		}
+		sigKey := &mockSigningPublicKey{data: sigKeyData}
+
+		// X25519 public key: 32 bytes
+		pubKeyData := make([]byte, 32)
+		for i := range pubKeyData {
+			pubKeyData[i] = byte(i + 100)
+		}
+		pubKey := &mockReceivingPublicKey{data: pubKeyData}
+
+		dest, err := NewDestinationWithCompressiblePadding(pubKey, sigKey, cert)
+		require.NoError(t, err)
+		require.NotNil(t, dest)
+		assert.True(t, dest.IsValid(), "destination from CompressiblePadding must be valid")
+
+		// Verify key types
+		require.NotNil(t, dest.KeyCertificate)
+		assert.Equal(t, key_certificate.KEYCERT_SIGN_ED25519,
+			dest.KeyCertificate.SigningPublicKeyType())
+		assert.Equal(t, key_certificate.KEYCERT_CRYPTO_X25519,
+			dest.KeyCertificate.PublicKeyType())
+
+		// Should serialize and round-trip successfully
+		b, err := dest.Bytes()
+		require.NoError(t, err)
+		assert.NotEmpty(t, b)
+
+		dest2, _, err := ReadDestination(b)
+		require.NoError(t, err)
+		assert.True(t, dest.Equals(&dest2),
+			"round-trip through Bytes/ReadDestination must produce equal destination")
+	})
+
+	t.Run("non_KEY_certificate_returns_error", func(t *testing.T) {
+		// Build a NULL certificate (type 0) — not a KEY certificate
+		builder := certificate.NewCertificateBuilder()
+		builder, err := builder.WithType(certificate.CERT_NULL)
+		require.NoError(t, err)
+		cert, err := builder.Build()
+		require.NoError(t, err)
+
+		pubKey := &mockReceivingPublicKey{data: make([]byte, 256)}
+		sigKey := &mockSigningPublicKey{data: make([]byte, 128)}
+
+		dest, err := NewDestinationWithCompressiblePadding(pubKey, sigKey, cert)
+		require.Error(t, err,
+			"NewDestinationWithCompressiblePadding must reject non-KEY certificates")
+		assert.Nil(t, dest)
+		assert.Contains(t, err.Error(), "KeyCertificate")
+	})
+
+	t.Run("nil_certificate_returns_error", func(t *testing.T) {
+		pubKey := &mockReceivingPublicKey{data: make([]byte, 32)}
+		sigKey := &mockSigningPublicKey{data: make([]byte, 32)}
+
+		dest, err := NewDestinationWithCompressiblePadding(pubKey, sigKey, nil)
+		require.Error(t, err,
+			"NewDestinationWithCompressiblePadding must reject nil certificate")
+		assert.Nil(t, dest)
 	})
 }

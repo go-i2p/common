@@ -45,8 +45,13 @@ func TestDestinationBytes(t *testing.T) {
 	serializedData, err := dest.Bytes()
 	assert.Nil(err, "Bytes() should not error")
 
-	assert.Equal(originalData, serializedData, "Serialized destination should match original data")
-	assert.Equal(len(originalData), len(serializedData))
+	// ReadDestination auto-canonicalizes ElGamal+DSA-SHA1 KEY(0,0) to NULL cert.
+	// The serialized form is 387 bytes (384 key data + 3-byte NULL cert),
+	// not 391 bytes (384 + 7-byte KEY(0,0) cert).
+	assert.Len(serializedData, 387,
+		"Canonicalized ElGamal+DSA-SHA1 should be 387 bytes")
+	assert.Equal(keysData, serializedData[:384],
+		"Key data must be preserved")
 
 	dest2, remainder2, err2 := ReadDestination(serializedData)
 	assert.Nil(err2)
@@ -241,4 +246,61 @@ func TestExcessKeyDataInCertificate(t *testing.T) {
 		assert.Equal(t, key_certificate.KEYCERT_SIGN_P521,
 			dest.KeyCertificate.SigningPublicKeyType())
 	})
+}
+
+// ============================================================================
+// CanonicalizeDestination with explicit KEY(0,0) input
+// Finding: [TEST] No test for CanonicalizeDestination with a KEY(0,0) cert input
+// ============================================================================
+
+func TestCanonicalizeDestination_KEY00Input(t *testing.T) {
+	// Construct a KEY(0,0) destination using readDestinationRaw to bypass
+	// the auto-canonicalization in ReadDestination.
+	keysData := make([]byte, 384)
+	for i := range keysData {
+		keysData[i] = byte(i % 256)
+	}
+	keyCertData := append(keysData, 0x05, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00)
+	dest, _, err := readDestinationRaw(keyCertData)
+	require.NoError(t, err)
+
+	// Confirm it's in KEY(0,0) form (391 bytes)
+	origBytes, err := dest.Bytes()
+	require.NoError(t, err)
+	assert.Len(t, origBytes, 391, "KEY(0,0) form must be 391 bytes before canonicalization")
+
+	// Canonicalize
+	canonical, err := CanonicalizeDestination(&dest)
+	require.NoError(t, err)
+	require.NotNil(t, canonical)
+
+	canonBytes, err := canonical.Bytes()
+	require.NoError(t, err)
+
+	// Canonical form must be 387 bytes (384 key data + 3-byte NULL cert)
+	assert.Len(t, canonBytes, 387, "Canonicalized form must be 387 bytes")
+
+	// Key data must be preserved
+	assert.Equal(t, origBytes[:384], canonBytes[:384],
+		"Key data must be identical after canonicalization")
+
+	// The trailing 3 bytes must be a NULL cert [0x00, 0x00, 0x00]
+	assert.Equal(t, []byte{0x00, 0x00, 0x00}, canonBytes[384:],
+		"Canonical form must end with NULL certificate")
+
+	// Hashes must match between canonicalized KEY(0,0) and a direct NULL cert
+	nullCertData := make([]byte, 387)
+	copy(nullCertData, keysData)
+	nullCertData[384] = 0x00
+	nullCertData[385] = 0x00
+	nullCertData[386] = 0x00
+	nullDest, _, err := readDestinationRaw(nullCertData)
+	require.NoError(t, err)
+
+	canonHash, err := canonical.Hash()
+	require.NoError(t, err)
+	nullHash, err := (&nullDest).Hash()
+	require.NoError(t, err)
+	assert.Equal(t, nullHash, canonHash,
+		"Canonicalized KEY(0,0) must hash identically to NULL cert form")
 }

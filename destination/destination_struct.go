@@ -3,7 +3,6 @@ package destination
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/go-i2p/logger"
 	"github.com/samber/oops"
@@ -15,32 +14,19 @@ import (
 	"github.com/go-i2p/common/base64"
 )
 
-/*
-[Destination]
-Accurate for version 0.9.67
-
-Description
-A Destination defines a particular endpoint to which messages can be directed for secure delivery.
-
-Contents
-Identical to KeysAndCert.
-*/
+// log provides structured logging for the destination package.
+var log = logger.GetGoI2PLogger()
 
 // Destination is the representation of an I2P Destination.
-//
-// https://geti2p.net/spec/common-structures#destination
+// Spec: https://geti2p.net/spec/common-structures#destination
 type Destination struct {
 	*keys_and_cert.KeysAndCert
 }
 
-// ReadDestination returns Destination from a []byte.
-// The remaining bytes after the specified length are also returned.
-// Returns a list of errors that occurred during parsing.
-func ReadDestination(data []byte) (Destination, []byte, error) {
-	log.WithFields(logger.Fields{
-		"input_length": len(data),
-	}).Debug("Reading Destination from bytes")
-
+// readDestinationRaw performs the core parse without canonicalization.
+// Used internally by ReadDestination and CanonicalizeDestination to
+// avoid infinite recursion.
+func readDestinationRaw(data []byte) (Destination, []byte, error) {
 	keysAndCertObj, remainder, err := keys_and_cert.ReadKeysAndCert(data)
 	if err != nil {
 		return Destination{}, remainder, err
@@ -49,9 +35,36 @@ func ReadDestination(data []byte) (Destination, []byte, error) {
 	d := Destination{keysAndCertObj}
 
 	if err := validateDestinationKeyTypes(d.KeysAndCert); err != nil {
-		// Return nil remainder so callers cannot accidentally advance a stream
-		// past a rejected destination (spec violation in BUG finding).
 		return Destination{}, nil, err
+	}
+
+	return d, remainder, nil
+}
+
+// ReadDestination returns Destination from a []byte.
+// The remaining bytes after the specified length are also returned.
+// Returns a list of errors that occurred during parsing.
+//
+// For ElGamal+DSA-SHA1 destinations encoded with a KEY(0,0) certificate,
+// the destination is automatically canonicalized to the NULL certificate
+// form per the I2P specification. This ensures consistent SHA-256 hashing
+// regardless of the wire encoding used by the sender.
+func ReadDestination(data []byte) (Destination, []byte, error) {
+	log.WithFields(logger.Fields{
+		"input_length": len(data),
+	}).Debug("Reading Destination from bytes")
+
+	d, remainder, err := readDestinationRaw(data)
+	if err != nil {
+		return d, remainder, err
+	}
+
+	// Auto-canonicalize ElGamal+DSA-SHA1 destinations so that Hash() and
+	// Equals() always produce consistent results regardless of whether the
+	// sender used a NULL cert or KEY(0,0) cert encoding.
+	canonical, canonErr := CanonicalizeDestination(&d)
+	if canonErr == nil && canonical != nil {
+		d = *canonical
 	}
 
 	log.WithFields(logger.Fields{
@@ -99,7 +112,7 @@ func (d Destination) Base32Address() (string, error) {
 		return "", err
 	}
 	hash := types.SHA256(dest)
-	str := strings.TrimRight(base32.EncodeToString(hash[:]), "=")
+	str := base32.EncodeToStringNoPadding(hash[:])
 	str = str + I2PBase32Suffix
 
 	log.Debug("Generated Base32 address for Destination")
