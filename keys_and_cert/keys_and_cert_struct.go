@@ -531,31 +531,15 @@ func ReadKeysAndCert(data []byte) (*KeysAndCert, []byte, error) {
 		return nil, remainder, err
 	}
 
-	pubKey, err := constructPublicKeyFromCert(keyCert, data)
+	keysAndCert, err := assembleKeysAndCert(keyCert, data)
 	if err != nil {
 		return nil, remainder, err
-	}
-
-	pubKeySize := keyCert.CryptoSize()
-	sigKeySize := keyCert.SigningPublicKeySize()
-	padding := extractPaddingFromData(data, pubKeySize, sigKeySize)
-
-	sigKey, err := constructSigningKeyFromCert(keyCert, data, sigKeySize)
-	if err != nil {
-		return nil, remainder, err
-	}
-
-	keysAndCert := &KeysAndCert{
-		KeyCertificate:  keyCert,
-		ReceivingPublic: pubKey,
-		Padding:         padding,
-		SigningPublic:   sigKey,
 	}
 
 	log.WithFields(logger.Fields{
 		"public_key_type":         keyCert.PublicKeyType(),
 		"signing_public_key_type": keyCert.SigningPublicKeyType(),
-		"padding_length":          len(padding),
+		"padding_length":          len(keysAndCert.Padding),
 		"remainder_length":        len(remainder),
 	}).Debug("Successfully read KeysAndCert")
 
@@ -581,6 +565,31 @@ func validateSpecializedReaderCertTypes(keyCert *key_certificate.KeyCertificate,
 		)
 	}
 	return nil
+}
+
+// assembleKeysAndCert constructs a KeysAndCert from a parsed KeyCertificate and raw data,
+// reducing duplication between the KEY-certificate and non-KEY-certificate parsing paths.
+func assembleKeysAndCert(keyCert *key_certificate.KeyCertificate, rawData []byte) (*KeysAndCert, error) {
+	pubKey, err := constructPublicKeyFromCert(keyCert, rawData)
+	if err != nil {
+		return nil, err
+	}
+
+	pubKeySize := keyCert.CryptoSize()
+	sigKeySize := keyCert.SigningPublicKeySize()
+	padding := extractPaddingFromData(rawData, pubKeySize, sigKeySize)
+
+	sigKey, err := constructSigningKeyFromCert(keyCert, rawData, sigKeySize)
+	if err != nil {
+		return nil, err
+	}
+
+	return &KeysAndCert{
+		KeyCertificate:  keyCert,
+		ReceivingPublic: pubKey,
+		Padding:         padding,
+		SigningPublic:   sigKey,
+	}, nil
 }
 
 // validateMinimumDataLength validates that the data has sufficient length for parsing.
@@ -742,26 +751,12 @@ func readKeysAndCertNonKeyCert(rawData []byte, certType int) (*KeysAndCert, []by
 		return nil, remainder, err
 	}
 
-	pubKey, err := constructPublicKeyFromCert(keyCert, rawData)
+	keysAndCert, err := assembleKeysAndCert(keyCert, rawData)
 	if err != nil {
 		return nil, remainder, err
 	}
 
-	sigKeySize := keyCert.SigningPublicKeySize()
-	pubKeySize := keyCert.CryptoSize()
-	padding := extractPaddingFromData(rawData, pubKeySize, sigKeySize)
-
-	sigKey, err := constructSigningKeyFromCert(keyCert, rawData, sigKeySize)
-	if err != nil {
-		return nil, remainder, err
-	}
-
-	return &KeysAndCert{
-		KeyCertificate:  keyCert,
-		ReceivingPublic: pubKey,
-		Padding:         padding,
-		SigningPublic:   sigKey,
-	}, remainder, nil
+	return keysAndCert, remainder, nil
 }
 
 // buildNullCertKeyCertificate creates a synthetic KeyCertificate for NULL certificates.

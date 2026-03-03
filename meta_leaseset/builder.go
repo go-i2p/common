@@ -4,9 +4,9 @@ package meta_leaseset
 import (
 	"crypto/ed25519"
 	"crypto/sha512"
-	"encoding/binary"
 
 	"filippo.io/edwards25519"
+	rootcommon "github.com/go-i2p/common"
 	common "github.com/go-i2p/common/data"
 	"github.com/go-i2p/common/destination"
 	"github.com/go-i2p/common/offline_signature"
@@ -204,34 +204,10 @@ func serializeMetaLeaseSetContent(
 	entries []MetaLeaseSetEntry,
 	revocations [][32]byte,
 ) ([]byte, error) {
-	data := make([]byte, 0)
-
-	destBytes, err := dest.Bytes()
+	// Serialize the common header (dest, published, expires, flags, offlineSig, options)
+	data, err := rootcommon.SerializeLeaseSetHeader(dest, published, expiresOffset, flags, offlineSig, options)
 	if err != nil {
-		return nil, oops.Errorf("failed to serialize destination: %w", err)
-	}
-	data = append(data, destBytes...)
-
-	publishedBytes := make([]byte, 4)
-	binary.BigEndian.PutUint32(publishedBytes, published)
-	data = append(data, publishedBytes...)
-
-	expiresBytes := make([]byte, 2)
-	binary.BigEndian.PutUint16(expiresBytes, expiresOffset)
-	data = append(data, expiresBytes...)
-
-	flagsBytes := make([]byte, 2)
-	binary.BigEndian.PutUint16(flagsBytes, flags)
-	data = append(data, flagsBytes...)
-
-	if offlineSig != nil {
-		data = append(data, offlineSig.Bytes()...)
-	}
-
-	if optData := options.Data(); len(optData) > 0 {
-		data = append(data, optData...)
-	} else {
-		data = append(data, 0x00, 0x00)
+		return nil, err
 	}
 
 	data = append(data, byte(len(entries)))
@@ -253,10 +229,7 @@ func serializeMetaLeaseSetContent(
 
 // determineSignatureType returns the signature type to use for signing.
 func determineSignatureType(dest destination.Destination, offlineSig *offline_signature.OfflineSignature) uint16 {
-	if offlineSig != nil {
-		return offlineSig.TransientSigType()
-	}
-	return uint16(dest.KeyCertificate.SigningPublicKeyType())
+	return rootcommon.DetermineSignatureType(dest.KeyCertificate.SigningPublicKeyType(), offlineSig)
 }
 
 // createMetaLeaseSetSignature signs the MetaLeaseSet data with the provided key.

@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	rootcommon "github.com/go-i2p/common"
 	common "github.com/go-i2p/common/data"
 	"github.com/go-i2p/common/destination"
 	"github.com/go-i2p/common/offline_signature"
@@ -184,29 +185,16 @@ func parseHeaderFields(mls *MetaLeaseSet, data []byte) []byte {
 // parseOfflineSignature parses the optional offline signature if the offline keys flag is set.
 // Returns remaining data after parsing or error if parsing fails.
 func parseOfflineSignature(mls *MetaLeaseSet, data []byte) ([]byte, error) {
-	if !mls.HasOfflineKeys() {
-		return data, nil
-	}
-
-	// Get destination signature type for offline signature parsing
 	destSigType := uint16(mls.destination.KeyCertificate.SigningPublicKeyType())
 
-	offlineSig, rem, err := offline_signature.ReadOfflineSignature(data, destSigType)
+	offlineSig, rem, err := rootcommon.ParseOfflineSignatureField(
+		mls.HasOfflineKeys(), destSigType, data, "MetaLeaseSet",
+	)
 	if err != nil {
-		err = oops.
-			Code("offline_signature_parse_failed").
-			Wrapf(err, "failed to parse offline signature in MetaLeaseSet")
-		log.WithFields(logger.Fields{
-			"at":     "parseOfflineSignature",
-			"reason": "offline signature parse failed",
-		}).Error(err.Error())
 		return nil, err
 	}
-	mls.offlineSignature = &offlineSig
-	data = rem
-	log.Debug("Parsed offline signature")
-
-	return data, nil
+	mls.offlineSignature = offlineSig
+	return rem, nil
 }
 
 // parseOptionsMapping parses the options mapping containing service record options.

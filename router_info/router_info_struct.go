@@ -473,40 +473,34 @@ func (router_info *RouterInfo) AddAddress(address *router_address.RouterAddress)
 	return nil
 }
 
+// getOptionString retrieves a string value from the RouterInfo options mapping,
+// reducing duplication between RouterCapabilities and RouterVersion.
+func (router_info *RouterInfo) getOptionString(optionKey, fieldLabel string) string {
+	log.Debug("Retrieving " + fieldLabel)
+	if router_info.options == nil {
+		log.Debug(fieldLabel + " called with nil options, returning empty string")
+		return ""
+	}
+	str, err := data.ToI2PString(optionKey)
+	if err != nil {
+		log.WithError(err).Error("Failed to create I2PString for '" + optionKey + "'")
+		return ""
+	}
+	val := string(router_info.options.Values().Get(str))
+	log.WithField(fieldLabel, val).Debug("Retrieved " + fieldLabel)
+	return val
+}
+
 // RouterCapabilities returns the capabilities string for this RouterInfo.
 // Returns an empty string if the options field is nil (e.g. zero-value or failed-parse RouterInfo).
 func (router_info *RouterInfo) RouterCapabilities() string {
-	log.Debug("Retrieving RouterCapabilities")
-	if router_info.options == nil {
-		log.Debug("RouterCapabilities called with nil options, returning empty string")
-		return ""
-	}
-	str, err := data.ToI2PString("caps")
-	if err != nil {
-		log.WithError(err).Error("Failed to create I2PString for 'caps'")
-		return ""
-	}
-	caps := string(router_info.options.Values().Get(str))
-	log.WithField("capabilities", caps).Debug("Retrieved RouterCapabilities")
-	return caps
+	return router_info.getOptionString("caps", "capabilities")
 }
 
 // RouterVersion returns the version string for this RouterInfo.
 // Returns an empty string if the options field is nil (e.g. zero-value or failed-parse RouterInfo).
 func (router_info *RouterInfo) RouterVersion() string {
-	log.Debug("Retrieving RouterVersion")
-	if router_info.options == nil {
-		log.Debug("RouterVersion called with nil options, returning empty string")
-		return ""
-	}
-	str, err := data.ToI2PString("router.version")
-	if err != nil {
-		log.WithError(err).Error("Failed to create I2PString for 'router.version'")
-		return ""
-	}
-	version := string(router_info.options.Values().Get(str))
-	log.WithField("version", version).Debug("Retrieved RouterVersion")
-	return version
+	return router_info.getOptionString("router.version", "version")
 }
 
 // GoodVersion checks if the RouterInfo version is acceptable.

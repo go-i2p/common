@@ -11,6 +11,7 @@ import (
 
 	"filippo.io/edwards25519"
 
+	rootcommon "github.com/go-i2p/common"
 	common "github.com/go-i2p/common/data"
 	"github.com/go-i2p/common/destination"
 	"github.com/go-i2p/common/key_certificate"
@@ -338,29 +339,16 @@ func parseDestinationAndHeader(ls2 *LeaseSet2, data []byte) ([]byte, error) {
 // parseOfflineSignature parses the optional offline signature if the offline keys flag is set.
 // Returns remaining data after parsing or error if parsing fails.
 func parseOfflineSignature(ls2 *LeaseSet2, data []byte) ([]byte, error) {
-	if !ls2.HasOfflineKeys() {
-		return data, nil
-	}
-
-	// Get destination signature type for offline signature parsing
 	destSigType := uint16(ls2.destination.KeyCertificate.SigningPublicKeyType())
 
-	offlineSig, rem, err := offline_signature.ReadOfflineSignature(data, destSigType)
+	offlineSig, rem, err := rootcommon.ParseOfflineSignatureField(
+		ls2.HasOfflineKeys(), destSigType, data, "LeaseSet2",
+	)
 	if err != nil {
-		err = oops.
-			Code("offline_signature_parse_failed").
-			Wrapf(err, "failed to parse offline signature in LeaseSet2")
-		log.WithFields(logger.Fields{
-			"at":     "parseOfflineSignature",
-			"reason": "offline signature parse failed",
-		}).Error(err.Error())
 		return nil, err
 	}
-	ls2.offlineSignature = &offlineSig
-	data = rem
-	log.Debug("Parsed offline signature")
-
-	return data, nil
+	ls2.offlineSignature = offlineSig
+	return rem, nil
 }
 
 // parseOptionsMapping parses the options mapping containing service record options.
@@ -1003,42 +991,10 @@ func serializeLeaseSet2Content(
 	encryptionKeys []EncryptionKey,
 	leases []lease.Lease2,
 ) ([]byte, error) {
-	data := make([]byte, 0)
-
-	// Add destination
-	destBytes, err := dest.Bytes()
+	// Serialize the common header (dest, published, expires, flags, offlineSig, options)
+	data, err := rootcommon.SerializeLeaseSetHeader(dest, published, expiresOffset, flags, offlineSig, options)
 	if err != nil {
-		return nil, oops.Errorf("failed to serialize destination: %w", err)
-	}
-	data = append(data, destBytes...)
-
-	// Add published timestamp (4 bytes)
-	publishedBytes := make([]byte, 4)
-	binary.BigEndian.PutUint32(publishedBytes, published)
-	data = append(data, publishedBytes...)
-
-	// Add expires offset (2 bytes)
-	expiresBytes := make([]byte, 2)
-	binary.BigEndian.PutUint16(expiresBytes, expiresOffset)
-	data = append(data, expiresBytes...)
-
-	// Add flags (2 bytes)
-	flagsBytes := make([]byte, 2)
-	binary.BigEndian.PutUint16(flagsBytes, flags)
-	data = append(data, flagsBytes...)
-
-	// Add offline signature if present
-	if offlineSig != nil {
-		data = append(data, offlineSig.Bytes()...)
-	}
-
-	// Add options mapping — use Data() as the single consistent representation.
-	// If Data() is available (non-nil, non-empty), serialize it directly.
-	// Otherwise, emit the 2-byte empty mapping (size=0).
-	if optData := options.Data(); len(optData) > 0 {
-		data = append(data, optData...)
-	} else {
-		data = append(data, 0x00, 0x00)
+		return nil, err
 	}
 
 	// Add encryption keys
@@ -1066,12 +1022,7 @@ func serializeLeaseSet2Content(
 
 // determineSignatureType determines which signature type to use based on offline signature.
 func determineSignatureType(dest destination.Destination, offlineSig *offline_signature.OfflineSignature) uint16 {
-	if offlineSig != nil {
-		// Use transient signature type from offline signature
-		return offlineSig.TransientSigType()
-	}
-	// Use destination's signature type (convert int to uint16)
-	return uint16(dest.KeyCertificate.SigningPublicKeyType())
+	return rootcommon.DetermineSignatureType(dest.KeyCertificate.SigningPublicKeyType(), offlineSig)
 }
 
 // createLeaseSet2Signature signs the LeaseSet2 data with the provided key.

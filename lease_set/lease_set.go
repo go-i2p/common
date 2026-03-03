@@ -4,6 +4,7 @@ package lease_set
 import (
 	"bytes"
 	"crypto/sha256"
+	"time"
 
 	"github.com/go-i2p/common/certificate"
 	"github.com/go-i2p/common/data"
@@ -499,23 +500,32 @@ func (lease_set LeaseSet) Hash() ([32]byte, error) {
 	return sha256.Sum256(destBytes), nil
 }
 
-// NewestExpiration returns the newest lease expiration as an I2P Date.
-// If there are no leases, returns epoch zero and ErrNoLeases.
-func (lease_set LeaseSet) NewestExpiration() (newest data.Date, err error) {
-	log.Debug("Finding newest expiration in LeaseSet")
+// findExpiration iterates leases and returns the Date that satisfies the
+// comparison function isBetter, reducing duplication between
+// NewestExpiration and OldestExpiration.
+func (lease_set LeaseSet) findExpiration(label string, isBetter func(candidate, current time.Time) bool) (data.Date, error) {
+	log.Debug("Finding " + label + " expiration in LeaseSet")
 	leases := lease_set.leases
 	if len(leases) == 0 {
 		return data.Date{}, ErrNoLeases
 	}
-	newest = leases[0].Date()
+	result := leases[0].Date()
 	for _, l := range leases[1:] {
 		date := l.Date()
-		if date.Time().After(newest.Time()) {
-			newest = date
+		if isBetter(date.Time(), result.Time()) {
+			result = date
 		}
 	}
-	log.WithField("newest_expiration", newest.Time()).Debug("Found newest expiration in LeaseSet")
-	return
+	log.WithField(label+"_expiration", result.Time()).Debug("Found " + label + " expiration in LeaseSet")
+	return result, nil
+}
+
+// NewestExpiration returns the newest lease expiration as an I2P Date.
+// If there are no leases, returns epoch zero and ErrNoLeases.
+func (lease_set LeaseSet) NewestExpiration() (data.Date, error) {
+	return lease_set.findExpiration("newest", func(candidate, current time.Time) bool {
+		return candidate.After(current)
+	})
 }
 
 // OldestExpiration returns the oldest lease expiration as an I2P Date.
@@ -526,19 +536,8 @@ func (lease_set LeaseSet) NewestExpiration() (newest data.Date, err error) {
 // accept a store of a LeaseSet unless it is 'newer' (i.e. has a later
 // OldestExpiration) than the currently cached entry. Use OldestExpiration,
 // not NewestExpiration, when comparing LeaseSet versions for netdb purposes.
-func (lease_set LeaseSet) OldestExpiration() (earliest data.Date, err error) {
-	log.Debug("Finding oldest expiration in LeaseSet")
-	leases := lease_set.leases
-	if len(leases) == 0 {
-		return data.Date{}, ErrNoLeases
-	}
-	earliest = leases[0].Date()
-	for _, l := range leases[1:] {
-		date := l.Date()
-		if date.Time().Before(earliest.Time()) {
-			earliest = date
-		}
-	}
-	log.WithField("oldest_expiration", earliest.Time()).Debug("Found oldest expiration in LeaseSet")
-	return
+func (lease_set LeaseSet) OldestExpiration() (data.Date, error) {
+	return lease_set.findExpiration("oldest", func(candidate, current time.Time) bool {
+		return candidate.Before(current)
+	})
 }
