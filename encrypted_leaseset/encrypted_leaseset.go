@@ -215,18 +215,16 @@ func parseEncryptedInnerData(els *EncryptedLeaseSet, data []byte) ([]byte, error
 	return data[els.innerLength:], nil
 }
 
-// parseSignatureAndFinalize reads the trailing signature.
+// parseSignatureAndFinalize reads the trailing signature, delegating to the
+// shared ParseLeaseSetSignature which handles offline key resolution.
 func parseSignatureAndFinalize(els *EncryptedLeaseSet, data []byte) ([]byte, error) {
-	sigType := int(els.sigType)
-	if els.HasOfflineKeys() && els.offlineSignature != nil {
-		sigType = int(els.offlineSignature.TransientSigType())
-	}
+	defaultSigType := int(els.sigType)
 
-	signature, rem, err := sig.ReadSignature(data, sigType)
+	signature, rem, err := rootcommon.ParseLeaseSetSignature(
+		data, defaultSigType, els.HasOfflineKeys(), els.offlineSignature, "EncryptedLeaseSet",
+	)
 	if err != nil {
-		return nil, oops.Code("sig_parse_failed").
-			With("sig_type", sigType).
-			Wrapf(err, "failed to parse signature in EncryptedLeaseSet")
+		return nil, err
 	}
 	els.signature = signature
 	return rem, nil

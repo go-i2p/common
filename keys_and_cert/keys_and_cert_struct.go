@@ -660,13 +660,21 @@ func logElgEd25519KeysDebug(dataLen int) {
 	}).Debug("Reading KeysAndCert from data")
 }
 
+// computeKeyLayoutSizes computes the total key size, padding size, and minimum data length
+// from public key and signing key sizes, consolidating the identical size computation
+// logic from getElgEd25519KeySizes and getX25519Ed25519KeySizes.
+func computeKeyLayoutSizes(pubKeySize, sigKeySize int) (totalKeySize, paddingSize, minDataLength int) {
+	totalKeySize = KEYS_AND_CERT_DATA_SIZE
+	paddingSize = totalKeySize - pubKeySize - sigKeySize
+	minDataLength = totalKeySize + certificate.CERT_MIN_SIZE
+	return
+}
+
 // getElgEd25519KeySizes returns the key sizes for ElGamal and Ed25519 keys.
 func getElgEd25519KeySizes() (pubKeySize, sigKeySize, totalKeySize, paddingSize, minDataLength int) {
 	pubKeySize = 256
 	sigKeySize = 32
-	totalKeySize = 384
-	paddingSize = totalKeySize - pubKeySize - sigKeySize
-	minDataLength = totalKeySize + certificate.CERT_MIN_SIZE
+	totalKeySize, paddingSize, minDataLength = computeKeyLayoutSizes(pubKeySize, sigKeySize)
 	return
 }
 
@@ -794,9 +802,7 @@ func extractX25519PublicKey(data []byte) (types.ReceivingPublicKey, error) {
 func getX25519Ed25519KeySizes() (pubKeySize, sigKeySize, totalKeySize, paddingSize, minDataLength int) {
 	pubKeySize = 32
 	sigKeySize = 32
-	totalKeySize = 384
-	paddingSize = totalKeySize - pubKeySize - sigKeySize
-	minDataLength = totalKeySize + certificate.CERT_MIN_SIZE
+	totalKeySize, paddingSize, minDataLength = computeKeyLayoutSizes(pubKeySize, sigKeySize)
 	return
 }
 

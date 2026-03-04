@@ -4,7 +4,6 @@ package lease_set2
 import (
 	"encoding/binary"
 	"sort"
-	"strings"
 	"time"
 
 	rootcommon "github.com/go-i2p/common"
@@ -185,20 +184,37 @@ func (ls2 *LeaseSet2) Bytes() ([]byte, error) {
 func ReadLeaseSet2(data []byte) (ls2 LeaseSet2, remainder []byte, err error) {
 	log.Debug("Parsing LeaseSet2 structure")
 
-	data, err = parseDestinationAndHeader(&ls2, data)
+	// Parse common header fields shared with MetaLeaseSet
+	var fields rootcommon.LeaseSetCommonFields
+	fields, data, err = rootcommon.ParseLeaseSetCommonPrefix(data, LEASESET2_MIN_SIZE, "LeaseSet2")
 	if err != nil {
 		return
+	}
+	ls2.destination = fields.Destination
+	ls2.published = fields.Published
+	ls2.expires = fields.Expires
+	ls2.flags = fields.Flags
+	ls2.offlineSignature = fields.OfflineSignature
+	ls2.options = fields.Options
+
+	// Warn if reserved flag bits (bits 15-3) are set per spec:
+	// "Bits 15-3: Reserved, set to 0 for compatibility with future uses."
+	reservedMask := uint16(0xFFF8) // bits 15-3
+	if ls2.flags&reservedMask != 0 {
+		log.WithFields(logger.Fields{
+			"flags":         ls2.flags,
+			"reserved_bits": ls2.flags & reservedMask,
+		}).Warn("LeaseSet2 has non-zero reserved flag bits (bits 15-3 should be 0)")
 	}
 
-	data, err = parseOfflineSignature(&ls2, data)
-	if err != nil {
-		return
-	}
+	log.WithFields(logger.Fields{
+		"published": ls2.published,
+		"expires":   ls2.expires,
+		"flags":     ls2.flags,
+	}).Debug("Parsed LeaseSet2 header")
 
-	data, err = parseOptionsMapping(&ls2, data)
-	if err != nil {
-		return
-	}
+	// Warn if options mapping keys are not sorted per spec
+	warnIfOptionsUnsorted(ls2.options)
 
 	remainder, err = parseKeysLeasesAndSignature(&ls2, data)
 	return
@@ -220,171 +236,6 @@ func parseKeysLeasesAndSignature(ls2 *LeaseSet2, data []byte) ([]byte, error) {
 	}
 
 	return parseSignatureAndFinalize(ls2, data)
-}
-
-// parseDestinationAndHeader validates minimum size and parses the destination and header fields.
-// Returns remaining data after parsing or error if validation or parsing fails.
-// validateLeaseSet2MinSize validates that data meets minimum LeaseSet2 size requirements.
-// Returns error if data is too short to contain a valid LeaseSet2.
-func validateLeaseSet2MinSize(dataLen int) error {
-	if dataLen < LEASESET2_MIN_SIZE {
-		err := oops.
-			Code("lease_set2_too_short").
-			With("data_length", dataLen).
-			With("minimum_required", LEASESET2_MIN_SIZE).
-			Errorf("data too short for LeaseSet2: got %d bytes, need at least %d", dataLen, LEASESET2_MIN_SIZE)
-		log.WithFields(logger.Fields{
-			"at":          "validateLeaseSet2MinSize",
-			"data_length": dataLen,
-			"min_size":    LEASESET2_MIN_SIZE,
-		}).Error(err.Error())
-		return err
-	}
-	return nil
-}
-
-// parseDestinationField parses the destination from data and updates the LeaseSet2.
-// Returns remaining data after destination or error if parsing fails.
-func parseDestinationField(ls2 *LeaseSet2, data []byte) ([]byte, error) {
-	dest, rem, err := destination.ReadDestination(data)
-	if err != nil {
-		err = oops.
-			Code("destination_parse_failed").
-			Wrapf(err, "failed to parse destination in LeaseSet2")
-		log.WithFields(logger.Fields{
-			"at":     "parseDestinationField",
-			"reason": "destination parse failed",
-		}).Error(err.Error())
-		return nil, err
-	}
-	ls2.destination = dest
-	return rem, nil
-}
-
-// validateHeaderDataSize validates that remaining data is sufficient for header fields.
-// Returns error if insufficient data remains for published, expires, and flags fields.
-func validateHeaderDataSize(dataLen int) error {
-	requiredSize := LEASESET2_PUBLISHED_SIZE + LEASESET2_EXPIRES_SIZE + LEASESET2_FLAGS_SIZE
-	if dataLen < requiredSize {
-		err := oops.
-			Code("header_too_short").
-			With("remaining_length", dataLen).
-			Errorf("insufficient data for LeaseSet2 header fields")
-		log.WithFields(logger.Fields{
-			"at":               "validateHeaderDataSize",
-			"remaining_length": dataLen,
-		}).Error(err.Error())
-		return err
-	}
-	return nil
-}
-
-// parseHeaderFields parses published timestamp, expires offset, and flags from data.
-// Updates LeaseSet2 fields and returns remaining data after header parsing.
-func parseHeaderFields(ls2 *LeaseSet2, data []byte) []byte {
-	ls2.published = binary.BigEndian.Uint32(data[:LEASESET2_PUBLISHED_SIZE])
-	data = data[LEASESET2_PUBLISHED_SIZE:]
-
-	ls2.expires = binary.BigEndian.Uint16(data[:LEASESET2_EXPIRES_SIZE])
-	data = data[LEASESET2_EXPIRES_SIZE:]
-
-	ls2.flags = binary.BigEndian.Uint16(data[:LEASESET2_FLAGS_SIZE])
-	data = data[LEASESET2_FLAGS_SIZE:]
-
-	// Warn if reserved flag bits (bits 15-3) are set per spec:
-	// "Bits 15-3: Reserved, set to 0 for compatibility with future uses."
-	reservedMask := uint16(0xFFF8) // bits 15-3
-	if ls2.flags&reservedMask != 0 {
-		log.WithFields(logger.Fields{
-			"flags":         ls2.flags,
-			"reserved_bits": ls2.flags & reservedMask,
-		}).Warn("LeaseSet2 has non-zero reserved flag bits (bits 15-3 should be 0)")
-	}
-
-	log.WithFields(logger.Fields{
-		"published": ls2.published,
-		"expires":   ls2.expires,
-		"flags":     ls2.flags,
-	}).Debug("Parsed LeaseSet2 header")
-
-	return data
-}
-
-func parseDestinationAndHeader(ls2 *LeaseSet2, data []byte) ([]byte, error) {
-	if err := validateLeaseSet2MinSize(len(data)); err != nil {
-		return nil, err
-	}
-
-	rem, err := parseDestinationField(ls2, data)
-	if err != nil {
-		return nil, err
-	}
-
-	if err := validateHeaderDataSize(len(rem)); err != nil {
-		return nil, err
-	}
-
-	rem = parseHeaderFields(ls2, rem)
-
-	return rem, nil
-}
-
-// parseOfflineSignature parses the optional offline signature if the offline keys flag is set.
-// Returns remaining data after parsing or error if parsing fails.
-func parseOfflineSignature(ls2 *LeaseSet2, data []byte) ([]byte, error) {
-	destSigType := uint16(ls2.destination.KeyCertificate.SigningPublicKeyType())
-
-	offlineSig, rem, err := rootcommon.ParseOfflineSignatureField(
-		ls2.HasOfflineKeys(), destSigType, data, "LeaseSet2",
-	)
-	if err != nil {
-		return nil, err
-	}
-	ls2.offlineSignature = offlineSig
-	return rem, nil
-}
-
-// parseOptionsMapping parses the options mapping containing service record options.
-// Returns remaining data after parsing or error if parsing fails.
-//
-// Note: ReadMapping returns a warning ("data exists beyond length of mapping")
-// whenever the input slice extends past the declared mapping size. This is
-// expected here because the options mapping is always embedded in the larger
-// LeaseSet2 structure.  We therefore treat that specific warning as non-fatal
-// and only propagate genuine parse failures.
-func parseOptionsMapping(ls2 *LeaseSet2, data []byte) ([]byte, error) {
-	mapping, rem, errs := common.ReadMapping(data)
-	if len(errs) > 0 {
-		// Filter: the "data exists beyond length" warning is expected when
-		// a mapping is embedded inside a larger byte stream.
-		var fatal []error
-		for _, e := range errs {
-			if strings.Contains(e.Error(), "data exists beyond length of mapping") {
-				log.Debug("options mapping: ignoring 'data beyond length' warning (expected in embedded context)")
-				continue
-			}
-			fatal = append(fatal, e)
-		}
-		if len(fatal) > 0 {
-			err := oops.
-				Code("options_parse_failed").
-				Wrapf(fatal[0], "failed to parse options mapping in LeaseSet2")
-			log.WithFields(logger.Fields{
-				"at":     "parseOptionsMapping",
-				"reason": "options mapping parse failed",
-			}).Error(err.Error())
-			return nil, err
-		}
-	}
-	ls2.options = mapping
-
-	// Warn if options mapping keys are not sorted per spec:
-	// "Options MUST be sorted by key for signature invariance."
-	warnIfOptionsUnsorted(mapping)
-
-	log.Debug("Parsed options mapping")
-
-	return rem, nil
 }
 
 // warnIfOptionsUnsorted checks if the mapping keys are sorted lexicographically
@@ -702,26 +553,12 @@ func parseLeases(ls2 *LeaseSet2, data []byte) ([]byte, error) {
 // parseSignatureAndFinalize parses the signature and logs the successful completion.
 // Returns remaining data after parsing or error if parsing fails.
 func parseSignatureAndFinalize(ls2 *LeaseSet2, data []byte) ([]byte, error) {
-	// Determine signature type
-	var sigType int
-	if ls2.HasOfflineKeys() && ls2.offlineSignature != nil {
-		// Use transient signature type from offline signature
-		sigType = int(ls2.offlineSignature.TransientSigType())
-	} else {
-		// Use destination signature type
-		sigType = ls2.destination.KeyCertificate.SigningPublicKeyType()
-	}
+	defaultSigType := ls2.destination.KeyCertificate.SigningPublicKeyType()
 
-	// Parse signature
-	signature, rem, err := sig.ReadSignature(data, sigType)
+	signature, rem, err := rootcommon.ParseLeaseSetSignature(
+		data, defaultSigType, ls2.HasOfflineKeys(), ls2.offlineSignature, "LeaseSet2",
+	)
 	if err != nil {
-		err = oops.
-			Code("signature_parse_failed").
-			Wrapf(err, "failed to parse signature in LeaseSet2")
-		log.WithFields(logger.Fields{
-			"at":       "parseSignatureAndFinalize",
-			"sig_type": sigType,
-		}).Error(err.Error())
 		return nil, err
 	}
 	ls2.signature = signature

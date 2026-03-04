@@ -4,7 +4,6 @@ package meta_leaseset
 import (
 	"encoding/binary"
 	"sort"
-	"strings"
 	"time"
 
 	rootcommon "github.com/go-i2p/common"
@@ -44,23 +43,24 @@ var log = logger.GetGoI2PLogger()
 func ReadMetaLeaseSet(data []byte) (mls MetaLeaseSet, remainder []byte, err error) {
 	log.Debug("Parsing MetaLeaseSet structure")
 
-	// Parse destination and header fields
-	data, err = parseDestinationAndHeader(&mls, data)
+	// Parse common header fields shared with LeaseSet2
+	var fields rootcommon.LeaseSetCommonFields
+	fields, data, err = rootcommon.ParseLeaseSetCommonPrefix(data, META_LEASESET_MIN_SIZE, "MetaLeaseSet")
 	if err != nil {
 		return
 	}
+	mls.destination = fields.Destination
+	mls.published = fields.Published
+	mls.expires = fields.Expires
+	mls.flags = fields.Flags
+	mls.offlineSignature = fields.OfflineSignature
+	mls.options = fields.Options
 
-	// Parse optional offline signature
-	data, err = parseOfflineSignature(&mls, data)
-	if err != nil {
-		return
-	}
-
-	// Parse options mapping
-	data, err = parseOptionsMapping(&mls, data)
-	if err != nil {
-		return
-	}
+	log.WithFields(logger.Fields{
+		"published": mls.published,
+		"expires":   mls.expires,
+		"flags":     mls.flags,
+	}).Debug("Parsed MetaLeaseSet header")
 
 	// Parse entries
 	data, err = parseEntries(&mls, data)
@@ -81,156 +81,6 @@ func ReadMetaLeaseSet(data []byte) (mls MetaLeaseSet, remainder []byte, err erro
 	}
 
 	return
-}
-
-// parseDestinationAndHeader validates minimum size and parses the destination and header fields.
-// Returns remaining data after parsing or error if validation or parsing fails.
-func parseDestinationAndHeader(mls *MetaLeaseSet, data []byte) ([]byte, error) {
-	if err := validateMinSize(len(data)); err != nil {
-		return nil, err
-	}
-
-	rem, err := parseDestinationField(mls, data)
-	if err != nil {
-		return nil, err
-	}
-
-	if err := validateHeaderDataSize(len(rem)); err != nil {
-		return nil, err
-	}
-
-	rem = parseHeaderFields(mls, rem)
-
-	return rem, nil
-}
-
-// validateMinSize validates that data meets minimum MetaLeaseSet size requirements.
-// Returns error if data is too short to contain a valid MetaLeaseSet.
-func validateMinSize(dataLen int) error {
-	if dataLen < META_LEASESET_MIN_SIZE {
-		err := oops.
-			Code("meta_leaseset_too_short").
-			With("data_length", dataLen).
-			With("minimum_required", META_LEASESET_MIN_SIZE).
-			Errorf("data too short for MetaLeaseSet: got %d bytes, need at least %d", dataLen, META_LEASESET_MIN_SIZE)
-		log.WithFields(logger.Fields{
-			"at":          "validateMinSize",
-			"data_length": dataLen,
-			"min_size":    META_LEASESET_MIN_SIZE,
-		}).Error(err.Error())
-		return err
-	}
-	return nil
-}
-
-// parseDestinationField parses the destination from data and updates the MetaLeaseSet.
-// Returns remaining data after destination or error if parsing fails.
-func parseDestinationField(mls *MetaLeaseSet, data []byte) ([]byte, error) {
-	dest, rem, err := destination.ReadDestination(data)
-	if err != nil {
-		err = oops.
-			Code("destination_parse_failed").
-			Wrapf(err, "failed to parse destination in MetaLeaseSet")
-		log.WithFields(logger.Fields{
-			"at":     "parseDestinationField",
-			"reason": "destination parse failed",
-		}).Error(err.Error())
-		return nil, err
-	}
-	mls.destination = dest
-	return rem, nil
-}
-
-// validateHeaderDataSize validates that remaining data is sufficient for header fields.
-// Returns error if insufficient data remains for published, expires, and flags fields.
-func validateHeaderDataSize(dataLen int) error {
-	requiredSize := META_LEASESET_PUBLISHED_SIZE + META_LEASESET_EXPIRES_SIZE + META_LEASESET_FLAGS_SIZE
-	if dataLen < requiredSize {
-		err := oops.
-			Code("header_too_short").
-			With("remaining_length", dataLen).
-			With("required_size", requiredSize).
-			Errorf("insufficient data for MetaLeaseSet header fields")
-		log.WithFields(logger.Fields{
-			"at":               "validateHeaderDataSize",
-			"remaining_length": dataLen,
-			"required_size":    requiredSize,
-		}).Error(err.Error())
-		return err
-	}
-	return nil
-}
-
-// parseHeaderFields parses published timestamp, expires offset, and flags from data.
-// Updates MetaLeaseSet fields and returns remaining data after header parsing.
-func parseHeaderFields(mls *MetaLeaseSet, data []byte) []byte {
-	mls.published = binary.BigEndian.Uint32(data[:META_LEASESET_PUBLISHED_SIZE])
-	data = data[META_LEASESET_PUBLISHED_SIZE:]
-
-	mls.expires = binary.BigEndian.Uint16(data[:META_LEASESET_EXPIRES_SIZE])
-	data = data[META_LEASESET_EXPIRES_SIZE:]
-
-	mls.flags = binary.BigEndian.Uint16(data[:META_LEASESET_FLAGS_SIZE])
-	data = data[META_LEASESET_FLAGS_SIZE:]
-
-	log.WithFields(logger.Fields{
-		"published": mls.published,
-		"expires":   mls.expires,
-		"flags":     mls.flags,
-	}).Debug("Parsed MetaLeaseSet header")
-
-	return data
-}
-
-// parseOfflineSignature parses the optional offline signature if the offline keys flag is set.
-// Returns remaining data after parsing or error if parsing fails.
-func parseOfflineSignature(mls *MetaLeaseSet, data []byte) ([]byte, error) {
-	destSigType := uint16(mls.destination.KeyCertificate.SigningPublicKeyType())
-
-	offlineSig, rem, err := rootcommon.ParseOfflineSignatureField(
-		mls.HasOfflineKeys(), destSigType, data, "MetaLeaseSet",
-	)
-	if err != nil {
-		return nil, err
-	}
-	mls.offlineSignature = offlineSig
-	return rem, nil
-}
-
-// parseOptionsMapping parses the options mapping containing service record options.
-// ReadMapping returns a non-fatal warning ("data exists beyond length of mapping")
-// whenever the input slice extends past the declared mapping size. This is
-// expected here because the options mapping is always embedded in the larger
-// MetaLeaseSet structure. We therefore treat that specific warning as non-fatal
-// and only propagate genuine parse failures.
-func parseOptionsMapping(mls *MetaLeaseSet, data []byte) ([]byte, error) {
-	mapping, rem, errs := common.ReadMapping(data)
-	if len(errs) > 0 {
-		// Filter: the "data exists beyond length" warning is expected when
-		// a mapping is embedded inside a larger byte stream.
-		var fatal []error
-		for _, e := range errs {
-			if strings.Contains(e.Error(), "data exists beyond length of mapping") {
-				log.Debug("options mapping: ignoring 'data beyond length' warning (expected in embedded context)")
-				continue
-			}
-			fatal = append(fatal, e)
-		}
-		if len(fatal) > 0 {
-			err := oops.
-				Code("options_parse_failed").
-				Wrapf(fatal[0], "failed to parse options mapping in MetaLeaseSet")
-			log.WithFields(logger.Fields{
-				"at":     "parseOptionsMapping",
-				"reason": "options mapping parse failed",
-			}).Error(err.Error())
-			return nil, err
-		}
-	}
-	mls.options = mapping
-	log.Debug("Parsed options mapping")
-
-	return rem, nil
 }
 
 // parseEntries parses the MetaLeaseSet entries from the data.
@@ -385,26 +235,12 @@ func validateEntryType(leaseType uint8, entryIndex int) error {
 // parseSignatureAndFinalize parses the signature and logs the successful completion.
 // Returns remaining data after parsing or error if parsing fails.
 func parseSignatureAndFinalize(mls *MetaLeaseSet, data []byte) ([]byte, error) {
-	// Determine signature type
-	var sigType int
-	if mls.HasOfflineKeys() && mls.offlineSignature != nil {
-		// Use transient signature type from offline signature
-		sigType = int(mls.offlineSignature.TransientSigType())
-	} else {
-		// Use destination signature type
-		sigType = mls.destination.KeyCertificate.SigningPublicKeyType()
-	}
+	defaultSigType := mls.destination.KeyCertificate.SigningPublicKeyType()
 
-	// Parse signature
-	signature, rem, err := sig.ReadSignature(data, sigType)
+	signature, rem, err := rootcommon.ParseLeaseSetSignature(
+		data, defaultSigType, mls.HasOfflineKeys(), mls.offlineSignature, "MetaLeaseSet",
+	)
 	if err != nil {
-		err = oops.
-			Code("signature_parse_failed").
-			Wrapf(err, "failed to parse signature in MetaLeaseSet")
-		log.WithFields(logger.Fields{
-			"at":       "parseSignatureAndFinalize",
-			"sig_type": sigType,
-		}).Error(err.Error())
 		return nil, err
 	}
 	mls.signature = signature

@@ -4,6 +4,7 @@ package common
 import (
 	"crypto/ed25519"
 	"encoding/binary"
+	"strings"
 
 	"github.com/go-i2p/common/data"
 	"github.com/go-i2p/common/destination"
@@ -17,7 +18,63 @@ import (
 	"github.com/samber/oops"
 )
 
+// LeaseSetHeaderFieldsSize is the combined size of the published (4),
+// expires (2), and flags (2) header fields shared by LeaseSet2 and MetaLeaseSet.
+const LeaseSetHeaderFieldsSize = 8
+
+// LeaseSetFlagOfflineKeys is bit 0 of the flags field, indicating that an
+// offline signature is present. This constant is shared by LeaseSet2 and MetaLeaseSet.
+const LeaseSetFlagOfflineKeys = 1 << 0
+
+// LeaseSetCommonFields holds the parsed header fields that are structurally
+// identical between LeaseSet2 and MetaLeaseSet wire formats.
+type LeaseSetCommonFields struct {
+	Destination      destination.Destination
+	Published        uint32
+	Expires          uint16
+	Flags            uint16
+	OfflineSignature *offline_signature.OfflineSignature
+	Options          data.Mapping
+}
+
 var lsLog = logger.GetGoI2PLogger()
+
+// ParseLeaseSetCommonPrefix parses the common wire-format prefix shared by
+// LeaseSet2 and MetaLeaseSet: destination, published, expires, flags, optional
+// offline signature, and options mapping. This consolidates the identical
+// parseDestinationAndHeader + parseOfflineSignature + parseOptionsMapping
+// call sequence from both packages into a single function.
+func ParseLeaseSetCommonPrefix(
+	inputData []byte, minSize int, structName string,
+) (fields LeaseSetCommonFields, remainder []byte, err error) {
+	if err = ValidateMinDataSize(len(inputData), minSize, structName); err != nil {
+		return
+	}
+
+	fields.Destination, remainder, err = ParseDestinationFromData(inputData, structName)
+	if err != nil {
+		return
+	}
+
+	if err = ValidateLeaseSetHeaderSize(len(remainder), structName); err != nil {
+		return
+	}
+
+	fields.Published, fields.Expires, fields.Flags, remainder = ParseLeaseSetHeaderFields(remainder)
+
+	hasOfflineKeys := (fields.Flags & LeaseSetFlagOfflineKeys) != 0
+	destSigType := uint16(fields.Destination.KeyCertificate.SigningPublicKeyType())
+
+	fields.OfflineSignature, remainder, err = ParseOfflineSignatureField(
+		hasOfflineKeys, destSigType, remainder, structName,
+	)
+	if err != nil {
+		return
+	}
+
+	fields.Options, remainder, err = ParseEmbeddedMapping(remainder, structName)
+	return
+}
 
 // SerializeLeaseSetHeader serializes the common header fields shared by
 // LeaseSet2 and MetaLeaseSet: destination, published timestamp, expires
@@ -291,4 +348,135 @@ func AppendBigEndianUint32(buf []byte, val uint32) []byte {
 	b := make([]byte, 4)
 	binary.BigEndian.PutUint32(b, val)
 	return append(buf, b...)
+}
+
+// ValidateMinDataSize validates that dataLen meets a minimum size requirement,
+// consolidating the identical validateMinSize and validateLeaseSet2MinSize
+// functions from meta_leaseset and lease_set2 packages.
+func ValidateMinDataSize(dataLen, minSize int, structName string) error {
+	if dataLen < minSize {
+		err := oops.
+			Code(strings.ToLower(strings.ReplaceAll(structName, " ", "_")) + "_too_short").
+			With("data_length", dataLen).
+			With("minimum_required", minSize).
+			Errorf("data too short for %s: got %d bytes, need at least %d", structName, dataLen, minSize)
+		lsLog.WithFields(logger.Fields{
+			"at":          "ValidateMinDataSize",
+			"data_length": dataLen,
+			"min_size":    minSize,
+		}).Error(err.Error())
+		return err
+	}
+	return nil
+}
+
+// ValidateLeaseSetHeaderSize validates that remaining data is sufficient for
+// the common header fields (published, expires, flags), consolidating the
+// identical validateHeaderDataSize functions from lease_set2 and meta_leaseset.
+func ValidateLeaseSetHeaderSize(dataLen int, structName string) error {
+	if dataLen < LeaseSetHeaderFieldsSize {
+		err := oops.
+			Code("header_too_short").
+			With("remaining_length", dataLen).
+			With("required_size", LeaseSetHeaderFieldsSize).
+			Errorf("insufficient data for %s header fields", structName)
+		lsLog.WithFields(logger.Fields{
+			"at":               "ValidateLeaseSetHeaderSize",
+			"remaining_length": dataLen,
+			"required_size":    LeaseSetHeaderFieldsSize,
+		}).Error(err.Error())
+		return err
+	}
+	return nil
+}
+
+// ParseDestinationFromData parses a destination from data, consolidating the
+// identical parseDestinationField functions from lease_set2 and meta_leaseset.
+func ParseDestinationFromData(inputData []byte, structName string) (destination.Destination, []byte, error) {
+	dest, rem, err := destination.ReadDestination(inputData)
+	if err != nil {
+		err = oops.
+			Code("destination_parse_failed").
+			Wrapf(err, "failed to parse destination in %s", structName)
+		lsLog.WithFields(logger.Fields{
+			"at":     "ParseDestinationFromData",
+			"reason": "destination parse failed",
+		}).Error(err.Error())
+		return destination.Destination{}, nil, err
+	}
+	return dest, rem, nil
+}
+
+// ParseLeaseSetHeaderFields parses the published timestamp (4 bytes), expires
+// offset (2 bytes), and flags (2 bytes) from data, consolidating the identical
+// parseHeaderFields logic from lease_set2 and meta_leaseset packages.
+func ParseLeaseSetHeaderFields(inputData []byte) (published uint32, expires uint16, flags uint16, remainder []byte) {
+	published = binary.BigEndian.Uint32(inputData[:4])
+	inputData = inputData[4:]
+	expires = binary.BigEndian.Uint16(inputData[:2])
+	inputData = inputData[2:]
+	flags = binary.BigEndian.Uint16(inputData[:2])
+	inputData = inputData[2:]
+	remainder = inputData
+	return
+}
+
+// ParseEmbeddedMapping parses an options mapping from data, filtering the
+// expected "data exists beyond length" warning that occurs when a mapping
+// is embedded in a larger structure. This consolidates the identical
+// parseOptionsMapping functions from lease_set2 and meta_leaseset packages.
+func ParseEmbeddedMapping(inputData []byte, structName string) (data.Mapping, []byte, error) {
+	mapping, rem, errs := data.ReadMapping(inputData)
+	if len(errs) > 0 {
+		var fatal []error
+		for _, e := range errs {
+			if strings.Contains(e.Error(), "data exists beyond length of mapping") {
+				lsLog.Debug("options mapping: ignoring 'data beyond length' warning (expected in embedded context)")
+				continue
+			}
+			fatal = append(fatal, e)
+		}
+		if len(fatal) > 0 {
+			err := oops.
+				Code("options_parse_failed").
+				Wrapf(fatal[0], "failed to parse options mapping in %s", structName)
+			lsLog.WithFields(logger.Fields{
+				"at":     "ParseEmbeddedMapping",
+				"reason": "options mapping parse failed",
+			}).Error(err.Error())
+			return data.Mapping{}, nil, err
+		}
+	}
+	lsLog.Debug("Parsed options mapping")
+	return mapping, rem, nil
+}
+
+// ParseLeaseSetSignature determines the signature type and parses the trailing
+// signature from data, consolidating the identical parseSignatureAndFinalize
+// functions from lease_set2, meta_leaseset, and encrypted_leaseset packages.
+func ParseLeaseSetSignature(
+	inputData []byte,
+	defaultSigType int,
+	hasOfflineKeys bool,
+	offlineSig *offline_signature.OfflineSignature,
+	structName string,
+) (sig.Signature, []byte, error) {
+	sigType := defaultSigType
+	if hasOfflineKeys && offlineSig != nil {
+		sigType = int(offlineSig.TransientSigType())
+	}
+
+	signature, rem, err := sig.ReadSignature(inputData, sigType)
+	if err != nil {
+		err = oops.
+			Code("signature_parse_failed").
+			With("sig_type", sigType).
+			Wrapf(err, "failed to parse signature in %s", structName)
+		lsLog.WithFields(logger.Fields{
+			"at":       "ParseLeaseSetSignature",
+			"sig_type": sigType,
+		}).Error(err.Error())
+		return sig.Signature{}, nil, err
+	}
+	return signature, rem, nil
 }
