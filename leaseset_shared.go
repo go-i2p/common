@@ -10,8 +10,10 @@ import (
 	"github.com/go-i2p/common/key_certificate"
 	"github.com/go-i2p/common/offline_signature"
 	sig "github.com/go-i2p/common/signature"
+	"github.com/go-i2p/crypto/ed25519ph"
 	"github.com/go-i2p/crypto/types"
 	"github.com/go-i2p/logger"
+	"github.com/go-i2p/red25519"
 	"github.com/samber/oops"
 )
 
@@ -40,19 +42,13 @@ func SerializeLeaseSetHeader(
 	buf = append(buf, destBytes...)
 
 	// Add published timestamp (4 bytes)
-	publishedBytes := make([]byte, 4)
-	binary.BigEndian.PutUint32(publishedBytes, published)
-	buf = append(buf, publishedBytes...)
+	buf = AppendBigEndianUint32(buf, published)
 
 	// Add expires offset (2 bytes)
-	expiresBytes := make([]byte, 2)
-	binary.BigEndian.PutUint16(expiresBytes, expiresOffset)
-	buf = append(buf, expiresBytes...)
+	buf = AppendBigEndianUint16(buf, expiresOffset)
 
 	// Add flags (2 bytes)
-	flagsBytes := make([]byte, 2)
-	binary.BigEndian.PutUint16(flagsBytes, flags)
-	buf = append(buf, flagsBytes...)
+	buf = AppendBigEndianUint16(buf, flags)
 
 	// Add offline signature if present
 	if offlineSig != nil {
@@ -232,4 +228,67 @@ func CreateLeaseSetSignature(
 	}
 
 	return signature, nil
+}
+
+// SignLeaseSetData performs the actual cryptographic signing operation,
+// dispatching to Ed25519, RedDSA, or Ed25519ph based on the sigType.
+// This consolidates the identical signLeaseSet2Data and signMetaLeaseSetData.
+func SignLeaseSetData(signingKey interface{}, data []byte, sigType uint16) ([]byte, error) {
+	privKey, err := ExtractEd25519PrivateKey(signingKey)
+	if err != nil {
+		return nil, err
+	}
+
+	switch sigType {
+	case uint16(sig.SIGNATURE_TYPE_EDDSA_SHA512_ED25519):
+		return ed25519.Sign(privKey, data), nil
+	case uint16(sig.SIGNATURE_TYPE_REDDSA_SHA512_ED25519):
+		return red25519.Sign(red25519.PrivateKey(privKey), data), nil
+	case uint16(sig.SIGNATURE_TYPE_EDDSA_SHA512_ED25519PH):
+		return signEd25519ph(privKey, data)
+	default:
+		return nil, oops.Errorf("signing not implemented for signature type %d (modern crypto only: Ed25519, Ed25519ph, RedDSA)", sigType)
+	}
+}
+
+// signEd25519ph performs Ed25519ph (pre-hashed) signing using the
+// go-i2p/crypto/ed25519ph package.
+func signEd25519ph(privKey ed25519.PrivateKey, data []byte) ([]byte, error) {
+	pk, err := ed25519ph.NewEd25519phPrivateKey([]byte(privKey))
+	if err != nil {
+		return nil, oops.Errorf("invalid Ed25519ph private key: %w", err)
+	}
+	signer, err := pk.NewSigner()
+	if err != nil {
+		return nil, oops.Errorf("failed to create Ed25519ph signer: %w", err)
+	}
+	return signer.Sign(data)
+}
+
+// PrependLeaseSetTypeByte prepends a DatabaseStore type byte to serialized
+// lease set content, consolidating the identical pattern from
+// serializeLeaseSet2ForSigning and serializeMetaLeaseSetForSigning.
+func PrependLeaseSetTypeByte(typeByte byte, content []byte) []byte {
+	data := make([]byte, 0, 1+len(content))
+	data = append(data, typeByte)
+	data = append(data, content...)
+	return data
+}
+
+// AppendBigEndianUint16 appends a big-endian encoded uint16 to buf,
+// consolidating the repeated make-encode-append pattern used across
+// multiple lease set serialization functions.
+func AppendBigEndianUint16(buf []byte, val uint16) []byte {
+	b := make([]byte, 2)
+	binary.BigEndian.PutUint16(b, val)
+	return append(buf, b...)
+}
+
+// AppendBigEndianUint32 appends a big-endian encoded uint32 to buf,
+// consolidating the repeated make-encode-append pattern used across
+// multiple lease set serialization functions.
+func AppendBigEndianUint32(buf []byte, val uint32) []byte {
+	b := make([]byte, 4)
+	binary.BigEndian.PutUint32(b, val)
+	return append(buf, b...)
 }

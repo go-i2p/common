@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"time"
 
+	rootcommon "github.com/go-i2p/common"
 	"github.com/go-i2p/common/key_certificate"
 	"github.com/go-i2p/common/offline_signature"
 	sig "github.com/go-i2p/common/signature"
@@ -320,27 +321,19 @@ func (els *EncryptedLeaseSet) bytesWithoutSignature() ([]byte, error) {
 	result := make([]byte, 0, 64+len(els.blindedPublicKey)+len(els.encryptedInnerData))
 
 	// sig_type (2 bytes)
-	buf := make([]byte, 2)
-	binary.BigEndian.PutUint16(buf, els.sigType)
-	result = append(result, buf...)
+	result = rootcommon.AppendBigEndianUint16(result, els.sigType)
 
 	// blinded_public_key
 	result = append(result, els.blindedPublicKey...)
 
 	// published (4 bytes)
-	buf = make([]byte, 4)
-	binary.BigEndian.PutUint32(buf, els.published)
-	result = append(result, buf...)
+	result = rootcommon.AppendBigEndianUint32(result, els.published)
 
 	// expires (2 bytes)
-	buf = make([]byte, 2)
-	binary.BigEndian.PutUint16(buf, els.expires)
-	result = append(result, buf...)
+	result = rootcommon.AppendBigEndianUint16(result, els.expires)
 
 	// flags (2 bytes)
-	buf = make([]byte, 2)
-	binary.BigEndian.PutUint16(buf, els.flags)
-	result = append(result, buf...)
+	result = rootcommon.AppendBigEndianUint16(result, els.flags)
 
 	// offline signature (if present)
 	if els.offlineSignature != nil {
@@ -348,9 +341,7 @@ func (els *EncryptedLeaseSet) bytesWithoutSignature() ([]byte, error) {
 	}
 
 	// inner_length (2 bytes)
-	buf = make([]byte, 2)
-	binary.BigEndian.PutUint16(buf, els.innerLength)
-	result = append(result, buf...)
+	result = rootcommon.AppendBigEndianUint16(result, els.innerLength)
 
 	// encrypted_data
 	result = append(result, els.encryptedInnerData...)

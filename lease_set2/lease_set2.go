@@ -2,14 +2,10 @@
 package lease_set2
 
 import (
-	"crypto/ed25519"
-	"crypto/sha512"
 	"encoding/binary"
 	"sort"
 	"strings"
 	"time"
-
-	"filippo.io/edwards25519"
 
 	rootcommon "github.com/go-i2p/common"
 	common "github.com/go-i2p/common/data"
@@ -18,9 +14,6 @@ import (
 	"github.com/go-i2p/common/lease"
 	"github.com/go-i2p/common/offline_signature"
 	sig "github.com/go-i2p/common/signature"
-	signatureTypes "github.com/go-i2p/common/signature"
-	"github.com/go-i2p/crypto/ed25519ph"
-	cryptorand "github.com/go-i2p/crypto/rand"
 	"github.com/go-i2p/logger"
 	"github.com/samber/oops"
 )
@@ -809,11 +802,15 @@ func NewLeaseSet2(
 	}
 
 	// Determine signature type and sign the data
-	sigType := determineSignatureType(dest, offlineSig)
-	signature, err := createLeaseSet2Signature(signingKey, dataToSign, sigType)
+	sigType := rootcommon.DetermineSignatureType(dest.KeyCertificate.SigningPublicKeyType(), offlineSig)
+	signature, err := rootcommon.CreateLeaseSetSignature(signingKey, dataToSign, sigType, rootcommon.SignLeaseSetData)
 	if err != nil {
 		return LeaseSet2{}, err
 	}
+	log.WithFields(logger.Fields{
+		"signature_type": sigType,
+		"data_size":      len(dataToSign),
+	}).Debug("Created LeaseSet2 signature")
 
 	// Assemble the final LeaseSet2 structure
 	ls2 := LeaseSet2{
@@ -972,10 +969,7 @@ func serializeLeaseSet2ForSigning(
 		return nil, err
 	}
 	// Prepend DatabaseStore type byte (0x03) per I2P spec
-	data := make([]byte, 0, 1+len(content))
-	data = append(data, LEASESET2_DBSTORE_TYPE)
-	data = append(data, content...)
-	return data, nil
+	return rootcommon.PrependLeaseSetTypeByte(LEASESET2_DBSTORE_TYPE, content), nil
 }
 
 // serializeLeaseSet2Content serializes all LeaseSet2 fields (excluding the signature)
@@ -1000,14 +994,8 @@ func serializeLeaseSet2Content(
 	// Add encryption keys
 	data = append(data, byte(len(encryptionKeys)))
 	for _, key := range encryptionKeys {
-		keyTypeBytes := make([]byte, 2)
-		binary.BigEndian.PutUint16(keyTypeBytes, key.KeyType)
-		data = append(data, keyTypeBytes...)
-
-		keyLenBytes := make([]byte, 2)
-		binary.BigEndian.PutUint16(keyLenBytes, key.KeyLen)
-		data = append(data, keyLenBytes...)
-
+		data = rootcommon.AppendBigEndianUint16(data, key.KeyType)
+		data = rootcommon.AppendBigEndianUint16(data, key.KeyLen)
 		data = append(data, key.KeyData...)
 	}
 
@@ -1020,160 +1008,4 @@ func serializeLeaseSet2Content(
 	return data, nil
 }
 
-// determineSignatureType determines which signature type to use based on offline signature.
-func determineSignatureType(dest destination.Destination, offlineSig *offline_signature.OfflineSignature) uint16 {
-	return rootcommon.DetermineSignatureType(dest.KeyCertificate.SigningPublicKeyType(), offlineSig)
-}
 
-// createLeaseSet2Signature signs the LeaseSet2 data with the provided key.
-// Supported signing types: Ed25519 (7), Ed25519ph (8), RedDSA (11).
-// Legacy types (DSA, ECDSA, RSA) are not supported per project "modern crypto only" policy.
-func createLeaseSet2Signature(signingKey interface{}, data []byte, sigType uint16) (sig.Signature, error) {
-	sigSize := offline_signature.SignatureSize(sigType)
-	if sigSize == 0 {
-		return sig.Signature{}, oops.
-			Code("unknown_signature_type").
-			With("signature_type", sigType).
-			Errorf("unknown signature type: %d", sigType)
-	}
-
-	signatureBytes, err := signLeaseSet2Data(signingKey, data, sigType)
-	if err != nil {
-		return sig.Signature{}, err
-	}
-
-	signature, err := sig.NewSignatureFromBytes(signatureBytes, int(sigType))
-	if err != nil {
-		return sig.Signature{}, oops.Errorf("failed to create signature: %w", err)
-	}
-
-	log.WithFields(logger.Fields{
-		"signature_type": sigType,
-		"signature_size": sigSize,
-		"data_size":      len(data),
-	}).Debug("Created LeaseSet2 signature")
-
-	return signature, nil
-}
-
-// signLeaseSet2Data performs the actual cryptographic signing operation.
-// Extracts the ed25519.PrivateKey from the signingKey interface and delegates
-// to the appropriate signing algorithm based on sigType.
-func signLeaseSet2Data(signingKey interface{}, data []byte, sigType uint16) ([]byte, error) {
-	privKey, err := extractEd25519PrivateKey(signingKey)
-	if err != nil {
-		return nil, err
-	}
-
-	switch sigType {
-	case uint16(signatureTypes.SIGNATURE_TYPE_EDDSA_SHA512_ED25519):
-		return ed25519.Sign(privKey, data), nil
-	case uint16(signatureTypes.SIGNATURE_TYPE_REDDSA_SHA512_ED25519):
-		// RedDSA (Red25519) requires randomized nonces for unlinkability.
-		return signRedDSA(privKey, data)
-	case uint16(signatureTypes.SIGNATURE_TYPE_EDDSA_SHA512_ED25519PH):
-		return signEd25519ph(privKey, data)
-	default:
-		return nil, oops.Errorf("signing not implemented for signature type %d (modern crypto only: Ed25519, Ed25519ph, RedDSA)", sigType)
-	}
-}
-
-// signRedDSA signs data using Red25519 (RedDSA) with randomized per-signature nonces.
-//
-// Unlike deterministic Ed25519 (RFC 8032), RedDSA computes the nonce as
-//
-//	r = H(Z ‖ scalar ‖ M)  where Z is 80 freshly-generated random bytes
-//
-// This prevents an observer from linking two signatures made with the same key,
-// which is the core unlinkability guarantee of RedDSA. The resulting signature
-// is still verifiable with a standard Ed25519 verifier.
-func signRedDSA(privKey ed25519.PrivateKey, data []byte) ([]byte, error) {
-	if len(privKey) != ed25519.PrivateKeySize {
-		return nil, oops.Errorf("RedDSA: invalid private key size: %d", len(privKey))
-	}
-	// Expand private key per Ed25519 spec, then clamp.
-	expanded := sha512.Sum512(privKey[:32])
-	expanded[0] &= 248
-	expanded[31] &= 63
-	expanded[31] |= 64
-
-	scalar, err := edwards25519.NewScalar().SetBytesWithClamping(expanded[:32])
-	if err != nil {
-		return nil, oops.Errorf("RedDSA: failed to create private scalar: %w", err)
-	}
-
-	pubKey := privKey.Public().(ed25519.PublicKey)
-
-	// Generate 80 random bytes Z for RedDSA nonce randomization.
-	var Z [80]byte
-	if _, err := cryptorand.Read(Z[:]); err != nil {
-		return nil, oops.Errorf("RedDSA: failed to generate random nonce bytes: %w", err)
-	}
-
-	// Compute nonce r = H(Z ‖ scalar_bytes ‖ M), reduced uniformly mod l.
-	nonceH := sha512.New()
-	nonceH.Write(Z[:])
-	nonceH.Write(expanded[:32])
-	nonceH.Write(data)
-	nonceDigest := nonceH.Sum(nil) // 64 bytes
-
-	r, err := edwards25519.NewScalar().SetUniformBytes(nonceDigest)
-	if err != nil {
-		return nil, oops.Errorf("RedDSA: failed to create nonce scalar: %w", err)
-	}
-
-	// R = r·B
-	R := new(edwards25519.Point).ScalarBaseMult(r)
-
-	// k = H(R ‖ A ‖ M) mod l
-	challengeH := sha512.New()
-	challengeH.Write(R.Bytes())
-	challengeH.Write(pubKey)
-	challengeH.Write(data)
-	challengeDigest := challengeH.Sum(nil) // 64 bytes
-
-	k, err := edwards25519.NewScalar().SetUniformBytes(challengeDigest)
-	if err != nil {
-		return nil, oops.Errorf("RedDSA: failed to create challenge scalar: %w", err)
-	}
-
-	// S = r + k·a
-	S := edwards25519.NewScalar().MultiplyAdd(k, scalar, r)
-
-	// Signature = R ‖ S (64 bytes)
-	sig := make([]byte, 64)
-	copy(sig[:32], R.Bytes())
-	copy(sig[32:], S.Bytes())
-	return sig, nil
-}
-
-// signEd25519ph performs Ed25519ph (pre-hashed) signing per RFC 8032 Section 5.1.
-// The message is first hashed with SHA-512, then the 64-byte digest is signed.
-func signEd25519ph(privKey ed25519.PrivateKey, data []byte) ([]byte, error) {
-	pk, err := ed25519ph.NewEd25519phPrivateKey([]byte(privKey))
-	if err != nil {
-		return nil, oops.Errorf("invalid Ed25519ph private key: %w", err)
-	}
-	signer, err := pk.NewSigner()
-	if err != nil {
-		return nil, oops.Errorf("failed to create Ed25519ph signer: %w", err)
-	}
-	return signer.Sign(data)
-}
-
-// extractEd25519PrivateKey extracts an ed25519.PrivateKey from the signingKey interface.
-func extractEd25519PrivateKey(signingKey interface{}) (ed25519.PrivateKey, error) {
-	switch key := signingKey.(type) {
-	case ed25519.PrivateKey:
-		return key, nil
-	case []byte:
-		if len(key) != ed25519.PrivateKeySize {
-			return nil, oops.Errorf("invalid signing key length: got %d, expected %d", len(key), ed25519.PrivateKeySize)
-		}
-		return ed25519.PrivateKey(key), nil
-	case nil:
-		return nil, oops.Errorf("signing key is nil")
-	default:
-		return nil, oops.Errorf("unsupported signing key type: %T (expected ed25519.PrivateKey)", signingKey)
-	}
-}

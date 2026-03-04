@@ -2,15 +2,10 @@
 package meta_leaseset
 
 import (
-	"crypto/ed25519"
-	"crypto/sha512"
-
-	"filippo.io/edwards25519"
 	rootcommon "github.com/go-i2p/common"
 	common "github.com/go-i2p/common/data"
 	"github.com/go-i2p/common/destination"
 	"github.com/go-i2p/common/offline_signature"
-	sig "github.com/go-i2p/common/signature"
 	"github.com/go-i2p/logger"
 	"github.com/samber/oops"
 )
@@ -53,8 +48,8 @@ func NewMetaLeaseSet(
 		return MetaLeaseSet{}, err
 	}
 
-	sigType := determineSignatureType(dest, offlineSig)
-	signature, err := createMetaLeaseSetSignature(signingKey, dataToSign, sigType)
+	sigType := rootcommon.DetermineSignatureType(dest.KeyCertificate.SigningPublicKeyType(), offlineSig)
+	signature, err := rootcommon.CreateLeaseSetSignature(signingKey, dataToSign, sigType, rootcommon.SignLeaseSetData)
 	if err != nil {
 		return MetaLeaseSet{}, err
 	}
@@ -187,10 +182,7 @@ func serializeMetaLeaseSetForSigning(
 	if err != nil {
 		return nil, err
 	}
-	data := make([]byte, 0, 1+len(content))
-	data = append(data, META_LEASESET_DBSTORE_TYPE)
-	data = append(data, content...)
-	return data, nil
+	return rootcommon.PrependLeaseSetTypeByte(META_LEASESET_DBSTORE_TYPE, content), nil
 }
 
 // serializeMetaLeaseSetContent serializes all MetaLeaseSet fields except the signature.
@@ -225,119 +217,4 @@ func serializeMetaLeaseSetContent(
 	}
 
 	return data, nil
-}
-
-// determineSignatureType returns the signature type to use for signing.
-func determineSignatureType(dest destination.Destination, offlineSig *offline_signature.OfflineSignature) uint16 {
-	return rootcommon.DetermineSignatureType(dest.KeyCertificate.SigningPublicKeyType(), offlineSig)
-}
-
-// createMetaLeaseSetSignature signs the MetaLeaseSet data with the provided key.
-// Supported signing types: Ed25519 (7), Ed25519ph (8), RedDSA (11).
-func createMetaLeaseSetSignature(signingKey interface{}, data []byte, sigType uint16) (sig.Signature, error) {
-	sigSize := offline_signature.SignatureSize(sigType)
-	if sigSize == 0 {
-		return sig.Signature{}, oops.
-			Code("unknown_signature_type").
-			With("signature_type", sigType).
-			Errorf("unknown or unsupported signature type: %d", sigType)
-	}
-
-	signatureBytes, err := signMetaLeaseSetData(signingKey, data, sigType)
-	if err != nil {
-		return sig.Signature{}, err
-	}
-
-	signature, err := sig.NewSignatureFromBytes(signatureBytes, int(sigType))
-	if err != nil {
-		return sig.Signature{}, oops.Errorf("failed to create signature: %w", err)
-	}
-
-	return signature, nil
-}
-
-// signMetaLeaseSetData performs the cryptographic signing operation.
-func signMetaLeaseSetData(signingKey interface{}, data []byte, sigType uint16) ([]byte, error) {
-	privKey, err := extractPrivateKey(signingKey)
-	if err != nil {
-		return nil, err
-	}
-
-	switch sigType {
-	case uint16(sig.SIGNATURE_TYPE_EDDSA_SHA512_ED25519):
-		return ed25519.Sign(privKey, data), nil
-	case uint16(sig.SIGNATURE_TYPE_REDDSA_SHA512_ED25519):
-		return signMetaRedDSA(privKey, data)
-	case uint16(sig.SIGNATURE_TYPE_EDDSA_SHA512_ED25519PH):
-		return signMetaEd25519ph(privKey, data)
-	default:
-		return nil, oops.Errorf(
-			"signing not implemented for signature type %d (modern crypto only: Ed25519, Ed25519ph, RedDSA)",
-			sigType,
-		)
-	}
-}
-
-// extractPrivateKey extracts an ed25519.PrivateKey from the signing key parameter.
-func extractPrivateKey(signingKey interface{}) (ed25519.PrivateKey, error) {
-	switch key := signingKey.(type) {
-	case ed25519.PrivateKey:
-		return key, nil
-	case []byte:
-		if len(key) != ed25519.PrivateKeySize {
-			return nil, oops.Errorf("invalid signing key length: got %d, expected %d", len(key), ed25519.PrivateKeySize)
-		}
-		return ed25519.PrivateKey(key), nil
-	case nil:
-		return nil, oops.Errorf("signing key is nil")
-	default:
-		return nil, oops.Errorf("unsupported signing key type: %T (expected ed25519.PrivateKey)", signingKey)
-	}
-}
-
-// signMetaRedDSA signs data using Red25519 (RedDSA) with randomized nonces.
-func signMetaRedDSA(privKey ed25519.PrivateKey, data []byte) ([]byte, error) {
-	if len(privKey) != ed25519.PrivateKeySize {
-		return nil, oops.Errorf("RedDSA: invalid private key size: %d", len(privKey))
-	}
-	expanded := sha512.Sum512(privKey[:32])
-	expanded[0] &= 248
-	expanded[31] &= 63
-	expanded[31] |= 64
-
-	scalar, err := edwards25519.NewScalar().SetBytesWithClamping(expanded[:32])
-	if err != nil {
-		return nil, oops.Errorf("RedDSA: failed to set scalar: %w", err)
-	}
-
-	pubPoint := edwards25519.NewGeneratorPoint().ScalarBaseMult(scalar)
-	pubBytes := pubPoint.Bytes()
-
-	msgHash := sha512.Sum512(append(expanded[32:], data...))
-	rScalar, err := edwards25519.NewScalar().SetUniformBytes(msgHash[:])
-	if err != nil {
-		return nil, oops.Errorf("RedDSA: failed to compute r scalar: %w", err)
-	}
-
-	rPoint := edwards25519.NewGeneratorPoint().ScalarBaseMult(rScalar)
-	rBytes := rPoint.Bytes()
-
-	kHash := sha512.Sum512(append(append(rBytes, pubBytes...), data...))
-	kScalar, err := edwards25519.NewScalar().SetUniformBytes(kHash[:])
-	if err != nil {
-		return nil, oops.Errorf("RedDSA: failed to compute k scalar: %w", err)
-	}
-
-	sScalar := edwards25519.NewScalar().MultiplyAdd(kScalar, scalar, rScalar)
-
-	var result [64]byte
-	copy(result[:32], rBytes)
-	copy(result[32:], sScalar.Bytes())
-	return result[:], nil
-}
-
-// signMetaEd25519ph signs data using Ed25519ph (pre-hashed).
-func signMetaEd25519ph(privKey ed25519.PrivateKey, data []byte) ([]byte, error) {
-	preHash := sha512.Sum512(data)
-	return ed25519.Sign(privKey, preHash[:]), nil
 }

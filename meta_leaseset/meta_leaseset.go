@@ -602,19 +602,13 @@ func (mls *MetaLeaseSet) Bytes() ([]byte, error) {
 	result = append(result, destBytes...)
 
 	// Add published timestamp (4 bytes)
-	publishedBytes := make([]byte, 4)
-	binary.BigEndian.PutUint32(publishedBytes, mls.published)
-	result = append(result, publishedBytes...)
+	result = rootcommon.AppendBigEndianUint32(result, mls.published)
 
 	// Add expires offset (2 bytes)
-	expiresBytes := make([]byte, 2)
-	binary.BigEndian.PutUint16(expiresBytes, mls.expires)
-	result = append(result, expiresBytes...)
+	result = rootcommon.AppendBigEndianUint16(result, mls.expires)
 
 	// Add flags (2 bytes)
-	flagsBytes := make([]byte, 2)
-	binary.BigEndian.PutUint16(flagsBytes, mls.flags)
-	result = append(result, flagsBytes...)
+	result = rootcommon.AppendBigEndianUint16(result, mls.flags)
 
 	// Add offline signature if present
 	if mls.offlineSignature != nil {
@@ -691,9 +685,7 @@ func (entry *MetaLeaseSetEntry) Bytes() ([]byte, error) {
 	result = append(result, entry.cost)
 
 	// Add end_date (4 bytes)
-	endDateBytes := make([]byte, 4)
-	binary.BigEndian.PutUint32(endDateBytes, entry.endDate)
-	result = append(result, endDateBytes...)
+	result = rootcommon.AppendBigEndianUint32(result, entry.endDate)
 
 	return result, nil
 }
