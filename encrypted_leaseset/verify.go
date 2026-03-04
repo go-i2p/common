@@ -2,6 +2,7 @@
 package encrypted_leaseset
 
 import (
+	rootcommon "github.com/go-i2p/common"
 	"github.com/go-i2p/common/key_certificate"
 	"github.com/go-i2p/crypto/types"
 	"github.com/samber/oops"
@@ -21,27 +22,13 @@ func (els *EncryptedLeaseSet) Verify() error {
 		return oops.Errorf("failed to serialize for verification: %w", err)
 	}
 
-	sigBytes := els.signature.Bytes()
-
 	// Determine the signing public key
 	signingPubKey, err := els.signingPublicKeyForVerification()
 	if err != nil {
 		return oops.Errorf("failed to get signing public key: %w", err)
 	}
 
-	// Create verifier and verify
-	verifier, err := signingPubKey.NewVerifier()
-	if err != nil {
-		return oops.Errorf("failed to create verifier: %w", err)
-	}
-
-	if err := verifier.Verify(dataToVerify, sigBytes); err != nil {
-		log.WithError(err).Warn("EncryptedLeaseSet signature verification failed")
-		return oops.Errorf("signature verification failed: %w", err)
-	}
-
-	log.Debug("EncryptedLeaseSet signature verification succeeded")
-	return nil
+	return rootcommon.VerifySignatureData(dataToVerify, els.signature.Bytes(), signingPubKey, "EncryptedLeaseSet")
 }
 
 // signingPublicKeyForVerification returns the appropriate signing public key

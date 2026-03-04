@@ -6,6 +6,7 @@ import (
 	"crypto/sha256"
 	"time"
 
+	rootcommon "github.com/go-i2p/common"
 	"github.com/go-i2p/common/certificate"
 	"github.com/go-i2p/common/data"
 	"github.com/go-i2p/common/destination"
@@ -473,20 +474,7 @@ func (lease_set LeaseSet) Verify() error {
 		return oops.Errorf("failed to get signing public key from Destination: %w", err)
 	}
 
-	// Create a verifier from the signing public key
-	verifier, err := signingPubKey.NewVerifier()
-	if err != nil {
-		return oops.Errorf("failed to create verifier: %w", err)
-	}
-
-	// Verify the signature
-	if err := verifier.Verify(dataToVerify, sigBytes); err != nil {
-		log.WithError(err).Warn("LeaseSet signature verification failed")
-		return oops.Errorf("LeaseSet signature verification failed: %w", err)
-	}
-
-	log.Debug("LeaseSet signature verification succeeded")
-	return nil
+	return rootcommon.VerifySignatureData(dataToVerify, sigBytes, signingPubKey, "LeaseSet")
 }
 
 // Hash returns the SHA-256 hash of the Destination bytes.

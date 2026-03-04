@@ -2,12 +2,14 @@
 package common
 
 import (
+	"crypto/ed25519"
 	"encoding/binary"
 
 	"github.com/go-i2p/common/data"
 	"github.com/go-i2p/common/destination"
 	"github.com/go-i2p/common/key_certificate"
 	"github.com/go-i2p/common/offline_signature"
+	sig "github.com/go-i2p/common/signature"
 	"github.com/go-i2p/crypto/types"
 	"github.com/go-i2p/logger"
 	"github.com/samber/oops"
@@ -99,19 +101,7 @@ func VerifyLeaseSetSignature(
 	dataToVerify = append(dataToVerify, typeByte)
 	dataToVerify = append(dataToVerify, contentBytes...)
 
-	// Create verifier and verify
-	verifier, err := signingPubKey.NewVerifier()
-	if err != nil {
-		return oops.Errorf("failed to create verifier: %w", err)
-	}
-
-	if err := verifier.Verify(dataToVerify, sigBytes); err != nil {
-		lsLog.WithError(err).Warn(typeName + " signature verification failed")
-		return oops.Errorf("%s signature verification failed: %w", typeName, err)
-	}
-
-	lsLog.Debug(typeName + " signature verification succeeded")
-	return nil
+	return VerifySignatureData(dataToVerify, sigBytes, signingPubKey, typeName)
 }
 
 // ResolveSigningPublicKey determines which signing public key to use for
@@ -170,4 +160,76 @@ func ParseOfflineSignatureField(
 	lsLog.Debug("Parsed offline signature")
 
 	return &offlineSig, rem, nil
+}
+
+// VerifySignatureData verifies a cryptographic signature against already-prepared
+// data using the provided signing public key. This is the common "create verifier
+// → verify → log" tail shared across all lease set Verify() methods.
+func VerifySignatureData(
+	dataToVerify []byte,
+	sigBytes []byte,
+	signingPubKey types.SigningPublicKey,
+	typeName string,
+) error {
+	verifier, err := signingPubKey.NewVerifier()
+	if err != nil {
+		return oops.Errorf("failed to create verifier: %w", err)
+	}
+
+	if err := verifier.Verify(dataToVerify, sigBytes); err != nil {
+		lsLog.WithError(err).Warn(typeName + " signature verification failed")
+		return oops.Errorf("%s signature verification failed: %w", typeName, err)
+	}
+
+	lsLog.Debug(typeName + " signature verification succeeded")
+	return nil
+}
+
+// ExtractEd25519PrivateKey extracts an ed25519.PrivateKey from the signing key
+// interface, consolidating the identical extractEd25519PrivateKey/extractPrivateKey
+// helpers from lease_set2 and meta_leaseset packages.
+func ExtractEd25519PrivateKey(signingKey interface{}) (ed25519.PrivateKey, error) {
+	switch key := signingKey.(type) {
+	case ed25519.PrivateKey:
+		return key, nil
+	case []byte:
+		if len(key) != ed25519.PrivateKeySize {
+			return nil, oops.Errorf("invalid signing key length: got %d, expected %d", len(key), ed25519.PrivateKeySize)
+		}
+		return ed25519.PrivateKey(key), nil
+	case nil:
+		return nil, oops.Errorf("signing key is nil")
+	default:
+		return nil, oops.Errorf("unsupported signing key type: %T (expected ed25519.PrivateKey)", signingKey)
+	}
+}
+
+// CreateLeaseSetSignature validates the signature type, delegates signing to the
+// provided signFn, and wraps the result in a Signature object. This consolidates
+// the identical createLeaseSet2Signature/createMetaLeaseSetSignature wrappers.
+func CreateLeaseSetSignature(
+	signingKey interface{},
+	data []byte,
+	sigType uint16,
+	signFn func(interface{}, []byte, uint16) ([]byte, error),
+) (sig.Signature, error) {
+	sigSize := offline_signature.SignatureSize(sigType)
+	if sigSize == 0 {
+		return sig.Signature{}, oops.
+			Code("unknown_signature_type").
+			With("signature_type", sigType).
+			Errorf("unknown or unsupported signature type: %d", sigType)
+	}
+
+	signatureBytes, err := signFn(signingKey, data, sigType)
+	if err != nil {
+		return sig.Signature{}, err
+	}
+
+	signature, err := sig.NewSignatureFromBytes(signatureBytes, int(sigType))
+	if err != nil {
+		return sig.Signature{}, oops.Errorf("failed to create signature: %w", err)
+	}
+
+	return signature, nil
 }

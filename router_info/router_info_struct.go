@@ -325,21 +325,14 @@ func validateBytesPrerequisites(ri *RouterInfo) error {
 	return nil
 }
 
-// serializeRouterInfoFields serializes all RouterInfo fields into a byte slice.
+// serializeRouterInfoFields serializes all RouterInfo fields into a byte slice,
+// delegating to serializeWithoutSignature for the common prefix and appending
+// the signature at the end.
 func serializeRouterInfoFields(ri *RouterInfo) ([]byte, error) {
-	identityBytes, err := ri.router_identity.Bytes()
+	bytes, err := ri.serializeWithoutSignature()
 	if err != nil {
 		return nil, err
 	}
-	var bytes []byte
-	bytes = append(bytes, identityBytes...)
-	bytes = append(bytes, ri.published.Bytes()...)
-	bytes = append(bytes, ri.size.Bytes()...)
-	for _, addr := range ri.addresses {
-		bytes = append(bytes, addr.Bytes()...)
-	}
-	bytes = append(bytes, ri.peer_size.Bytes()...)
-	bytes = append(bytes, ri.options.Data()...)
 	bytes = append(bytes, ri.signature.Bytes()...)
 	return bytes, nil
 }
