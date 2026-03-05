@@ -590,3 +590,37 @@ func createDummyX25519Key() types.ReceivingPublicKey {
 	}
 	return key
 }
+
+// ============================================================================
+// NewKeysAndCert nil key rejection
+// ============================================================================
+
+func TestNewKeysAndCert_NilPublicKeyRejected(t *testing.T) {
+	keyCert := buildTestKeyCert(t, key_certificate.KEYCERT_SIGN_ED25519, key_certificate.KEYCERT_CRYPTO_X25519)
+	padding := make([]byte, KEYS_AND_CERT_DATA_SIZE-32-32)
+	_, err := NewKeysAndCert(keyCert, nil, padding, createDummySigningKey())
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "publicKey cannot be nil")
+}
+
+func TestNewKeysAndCert_NilSigningKeyRejected(t *testing.T) {
+	keyCert := buildTestKeyCert(t, key_certificate.KEYCERT_SIGN_ED25519, key_certificate.KEYCERT_CRYPTO_X25519)
+	padding := make([]byte, KEYS_AND_CERT_DATA_SIZE-32-32)
+	_, err := NewKeysAndCert(keyCert, createDummyX25519Key(), padding, nil)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "signingPublicKey cannot be nil")
+}
+
+// ============================================================================
+// validatePublicKeySize / validateSigningKeySize nil key paths
+// ============================================================================
+
+func TestValidatePublicKeySize_NilKey(t *testing.T) {
+	err := validatePublicKeySize(nil, 32)
+	assert.NoError(t, err, "nil public key should pass validatePublicKeySize (nil guard)")
+}
+
+func TestValidateSigningKeySize_NilKey(t *testing.T) {
+	err := validateSigningKeySize(nil, 32)
+	assert.NoError(t, err, "nil signing key should pass validateSigningKeySize (nil guard)")
+}

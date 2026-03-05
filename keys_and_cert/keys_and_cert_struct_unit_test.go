@@ -1011,3 +1011,84 @@ func TestKeysAndCertMinSizeConstant(t *testing.T) {
 	assert.Equal(t, KEYS_AND_CERT_DATA_SIZE+3, KEYS_AND_CERT_MIN_SIZE,
 		"KEYS_AND_CERT_MIN_SIZE should equal KEYS_AND_CERT_DATA_SIZE + CERT_MIN_SIZE")
 }
+
+// ============================================================================
+// From-scratch P521 construction + round-trip
+// ============================================================================
+
+func TestNewKeysAndCert_P521FromScratchRoundTrip(t *testing.T) {
+	// Build a P521 KeyCertificate (sigKeySize=132, excess=4)
+	keyCert := buildTestKeyCert(t, key_certificate.KEYCERT_SIGN_P521, key_certificate.KEYCERT_CRYPTO_ELG)
+
+	// Generate a fake 132-byte signing key
+	sigKeyBytes := make([]byte, 132)
+	_, err := rand.Read(sigKeyBytes)
+	require.NoError(t, err)
+	sigKey := wrongSizeKey(sigKeyBytes)
+
+	// ElGamal public key (256 bytes)
+	var pubKey elgamal.ElgPublicKey
+	_, err = rand.Read(pubKey[:])
+	require.NoError(t, err)
+
+	// No padding needed: 256 (ElGamal) + 128 (inline SPK) = 384
+	padding := make([]byte, 0)
+
+	kac, err := NewKeysAndCert(keyCert, pubKey, padding, sigKey)
+	require.NoError(t, err, "NewKeysAndCert with P521 from scratch should succeed")
+	require.NotNil(t, kac)
+
+	// Serialize
+	serialized, err := kac.Bytes()
+	require.NoError(t, err, "Bytes() should not error")
+
+	// Parse back
+	parsed, remainder, err := ReadKeysAndCert(serialized)
+	require.NoError(t, err, "ReadKeysAndCert should parse the serialized output")
+	assert.Empty(t, remainder)
+
+	// The reconstructed signing key must match the original
+	assert.Equal(t, sigKeyBytes, parsed.SigningPublic.Bytes(),
+		"P521 from-scratch round-trip: signing key must match original")
+	assert.Equal(t, pubKey[:], parsed.ReceivingPublic.Bytes(),
+		"P521 from-scratch round-trip: public key must match original")
+}
+
+// ============================================================================
+// From-scratch RSA-2048 construction + round-trip
+// ============================================================================
+
+func TestNewKeysAndCert_RSA2048FromScratchRoundTrip(t *testing.T) {
+	// Build an RSA-2048 KeyCertificate (sigKeySize=256, excess=128)
+	keyCert := buildTestKeyCert(t, key_certificate.KEYCERT_SIGN_RSA2048, key_certificate.KEYCERT_CRYPTO_ELG)
+
+	// Generate a fake 256-byte signing key
+	sigKeyBytes := make([]byte, 256)
+	_, err := rand.Read(sigKeyBytes)
+	require.NoError(t, err)
+	sigKey := wrongSizeKey(sigKeyBytes)
+
+	// ElGamal public key (256 bytes)
+	var pubKey elgamal.ElgPublicKey
+	_, err = rand.Read(pubKey[:])
+	require.NoError(t, err)
+
+	// No padding needed: 256 + 128 (inline) = 384
+	padding := make([]byte, 0)
+
+	kac, err := NewKeysAndCert(keyCert, pubKey, padding, sigKey)
+	require.NoError(t, err, "NewKeysAndCert with RSA-2048 from scratch should succeed")
+
+	// Serialize
+	serialized, err := kac.Bytes()
+	require.NoError(t, err, "Bytes() should not error")
+
+	// Parse back
+	parsed, remainder, err := ReadKeysAndCert(serialized)
+	require.NoError(t, err, "ReadKeysAndCert should parse the serialized output")
+	assert.Empty(t, remainder)
+
+	// The reconstructed signing key must match the original
+	assert.Equal(t, sigKeyBytes, parsed.SigningPublic.Bytes(),
+		"RSA-2048 from-scratch round-trip: signing key must match original")
+}

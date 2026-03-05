@@ -6,12 +6,6 @@
 
 Package keys_and_cert implements the I2P KeysAndCert common data structure
 
-Package keys_and_cert implements the I2P KeysAndCert common data structure
-
-Package keys_and_cert implements the I2P KeysAndCert common data structure
-
-Package keys_and_cert implements the I2P KeysAndCert common data structure
-
 ## Usage
 
 ```go
@@ -29,13 +23,13 @@ Sizes of various KeysAndCert structures and requirements
 ```go
 type KeysAndCert struct {
 	KeyCertificate  *key_certificate.KeyCertificate
-	ReceivingPublic types.RecievingPublicKey
+	ReceivingPublic types.ReceivingPublicKey
 	Padding         []byte
 	SigningPublic   types.SigningPublicKey
 }
 ```
 
-KeysAndCert is the represenation of an I2P KeysAndCert.
+KeysAndCert is the representation of an I2P KeysAndCert.
 
 https://geti2p.net/spec/common-structures#keysandcert
 
@@ -44,7 +38,7 @@ https://geti2p.net/spec/common-structures#keysandcert
 ```go
 func NewKeysAndCert(
 	keyCertificate *key_certificate.KeyCertificate,
-	publicKey types.RecievingPublicKey,
+	publicKey types.ReceivingPublicKey,
 	padding []byte,
 	signingPublicKey types.SigningPublicKey,
 ) (*KeysAndCert, error)
@@ -69,13 +63,13 @@ func ReadKeysAndCertElgAndEd25519(data []byte) (keysAndCert *KeysAndCert, remain
 ReadKeysAndCertElgAndEd25519 reads KeysAndCert with fixed ElGamal and Ed25519
 key sizes.
 
-#### func (KeysAndCert) Bytes
+#### func (*KeysAndCert) Bytes
 
 ```go
-func (keys_and_cert KeysAndCert) Bytes() []byte
+func (kac *KeysAndCert) Bytes() ([]byte, error)
 ```
-Bytes returns the entire keyCertificate in []byte form, trims payload to
-specified length.
+Bytes returns the entire KeysAndCert in []byte form as wire-format bytes.
+Returns an error if the KeysAndCert is not fully initialized.
 
 #### func (*KeysAndCert) Certificate
 
@@ -87,16 +81,17 @@ Certificate returns the certificate.
 #### func (*KeysAndCert) PublicKey
 
 ```go
-func (keys_and_cert *KeysAndCert) PublicKey() (key types.RecievingPublicKey)
+func (kac *KeysAndCert) PublicKey() (types.ReceivingPublicKey, error)
 ```
-PublicKey returns the public key as a types.publicKey.
+PublicKey returns the public key. Returns an error if the KeysAndCert is not fully initialized.
 
 #### func (*KeysAndCert) SigningPublicKey
 
 ```go
-func (keys_and_cert *KeysAndCert) SigningPublicKey() (signing_public_key types.SigningPublicKey)
+func (kac *KeysAndCert) SigningPublicKey() (types.SigningPublicKey, error)
 ```
 SigningPublicKey returns the signing public key.
+Returns an error if the KeysAndCert is not fully initialized.
 
 #### type PrivateKeysAndCert
 
@@ -114,9 +109,17 @@ keys for the Public Key and the Signing Public Key.
 #### func  NewPrivateKeysAndCert
 
 ```go
-func NewPrivateKeysAndCert() (*PrivateKeysAndCert, error)
+func NewPrivateKeysAndCert(
+	keyCertificate *key_certificate.KeyCertificate,
+	publicKey types.ReceivingPublicKey,
+	padding []byte,
+	signingPublicKey types.SigningPublicKey,
+	encryptionPrivateKey crypto.PrivateKey,
+	signingPrivateKey crypto.PrivateKey,
+) (*PrivateKeysAndCert, error)
 ```
-NewPrivateKeysAndCert creates a new PrivateKeysAndCert instance.
+NewPrivateKeysAndCert creates a new PrivateKeysAndCert instance with the provided parameters.
+It validates the embedded KeysAndCert and ensures both private keys are non-nil.
 
 
 

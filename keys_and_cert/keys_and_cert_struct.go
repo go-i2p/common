@@ -114,6 +114,12 @@ func NewKeysAndCert(
 		log.Error("KeyCertificate is nil")
 		return nil, oops.Errorf("KeyCertificate cannot be nil")
 	}
+	if publicKey == nil {
+		return nil, oops.Errorf("publicKey cannot be nil")
+	}
+	if signingPublicKey == nil {
+		return nil, oops.Errorf("signingPublicKey cannot be nil")
+	}
 
 	// Get actual key sizes from certificate
 	pubKeySize := keyCertificate.CryptoSize()
@@ -141,11 +147,11 @@ func NewKeysAndCert(
 		SigningPublic:   signingPublicKey,
 	}
 
-	/*log.WithFields(logger.Fields{
-		"public_key_length":         publicKey.Len(),
-		"signing_public_key_length": signingPublicKey.Len(),
-		"padding_length":            len(padding),
-	}).Debug("Successfully created KeysAndCert")*/
+	// If the signing key exceeds 128 bytes (P521, RSA-*), inject the excess
+	// bytes into the KeyCertificate payload so Bytes() serializes correctly.
+	if err := injectExcessSigningKeyBytes(keysAndCert); err != nil {
+		return nil, err
+	}
 
 	return keysAndCert, nil
 }
@@ -273,6 +279,46 @@ func validatePaddingSize(padding []byte, pubKeySize, sigKeySize int) error {
 		}).Error("Invalid padding size")
 		return oops.Errorf("invalid padding size: expected %d, got %d", expectedPaddingSize, len(padding))
 	}
+	return nil
+}
+
+// injectExcessSigningKeyBytes rebuilds the KeyCertificate payload when the
+// signing key exceeds KEYS_AND_CERT_SPK_SIZE (128 bytes). Per the I2P spec,
+// the excess bytes (sigKey[:excess]) must be stored in the certificate payload
+// immediately after the 4-byte key-type fields. This ensures that Bytes()
+// serializes the full signing key correctly for from-scratch construction.
+func injectExcessSigningKeyBytes(kac *KeysAndCert) error {
+	sigKeySize := kac.KeyCertificate.SigningPublicKeySize()
+	if sigKeySize <= KEYS_AND_CERT_SPK_SIZE {
+		return nil
+	}
+	excess := sigKeySize - KEYS_AND_CERT_SPK_SIZE
+	sigBytes := kac.SigningPublic.Bytes()
+	return rebuildKeyCertPayload(kac, sigBytes[:excess])
+}
+
+// rebuildKeyCertPayload reconstructs the KeyCertificate with the given excess
+// signing key bytes placed after the 4-byte key-type fields in the payload.
+func rebuildKeyCertPayload(kac *KeysAndCert, excessBytes []byte) error {
+	spkBytes := kac.KeyCertificate.SpkType.Bytes()
+	cpkBytes := kac.KeyCertificate.CpkType.Bytes()
+
+	payload := make([]byte, 0, len(spkBytes)+len(cpkBytes)+len(excessBytes))
+	payload = append(payload, spkBytes...)
+	payload = append(payload, cpkBytes...)
+	payload = append(payload, excessBytes...)
+
+	cert, err := certificate.NewCertificateWithType(certificate.CERT_KEY, payload)
+	if err != nil {
+		return oops.Wrapf(err, "failed to rebuild certificate with excess signing key bytes")
+	}
+
+	keyCert, err := key_certificate.KeyCertificateFromCertificate(cert)
+	if err != nil {
+		return oops.Wrapf(err, "failed to create KeyCertificate from rebuilt certificate")
+	}
+
+	kac.KeyCertificate = keyCert
 	return nil
 }
 
@@ -781,14 +827,14 @@ func readKeysAndCertNonKeyCert(rawData []byte, certType int) (*KeysAndCert, []by
 // NULL certificates imply ElGamal (type 0) encryption + DSA-SHA1 (type 0) signing.
 //
 // NOTE: This directly sets exported fields (SpkType, CpkType) rather than using a
-// KeyCertificate constructor, because no constructor exists for synthetic (non-parsed)
-// KeyCertificates. If KeyCertificate adds validation in constructors, this should be updated.
+// KeyCertificate constructor, because KeyCertificateFromCertificate requires a KEY-type
+// certificate. If KeyCertificate adds validation in constructors, this should be updated.
 func buildNullCertKeyCertificate(cert *certificate.Certificate) (*key_certificate.KeyCertificate, error) {
 	if cert == nil {
 		return nil, oops.Errorf("ReadCertificate returned nil certificate")
 	}
-	spkType := i2pdata.Integer([]byte{0x00, 0x00}) // DSA-SHA1 = 0
-	cpkType := i2pdata.Integer([]byte{0x00, 0x00}) // ElGamal = 0
+	spkType := i2pdata.Integer([]byte{0x00, byte(key_certificate.KEYCERT_SIGN_DSA_SHA1)})
+	cpkType := i2pdata.Integer([]byte{0x00, byte(key_certificate.KEYCERT_CRYPTO_ELG)})
 	return &key_certificate.KeyCertificate{
 		Certificate: *cert,
 		SpkType:     spkType,
