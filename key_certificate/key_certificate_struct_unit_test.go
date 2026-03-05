@@ -691,3 +691,84 @@ func TestDerivedLegacyMapsMatchCanonical(t *testing.T) {
 		}
 	})
 }
+
+// TestLegacyAliasConstantsMatchCanonical ensures that the deprecated legacy alias
+// constants do not drift from their canonical counterparts.
+func TestLegacyAliasConstantsMatchCanonical(t *testing.T) {
+	assert.Equal(t, KEYCERT_CRYPTO_ELG, CRYPTO_KEY_TYPE_ELGAMAL,
+		"CRYPTO_KEY_TYPE_ELGAMAL must equal KEYCERT_CRYPTO_ELG")
+	assert.Equal(t, KEYCERT_SIGN_DSA_SHA1, SIGNATURE_TYPE_DSA_SHA1,
+		"SIGNATURE_TYPE_DSA_SHA1 must equal KEYCERT_SIGN_DSA_SHA1")
+	assert.Equal(t, KEYCERT_SIGN_ED25519, SIGNATURE_TYPE_ED25519_SHA512,
+		"SIGNATURE_TYPE_ED25519_SHA512 must equal KEYCERT_SIGN_ED25519")
+}
+
+// TestSignatureSizeOrError_KnownType verifies that SignatureSizeOrError returns
+// the correct size and nil error for known signing key types.
+func TestSignatureSizeOrError_KnownType(t *testing.T) {
+	kc, _, err := NewKeyCertificate(testKeyCertBytesEd25519X25519)
+	require.NoError(t, err)
+
+	size, err := kc.SignatureSizeOrError()
+	assert.NoError(t, err)
+	assert.Equal(t, 64, size, "Ed25519 signature size should be 64 bytes")
+}
+
+// TestSignatureSizeOrError_UnknownType verifies that SignatureSizeOrError returns
+// an error for unknown signing key types.
+func TestSignatureSizeOrError_UnknownType(t *testing.T) {
+	// Build a key certificate with unknown signing type 1000
+	kc, _, err := NewKeyCertificate([]byte{0x05, 0x00, 0x04, 0x03, 0xe8, 0x00, 0x00})
+	require.NoError(t, err)
+
+	size, err := kc.SignatureSizeOrError()
+	assert.Error(t, err, "Should return error for unknown signing key type")
+	assert.Equal(t, 0, size)
+	assert.Contains(t, err.Error(), "unknown signing key type")
+}
+
+// TestCryptoSizeOrError_KnownType verifies that CryptoSizeOrError returns
+// the correct size and nil error for known crypto key types.
+func TestCryptoSizeOrError_KnownType(t *testing.T) {
+	kc, _, err := NewKeyCertificate(testKeyCertBytesDSAElGamal)
+	require.NoError(t, err)
+
+	size, err := kc.CryptoSizeOrError()
+	assert.NoError(t, err)
+	assert.Equal(t, 256, size, "ElGamal crypto public key size should be 256 bytes")
+}
+
+// TestCryptoSizeOrError_UnknownType verifies that CryptoSizeOrError returns
+// an error for unknown crypto key types.
+func TestCryptoSizeOrError_UnknownType(t *testing.T) {
+	// Build a key certificate with unknown crypto type 1000
+	kc, _, err := NewKeyCertificate([]byte{0x05, 0x00, 0x04, 0x00, 0x07, 0x03, 0xe8})
+	require.NoError(t, err)
+
+	size, err := kc.CryptoSizeOrError()
+	assert.Error(t, err, "Should return error for unknown crypto key type")
+	assert.Equal(t, 0, size)
+	assert.Contains(t, err.Error(), "unknown crypto key type")
+}
+
+// TestConstructRedDSAKeyReturnsEd25519SizeKey verifies that the RedDSA signing
+// key constructor produces a key of the same size as Ed25519 (32 bytes).
+func TestConstructRedDSAKeyReturnsEd25519SizeKey(t *testing.T) {
+	assert := assert.New(t)
+
+	// RedDSA key certificate: signing=11, crypto=0
+	certBytes := []byte{0x05, 0x00, 0x04, 0x00, 0x0b, 0x00, 0x00}
+	kc, _, err := NewKeyCertificate(certBytes)
+	assert.Nil(err)
+
+	// Build a 128-byte signing public key field (padded)
+	data := make([]byte, KEYCERT_SPK_SIZE)
+	for i := range data {
+		data[i] = byte(i)
+	}
+
+	pubKey, err := kc.ConstructSigningPublicKey(data)
+	assert.Nil(err)
+	assert.Equal(KEYCERT_SIGN_REDDSA_ED25519_SIZE, len(pubKey.Bytes()),
+		"RedDSA signing key should be %d bytes", KEYCERT_SIGN_REDDSA_ED25519_SIZE)
+}

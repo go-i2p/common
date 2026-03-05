@@ -259,19 +259,22 @@ func buildP521WireData(t *testing.T) (wireData []byte, fullSigningKey []byte) {
 	_, err := rand.Read(block[0:256])
 	require.NoError(t, err)
 
-	// Generate a random 132-byte P521 signing key
-	fullSigningKey = make([]byte, 132)
-	_, err = rand.Read(fullSigningKey)
+	// Generate inline (128 bytes) and excess (4 bytes) separately
+	inlineBytes := make([]byte, 128)
+	_, err = rand.Read(inlineBytes)
+	require.NoError(t, err)
+	excessBytes := make([]byte, 4)
+	_, err = rand.Read(excessBytes)
 	require.NoError(t, err)
 
-	// First 128 bytes are inline in the SPK field (right-justified = starts at 256)
-	copy(block[256:384], fullSigningKey[0:128])
+	// Inline bytes go in the SPK field
+	copy(block[256:384], inlineBytes)
 
 	// Build cert payload: SpkType(P521=3) || CpkType(ElGamal=0) || excess(4 bytes)
 	certPayload := make([]byte, 8)
 	binary.BigEndian.PutUint16(certPayload[0:2], uint16(key_certificate.KEYCERT_SIGN_P521))
 	binary.BigEndian.PutUint16(certPayload[2:4], uint16(key_certificate.KEYCERT_CRYPTO_ELG))
-	copy(certPayload[4:8], fullSigningKey[128:132]) // excess bytes
+	copy(certPayload[4:8], excessBytes)
 
 	certBytes := []byte{certificate.CERT_KEY}
 	lenBytes := make([]byte, 2)
@@ -280,6 +283,8 @@ func buildP521WireData(t *testing.T) (wireData []byte, fullSigningKey []byte) {
 	certBytes = append(certBytes, certPayload...)
 
 	wireData = append(block, certBytes...)
+	// Per I2P spec, full signing key = excess || inline (cert payload bytes first)
+	fullSigningKey = append(excessBytes, inlineBytes...)
 	return
 }
 
@@ -295,20 +300,22 @@ func buildRSA2048WireData(t *testing.T) (wireData []byte, fullSigningKey []byte)
 	_, err := rand.Read(block[0:256])
 	require.NoError(t, err)
 
-	// Generate a random 256-byte RSA-2048 signing key
-	fullSigningKey = make([]byte, 256)
-	_, err = rand.Read(fullSigningKey)
+	// Generate inline (128 bytes) and excess (128 bytes) separately
+	inlineBytes := make([]byte, 128)
+	_, err = rand.Read(inlineBytes)
+	require.NoError(t, err)
+	excessBytes := make([]byte, 128)
+	_, err = rand.Read(excessBytes)
 	require.NoError(t, err)
 
-	// First 128 bytes inline in SPK field (right-justified = fills bytes 256..383)
-	copy(block[256:384], fullSigningKey[0:128])
+	// Inline bytes go in SPK field
+	copy(block[256:384], inlineBytes)
 
 	// cert payload: SpkType(RSA2048=4) || CpkType(ElGamal=0) || excess(128 bytes)
-	excess := fullSigningKey[128:256]
-	certPayload := make([]byte, 4+len(excess))
+	certPayload := make([]byte, 4+len(excessBytes))
 	binary.BigEndian.PutUint16(certPayload[0:2], uint16(key_certificate.KEYCERT_SIGN_RSA2048))
 	binary.BigEndian.PutUint16(certPayload[2:4], uint16(key_certificate.KEYCERT_CRYPTO_ELG))
-	copy(certPayload[4:], excess)
+	copy(certPayload[4:], excessBytes)
 
 	certBytes := []byte{certificate.CERT_KEY}
 	lenBytes := make([]byte, 2)
@@ -317,6 +324,8 @@ func buildRSA2048WireData(t *testing.T) (wireData []byte, fullSigningKey []byte)
 	certBytes = append(certBytes, certPayload...)
 
 	wireData = append(block, certBytes...)
+	// Per I2P spec, full signing key = excess || inline (cert payload bytes first)
+	fullSigningKey = append(excessBytes, inlineBytes...)
 	return
 }
 
@@ -327,16 +336,18 @@ func buildRSA3072WireData(t *testing.T) (wireData []byte, fullSigningKey []byte)
 	_, err := rand.Read(block[0:256])
 	require.NoError(t, err)
 
-	fullSigningKey = make([]byte, 384)
-	_, err = rand.Read(fullSigningKey)
+	inlineBytes := make([]byte, 128)
+	_, err = rand.Read(inlineBytes)
 	require.NoError(t, err)
-	copy(block[256:384], fullSigningKey[0:128])
+	excessBytes := make([]byte, 256)
+	_, err = rand.Read(excessBytes)
+	require.NoError(t, err)
+	copy(block[256:384], inlineBytes)
 
-	excess := fullSigningKey[128:384]
-	certPayload := make([]byte, 4+len(excess))
+	certPayload := make([]byte, 4+len(excessBytes))
 	binary.BigEndian.PutUint16(certPayload[0:2], uint16(key_certificate.KEYCERT_SIGN_RSA3072))
 	binary.BigEndian.PutUint16(certPayload[2:4], uint16(key_certificate.KEYCERT_CRYPTO_ELG))
-	copy(certPayload[4:], excess)
+	copy(certPayload[4:], excessBytes)
 
 	certBytes := []byte{certificate.CERT_KEY}
 	lenBytes := make([]byte, 2)
@@ -345,6 +356,8 @@ func buildRSA3072WireData(t *testing.T) (wireData []byte, fullSigningKey []byte)
 	certBytes = append(certBytes, certPayload...)
 
 	wireData = append(block, certBytes...)
+	// Per I2P spec, full signing key = excess || inline
+	fullSigningKey = append(excessBytes, inlineBytes...)
 	return
 }
 
@@ -355,16 +368,18 @@ func buildRSA4096WireData(t *testing.T) (wireData []byte, fullSigningKey []byte)
 	_, err := rand.Read(block[0:256])
 	require.NoError(t, err)
 
-	fullSigningKey = make([]byte, 512)
-	_, err = rand.Read(fullSigningKey)
+	inlineBytes := make([]byte, 128)
+	_, err = rand.Read(inlineBytes)
 	require.NoError(t, err)
-	copy(block[256:384], fullSigningKey[0:128])
+	excessBytes := make([]byte, 384)
+	_, err = rand.Read(excessBytes)
+	require.NoError(t, err)
+	copy(block[256:384], inlineBytes)
 
-	excess := fullSigningKey[128:512]
-	certPayload := make([]byte, 4+len(excess))
+	certPayload := make([]byte, 4+len(excessBytes))
 	binary.BigEndian.PutUint16(certPayload[0:2], uint16(key_certificate.KEYCERT_SIGN_RSA4096))
 	binary.BigEndian.PutUint16(certPayload[2:4], uint16(key_certificate.KEYCERT_CRYPTO_ELG))
-	copy(certPayload[4:], excess)
+	copy(certPayload[4:], excessBytes)
 
 	certBytes := []byte{certificate.CERT_KEY}
 	lenBytes := make([]byte, 2)
@@ -373,6 +388,8 @@ func buildRSA4096WireData(t *testing.T) (wireData []byte, fullSigningKey []byte)
 	certBytes = append(certBytes, certPayload...)
 
 	wireData = append(block, certBytes...)
+	// Per I2P spec, full signing key = excess || inline
+	fullSigningKey = append(excessBytes, inlineBytes...)
 	return
 }
 

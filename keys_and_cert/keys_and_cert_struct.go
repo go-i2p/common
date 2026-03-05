@@ -325,8 +325,9 @@ func buildKeysAndCertBlock(kac *KeysAndCert) []byte {
 	}
 	// Place signing key in the 128-byte SPK wire field.
 	// For keys ≤ 128 bytes: right-justified (key at end of field, padding before).
-	// For keys > 128 bytes (P521, RSA*): first 128 bytes fill the field entirely;
+	// For keys > 128 bytes (P521, RSA*): the inline portion occupies all 128 bytes;
 	// the excess bytes are already stored in the KeyCertificate payload.
+	// Per I2P spec, fullKey = excess || inline, so inline bytes are at the END.
 	if kac.SigningPublic != nil {
 		sigBytes := kac.SigningPublic.Bytes()
 		inlineSize := len(sigBytes)
@@ -334,7 +335,10 @@ func buildKeysAndCertBlock(kac *KeysAndCert) []byte {
 			inlineSize = KEYS_AND_CERT_SPK_SIZE
 		}
 		sigStartOffset := KEYS_AND_CERT_DATA_SIZE - inlineSize
-		copy(block[sigStartOffset:KEYS_AND_CERT_DATA_SIZE], sigBytes[:inlineSize])
+		// For oversized keys, inline bytes are the last 128 bytes of the full key
+		// (since fullKey = excess || inline). For normal keys, this is equivalent
+		// to sigBytes[:inlineSize].
+		copy(block[sigStartOffset:KEYS_AND_CERT_DATA_SIZE], sigBytes[len(sigBytes)-inlineSize:])
 	}
 
 	return block
@@ -471,10 +475,15 @@ func constructSigningKeyFromCert(keyCert *key_certificate.KeyCertificate, data [
 }
 
 // constructLargeSigningKey reconstructs a signing key whose total size exceeds
-// KEYS_AND_CERT_SPK_SIZE (128 bytes). Per the I2P spec:
-//   - The first 128 bytes reside in the inline SPK field (data[256:384]).
-//   - The remaining (sigKeySize − 128) bytes follow the 4-byte key-type fields
-//     in the Key Certificate payload.
+// KEYS_AND_CERT_SPK_SIZE (128 bytes). Per the I2P spec, signing keys are
+// end-aligned in the SPK field:
+//   - The excess (sigKeySize − 128) bytes are stored in the Key Certificate
+//     payload immediately after the 4-byte key-type fields. These are the
+//     FIRST bytes of the signing key.
+//   - The 128-byte inline SPK field (data[256:384]) contains the LAST 128
+//     bytes of the signing key.
+//
+// The reconstructed key is: excess || inline.
 func constructLargeSigningKey(keyCert *key_certificate.KeyCertificate, data []byte, sigKeySize int) (types.SigningPublicKey, error) {
 	const certPayloadKeyTypeOffset = 4 // 2-byte SpkType + 2-byte CpkType
 	excess := sigKeySize - KEYS_AND_CERT_SPK_SIZE
@@ -491,10 +500,11 @@ func constructLargeSigningKey(keyCert *key_certificate.KeyCertificate, data []by
 	}
 
 	fullKey := make([]byte, sigKeySize)
-	copy(fullKey[:KEYS_AND_CERT_SPK_SIZE],
-		data[KEYS_AND_CERT_DATA_SIZE-KEYS_AND_CERT_SPK_SIZE:KEYS_AND_CERT_DATA_SIZE])
-	copy(fullKey[KEYS_AND_CERT_SPK_SIZE:],
+	// Per I2P spec end-alignment: excess bytes first, then inline SPK bytes.
+	copy(fullKey[:excess],
 		certData[certPayloadKeyTypeOffset:certPayloadKeyTypeOffset+excess])
+	copy(fullKey[excess:],
+		data[KEYS_AND_CERT_DATA_SIZE-KEYS_AND_CERT_SPK_SIZE:KEYS_AND_CERT_DATA_SIZE])
 
 	sigKey, err := keyCert.ConstructSigningPublicKey(fullKey)
 	if err != nil {

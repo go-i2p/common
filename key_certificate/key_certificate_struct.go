@@ -136,7 +136,17 @@ func validatePayloadLengthAgainstKeyTypes(certData []byte, spkType, cpkType data
 	sigInfo, sigExists := SigningKeySizes[sigType]
 	crypInfo, crypExists := CryptoKeySizes[crypType]
 	if !sigExists || !crypExists {
-		return nil // Unknown types are validated elsewhere
+		// Unknown types bypass size validation — we can't know the expected payload.
+		// Log a warning since this may indicate a forward-compatibility gap where
+		// the spec's "prohibit excess data" rule is not enforced.
+		log.WithFields(logger.Fields{
+			"signing_type":   sigType,
+			"signing_known":  sigExists,
+			"crypto_type":    crypType,
+			"crypto_known":   crypExists,
+			"payload_length": len(certData),
+		}).Warn("Skipping payload length validation for unknown key type(s)")
+		return nil
 	}
 
 	excessSigning := 0
@@ -394,10 +404,7 @@ func validateSigningKeyData(dataLen, requiredSize int) error {
 // constructDSAKey constructs a DSA-SHA1 signing public key from certificate data.
 // Legacy DSA-SHA1 signing key construction for backwards compatibility.
 //
-// Note: KEYCERT_SIGN_DSA_SHA1_SIZE == KEYCERT_SPK_SIZE (both 128 bytes), so the
-// DSA key always occupies the entire SPK field. The key is extracted from the end
-// of the 128-byte field for consistency with other signing key constructors that
-// use end-alignment.
+// DSA fills the entire 128-byte SPK field (KEYCERT_SIGN_DSA_SHA1_SIZE == KEYCERT_SPK_SIZE).
 func constructDSAKey(data []byte) (types.SigningPublicKey, error) {
 	if len(data) < KEYCERT_SIGN_DSA_SHA1_SIZE {
 		return nil, oops.Errorf("insufficient data for DSA key: expected at least %d bytes, got %d",
@@ -570,17 +577,29 @@ func constructEd25519PHKey(data []byte) (types.SigningPublicKey, error) {
 	return ed25519ph_key, nil
 }
 
-// ConstructSigningPublicKey returns a SingingPublicKey constructed using any excess data that may be stored in the KeyCertificate.
+// constructRedDSAKey constructs a RedDSA (randomized EdDSA) signing public key.
+// Per the I2P spec (0.9.39+), RedDSA-Ed25519 uses the same 32-byte Ed25519 curve
+// point format for public keys. This wrapper delegates to constructEd25519Key and
+// exists to decouple from any future divergence in the RedDSA key format.
+func constructRedDSAKey(data []byte) (types.SigningPublicKey, error) {
+	return constructEd25519Key(data)
+}
+
+// ConstructSigningPublicKey returns a SigningPublicKey constructed using any excess data that may be stored in the KeyCertificate.
 // Returns any errors encountered while parsing.
 //
 // The data parameter must be the combined byte slice used to reconstruct the signing key:
 //   - For types where the signing key fits within KEYCERT_SPK_SIZE (128 bytes) – e.g. Ed25519,
 //     DSA, P256, P384 – data is the full 128-byte SPK field from the KeysAndCert structure.
 //   - For types whose signing key exceeds KEYCERT_SPK_SIZE – P521 (132 bytes), RSA-2048 (256 bytes),
-//     RSA-3072 (384 bytes), RSA-4096 (512 bytes) – the caller MUST pre-concatenate the 128-byte
-//     inline SPK field from KeysAndCert with the excess bytes extracted from the key certificate
-//     payload (stored immediately after the 4-byte type fields in the certificate Data).
-//     Failure to include the excess bytes will result in a truncated / incorrect key.
+//     RSA-3072 (384 bytes), RSA-4096 (512 bytes) – the caller MUST pre-concatenate the
+//     excess bytes from the key certificate payload (stored immediately after the 4-byte
+//     type fields) FOLLOWED BY the 128-byte inline SPK field from KeysAndCert.
+//     Per the I2P spec, signing keys are end-aligned in the SPK field: the inline
+//     128 bytes contain the LAST 128 bytes of the key, while the excess bytes in
+//     the certificate payload contain the FIRST (keySize − 128) bytes.
+//     Correct order: excess || inline.  Failure to include the excess bytes or
+//     using the wrong order will result in a truncated / incorrect key.
 func (keyCertificate KeyCertificate) ConstructSigningPublicKey(data []byte) (signing_public_key types.SigningPublicKey, err error) {
 	log.WithFields(logger.Fields{
 		"input_length": len(data),
@@ -629,8 +648,7 @@ func selectSigningKeyConstructor(signing_key_type int, data []byte) (types.Signi
 	case KEYCERT_SIGN_ED25519PH:
 		return constructEd25519PHKey(data)
 	case KEYCERT_SIGN_REDDSA_ED25519:
-		// RedDSA uses the same key format as Ed25519
-		return constructEd25519Key(data)
+		return constructRedDSAKey(data)
 	default:
 		log.WithFields(logger.Fields{
 			"signing_key_type": signing_key_type,
@@ -660,6 +678,18 @@ func (keyCertificate KeyCertificate) SignatureSize() (size int) {
 	return info.SignatureSize
 }
 
+// SignatureSizeOrError returns the signature size for the certificate's signing key type,
+// or an error if the type is unknown. Prefer this over SignatureSize when callers need
+// to distinguish \"unknown type\" from a hypothetical 0-byte signature.
+func (keyCertificate KeyCertificate) SignatureSizeOrError() (int, error) {
+	key_type := keyCertificate.SigningPublicKeyType()
+	info, exists := SigningKeySizes[key_type]
+	if !exists {
+		return 0, oops.Errorf("unknown signing key type: %d", key_type)
+	}
+	return info.SignatureSize, nil
+}
+
 // CryptoSize return the size of a Public Key corresponding to the Key Certificate's publicKey type.
 func (keyCertificate KeyCertificate) CryptoSize() (size int) {
 	key_type := keyCertificate.PublicKeyType()
@@ -676,4 +706,16 @@ func (keyCertificate KeyCertificate) CryptoSize() (size int) {
 		"crypto_size": info.CryptoPublicKeySize,
 	}).Debug("Retrieved crypto size")
 	return info.CryptoPublicKeySize
+}
+
+// CryptoSizeOrError returns the crypto public key size for the certificate's public key type,
+// or an error if the type is unknown. Prefer this over CryptoSize when callers need
+// to distinguish "unknown type" from a hypothetical 0-byte key.
+func (keyCertificate KeyCertificate) CryptoSizeOrError() (int, error) {
+	key_type := keyCertificate.PublicKeyType()
+	info, exists := CryptoKeySizes[key_type]
+	if !exists {
+		return 0, oops.Errorf("unknown crypto key type: %d", key_type)
+	}
+	return info.CryptoPublicKeySize, nil
 }
