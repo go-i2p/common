@@ -83,13 +83,24 @@ func (d *Destination) Hash() ([32]byte, error) {
 // and a NULL cert encoded destination will correctly compare as equal.
 // Returns false if either destination is nil or not properly initialized.
 func (d *Destination) Equals(other *Destination) bool {
+	if !areDestinationsComparable(d, other) {
+		return false
+	}
+	return compareCanonicalBytes(d, other)
+}
+
+// areDestinationsComparable checks that both destinations are non-nil and have
+// valid KeysAndCert fields required for comparison.
+func areDestinationsComparable(d, other *Destination) bool {
 	if d == nil || other == nil {
 		return false
 	}
-	if d.KeysAndCert == nil || other.KeysAndCert == nil {
-		return false
-	}
-	// Canonicalize both for consistent comparison.
+	return d.KeysAndCert != nil && other.KeysAndCert != nil
+}
+
+// compareCanonicalBytes canonicalizes both destinations and compares their
+// serialized byte representations.
+func compareCanonicalBytes(d, other *Destination) bool {
 	dCanon, err := CanonicalizeDestination(d)
 	if err != nil {
 		return false
@@ -191,17 +202,27 @@ func CanonicalizeDestination(d *Destination) (*Destination, error) {
 	if d == nil || d.KeysAndCert == nil {
 		return nil, oops.Errorf("destination is nil or not initialized")
 	}
+	if !needsCanonicalization(d) {
+		return d, nil
+	}
+	return buildCanonicalDestination(d)
+}
+
+// needsCanonicalization returns true if the destination uses ElGamal+DSA-SHA1
+// key types and may need to be re-encoded with a NULL certificate.
+func needsCanonicalization(d *Destination) bool {
 	if d.KeysAndCert.KeyCertificate == nil {
-		return d, nil // already uses implicit NULL cert
+		return false
 	}
 	sigType := d.KeysAndCert.KeyCertificate.SigningPublicKeyType()
 	cryptoType := d.KeysAndCert.KeyCertificate.PublicKeyType()
-	if sigType != key_certificate.KEYCERT_SIGN_DSA_SHA1 ||
-		cryptoType != key_certificate.KEYCERT_CRYPTO_ELG {
-		return d, nil // not ElGamal+DSA-SHA1; no canonicalization needed
-	}
-	// The wire bytes for ElGamal+DSA-SHA1 are exactly 384 bytes of key
-	// data followed by the cert.  Replace the cert with a 3-byte NULL cert.
+	return sigType == key_certificate.KEYCERT_SIGN_DSA_SHA1 &&
+		cryptoType == key_certificate.KEYCERT_CRYPTO_ELG
+}
+
+// buildCanonicalDestination constructs an ElGamal+DSA-SHA1 destination with a
+// 3-byte NULL certificate, replacing any KEY(0,0) certificate.
+func buildCanonicalDestination(d *Destination) (*Destination, error) {
 	b, err := d.KeysAndCert.Bytes()
 	if err != nil {
 		return nil, oops.Errorf("failed to serialize destination for canonicalization: %w", err)
@@ -243,6 +264,20 @@ func NewDestinationWithCompressiblePadding(
 	if err != nil {
 		return nil, oops.Errorf("failed to create KeyCertificate from certificate: %w", err)
 	}
+	padding, err := generatePaddingFromCert(keyCert)
+	if err != nil {
+		return nil, err
+	}
+	kac, err := keys_and_cert.NewKeysAndCert(keyCert, publicKey, padding, signingPublicKey)
+	if err != nil {
+		return nil, err
+	}
+	return NewDestination(kac)
+}
+
+// generatePaddingFromCert calculates the required padding size from key
+// certificate sizes and generates Proposal 161-compliant compressible padding.
+func generatePaddingFromCert(keyCert *key_certificate.KeyCertificate) ([]byte, error) {
 	cryptoSize, err := keyCert.CryptoPublicKeySize()
 	if err != nil {
 		return nil, oops.Errorf("unknown crypto key type for padding calculation: %w", err)
@@ -255,13 +290,5 @@ func NewDestinationWithCompressiblePadding(
 	if paddingSize < 0 {
 		paddingSize = 0
 	}
-	padding, err := keys_and_cert.GenerateCompressiblePadding(paddingSize)
-	if err != nil {
-		return nil, oops.Errorf("failed to generate compressible padding: %w", err)
-	}
-	kac, err := keys_and_cert.NewKeysAndCert(keyCert, publicKey, padding, signingPublicKey)
-	if err != nil {
-		return nil, err
-	}
-	return NewDestination(kac)
+	return keys_and_cert.GenerateCompressiblePadding(paddingSize)
 }

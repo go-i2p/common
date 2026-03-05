@@ -432,49 +432,69 @@ func (entry *MetaLeaseSetEntry) Cost() uint8 {
 // The signature must be generated over all preceding data prepended with
 // the DatabaseStore type byte (0x07 for MetaLeaseSet).
 func (mls *MetaLeaseSet) Bytes() ([]byte, error) {
-	result := make([]byte, 0)
+	result, err := serializeHeader(mls)
+	if err != nil {
+		return nil, err
+	}
 
-	// Add destination
-	// Use Destination.Bytes() to guard against a nil KeysAndCert pointer.
+	result, err = serializeOptions(result, mls)
+	if err != nil {
+		return nil, err
+	}
+
+	result, err = serializeEntries(result, mls)
+	if err != nil {
+		return nil, err
+	}
+
+	result = serializeRevocations(result, mls)
+	result = append(result, mls.signature.Bytes()...)
+
+	log.WithFields(logger.Fields{
+		"total_size":      len(result),
+		"num_entries":     mls.numEntries,
+		"has_offline_sig": mls.offlineSignature != nil,
+		"options_count":   len(mls.options.Values()),
+	}).Debug("Serialized MetaLeaseSet to bytes")
+
+	return result, nil
+}
+
+// serializeHeader serializes the destination, timestamps, flags, and optional
+// offline signature into the beginning of the wire format.
+func serializeHeader(mls *MetaLeaseSet) ([]byte, error) {
 	destBytes, err := mls.destination.Bytes()
 	if err != nil {
 		return nil, oops.Errorf("failed to serialize destination: %w", err)
 	}
+	result := make([]byte, 0)
 	result = append(result, destBytes...)
-
-	// Add published timestamp (4 bytes)
 	result = rootcommon.AppendBigEndianUint32(result, mls.published)
-
-	// Add expires offset (2 bytes)
 	result = rootcommon.AppendBigEndianUint16(result, mls.expires)
-
-	// Add flags (2 bytes)
 	result = rootcommon.AppendBigEndianUint16(result, mls.flags)
 
-	// Add offline signature if present
 	if mls.offlineSignature != nil {
 		result = append(result, mls.offlineSignature.Bytes()...)
 	}
+	return result, nil
+}
 
-	// Add options mapping, sorted by key for signature invariance.
-	// ValuesToMapping applies the canonical Java String.compareTo() key order
-	// required by the I2P spec so that signature verification succeeds on all
-	// conforming receivers.
+// serializeOptions appends the options mapping to the result in canonical
+// key order for signature invariance per the I2P spec.
+func serializeOptions(result []byte, mls *MetaLeaseSet) ([]byte, error) {
 	if len(mls.options.Values()) > 0 {
 		sortedOpts, sortErr := common.ValuesToMapping(mls.options.Values())
 		if sortErr != nil {
 			return nil, oops.Errorf("failed to sort options mapping: %w", sortErr)
 		}
-		result = append(result, sortedOpts.Data()...)
-	} else {
-		// Empty mapping (2 bytes of zero)
-		result = append(result, 0x00, 0x00)
+		return append(result, sortedOpts.Data()...), nil
 	}
+	return append(result, 0x00, 0x00), nil
+}
 
-	// Add number of entries
+// serializeEntries appends the entry count and each serialized entry to the result.
+func serializeEntries(result []byte, mls *MetaLeaseSet) ([]byte, error) {
 	result = append(result, mls.numEntries)
-
-	// Add each entry
 	for i, entry := range mls.entries {
 		entryBytes, err := entry.Bytes()
 		if err != nil {
@@ -482,27 +502,16 @@ func (mls *MetaLeaseSet) Bytes() ([]byte, error) {
 		}
 		result = append(result, entryBytes...)
 	}
+	return result, nil
+}
 
-	// Add number of revocations (1 byte)
+// serializeRevocations appends the revocation count and hashes to the result.
+func serializeRevocations(result []byte, mls *MetaLeaseSet) []byte {
 	result = append(result, mls.numRevocations)
-
-	// Add revocation hashes (32 bytes each)
 	for _, hash := range mls.revocations {
 		result = append(result, hash[:]...)
 	}
-
-	// Add signature
-	result = append(result, mls.signature.Bytes()...)
-
-	log.WithFields(logger.Fields{
-		"total_size":       len(result),
-		"destination_size": len(destBytes),
-		"num_entries":      mls.numEntries,
-		"has_offline_sig":  mls.offlineSignature != nil,
-		"options_count":    len(mls.options.Values()),
-	}).Debug("Serialized MetaLeaseSet to bytes")
-
-	return result, nil
+	return result
 }
 
 // Bytes serializes a MetaLeaseSetEntry to its wire format representation.

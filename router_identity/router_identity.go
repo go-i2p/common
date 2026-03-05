@@ -23,22 +23,38 @@ import (
 //
 // Returns an error if the provided KeysAndCert is invalid or uses prohibited key types.
 func NewRouterIdentityFromKeysAndCert(keysAndCert *keys_and_cert.KeysAndCert) (*RouterIdentity, error) {
-	if keysAndCert == nil {
-		return nil, oops.Errorf("KeysAndCert cannot be nil")
-	}
-	if err := keysAndCert.Validate(); err != nil {
-		return nil, oops.Errorf("invalid KeysAndCert: %w", err)
-	}
-	if err := validateRouterIdentityKeyTypes(keysAndCert); err != nil {
+	if err := validateKeysAndCertInput(keysAndCert); err != nil {
 		return nil, err
 	}
 	logDeprecatedKeyTypes(keysAndCert.KeyCertificate)
 
-	// Defensive deep copy: clone struct, then independently copy pointer/slice fields.
+	kacCopy, err := deepCopyKeysAndCert(keysAndCert)
+	if err != nil {
+		return nil, err
+	}
+
+	return &RouterIdentity{
+		KeysAndCert: kacCopy,
+	}, nil
+}
+
+// validateKeysAndCertInput checks that the KeysAndCert is non-nil, valid, and
+// uses permitted key types for a RouterIdentity.
+func validateKeysAndCertInput(keysAndCert *keys_and_cert.KeysAndCert) error {
+	if keysAndCert == nil {
+		return oops.Errorf("KeysAndCert cannot be nil")
+	}
+	if err := keysAndCert.Validate(); err != nil {
+		return oops.Errorf("invalid KeysAndCert: %w", err)
+	}
+	return validateRouterIdentityKeyTypes(keysAndCert)
+}
+
+// deepCopyKeysAndCert creates an independent deep copy of a KeysAndCert,
+// cloning the KeyCertificate and Padding to avoid data aliasing.
+func deepCopyKeysAndCert(keysAndCert *keys_and_cert.KeysAndCert) (*keys_and_cert.KeysAndCert, error) {
 	kacCopy := *keysAndCert
 
-	// Deep copy KeyCertificate by re-parsing its wire bytes, giving an independent
-	// Certificate.payload backing array (fixes the shallow-copy aliasing risk).
 	if keysAndCert.KeyCertificate != nil {
 		certBytes := keysAndCert.KeyCertificate.Certificate.RawBytes()
 		newKeyCert, _, err := key_certificate.NewKeyCertificate(certBytes)
@@ -48,16 +64,13 @@ func NewRouterIdentityFromKeysAndCert(keysAndCert *keys_and_cert.KeysAndCert) (*
 		kacCopy.KeyCertificate = newKeyCert
 	}
 
-	// Deep copy Padding slice backing array.
 	if keysAndCert.Padding != nil {
 		paddingCopy := make([]byte, len(keysAndCert.Padding))
 		copy(paddingCopy, keysAndCert.Padding)
 		kacCopy.Padding = paddingCopy
 	}
 
-	return &RouterIdentity{
-		KeysAndCert: &kacCopy,
-	}, nil
+	return &kacCopy, nil
 }
 
 // NewRouterIdentityFromBytes creates a RouterIdentity by parsing bytes.

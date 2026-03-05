@@ -264,8 +264,16 @@ func (keyCertificate KeyCertificate) ConstructPublicKey(data []byte) (public_key
 	log.WithFields(logger.Fields{
 		"input_length": len(data),
 	}).Debug("Constructing publicKey from keyCertificate")
+	if err = validatePublicKeyDataLength(data); err != nil {
+		return
+	}
 	key_type := keyCertificate.PublicKeyType()
-	// The input must be the full 256-byte public key field from KeysAndCert.
+	return constructPublicKeyByType(key_type, data)
+}
+
+// validatePublicKeyDataLength checks that the input data is at least as large
+// as the full 256-byte public key field from KeysAndCert.
+func validatePublicKeyDataLength(data []byte) error {
 	if len(data) < KEYCERT_PUBKEY_SIZE {
 		log.WithFields(logger.Fields{
 			"at":           "(keyCertificate) ConstructPublicKey",
@@ -273,56 +281,63 @@ func (keyCertificate KeyCertificate) ConstructPublicKey(data []byte) (public_key
 			"required_len": KEYCERT_PUBKEY_SIZE,
 			"reason":       "not enough data",
 		}).Error("error constructing public key")
-		err = oops.Errorf("error constructing public key: not enough data")
-		return
+		return oops.Errorf("error constructing public key: not enough data")
 	}
-	// Per spec: "The Crypto Public Key is aligned at the start" of the 256-byte field.
-	// ElGamal fills the entire 256-byte field, so start-aligned and end-aligned are the same.
+	return nil
+}
+
+// constructPublicKeyByType dispatches public key construction to the appropriate
+// handler based on the crypto key type code.
+func constructPublicKeyByType(key_type int, data []byte) (types.ReceivingPublicKey, error) {
 	switch key_type {
 	case KEYCERT_CRYPTO_ELG:
-		var elg_key elgamal.ElgPublicKey
-		copy(elg_key[:], data[0:KEYCERT_CRYPTO_ELG_SIZE])
-		public_key = elg_key
-		log.Debug("Constructed ElgPublicKey")
+		return constructElGamalKey(data), nil
 	case KEYCERT_CRYPTO_P256:
-		public_key, err = newECDHP256PublicKey(data)
-		if err != nil {
-			log.WithError(err).Warn("Failed to construct ECDH-P256 public key")
-		} else {
-			log.Debug("Constructed ECDH-P256 public key")
-		}
+		return constructECDHKey(data, newECDHP256PublicKey, "ECDH-P256")
 	case KEYCERT_CRYPTO_P384:
-		public_key, err = newECDHP384PublicKey(data)
-		if err != nil {
-			log.WithError(err).Warn("Failed to construct ECDH-P384 public key")
-		} else {
-			log.Debug("Constructed ECDH-P384 public key")
-		}
+		return constructECDHKey(data, newECDHP384PublicKey, "ECDH-P384")
 	case KEYCERT_CRYPTO_P521:
-		public_key, err = newECDHP521PublicKey(data)
-		if err != nil {
-			log.WithError(err).Warn("Failed to construct ECDH-P521 public key")
-		} else {
-			log.Debug("Constructed ECDH-P521 public key")
-		}
+		return constructECDHKey(data, newECDHP521PublicKey, "ECDH-P521")
 	case KEYCERT_CRYPTO_X25519,
 		KEYCERT_CRYPTO_MLKEM512_X25519,
 		KEYCERT_CRYPTO_MLKEM768_X25519,
 		KEYCERT_CRYPTO_MLKEM1024_X25519:
-		curve25519_key := make(curve25519.Curve25519PublicKey, KEYCERT_CRYPTO_X25519_SIZE)
-		copy(curve25519_key, data[0:KEYCERT_CRYPTO_X25519_SIZE])
-		public_key = curve25519_key
-		log.Debug("Constructed Curve25519PublicKey")
+		return constructCurve25519Key(data), nil
 	case KEYCERT_CRYPTO_RESERVED_NONE:
 		log.Warn("Crypto key type 255 (RESERVED_NONE) is reserved by spec and not implemented")
-		err = oops.Errorf("reserved crypto key type: RESERVED_NONE (type %d)", KEYCERT_CRYPTO_RESERVED_NONE)
+		return nil, oops.Errorf("reserved crypto key type: RESERVED_NONE (type %d)", KEYCERT_CRYPTO_RESERVED_NONE)
 	default:
-		log.WithFields(logger.Fields{
-			"key_type": key_type,
-		}).Warn("Unknown public key type")
-		err = oops.Errorf("unknown crypto key type: %d", key_type)
+		log.WithFields(logger.Fields{"key_type": key_type}).Warn("Unknown public key type")
+		return nil, oops.Errorf("unknown crypto key type: %d", key_type)
 	}
-	return
+}
+
+// constructElGamalKey builds an ElGamal public key from the 256-byte field.
+func constructElGamalKey(data []byte) elgamal.ElgPublicKey {
+	var elg_key elgamal.ElgPublicKey
+	copy(elg_key[:], data[0:KEYCERT_CRYPTO_ELG_SIZE])
+	log.Debug("Constructed ElgPublicKey")
+	return elg_key
+}
+
+// constructECDHKey builds an ECDH public key using the provided constructor
+// function and logs the result.
+func constructECDHKey(data []byte, constructor func([]byte) (types.ReceivingPublicKey, error), name string) (types.ReceivingPublicKey, error) {
+	key, err := constructor(data)
+	if err != nil {
+		log.WithError(err).Warn("Failed to construct " + name + " public key")
+	} else {
+		log.Debug("Constructed " + name + " public key")
+	}
+	return key, err
+}
+
+// constructCurve25519Key builds a Curve25519 public key from the 256-byte field.
+func constructCurve25519Key(data []byte) curve25519.Curve25519PublicKey {
+	curve25519_key := make(curve25519.Curve25519PublicKey, KEYCERT_CRYPTO_X25519_SIZE)
+	copy(curve25519_key, data[0:KEYCERT_CRYPTO_X25519_SIZE])
+	log.Debug("Constructed Curve25519PublicKey")
+	return curve25519_key
 }
 
 // CryptoPublicKeySize returns the size of a public key for the certificate's crypto type

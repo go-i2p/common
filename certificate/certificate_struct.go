@@ -92,33 +92,73 @@ func validateCertPayload(certType uint8, payload []byte) error {
 	if len(payload) > CERT_MAX_PAYLOAD_SIZE {
 		return oops.Errorf("payload too long: %d bytes", len(payload))
 	}
-	if certType == CERT_NULL && len(payload) > CERT_EMPTY_PAYLOAD_SIZE {
-		return oops.Errorf("NULL certificates must have empty payload")
+	return validateCertPayloadByType(certType, payload)
+}
+
+// validateCertPayloadByType dispatches type-specific payload validation for
+// certificate construction. Each case enforces the I2P spec constraints for the
+// given certificate type.
+func validateCertPayloadByType(certType uint8, payload []byte) error {
+	switch certType {
+	case CERT_NULL:
+		return validateEmptyPayload(payload, "NULL")
+	case CERT_HIDDEN:
+		return validateEmptyPayload(payload, "HIDDEN")
+	case CERT_SIGNED:
+		return validateSignedPayload(payload)
+	case CERT_KEY:
+		return validateKeyPayload(payload)
+	case CERT_HASHCASH:
+		return validateHashcashCertPayload(payload)
+	case CERT_MULTIPLE:
+		return validateMultiplePayload(payload)
+	default:
+		return nil
 	}
-	if certType == CERT_HIDDEN && len(payload) > CERT_EMPTY_PAYLOAD_SIZE {
-		return oops.Errorf("HIDDEN certificates must have empty payload per spec (total length 3)")
+}
+
+// validateEmptyPayload checks that the payload is empty for certificate types
+// that require no payload data (NULL, HIDDEN).
+func validateEmptyPayload(payload []byte, typeName string) error {
+	if len(payload) > CERT_EMPTY_PAYLOAD_SIZE {
+		return oops.Errorf("%s certificates must have empty payload", typeName)
 	}
-	if certType == CERT_SIGNED && len(payload) != CERT_SIGNED_PAYLOAD_SHORT && len(payload) != CERT_SIGNED_PAYLOAD_LONG {
+	return nil
+}
+
+// validateSignedPayload checks that a SIGNED certificate payload has a valid
+// length per the I2P spec (40 or 72 bytes).
+func validateSignedPayload(payload []byte) error {
+	if len(payload) != CERT_SIGNED_PAYLOAD_SHORT && len(payload) != CERT_SIGNED_PAYLOAD_LONG {
 		return oops.Errorf("SIGNED certificates must have payload of %d or %d bytes, got %d",
 			CERT_SIGNED_PAYLOAD_SHORT, CERT_SIGNED_PAYLOAD_LONG, len(payload))
 	}
-	if certType == CERT_KEY && len(payload) < CERT_MIN_KEY_PAYLOAD_SIZE {
+	return nil
+}
+
+// validateKeyPayload checks that a KEY certificate payload has at least the
+// minimum required size.
+func validateKeyPayload(payload []byte) error {
+	if len(payload) < CERT_MIN_KEY_PAYLOAD_SIZE {
 		return oops.Errorf("KEY certificates require at least %d bytes payload, got %d",
 			CERT_MIN_KEY_PAYLOAD_SIZE, len(payload))
 	}
-	if certType == CERT_HASHCASH {
-		// I2P spec: HASHCASH payload "contains an ASCII colon-separated hashcash string."
-		// A zero-length payload is invalid per spec.
-		if len(payload) == 0 {
-			return oops.Errorf("HASHCASH certificates must have non-empty payload per spec")
-		}
-		if err := validateHashcashPayload(payload); err != nil {
-			return err
-		}
+	return nil
+}
+
+// validateHashcashCertPayload checks that a HASHCASH certificate payload is
+// non-empty and contains valid ASCII per the I2P spec.
+func validateHashcashCertPayload(payload []byte) error {
+	if len(payload) == 0 {
+		return oops.Errorf("HASHCASH certificates must have non-empty payload per spec")
 	}
-	if certType == CERT_MULTIPLE && len(payload) < CERT_MIN_SIZE {
-		// I2P spec: MULTIPLE certificate "contains multiple certificates."
-		// Payload must contain at least one complete sub-certificate (3 bytes minimum).
+	return validateHashcashPayload(payload)
+}
+
+// validateMultiplePayload checks that a MULTIPLE certificate payload contains
+// at least one complete sub-certificate (minimum 3 bytes).
+func validateMultiplePayload(payload []byte) error {
+	if len(payload) < CERT_MIN_SIZE {
 		return oops.Errorf("MULTIPLE certificates must contain at least one sub-certificate (%d bytes minimum), got %d",
 			CERT_MIN_SIZE, len(payload))
 	}
@@ -341,26 +381,34 @@ func certTypeName(certType int) string {
 func (c *Certificate) Equals(other *Certificate) bool {
 	cValid := c.IsValid()
 	oValid := other.IsValid()
-
 	if !cValid && !oValid {
 		return true
 	}
 	if !cValid || !oValid {
 		return false
 	}
+	return compareCertFields(c, other)
+}
 
+// compareCertFields checks whether two valid certificates have identical type,
+// length, and payload data.
+func compareCertFields(c, other *Certificate) bool {
 	cType, _ := c.Type()
 	oType, _ := other.Type()
 	if cType != oType {
 		return false
 	}
-
 	cLen, _ := c.Length()
 	oLen, _ := other.Length()
 	if cLen != oLen {
 		return false
 	}
+	return compareCertData(c, other)
+}
 
+// compareCertData checks whether the payload data of two certificates is
+// byte-for-byte identical.
+func compareCertData(c, other *Certificate) bool {
 	cData, _ := c.Data()
 	oData, _ := other.Data()
 	if len(cData) != len(oData) {

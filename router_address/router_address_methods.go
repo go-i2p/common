@@ -603,36 +603,43 @@ func (ra RouterAddress) GoString() string {
 	}
 	var sb strings.Builder
 	sb.WriteString("RouterAddress{")
+	appendTransportType(&sb, ra)
+	appendCostField(&sb, ra)
+	appendOptionalField(&sb, ra.HostString(), "host")
+	appendOptionalField(&sb, ra.PortString(), "port")
+	appendOptionalField(&sb, ra.ProtocolVersionString(), "v")
+	sb.WriteString("}")
+	return sb.String()
+}
 
+// appendTransportType writes the transport type label to the string builder.
+func appendTransportType(sb *strings.Builder, ra RouterAddress) {
 	if ts, err := ra.TransportType.Data(); err == nil {
 		sb.WriteString("type=")
 		sb.WriteString(ts)
 	}
+}
 
+// appendCostField writes the cost label to the string builder.
+func appendCostField(sb *strings.Builder, ra RouterAddress) {
 	sb.WriteString(", cost=")
 	sb.WriteString(strconv.Itoa(ra.Cost()))
+}
 
-	if hs := ra.HostString(); hs != nil {
-		if h, err := hs.Data(); err == nil && len(h) > 0 {
-			sb.WriteString(", host=")
-			sb.WriteString(h)
-		}
+// appendOptionalField writes a labeled option value to the string builder if
+// the option is present and non-empty.
+func appendOptionalField(sb *strings.Builder, opt data.I2PString, label string) {
+	if opt == nil {
+		return
 	}
-	if ps := ra.PortString(); ps != nil {
-		if p, err := ps.Data(); err == nil && len(p) > 0 {
-			sb.WriteString(", port=")
-			sb.WriteString(p)
-		}
+	val, err := opt.Data()
+	if err != nil || len(val) == 0 {
+		return
 	}
-	if pvs := ra.ProtocolVersionString(); pvs != nil {
-		if v, err := pvs.Data(); err == nil && len(v) > 0 {
-			sb.WriteString(", v=")
-			sb.WriteString(v)
-		}
-	}
-
-	sb.WriteString("}")
-	return sb.String()
+	sb.WriteString(", ")
+	sb.WriteString(label)
+	sb.WriteString("=")
+	sb.WriteString(val)
 }
 
 // SetOption sets or replaces a transport option in the RouterAddress.

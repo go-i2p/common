@@ -131,47 +131,75 @@ func validateTypeSpecificPayload(cert Certificate) error {
 
 	switch certType {
 	case CERT_NULL, CERT_HIDDEN:
-		if payloadLen != 0 {
-			return oops.Errorf("certificate type %d should have empty payload, got %d bytes", certType, payloadLen)
-		}
+		return validateEmptyTypePayload(certType, payloadLen)
 	case CERT_HASHCASH:
-		// I2P spec: HASHCASH payload "contains an ASCII colon-separated hashcash string."
-		// A zero-length payload is invalid per spec. We validate basic structure here:
-		// the payload must be non-empty and contain only printable ASCII characters.
-		if payloadLen == 0 {
-			return oops.Errorf("HASHCASH certificate payload must not be empty per spec")
-		}
-		if err := validateHashcashPayload(cert.payload[:payloadLen]); err != nil {
-			return err
-		}
+		return validateHashcashTypePayload(cert, payloadLen)
 	case CERT_SIGNED:
-		// I2P spec: SIGNED payload is exactly 40 bytes (DSA signature) or
-		// 72 bytes (40-byte signature + 32-byte Hash of signing Destination).
-		if payloadLen != CERT_SIGNED_PAYLOAD_SHORT && payloadLen != CERT_SIGNED_PAYLOAD_LONG {
-			return oops.Errorf(
-				"SIGNED certificate payload must be %d or %d bytes, got %d",
-				CERT_SIGNED_PAYLOAD_SHORT, CERT_SIGNED_PAYLOAD_LONG, payloadLen,
-			)
-		}
+		return validateSignedTypePayload(payloadLen)
 	case CERT_MULTIPLE:
-		// I2P spec: MULTIPLE certificate "contains multiple certificates" in its payload.
-		// The payload must contain at least one complete sub-certificate (minimum 3 bytes).
-		// MULTIPLE is deprecated/unused but we validate structural minimums.
-		if payloadLen < CERT_MIN_SIZE {
-			return oops.Errorf("MULTIPLE certificate payload must contain at least one sub-certificate (%d bytes minimum), got %d",
-				CERT_MIN_SIZE, payloadLen)
-		}
+		return validateMultipleTypePayload(payloadLen)
 	case CERT_KEY:
-		if payloadLen < CERT_MIN_KEY_PAYLOAD_SIZE {
-			return oops.Errorf("KEY certificate payload too short: %d bytes (minimum %d)", payloadLen, CERT_MIN_KEY_PAYLOAD_SIZE)
-		}
+		return validateKeyTypePayload(payloadLen)
 	default:
-		// Unknown type — log a warning but accept for forward compatibility.
-		if certType > CERT_KEY {
-			log.WithFields(logger.Fields{
-				"cert_type": certType,
-			}).Warn("unknown certificate type")
-		}
+		return handleUnknownCertType(certType)
+	}
+}
+
+// validateEmptyTypePayload checks that NULL and HIDDEN certificates have zero-length payloads.
+func validateEmptyTypePayload(certType int, payloadLen int) error {
+	if payloadLen != 0 {
+		return oops.Errorf("certificate type %d should have empty payload, got %d bytes", certType, payloadLen)
+	}
+	return nil
+}
+
+// validateHashcashTypePayload checks that a HASHCASH certificate has a non-empty
+// payload containing valid printable ASCII per the I2P spec.
+func validateHashcashTypePayload(cert Certificate, payloadLen int) error {
+	if payloadLen == 0 {
+		return oops.Errorf("HASHCASH certificate payload must not be empty per spec")
+	}
+	return validateHashcashPayload(cert.payload[:payloadLen])
+}
+
+// validateSignedTypePayload checks that a SIGNED certificate payload has valid
+// length (40 or 72 bytes) per the I2P spec.
+func validateSignedTypePayload(payloadLen int) error {
+	if payloadLen != CERT_SIGNED_PAYLOAD_SHORT && payloadLen != CERT_SIGNED_PAYLOAD_LONG {
+		return oops.Errorf(
+			"SIGNED certificate payload must be %d or %d bytes, got %d",
+			CERT_SIGNED_PAYLOAD_SHORT, CERT_SIGNED_PAYLOAD_LONG, payloadLen,
+		)
+	}
+	return nil
+}
+
+// validateMultipleTypePayload checks that a MULTIPLE certificate payload contains
+// at least one complete sub-certificate (minimum 3 bytes).
+func validateMultipleTypePayload(payloadLen int) error {
+	if payloadLen < CERT_MIN_SIZE {
+		return oops.Errorf("MULTIPLE certificate payload must contain at least one sub-certificate (%d bytes minimum), got %d",
+			CERT_MIN_SIZE, payloadLen)
+	}
+	return nil
+}
+
+// validateKeyTypePayload checks that a KEY certificate payload meets the minimum
+// size requirement.
+func validateKeyTypePayload(payloadLen int) error {
+	if payloadLen < CERT_MIN_KEY_PAYLOAD_SIZE {
+		return oops.Errorf("KEY certificate payload too short: %d bytes (minimum %d)", payloadLen, CERT_MIN_KEY_PAYLOAD_SIZE)
+	}
+	return nil
+}
+
+// handleUnknownCertType logs a warning for unrecognized certificate types for
+// forward compatibility with future certificate types.
+func handleUnknownCertType(certType int) error {
+	if certType > CERT_KEY {
+		log.WithFields(logger.Fields{
+			"cert_type": certType,
+		}).Warn("unknown certificate type")
 	}
 	return nil
 }
