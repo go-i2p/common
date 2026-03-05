@@ -53,34 +53,41 @@ func NewEncryptedLeaseSet(
 		encryptedInnerData: encryptedInnerData,
 	}
 
-	// Serialize content for signing: type_byte + all_fields_except_signature
-	dataToSign, err := els.dataForSigning()
-	if err != nil {
+	if err := signEncryptedLeaseSet(els, sigType, offlineSig, signingKey); err != nil {
 		return nil, err
 	}
 
-	// Determine which sig type to use for signing
+	logEncryptedLeaseSetCreation(els)
+	return els, nil
+}
+
+// signEncryptedLeaseSet serializes and signs the EncryptedLeaseSet data.
+func signEncryptedLeaseSet(els *EncryptedLeaseSet, sigType uint16, offlineSig *offline_signature.OfflineSignature, signingKey interface{}) error {
+	dataToSign, err := els.dataForSigning()
+	if err != nil {
+		return err
+	}
 	signingSigType := sigType
 	if offlineSig != nil {
 		signingSigType = offlineSig.TransientSigType()
 	}
-
-	// Sign (standard Ed25519, no pre-hashing)
 	signature, err := createSignature(signingKey, dataToSign, signingSigType)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	els.signature = signature
+	return nil
+}
 
+// logEncryptedLeaseSetCreation logs the successful creation of an EncryptedLeaseSet.
+func logEncryptedLeaseSetCreation(els *EncryptedLeaseSet) {
 	log.WithFields(logger.Fields{
-		"sig_type":       sigType,
+		"sig_type":       els.sigType,
 		"inner_length":   els.innerLength,
 		"has_offline":    els.HasOfflineKeys(),
-		"published":      published,
-		"expires_offset": expiresOffset,
+		"published":      els.published,
+		"expires_offset": els.expires,
 	}).Debug("Successfully created EncryptedLeaseSet")
-
-	return els, nil
 }
 
 // NewEncryptedLeaseSetFromDestination creates an EncryptedLeaseSet from a blinded Destination.

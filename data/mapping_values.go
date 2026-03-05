@@ -211,25 +211,9 @@ func ValuesToMapping(values MappingValues) (*Mapping, error) {
 
 	sortedValues := mappingOrder(values)
 
-	// Default length to 2 * len
-	// 1 byte for ';'
-	// 1 byte for '='
-	log.WithFields(logger.Fields{
-		"values_count": len(sortedValues),
-	}).Debug("Converting MappingValues to Mapping")
-	baseLength := 2 * len(sortedValues)
-	for _, mappingVals := range sortedValues {
-		for _, keyOrVal := range mappingVals {
-			baseLength += len(keyOrVal)
-		}
-	}
-
-	if baseLength > MAX_MAPPING_DATA_SIZE {
-		log.WithFields(logger.Fields{
-			"mapping_size": baseLength,
-			"max_size":     MAX_MAPPING_DATA_SIZE,
-		}).Error("Mapping data exceeds maximum size")
-		return nil, oops.Errorf("mapping data size %d exceeds maximum %d bytes", baseLength, MAX_MAPPING_DATA_SIZE)
+	baseLength := calculateMappingDataSize(sortedValues)
+	if err := validateMappingDataSize(baseLength); err != nil {
+		return nil, err
 	}
 
 	log.WithFields(logger.Fields{
@@ -245,6 +229,30 @@ func ValuesToMapping(values MappingValues) (*Mapping, error) {
 		size: mappingSize,
 		vals: &sortedValues,
 	}, nil
+}
+
+// calculateMappingDataSize computes the total byte size of sorted mapping values.
+// Each pair contributes 1 byte for '=' and 1 byte for ';' plus the key/value lengths.
+func calculateMappingDataSize(sortedValues MappingValues) int {
+	baseLength := 2 * len(sortedValues)
+	for _, mappingVals := range sortedValues {
+		for _, keyOrVal := range mappingVals {
+			baseLength += len(keyOrVal)
+		}
+	}
+	return baseLength
+}
+
+// validateMappingDataSize checks if the mapping data size exceeds the maximum allowed.
+func validateMappingDataSize(baseLength int) error {
+	if baseLength > MAX_MAPPING_DATA_SIZE {
+		log.WithFields(logger.Fields{
+			"mapping_size": baseLength,
+			"max_size":     MAX_MAPPING_DATA_SIZE,
+		}).Error("Mapping data exceeds maximum size")
+		return oops.Errorf("mapping data size %d exceeds maximum %d bytes", baseLength, MAX_MAPPING_DATA_SIZE)
+	}
+	return nil
 }
 
 // mappingOrderLess compares two key strings following Java String.compareTo() semantics:

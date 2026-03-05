@@ -6,6 +6,7 @@ import (
 	common "github.com/go-i2p/common/data"
 	"github.com/go-i2p/common/destination"
 	"github.com/go-i2p/common/offline_signature"
+	sig "github.com/go-i2p/common/signature"
 	"github.com/go-i2p/logger"
 	"github.com/samber/oops"
 )
@@ -31,15 +32,10 @@ func NewMetaLeaseSet(
 ) (MetaLeaseSet, error) {
 	log.Debug("Creating new MetaLeaseSet")
 
-	if err := validateNewMetaLeaseSetInputs(dest, flags, offlineSig, entries); err != nil {
+	if err := validateAllMetaLeaseSetInputs(dest, flags, offlineSig, options, entries); err != nil {
 		return MetaLeaseSet{}, err
 	}
 
-	if err := validateOptionsSorted(options); err != nil {
-		return MetaLeaseSet{}, err
-	}
-
-	// Serialize content for signing (prepended with DB store type byte)
 	dataToSign, err := serializeMetaLeaseSetForSigning(
 		dest, published, expiresOffset, flags,
 		offlineSig, options, entries, revocations,
@@ -48,35 +44,66 @@ func NewMetaLeaseSet(
 		return MetaLeaseSet{}, err
 	}
 
-	sigType := rootcommon.DetermineSignatureType(dest.KeyCertificate.SigningPublicKeyType(), offlineSig)
-	signature, err := rootcommon.CreateLeaseSetSignature(signingKey, dataToSign, sigType, rootcommon.SignLeaseSetData)
+	signature, err := signMetaLeaseSetData(dest, offlineSig, signingKey, dataToSign)
 	if err != nil {
 		return MetaLeaseSet{}, err
 	}
 
-	mls := MetaLeaseSet{
-		destination:      dest,
-		published:        published,
-		expires:          expiresOffset,
-		flags:            flags,
-		offlineSignature: offlineSig,
-		options:          options,
-		numEntries:       uint8(len(entries)),
-		entries:          entries,
-		numRevocations:   uint8(len(revocations)),
-		revocations:      revocations,
-		signature:        signature,
-	}
-
-	log.WithFields(logger.Fields{
-		"num_entries":      len(entries),
-		"num_revocations":  len(revocations),
-		"has_offline_keys": mls.HasOfflineKeys(),
-		"published":        published,
-		"expires_offset":   expiresOffset,
-	}).Debug("Successfully created MetaLeaseSet")
-
+	mls := assembleMetaLeaseSet(dest, published, expiresOffset, flags, offlineSig, options, entries, revocations, signature)
+	logMetaLeaseSetCreation(mls)
 	return mls, nil
+}
+
+// validateAllMetaLeaseSetInputs validates all inputs including options sorting for MetaLeaseSet creation.
+func validateAllMetaLeaseSetInputs(
+	dest destination.Destination,
+	flags uint16,
+	offlineSig *offline_signature.OfflineSignature,
+	options common.Mapping,
+	entries []MetaLeaseSetEntry,
+) error {
+	if err := validateNewMetaLeaseSetInputs(dest, flags, offlineSig, entries); err != nil {
+		return err
+	}
+	return validateOptionsSorted(options)
+}
+
+// signMetaLeaseSetData determines the signature type and signs the serialized data.
+func signMetaLeaseSetData(dest destination.Destination, offlineSig *offline_signature.OfflineSignature, signingKey interface{}, dataToSign []byte) (sig.Signature, error) {
+	sigType := rootcommon.DetermineSignatureType(dest.KeyCertificate.SigningPublicKeyType(), offlineSig)
+	return rootcommon.CreateLeaseSetSignature(signingKey, dataToSign, sigType, rootcommon.SignLeaseSetData)
+}
+
+// assembleMetaLeaseSet constructs the MetaLeaseSet struct from its validated and signed components.
+func assembleMetaLeaseSet(
+	dest destination.Destination,
+	published uint32,
+	expiresOffset uint16,
+	flags uint16,
+	offlineSig *offline_signature.OfflineSignature,
+	options common.Mapping,
+	entries []MetaLeaseSetEntry,
+	revocations [][32]byte,
+	signature sig.Signature,
+) MetaLeaseSet {
+	return MetaLeaseSet{
+		destination: dest, published: published, expires: expiresOffset,
+		flags: flags, offlineSignature: offlineSig, options: options,
+		numEntries: uint8(len(entries)), entries: entries,
+		numRevocations: uint8(len(revocations)), revocations: revocations,
+		signature: signature,
+	}
+}
+
+// logMetaLeaseSetCreation logs the successful creation of a MetaLeaseSet.
+func logMetaLeaseSetCreation(mls MetaLeaseSet) {
+	log.WithFields(logger.Fields{
+		"num_entries":      len(mls.entries),
+		"num_revocations":  len(mls.revocations),
+		"has_offline_keys": mls.HasOfflineKeys(),
+		"published":        mls.published,
+		"expires_offset":   mls.expires,
+	}).Debug("Successfully created MetaLeaseSet")
 }
 
 // validateNewMetaLeaseSetInputs validates all input parameters for MetaLeaseSet creation.

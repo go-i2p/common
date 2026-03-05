@@ -819,16 +819,7 @@ func ReadKeysAndCertX25519AndEd25519(data []byte) (keysAndCert *KeysAndCert, rem
 		return
 	}
 
-	keysAndCert = &KeysAndCert{}
-	keysAndCert.ReceivingPublic, err = extractX25519PublicKey(data)
-	if err != nil {
-		return
-	}
-
-	keysAndCert.Padding = extractPaddingFromData(data, pubKeySize, sigKeySize)
-
-	sigKeyOffset := totalKeySize - sigKeySize
-	keysAndCert.SigningPublic, err = extractEd25519SigningKey(data, sigKeyOffset, sigKeySize)
+	keysAndCert, err = extractX25519Ed25519Keys(data, pubKeySize, sigKeySize, totalKeySize)
 	if err != nil {
 		return
 	}
@@ -847,13 +838,31 @@ func ReadKeysAndCertX25519AndEd25519(data []byte) (keysAndCert *KeysAndCert, rem
 		return
 	}
 
+	logX25519Ed25519Success(keysAndCert, remainder)
+	return
+}
+
+// extractX25519Ed25519Keys extracts the public key, padding, and signing key from data.
+func extractX25519Ed25519Keys(data []byte, pubKeySize, sigKeySize, totalKeySize int) (keysAndCert *KeysAndCert, err error) {
+	keysAndCert = &KeysAndCert{}
+	keysAndCert.ReceivingPublic, err = extractX25519PublicKey(data)
+	if err != nil {
+		return
+	}
+	keysAndCert.Padding = extractPaddingFromData(data, pubKeySize, sigKeySize)
+	sigKeyOffset := totalKeySize - sigKeySize
+	keysAndCert.SigningPublic, err = extractEd25519SigningKey(data, sigKeyOffset, sigKeySize)
+	return
+}
+
+// logX25519Ed25519Success logs successful reading of X25519+Ed25519 KeysAndCert.
+func logX25519Ed25519Success(keysAndCert *KeysAndCert, remainder []byte) {
 	log.WithFields(logger.Fields{
 		"public_key_type":         "X25519",
 		"signing_public_key_type": "Ed25519",
 		"padding_length":          len(keysAndCert.Padding),
 		"remainder_length":        len(remainder),
 	}).Debug("Successfully read X25519+Ed25519 KeysAndCert")
-	return
 }
 
 // GenerateCompressiblePadding generates padding that is compressible per I2P Proposal 161.

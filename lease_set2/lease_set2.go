@@ -626,56 +626,69 @@ func NewLeaseSet2(
 ) (LeaseSet2, error) {
 	log.Debug("Creating new LeaseSet2")
 
-	// Validate inputs
-	if err := validateLeaseSet2Inputs(dest, expiresOffset, flags, offlineSig, encryptionKeys, leases); err != nil {
+	if err := validateLeaseSet2AllInputs(dest, expiresOffset, flags, offlineSig, options, encryptionKeys, leases); err != nil {
 		return LeaseSet2{}, err
 	}
 
-	// Validate that options keys are sorted per spec:
-	// "LS2 options MUST be sorted by key, so the signature is invariant."
-	if err := validateOptionsSorted(options); err != nil {
-		return LeaseSet2{}, err
-	}
-
-	// Construct the LeaseSet2 data for signing
 	dataToSign, err := serializeLeaseSet2ForSigning(dest, published, expiresOffset, flags, offlineSig, options, encryptionKeys, leases)
 	if err != nil {
 		return LeaseSet2{}, err
 	}
 
-	// Determine signature type and sign the data
-	sigType := rootcommon.DetermineSignatureType(dest.KeyCertificate.SigningPublicKeyType(), offlineSig)
-	signature, err := rootcommon.CreateLeaseSetSignature(signingKey, dataToSign, sigType, rootcommon.SignLeaseSetData)
+	signature, err := signLeaseSet2Data(dest, offlineSig, signingKey, dataToSign)
 	if err != nil {
 		return LeaseSet2{}, err
+	}
+
+	ls2 := LeaseSet2{
+		destination: dest, published: published, expires: expiresOffset,
+		flags: flags, offlineSignature: offlineSig, options: options,
+		encryptionKeys: encryptionKeys, leases: leases, signature: signature,
+	}
+	logLeaseSet2Creation(ls2)
+	return ls2, nil
+}
+
+// validateLeaseSet2AllInputs validates all inputs including options sorting for LeaseSet2 creation.
+func validateLeaseSet2AllInputs(
+	dest destination.Destination,
+	expiresOffset uint16,
+	flags uint16,
+	offlineSig *offline_signature.OfflineSignature,
+	options common.Mapping,
+	encryptionKeys []EncryptionKey,
+	leases []lease.Lease2,
+) error {
+	if err := validateLeaseSet2Inputs(dest, expiresOffset, flags, offlineSig, encryptionKeys, leases); err != nil {
+		return err
+	}
+	// "LS2 options MUST be sorted by key, so the signature is invariant."
+	return validateOptionsSorted(options)
+}
+
+// signLeaseSet2Data determines the signature type and signs the serialized data.
+func signLeaseSet2Data(dest destination.Destination, offlineSig *offline_signature.OfflineSignature, signingKey interface{}, dataToSign []byte) (signature sig.Signature, err error) {
+	sigType := rootcommon.DetermineSignatureType(dest.KeyCertificate.SigningPublicKeyType(), offlineSig)
+	signature, err = rootcommon.CreateLeaseSetSignature(signingKey, dataToSign, sigType, rootcommon.SignLeaseSetData)
+	if err != nil {
+		return
 	}
 	log.WithFields(logger.Fields{
 		"signature_type": sigType,
 		"data_size":      len(dataToSign),
 	}).Debug("Created LeaseSet2 signature")
+	return
+}
 
-	// Assemble the final LeaseSet2 structure
-	ls2 := LeaseSet2{
-		destination:      dest,
-		published:        published,
-		expires:          expiresOffset,
-		flags:            flags,
-		offlineSignature: offlineSig,
-		options:          options,
-		encryptionKeys:   encryptionKeys,
-		leases:           leases,
-		signature:        signature,
-	}
-
+// logLeaseSet2Creation logs the successful creation of a LeaseSet2.
+func logLeaseSet2Creation(ls2 LeaseSet2) {
 	log.WithFields(logger.Fields{
-		"num_encryption_keys": len(encryptionKeys),
-		"num_leases":          len(leases),
+		"num_encryption_keys": len(ls2.encryptionKeys),
+		"num_leases":          len(ls2.leases),
 		"has_offline_keys":    ls2.HasOfflineKeys(),
-		"published":           published,
-		"expires_offset":      expiresOffset,
+		"published":           ls2.published,
+		"expires_offset":      ls2.expires,
 	}).Debug("Successfully created LeaseSet2")
-
-	return ls2, nil
 }
 
 // validateLeaseSet2Inputs validates all input parameters for LeaseSet2 creation.

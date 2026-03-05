@@ -27,15 +27,10 @@ func ReadRouterAddress(routerAddressData []byte) (ra RouterAddress, remainder []
 		return
 	}
 
-	// parseExpirationDate may return ErrNonZeroExpiration as a non-fatal warning.
 	var expirationWarning error
-	remainder, err = parseExpirationDate(&ra, remainder)
+	remainder, expirationWarning, err = handleExpirationWarning(&ra, remainder)
 	if err != nil {
-		if !errors.Is(err, ErrNonZeroExpiration) {
-			return // fatal parse error
-		}
-		expirationWarning = err
-		err = nil
+		return
 	}
 
 	remainder, err = parseTransportType(&ra, remainder)
@@ -46,6 +41,20 @@ func ReadRouterAddress(routerAddressData []byte) (ra RouterAddress, remainder []
 	remainder, err = parseTransportOptions(&ra, remainder)
 	if err == nil {
 		err = expirationWarning
+	}
+	return
+}
+
+// handleExpirationWarning processes the expiration date parsing result, separating
+// fatal errors from the non-fatal ErrNonZeroExpiration warning per I2P spec.
+func handleExpirationWarning(ra *RouterAddress, data []byte) (remainder []byte, warning error, err error) {
+	remainder, err = parseExpirationDate(ra, data)
+	if err != nil {
+		if !errors.Is(err, ErrNonZeroExpiration) {
+			return // fatal parse error
+		}
+		warning = err
+		err = nil
 	}
 	return
 }

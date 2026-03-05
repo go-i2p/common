@@ -153,18 +153,8 @@ func parseLeaseSetComponents(data []byte) (LeaseSet, error) {
 		return LeaseSet{}, oops.Errorf("failed to read destination: %w", err)
 	}
 
-	encryptionKey, remainder, err := parseEncryptionKey(remainder)
+	encryptionKey, signingKey, remainder, err := parseLeaseSetCryptoKeys(remainder, dest)
 	if err != nil {
-		return LeaseSet{}, err
-	}
-
-	signingKey, remainder, err := parseSigningKey(remainder, dest)
-	if err != nil {
-		return LeaseSet{}, err
-	}
-
-	// Validate signing key type matches destination's signing key type (spec: 0.9.26+)
-	if err := validateParsedSigningKeyType(signingKey, dest); err != nil {
 		return LeaseSet{}, err
 	}
 
@@ -179,6 +169,21 @@ func parseLeaseSetComponents(data []byte) (LeaseSet, error) {
 	}
 
 	return assembleLeaseSetFromParsedData(dest, encryptionKey, signingKey, leaseCount, leases, signature), nil
+}
+
+// parseLeaseSetCryptoKeys parses and validates the encryption and signing keys from lease set data.
+func parseLeaseSetCryptoKeys(data []byte, dest destination.Destination) (encKey elgamal.ElgPublicKey, sigKey types.SigningPublicKey, remainder []byte, err error) {
+	encKey, remainder, err = parseEncryptionKey(data)
+	if err != nil {
+		return
+	}
+	sigKey, remainder, err = parseSigningKey(remainder, dest)
+	if err != nil {
+		return
+	}
+	// Validate signing key type matches destination's signing key type (spec: 0.9.26+)
+	err = validateParsedSigningKeyType(sigKey, dest)
+	return
 }
 
 // validateLeaseSetDataLength checks if data has minimum required length for a LeaseSet.

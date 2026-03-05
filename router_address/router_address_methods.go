@@ -650,7 +650,19 @@ func (ra *RouterAddress) SetOption(key, value string) error {
 		return oops.Errorf("cannot set option on nil RouterAddress")
 	}
 
-	// Rebuild options map from current state, set the new key, and reconstruct.
+	opts := extractOptionsMap(ra)
+	opts[key] = value
+
+	newMapping, err := data.GoMapToMapping(opts)
+	if err != nil {
+		return oops.Wrapf(err, "failed to create mapping with option %q=%q", key, value)
+	}
+	ra.TransportOptions = newMapping
+	return nil
+}
+
+// extractOptionsMap converts existing transport options to a Go map for modification.
+func extractOptionsMap(ra *RouterAddress) map[string]string {
 	opts := make(map[string]string)
 	if ra.TransportOptions != nil {
 		for _, pair := range ra.Options().Values() {
@@ -661,12 +673,5 @@ func (ra *RouterAddress) SetOption(key, value string) error {
 			}
 		}
 	}
-	opts[key] = value
-
-	newMapping, err := data.GoMapToMapping(opts)
-	if err != nil {
-		return oops.Wrapf(err, "failed to create mapping with option %q=%q", key, value)
-	}
-	ra.TransportOptions = newMapping
-	return nil
+	return opts
 }

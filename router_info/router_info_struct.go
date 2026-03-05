@@ -304,25 +304,31 @@ func (router_info RouterInfo) Bytes() ([]byte, error) {
 // validateBytesPrerequisites checks that all required RouterInfo fields are non-nil
 // before serialization.
 func validateBytesPrerequisites(ri *RouterInfo) error {
-	if ri.router_identity == nil {
-		return oops.Errorf("cannot serialize RouterInfo: router_identity is nil")
-	}
-	if ri.published == nil {
-		return oops.Errorf("cannot serialize RouterInfo: published is nil")
-	}
-	if ri.size == nil {
-		return oops.Errorf("cannot serialize RouterInfo: size is nil")
-	}
-	if ri.peer_size == nil {
-		return oops.Errorf("cannot serialize RouterInfo: peer_size is nil")
-	}
-	if ri.options == nil {
-		return oops.Errorf("cannot serialize RouterInfo: options is nil")
-	}
-	if ri.signature == nil {
-		return oops.Errorf("cannot serialize RouterInfo: signature is nil")
+	if field := findNilRequiredField(ri); field != "" {
+		return oops.Errorf("cannot serialize RouterInfo: %s is nil", field)
 	}
 	return nil
+}
+
+// findNilRequiredField checks for nil required fields and returns the first nil field name.
+// Returns an empty string if all required fields are set.
+func findNilRequiredField(ri *RouterInfo) string {
+	switch {
+	case ri.router_identity == nil:
+		return "router_identity"
+	case ri.published == nil:
+		return "published"
+	case ri.size == nil:
+		return "size"
+	case ri.peer_size == nil:
+		return "peer_size"
+	case ri.options == nil:
+		return "options"
+	case ri.signature == nil:
+		return "signature"
+	default:
+		return ""
+	}
 }
 
 // serializeRouterInfoFields serializes all RouterInfo fields into a byte slice,
@@ -676,49 +682,56 @@ func (ri *RouterInfo) serializeWithoutSignature() ([]byte, error) {
 func ReadRouterInfo(bytes []byte) (info RouterInfo, remainder []byte, err error) {
 	log.WithField("input_length", len(bytes)).Debug("Reading RouterInfo from bytes")
 
+	if err = validateRouterInfoMinSize(bytes); err != nil {
+		return
+	}
+
+	info, remainder, err = parseRouterInfoCore(bytes)
+	if err != nil {
+		return
+	}
+
+	info.addresses, remainder, err = parseRouterAddresses(info.size, remainder)
+	if err != nil {
+		return
+	}
+
+	info.peer_size, info.options, remainder, err = parsePeerSizeAndOptions(remainder)
+	if err != nil {
+		return
+	}
+
+	info.signature, remainder, err = parseRouterInfoSignature(info.router_identity, remainder)
+	if err != nil {
+		return
+	}
+
+	logReadRouterInfoSuccess(info, remainder)
+	return
+}
+
+// validateRouterInfoMinSize checks that data meets minimum size requirements for RouterInfo.
+func validateRouterInfoMinSize(bytes []byte) error {
 	if len(bytes) < ROUTER_INFO_MIN_SIZE {
-		err = oops.Errorf("data too short for RouterInfo: need at least %d bytes, got %d", ROUTER_INFO_MIN_SIZE, len(bytes))
 		log.WithFields(logger.Fields{
 			"at":           "ReadRouterInfo",
 			"data_len":     len(bytes),
 			"required_len": ROUTER_INFO_MIN_SIZE,
 			"reason":       "data too short",
 		}).Error("error parsing router info")
-		return
+		return oops.Errorf("data too short for RouterInfo: need at least %d bytes, got %d", ROUTER_INFO_MIN_SIZE, len(bytes))
 	}
+	return nil
+}
 
-	// Parse core RouterInfo fields
-	info, remainder, err = parseRouterInfoCore(bytes)
-	if err != nil {
-		return
-	}
-
-	// Parse router addresses
-	info.addresses, remainder, err = parseRouterAddresses(info.size, remainder)
-	if err != nil {
-		return
-	}
-
-	// Parse peer size and options
-	info.peer_size, info.options, remainder, err = parsePeerSizeAndOptions(remainder)
-	if err != nil {
-		return
-	}
-
-	// Parse signature
-	info.signature, remainder, err = parseRouterInfoSignature(info.router_identity, remainder)
-	if err != nil {
-		return
-	}
-
+// logReadRouterInfoSuccess logs successful parsing of RouterInfo.
+func logReadRouterInfoSuccess(info RouterInfo, remainder []byte) {
 	log.WithFields(logger.Fields{
 		"router_identity":  info.router_identity,
 		"published":        info.published,
 		"address_count":    len(info.addresses),
 		"remainder_length": len(remainder),
 	}).Debug("Successfully read RouterInfo")
-
-	return
 }
 
 // parseRouterInfoCore reads the RouterIdentity, published date, and address count from bytes.
