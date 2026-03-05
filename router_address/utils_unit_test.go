@@ -28,8 +28,8 @@ func TestReadRouterAddressReturnsCorrectRemainderWithoutError(t *testing.T) {
 	assert.Nil(err, "ReadRouterAddress() reported error with valid data:")
 	assert.Equal(0, len(remainder)-3)
 
-	err = router_address.checkValid()
-	assert.Nil(err, "checkValid() on address from ReadRouterAddress() reported error with valid data")
+	err = router_address.Validate()
+	assert.Nil(err, "Validate() on address from ReadRouterAddress() reported error with valid data")
 }
 
 func TestReadRouterAddressAcceptsZeroExpiration(t *testing.T) {

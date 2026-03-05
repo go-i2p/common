@@ -1179,7 +1179,7 @@ func TestSetOption(t *testing.T) {
 }
 
 // =========================================================================
-// String() with SSU2 introducer options
+// String() excludes cryptographic material (QUALITY-3)
 // =========================================================================
 
 func TestStringWithSSU2Introducers(t *testing.T) {
@@ -1196,10 +1196,11 @@ func TestStringWithSSU2Introducers(t *testing.T) {
 	assert.NotEmpty(t, s)
 	assert.Contains(t, s, "SSU2")
 	assert.Contains(t, s, "10.0.0.1")
-	// Introducer option values should appear in the string output.
-	assert.Contains(t, s, "hash0")
-	assert.Contains(t, s, "1234567890")
-	assert.Contains(t, s, "tag0")
+	assert.Contains(t, s, "9150")
+	// String() must NOT expose introducer data (cryptographic material).
+	assert.NotContains(t, s, "hash0", "String() should not expose introducer hash")
+	assert.NotContains(t, s, "1234567890", "String() should not expose introducer expiration")
+	assert.NotContains(t, s, "tag0", "String() should not expose introducer tag")
 }
 
 // =========================================================================
@@ -1212,4 +1213,173 @@ func TestIPVersionFromCaps_ExplicitIPv4Suffix(t *testing.T) {
 	})
 	require.NoError(t, err)
 	assert.Equal(t, IPV4_VERSION_STRING, ra.ipVersionFromCaps())
+}
+
+// =========================================================================
+// IsNTCP2() / IsSSU2() Tests (GAP-3)
+// =========================================================================
+
+func TestIsNTCP2(t *testing.T) {
+	t.Run("true for NTCP2 transport", func(t *testing.T) {
+		ra, err := NewRouterAddress(5, time.Time{}, "NTCP2", map[string]string{"host": "127.0.0.1"})
+		require.NoError(t, err)
+		assert.True(t, ra.IsNTCP2())
+		assert.False(t, ra.IsSSU2())
+	})
+
+	t.Run("false for SSU2 transport", func(t *testing.T) {
+		ra, err := NewRouterAddress(5, time.Time{}, "SSU2", map[string]string{"host": "127.0.0.1"})
+		require.NoError(t, err)
+		assert.False(t, ra.IsNTCP2())
+	})
+
+	t.Run("false for nil transport type", func(t *testing.T) {
+		ra := &RouterAddress{TransportType: nil}
+		assert.False(t, ra.IsNTCP2())
+	})
+}
+
+func TestIsSSU2(t *testing.T) {
+	t.Run("true for SSU2 transport", func(t *testing.T) {
+		ra, err := NewRouterAddress(5, time.Time{}, "SSU2", map[string]string{"host": "127.0.0.1"})
+		require.NoError(t, err)
+		assert.True(t, ra.IsSSU2())
+		assert.False(t, ra.IsNTCP2())
+	})
+
+	t.Run("false for NTCP2 transport", func(t *testing.T) {
+		ra, err := NewRouterAddress(5, time.Time{}, "NTCP2", map[string]string{"host": "127.0.0.1"})
+		require.NoError(t, err)
+		assert.False(t, ra.IsSSU2())
+	})
+
+	t.Run("false for nil transport type", func(t *testing.T) {
+		ra := &RouterAddress{TransportType: nil}
+		assert.False(t, ra.IsSSU2())
+	})
+}
+
+// =========================================================================
+// MarshalBinary() / UnmarshalBinary() Tests (GAP-1)
+// =========================================================================
+
+func TestMarshalBinaryRoundTrip(t *testing.T) {
+	ra, err := NewRouterAddress(10, time.Time{}, "NTCP2", map[string]string{
+		"host": "192.168.1.1",
+		"port": "443",
+	})
+	require.NoError(t, err)
+
+	marshaled, err := ra.MarshalBinary()
+	require.NoError(t, err)
+	assert.NotEmpty(t, marshaled)
+
+	var restored RouterAddress
+	err = restored.UnmarshalBinary(marshaled)
+	require.NoError(t, err)
+
+	assert.Equal(t, ra.Cost(), restored.Cost())
+	assert.True(t, ra.Equals(restored))
+}
+
+func TestUnmarshalBinaryInvalidData(t *testing.T) {
+	var ra RouterAddress
+	err := ra.UnmarshalBinary([]byte{0x01})
+	assert.Error(t, err, "UnmarshalBinary should fail on data too short")
+}
+
+func TestMarshalBinaryNilFields(t *testing.T) {
+	ra := RouterAddress{}
+	_, err := ra.MarshalBinary()
+	assert.Error(t, err, "MarshalBinary should fail on zero-value RouterAddress")
+}
+
+// =========================================================================
+// SetOptions() Tests (QUALITY-5)
+// =========================================================================
+
+func TestSetOptionsBatch(t *testing.T) {
+	ra, err := NewRouterAddress(5, time.Time{}, "NTCP2", map[string]string{
+		"host": "127.0.0.1",
+	})
+	require.NoError(t, err)
+
+	err = ra.SetOptions(map[string]string{
+		"port": "443",
+		"caps": "BC",
+	})
+	require.NoError(t, err)
+
+	assert.True(t, ra.CheckOption("port"))
+	assert.True(t, ra.CheckOption("caps"))
+	assert.True(t, ra.CheckOption("host"), "existing option should be preserved")
+}
+
+func TestSetOptionsNilReceiver(t *testing.T) {
+	var ra *RouterAddress
+	err := ra.SetOptions(map[string]string{"host": "1.2.3.4"})
+	assert.Error(t, err)
+}
+
+// =========================================================================
+// RemoveOption() Tests (GAP-2)
+// =========================================================================
+
+func TestRemoveOption(t *testing.T) {
+	ra, err := NewRouterAddress(5, time.Time{}, "NTCP2", map[string]string{
+		"host": "127.0.0.1",
+		"port": "443",
+	})
+	require.NoError(t, err)
+
+	err = ra.RemoveOption("port")
+	require.NoError(t, err)
+	assert.False(t, ra.CheckOption("port"), "port should be removed")
+	assert.True(t, ra.CheckOption("host"), "host should be preserved")
+}
+
+func TestRemoveOptionIdempotent(t *testing.T) {
+	ra, err := NewRouterAddress(5, time.Time{}, "NTCP2", map[string]string{
+		"host": "127.0.0.1",
+	})
+	require.NoError(t, err)
+
+	err = ra.RemoveOption("nonexistent")
+	assert.NoError(t, err, "RemoveOption on missing key should not error")
+}
+
+func TestRemoveOptionNilReceiver(t *testing.T) {
+	var ra *RouterAddress
+	err := ra.RemoveOption("host")
+	assert.Error(t, err)
+}
+
+// =========================================================================
+// String() does not expose static key or IV (QUALITY-3)
+// =========================================================================
+
+func TestStringExcludesCryptoMaterial(t *testing.T) {
+	ra, err := NewRouterAddress(5, time.Time{}, "NTCP2", map[string]string{
+		"host": "10.0.0.1",
+		"port": "443",
+		"s":    "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
+		"i":    "AAAAAAAAAAAAAAAAAAAAAA==",
+		"v":    "2",
+	})
+	require.NoError(t, err)
+
+	s := ra.String()
+	assert.Contains(t, s, "NTCP2")
+	assert.Contains(t, s, "10.0.0.1")
+	assert.Contains(t, s, "443")
+	assert.NotContains(t, s, "AAAAAAAAAA", "String() must not contain static key")
+}
+
+// =========================================================================
+// ROUTER_ADDRESS_TRUE_MIN_SIZE constant (QUALITY-4)
+// =========================================================================
+
+func TestTrueMinSizeConstant(t *testing.T) {
+	assert.Equal(t, 13, ROUTER_ADDRESS_TRUE_MIN_SIZE)
+	assert.Equal(t, ROUTER_ADDRESS_MIN_SIZE+1, ROUTER_ADDRESS_TRUE_MIN_SIZE)
 }

@@ -321,53 +321,53 @@ func TestExpirationReturnsZeroOnNilExpirationDate(t *testing.T) {
 }
 
 // =========================================================================
-// checkValid() Tests
+// Validate() Tests
 // =========================================================================
 
-func TestCheckValidReturnsBehavior(t *testing.T) {
+func TestValidateReturnsBehavior(t *testing.T) {
 	t.Run("valid address", func(t *testing.T) {
 		ra, err := NewRouterAddress(5, time.Time{}, "NTCP2", map[string]string{"host": "127.0.0.1"})
 		require.NoError(t, err)
-		err = ra.checkValid()
+		err = ra.Validate()
 		assert.NoError(t, err)
 	})
 
 	t.Run("nil transport type", func(t *testing.T) {
 		ra := &RouterAddress{TransportType: nil}
-		err := ra.checkValid()
+		err := ra.Validate()
 		assert.Error(t, err)
 	})
 
 	t.Run("nil transport options", func(t *testing.T) {
 		transportType, _ := data.ToI2PString("NTCP2")
 		ra := &RouterAddress{TransportType: transportType, TransportOptions: nil}
-		err := ra.checkValid()
+		err := ra.Validate()
 		assert.Error(t, err)
 	})
 }
 
-func TestCheckValidSignature(t *testing.T) {
+func TestValidateSignature(t *testing.T) {
 	ra, err := NewRouterAddress(5, time.Time{}, "NTCP2", map[string]string{"host": "127.0.0.1"})
 	require.NoError(t, err)
 
-	e := ra.checkValid()
+	e := ra.Validate()
 	assert.NoError(t, e)
 }
 
 // =========================================================================
-// checkValid() from ReadRouterAddress
+// Validate() from ReadRouterAddress
 // =========================================================================
 
-func TestCheckRouterAddressValidNoErrWithValidData(t *testing.T) {
+func TestRouterAddressValidateNoErrWithValidData(t *testing.T) {
 	assert := assert.New(t)
 
 	router_address, _, _ := ReadRouterAddress([]byte{0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00})
 	mapping, err := data.GoMapToMapping(map[string]string{"host": "127.0.0.1", "port": "4567"})
 	assert.Nil(err, "GoMapToMapping() returned error with valid data")
 	router_address.TransportOptions = mapping
-	err = router_address.checkValid()
+	err = router_address.Validate()
 
-	assert.Nil(err, "checkValid() reported error with valid data")
+	assert.Nil(err, "Validate() reported error with valid data")
 }
 
 // =========================================================================

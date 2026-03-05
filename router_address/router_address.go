@@ -2,6 +2,7 @@
 package router_address
 
 import (
+	"encoding"
 	"net"
 	"time"
 
@@ -14,6 +15,13 @@ var log = logger.GetGoI2PLogger()
 
 // Compile-time assertion that RouterAddress implements net.Addr.
 var _ net.Addr = (*RouterAddress)(nil)
+
+// Compile-time assertions that RouterAddress implements encoding.BinaryMarshaler
+// and encoding.BinaryUnmarshaler.
+var (
+	_ encoding.BinaryMarshaler   = (*RouterAddress)(nil)
+	_ encoding.BinaryUnmarshaler = (*RouterAddress)(nil)
+)
 
 // NewRouterAddress creates a new RouterAddress with the provided parameters.
 // Validates that the transport type is not empty and that required options are provided.

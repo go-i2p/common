@@ -107,8 +107,34 @@ func (ra *RouterAddress) UDP() bool {
 	return isUDP
 }
 
-// String implements net.Addr. It returns the transport style, host, port, and options.
-// Safe to call on a zero-value or partially initialized RouterAddress.
+// IsNTCP2 returns true if the transport style is exactly "NTCP2".
+func (ra *RouterAddress) IsNTCP2() bool {
+	if ra.TransportType == nil {
+		return false
+	}
+	style, err := ra.TransportType.Data()
+	if err != nil {
+		return false
+	}
+	return style == NTCP2_TRANSPORT_STYLE
+}
+
+// IsSSU2 returns true if the transport style is exactly "SSU2".
+func (ra *RouterAddress) IsSSU2() bool {
+	if ra.TransportType == nil {
+		return false
+	}
+	style, err := ra.TransportType.Data()
+	if err != nil {
+		return false
+	}
+	return style == SSU2_TRANSPORT_STYLE
+}
+
+// String implements net.Addr. It returns a compact summary suitable for
+// logging: transport style, host, and port. Cryptographic material (static
+// key, IV, introducer data) is deliberately excluded to prevent accidental
+// exposure in logs or error messages. Use GoString() for debug-level detail.
 func (ra *RouterAddress) String() string {
 	log.Debug("Converting RouterAddress to string")
 	if ra == nil {
@@ -125,16 +151,6 @@ func (ra *RouterAddress) String() string {
 	appendOption(ra.TransportStyle())
 	appendOption(ra.HostString())
 	appendOption(ra.PortString())
-	appendOption(ra.StaticKeyString())
-	appendOption(ra.InitializationVectorString())
-	appendOption(ra.ProtocolVersionString())
-	if ra.UDP() {
-		for i := 0; i <= MAX_INTRODUCER_NUMBER; i++ {
-			appendOption(ra.IntroducerHashString(i))
-			appendOption(ra.IntroducerExpirationString(i))
-			appendOption(ra.IntroducerTagString(i))
-		}
-	}
 	str := strings.TrimSpace(strings.Join(rv, " "))
 	log.WithField("router_address_string", str).Debug("Converted RouterAddress to string")
 	return str
@@ -182,6 +198,23 @@ func (ra RouterAddress) Serialize() ([]byte, error) {
 	buf = append(buf, ra.TransportOptions.Data()...)
 	log.WithField("bytes_length", len(buf)).Debug("Serialized RouterAddress")
 	return buf, nil
+}
+
+// MarshalBinary implements encoding.BinaryMarshaler.
+// It delegates to Serialize().
+func (ra RouterAddress) MarshalBinary() ([]byte, error) {
+	return ra.Serialize()
+}
+
+// UnmarshalBinary implements encoding.BinaryUnmarshaler.
+// It delegates to ReadRouterAddress, discarding any remainder bytes.
+func (ra *RouterAddress) UnmarshalBinary(data []byte) error {
+	parsed, _, err := ReadRouterAddress(data)
+	if err != nil {
+		return err
+	}
+	*ra = parsed
+	return nil
 }
 
 // Cost returns the cost for this RouterAddress as a Go integer.
@@ -525,18 +558,6 @@ func (ra RouterAddress) Options() data.Mapping {
 	return *ra.TransportOptions
 }
 
-// checkValid checks if the RouterAddress has the minimum required fields set.
-// Returns a non-nil error if the address is missing critical fields.
-func (ra RouterAddress) checkValid() error {
-	if ra.TransportType == nil {
-		return oops.Errorf("invalid router address: nil transport type")
-	}
-	if ra.TransportOptions == nil {
-		return oops.Errorf("invalid router address: nil transport options")
-	}
-	return nil
-}
-
 // Equals compares two RouterAddress instances for equality.
 // Two addresses are equal if they have the same cost, expiration, transport style, and options.
 // Returns false if either address cannot be serialized (nil fields).
@@ -548,15 +569,6 @@ func (ra RouterAddress) Equals(other RouterAddress) bool {
 		return false
 	}
 	return bytes.Equal(aBytes, bBytes)
-}
-
-// compareBytesContent checks whether two byte slices are identical, treating two
-// nil slices as equal.
-func compareBytesContent(a, b []byte) bool {
-	if a == nil || b == nil {
-		return a == nil && b == nil
-	}
-	return bytes.Equal(a, b)
 }
 
 // decodeOptionValue attempts to decode a string option value as I2P base64.
@@ -645,6 +657,9 @@ func appendOptionalField(sb *strings.Builder, opt data.I2PString, label string) 
 // SetOption sets or replaces a transport option in the RouterAddress.
 // Both key and value are provided as Go strings and converted to I2PStrings.
 // If TransportOptions is nil, a new Mapping is created.
+//
+// For setting multiple options at once, prefer SetOptions to avoid
+// rebuilding the mapping on every call.
 func (ra *RouterAddress) SetOption(key, value string) error {
 	if ra == nil {
 		return oops.Errorf("cannot set option on nil RouterAddress")
@@ -656,6 +671,46 @@ func (ra *RouterAddress) SetOption(key, value string) error {
 	newMapping, err := data.GoMapToMapping(opts)
 	if err != nil {
 		return oops.Wrapf(err, "failed to create mapping with option %q=%q", key, value)
+	}
+	ra.TransportOptions = newMapping
+	return nil
+}
+
+// SetOptions sets or replaces multiple transport options in a single call.
+// This is more efficient than calling SetOption in a loop because the
+// mapping is rebuilt only once.
+func (ra *RouterAddress) SetOptions(opts map[string]string) error {
+	if ra == nil {
+		return oops.Errorf("cannot set options on nil RouterAddress")
+	}
+
+	existing := extractOptionsMap(ra)
+	for k, v := range opts {
+		existing[k] = v
+	}
+
+	newMapping, err := data.GoMapToMapping(existing)
+	if err != nil {
+		return oops.Wrapf(err, "failed to create mapping with batch options")
+	}
+	ra.TransportOptions = newMapping
+	return nil
+}
+
+// RemoveOption removes a transport option by key. Returns nil if the key
+// was not present (idempotent). Returns an error only if the mapping
+// rebuild fails.
+func (ra *RouterAddress) RemoveOption(key string) error {
+	if ra == nil {
+		return oops.Errorf("cannot remove option from nil RouterAddress")
+	}
+
+	opts := extractOptionsMap(ra)
+	delete(opts, key)
+
+	newMapping, err := data.GoMapToMapping(opts)
+	if err != nil {
+		return oops.Wrapf(err, "failed to rebuild mapping after removing %q", key)
 	}
 	ra.TransportOptions = newMapping
 	return nil

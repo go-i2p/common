@@ -12,6 +12,14 @@ package router_address
 // This constant is intentionally kept as a fast early-reject gate only.
 const (
 	ROUTER_ADDRESS_MIN_SIZE = 12
+
+	// ROUTER_ADDRESS_TRUE_MIN_SIZE is the minimum byte count for a
+	// successfully-parsed RouterAddress: 1 (cost) + 8 (expiration) +
+	// 1 (transport_style length prefix) + 1 (min transport char) +
+	// 2 (mapping size field) = 13 bytes. Use ROUTER_ADDRESS_MIN_SIZE for
+	// the fast pre-parse rejection gate and this constant when reasoning
+	// about valid parse results.
+	ROUTER_ADDRESS_TRUE_MIN_SIZE = 13
 )
 
 // ============ IP Version Constants ============
@@ -29,6 +37,12 @@ const IPV6_SUFFIX = "6"
 
 // SSU_TRANSPORT_PREFIX is the prefix used to identify SSU (UDP-based) transports
 const SSU_TRANSPORT_PREFIX = "ssu"
+
+// NTCP2_TRANSPORT_STYLE is the exact transport style string for NTCP2.
+const NTCP2_TRANSPORT_STYLE = "NTCP2"
+
+// SSU2_TRANSPORT_STYLE is the exact transport style string for SSU2.
+const SSU2_TRANSPORT_STYLE = "SSU2"
 
 // ============ Router Address Option Keys ============
 
