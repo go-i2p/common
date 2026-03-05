@@ -9,6 +9,9 @@ import (
 	"github.com/go-i2p/common/data"
 )
 
+// Compile-time interface assertions.
+var _ fmt.Stringer = Lease2{}
+
 /*
 [Lease2]
 Accurate for version 0.9.67

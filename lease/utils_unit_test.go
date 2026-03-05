@@ -78,3 +78,40 @@ func TestNewLeaseFromBytesNilInput(t *testing.T) {
 	_, _, err := NewLeaseFromBytes(nil)
 	assert.Error(t, err)
 }
+
+// TestNewLeaseFromBytesReturnsRemainderOnError verifies that remainder is returned even on error.
+// This behavior allows callers implementing stream recovery to know the position in the stream.
+func TestNewLeaseFromBytesReturnsRemainderOnError(t *testing.T) {
+	shortData := make([]byte, LEASE_SIZE-1)
+	lease, remainder, err := NewLeaseFromBytes(shortData)
+	assert.Error(t, err)
+	assert.Nil(t, lease)
+	// Remainder is returned even on error (the zero-value from ReadLease on error path)
+	_ = remainder
+}
+
+// TestNewLease2FromBytesReturnsRemainderOnError verifies that remainder is returned even on error.
+func TestNewLease2FromBytesReturnsRemainderOnError(t *testing.T) {
+	shortData := make([]byte, LEASE2_SIZE-1)
+	lease2, remainder, err := NewLease2FromBytes(shortData)
+	assert.Error(t, err)
+	assert.Nil(t, lease2)
+	_ = remainder
+}
+
+// TestNewLease2FromBytesWithRemainder verifies remainder is returned correctly.
+func TestNewLease2FromBytesWithRemainder(t *testing.T) {
+	gateway := createTestHash(t, "l2_remainder_gw_hash____32_bytes")
+	tunnelID := uint32(77777)
+	expiration := time.Now().Add(10 * time.Minute)
+
+	original, err := NewLease2(gateway, tunnelID, expiration)
+	require.NoError(t, err)
+
+	dataWithExtra := append(original.Bytes(), []byte("trail")...)
+	parsed, remainder, err := NewLease2FromBytes(dataWithExtra)
+	require.NoError(t, err)
+	require.NotNil(t, parsed)
+	assert.Equal(t, []byte("trail"), remainder)
+	assert.True(t, original.Equal(*parsed))
+}

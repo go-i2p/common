@@ -10,6 +10,9 @@ import (
 	"github.com/go-i2p/common/data"
 )
 
+// Compile-time interface assertions.
+var _ fmt.Stringer = Lease{}
+
 /*
 [Lease]
 Accurate for version 0.9.67
@@ -79,9 +82,13 @@ func (lease Lease) Date() (date data.Date) {
 }
 
 // Time returns the expiration time as a Go time.Time value for convenient time operations.
-// Uses unsigned decoding with a math.MaxInt64 cap to match data.Date.Time() behaviour;
-// values above math.MaxInt64 are clamped to time.UnixMilli(math.MaxInt64) rather than
-// wrapping to a pre-epoch time via signed cast.
+// Uses unsigned decoding with a math.MaxInt64 cap: values above math.MaxInt64 are
+// clamped to time.UnixMilli(math.MaxInt64) rather than wrapping to a pre-epoch time
+// via signed cast.
+//
+// Note: For millis > math.MaxInt64 (high bit set), Time() returns the clamped maximum
+// while Date().Time() returns the zero time.Time{}. Both handle the edge case safely,
+// but callers choosing between the two methods should be aware of this divergence.
 func (lease Lease) Time() time.Time {
 	millis := binary.BigEndian.Uint64(lease[LEASE_TUNNEL_GW_SIZE+LEASE_TUNNEL_ID_SIZE:])
 	if millis > uint64(math.MaxInt64) {

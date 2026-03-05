@@ -2,6 +2,7 @@ package lease
 
 import (
 	"encoding/binary"
+	"fmt"
 	"testing"
 	"time"
 
@@ -212,6 +213,12 @@ func BenchmarkLease2Time(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		_ = lease2.Time()
 	}
+}
+
+// TestLease2ImplementsStringer verifies that Lease2 satisfies the fmt.Stringer interface.
+func TestLease2ImplementsStringer(t *testing.T) {
+	var _ fmt.Stringer = Lease2{}
+	var _ fmt.Stringer = (*Lease2)(nil)
 }
 
 // TestLease2String verifies the String() method returns a human-readable representation.
