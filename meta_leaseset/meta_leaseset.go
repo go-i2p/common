@@ -17,6 +17,18 @@ import (
 
 var log = logger.GetGoI2PLogger()
 
+// ApplyCommonFields stores the parsed common header fields into the MetaLeaseSet,
+// satisfying the rootcommon.LeaseSetFieldApplier interface to eliminate
+// duplicated field assignment code shared with LeaseSet2.
+func (mls *MetaLeaseSet) ApplyCommonFields(fields rootcommon.LeaseSetCommonFields) {
+	mls.destination = fields.Destination
+	mls.published = fields.Published
+	mls.expires = fields.Expires
+	mls.flags = fields.Flags
+	mls.offlineSignature = fields.OfflineSignature
+	mls.options = fields.Options
+}
+
 // ReadMetaLeaseSet parses a MetaLeaseSet structure from the provided byte slice.
 // Returns the parsed MetaLeaseSet, remaining bytes, and any error encountered.
 //
@@ -43,18 +55,11 @@ var log = logger.GetGoI2PLogger()
 func ReadMetaLeaseSet(data []byte) (mls MetaLeaseSet, remainder []byte, err error) {
 	log.Debug("Parsing MetaLeaseSet structure")
 
-	// Parse common header fields shared with LeaseSet2
-	var fields rootcommon.LeaseSetCommonFields
-	fields, data, err = rootcommon.ParseLeaseSetCommonPrefix(data, META_LEASESET_MIN_SIZE, "MetaLeaseSet")
+	// Parse and apply common header fields shared with LeaseSet2
+	data, err = rootcommon.ParseAndApplyCommonPrefix(&mls, data, META_LEASESET_MIN_SIZE, "MetaLeaseSet")
 	if err != nil {
 		return
 	}
-	mls.destination = fields.Destination
-	mls.published = fields.Published
-	mls.expires = fields.Expires
-	mls.flags = fields.Flags
-	mls.offlineSignature = fields.OfflineSignature
-	mls.options = fields.Options
 
 	log.WithFields(logger.Fields{
 		"published": mls.published,

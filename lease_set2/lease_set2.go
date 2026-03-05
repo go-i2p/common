@@ -19,6 +19,18 @@ import (
 
 var log = logger.GetGoI2PLogger()
 
+// ApplyCommonFields stores the parsed common header fields into the LeaseSet2,
+// satisfying the rootcommon.LeaseSetFieldApplier interface to eliminate
+// duplicated field assignment code shared with MetaLeaseSet.
+func (ls2 *LeaseSet2) ApplyCommonFields(fields rootcommon.LeaseSetCommonFields) {
+	ls2.destination = fields.Destination
+	ls2.published = fields.Published
+	ls2.expires = fields.Expires
+	ls2.flags = fields.Flags
+	ls2.offlineSignature = fields.OfflineSignature
+	ls2.options = fields.Options
+}
+
 // Destination returns the destination identity associated with this LeaseSet2.
 // The destination contains the signing and encryption public keys for the service.
 func (ls2 *LeaseSet2) Destination() destination.Destination {
@@ -184,18 +196,11 @@ func (ls2 *LeaseSet2) Bytes() ([]byte, error) {
 func ReadLeaseSet2(data []byte) (ls2 LeaseSet2, remainder []byte, err error) {
 	log.Debug("Parsing LeaseSet2 structure")
 
-	// Parse common header fields shared with MetaLeaseSet
-	var fields rootcommon.LeaseSetCommonFields
-	fields, data, err = rootcommon.ParseLeaseSetCommonPrefix(data, LEASESET2_MIN_SIZE, "LeaseSet2")
+	// Parse and apply common header fields shared with MetaLeaseSet
+	data, err = rootcommon.ParseAndApplyCommonPrefix(&ls2, data, LEASESET2_MIN_SIZE, "LeaseSet2")
 	if err != nil {
 		return
 	}
-	ls2.destination = fields.Destination
-	ls2.published = fields.Published
-	ls2.expires = fields.Expires
-	ls2.flags = fields.Flags
-	ls2.offlineSignature = fields.OfflineSignature
-	ls2.options = fields.Options
 
 	// Warn if reserved flag bits (bits 15-3) are set per spec:
 	// "Bits 15-3: Reserved, set to 0 for compatibility with future uses."

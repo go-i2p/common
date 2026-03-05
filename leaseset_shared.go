@@ -37,6 +37,30 @@ type LeaseSetCommonFields struct {
 	Options          data.Mapping
 }
 
+// LeaseSetFieldApplier is implemented by lease set types that can receive
+// parsed common header fields, eliminating duplicated field assignment code
+// between LeaseSet2 and MetaLeaseSet.
+type LeaseSetFieldApplier interface {
+	ApplyCommonFields(fields LeaseSetCommonFields)
+}
+
+// ParseAndApplyCommonPrefix parses the common wire-format prefix shared by
+// LeaseSet2 and MetaLeaseSet and applies the resulting fields to the target
+// structure via the LeaseSetFieldApplier interface. This consolidates the
+// duplicated parse-then-assign pattern from both ReadLeaseSet2 and
+// ReadMetaLeaseSet into a single call.
+func ParseAndApplyCommonPrefix(
+	target LeaseSetFieldApplier, inputData []byte, minSize int, structName string,
+) (remainder []byte, err error) {
+	var fields LeaseSetCommonFields
+	fields, remainder, err = ParseLeaseSetCommonPrefix(inputData, minSize, structName)
+	if err != nil {
+		return
+	}
+	target.ApplyCommonFields(fields)
+	return
+}
+
 var lsLog = logger.GetGoI2PLogger()
 
 // ParseLeaseSetCommonPrefix parses the common wire-format prefix shared by
