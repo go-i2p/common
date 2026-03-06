@@ -1,9 +1,10 @@
 package destination
 
 import (
-	"github.com/go-i2p/crypto/rand"
 	"encoding/binary"
 	"testing"
+
+	"github.com/go-i2p/crypto/rand"
 
 	"github.com/go-i2p/common/key_certificate"
 	"github.com/go-i2p/common/keys_and_cert"
@@ -109,7 +110,7 @@ func createEd25519X25519DestinationBytes(t *testing.T) []byte {
 
 // createDestinationBytesWithExcessSigningKey creates destination bytes
 // where the signing public key exceeds the 128-byte default space.
-func createDestinationBytesWithExcessSigningKey(t *testing.T, sigType int, excessBytes int) []byte {
+func createDestinationBytesWithExcessSigningKey(t *testing.T, sigType, excessBytes int) []byte {
 	t.Helper()
 
 	keysData := make([]byte, 384)

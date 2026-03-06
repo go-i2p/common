@@ -85,7 +85,7 @@ func NewKeyCertificate(bytes []byte) (key_certificate *KeyCertificate, remainder
 
 	key_certificate = buildKeyCertificate(cert, spkType, cpkType)
 
-	return
+	return key_certificate, remainder, err
 }
 
 // parseBaseCertificate reads and validates the base certificate structure.
@@ -275,7 +275,7 @@ func (keyCertificate KeyCertificate) ConstructPublicKey(data []byte) (public_key
 		"input_length": len(data),
 	}).Debug("Constructing publicKey from keyCertificate")
 	if err = validatePublicKeyDataLength(data); err != nil {
-		return
+		return public_key, err
 	}
 	key_type := keyCertificate.PublicKeyType()
 	return constructPublicKeyByType(key_type, data)
@@ -609,15 +609,15 @@ func (keyCertificate KeyCertificate) ConstructSigningPublicKey(data []byte) (sig
 	logSigningKeyDebug(signing_key_type, len(data))
 
 	if err = validateSigningKeyData(len(data), keyCertificate.SigningPublicKeySize()); err != nil {
-		return
+		return signing_public_key, err
 	}
 
 	signing_public_key, err = selectSigningKeyConstructor(signing_key_type, data)
-	return
+	return signing_public_key, err
 }
 
 // logSigningKeyDebug logs debug information about the signing key construction.
-func logSigningKeyDebug(signing_key_type int, data_len int) {
+func logSigningKeyDebug(signing_key_type, data_len int) {
 	log.WithFields(logger.Fields{
 		"signing_key_type": signing_key_type,
 		"data_len":         data_len,

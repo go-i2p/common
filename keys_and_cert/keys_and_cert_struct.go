@@ -722,7 +722,7 @@ func computeKeyLayoutSizes(pubKeySize, sigKeySize int) (totalKeySize, paddingSiz
 	totalKeySize = KEYS_AND_CERT_DATA_SIZE
 	paddingSize = totalKeySize - pubKeySize - sigKeySize
 	minDataLength = totalKeySize + certificate.CERT_MIN_SIZE
-	return
+	return totalKeySize, paddingSize, minDataLength
 }
 
 // getElgEd25519KeySizes returns the key sizes for ElGamal and Ed25519 keys.
@@ -730,14 +730,14 @@ func getElgEd25519KeySizes() (pubKeySize, sigKeySize, totalKeySize, paddingSize,
 	pubKeySize = 256
 	sigKeySize = 32
 	totalKeySize, paddingSize, minDataLength = computeKeyLayoutSizes(pubKeySize, sigKeySize)
-	return
+	return pubKeySize, sigKeySize, totalKeySize, paddingSize, minDataLength
 }
 
 // extractElgEd25519Keys extracts the ElGamal public key, padding, and Ed25519 signing key from data.
 func extractElgEd25519Keys(data []byte, pubKeySize, paddingSize, sigKeySize int) (pubKey types.ReceivingPublicKey, padding []byte, sigKey types.SigningPublicKey, err error) {
 	pubKey, err = extractElGamalPublicKey(data, pubKeySize)
 	if err != nil {
-		return
+		return pubKey, padding, sigKey, err
 	}
 
 	paddingStart := pubKeySize
@@ -745,7 +745,7 @@ func extractElgEd25519Keys(data []byte, pubKeySize, paddingSize, sigKeySize int)
 	padding = extractPaddingData(data, paddingStart, paddingEnd)
 
 	sigKey, err = extractEd25519SigningKey(data, paddingEnd, sigKeySize)
-	return
+	return pubKey, padding, sigKey, err
 }
 
 // logElgEd25519Success logs successful parsing of ElGamal/Ed25519 KeysAndCert.
@@ -765,18 +765,18 @@ func ReadKeysAndCertElgAndEd25519(data []byte) (keysAndCert *KeysAndCert, remain
 	pubKeySize, sigKeySize, totalKeySize, paddingSize, minDataLength := getElgEd25519KeySizes()
 
 	if err = validateMinimumDataLength(len(data), minDataLength); err != nil {
-		return
+		return keysAndCert, remainder, err
 	}
 
 	keysAndCert = &KeysAndCert{}
 	keysAndCert.ReceivingPublic, keysAndCert.Padding, keysAndCert.SigningPublic, err = extractElgEd25519Keys(data, pubKeySize, paddingSize, sigKeySize)
 	if err != nil {
-		return
+		return keysAndCert, remainder, err
 	}
 
 	keysAndCert.KeyCertificate, remainder, err = extractKeyCertificate(data, totalKeySize)
 	if err != nil {
-		return
+		return keysAndCert, remainder, err
 	}
 
 	if err = validateSpecializedReaderCertTypes(
@@ -785,11 +785,11 @@ func ReadKeysAndCertElgAndEd25519(data []byte) (keysAndCert *KeysAndCert, remain
 		key_certificate.KEYCERT_SIGN_ED25519,
 		"ReadKeysAndCertElgAndEd25519",
 	); err != nil {
-		return
+		return keysAndCert, remainder, err
 	}
 
 	logElgEd25519Success(len(keysAndCert.Padding), len(remainder))
-	return
+	return keysAndCert, remainder, err
 }
 
 // readKeysAndCertNonKeyCert handles parsing of KeysAndCert with non-KEY certificate types.
@@ -858,7 +858,7 @@ func getX25519Ed25519KeySizes() (pubKeySize, sigKeySize, totalKeySize, paddingSi
 	pubKeySize = 32
 	sigKeySize = 32
 	totalKeySize, paddingSize, minDataLength = computeKeyLayoutSizes(pubKeySize, sigKeySize)
-	return
+	return pubKeySize, sigKeySize, totalKeySize, paddingSize, minDataLength
 }
 
 // ReadKeysAndCertX25519AndEd25519 reads KeysAndCert with fixed X25519 and Ed25519 key sizes.
@@ -871,17 +871,17 @@ func ReadKeysAndCertX25519AndEd25519(data []byte) (keysAndCert *KeysAndCert, rem
 	pubKeySize, sigKeySize, totalKeySize, _, minDataLength := getX25519Ed25519KeySizes()
 
 	if err = validateMinimumDataLength(len(data), minDataLength); err != nil {
-		return
+		return keysAndCert, remainder, err
 	}
 
 	keysAndCert, err = extractX25519Ed25519Keys(data, pubKeySize, sigKeySize, totalKeySize)
 	if err != nil {
-		return
+		return keysAndCert, remainder, err
 	}
 
 	keysAndCert.KeyCertificate, remainder, err = extractKeyCertificate(data, totalKeySize)
 	if err != nil {
-		return
+		return keysAndCert, remainder, err
 	}
 
 	if err = validateSpecializedReaderCertTypes(
@@ -890,11 +890,11 @@ func ReadKeysAndCertX25519AndEd25519(data []byte) (keysAndCert *KeysAndCert, rem
 		key_certificate.KEYCERT_SIGN_ED25519,
 		"ReadKeysAndCertX25519AndEd25519",
 	); err != nil {
-		return
+		return keysAndCert, remainder, err
 	}
 
 	logX25519Ed25519Success(keysAndCert, remainder)
-	return
+	return keysAndCert, remainder, err
 }
 
 // extractX25519Ed25519Keys extracts the public key, padding, and signing key from data.
@@ -902,12 +902,12 @@ func extractX25519Ed25519Keys(data []byte, pubKeySize, sigKeySize, totalKeySize 
 	keysAndCert = &KeysAndCert{}
 	keysAndCert.ReceivingPublic, err = extractX25519PublicKey(data)
 	if err != nil {
-		return
+		return keysAndCert, err
 	}
 	keysAndCert.Padding = extractPaddingFromData(data, pubKeySize, sigKeySize)
 	sigKeyOffset := totalKeySize - sigKeySize
 	keysAndCert.SigningPublic, err = extractEd25519SigningKey(data, sigKeyOffset, sigKeySize)
-	return
+	return keysAndCert, err
 }
 
 // logX25519Ed25519Success logs successful reading of X25519+Ed25519 KeysAndCert.

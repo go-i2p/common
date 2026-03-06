@@ -63,7 +63,7 @@ func (str I2PString) Length() (length int, err error) {
 			"reason": "no data",
 		}).Error("error parsing string")
 		err = ErrZeroLength
-		return
+		return length, err
 	}
 	l, _ := ReadInteger(str[:], 1)
 	if l == nil {
@@ -93,7 +93,7 @@ func (str I2PString) Length() (length int, err error) {
 		err = ErrDataTooLong
 	}
 
-	return
+	return length, err
 }
 
 // Data returns the I2PString content as a string trimmed to the specified length and not including the length byte.
@@ -208,12 +208,12 @@ func ToI2PString(data string) (str I2PString, err error) {
 			"reason":     "too much data",
 		}).Error("cannot create I2P string")
 		err = oops.Errorf("cannot store that much data in I2P string")
-		return
+		return str, err
 	}
 	i2p_string := []byte{byte(data_len)}
 	i2p_string = append(i2p_string, []byte(data)...)
 	str = I2PString(i2p_string)
-	return
+	return str, err
 }
 
 // ReadI2PString returns I2PString from a []byte.
@@ -221,7 +221,7 @@ func ToI2PString(data string) (str I2PString, err error) {
 // Returns a list of errors that occurred during parsing.
 func ReadI2PString(data []byte) (str I2PString, remainder []byte, err error) {
 	if err = validateI2PStringData(data); err != nil {
-		return
+		return str, remainder, err
 	}
 
 	log.WithFields(logger.Fields{
@@ -230,21 +230,21 @@ func ReadI2PString(data []byte) (str I2PString, remainder []byte, err error) {
 
 	length, err := parseI2PStringLength(data)
 	if err != nil {
-		return
+		return str, remainder, err
 	}
 
 	if err = validateI2PStringDataLength(data, length); err != nil {
 		str = data
 		remainder = nil
-		return
+		return str, remainder, err
 	}
 
 	str, remainder = extractI2PStringData(data, length)
 
 	if err = verifyI2PStringLength(str, length); err != nil {
-		return
+		return str, remainder, err
 	}
-	return
+	return str, remainder, err
 }
 
 // validateI2PStringData validates that data is not empty.

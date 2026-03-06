@@ -141,7 +141,7 @@ func TestBytesOptionsConsistency(t *testing.T) {
 // 10K real router info file processing
 //
 
-func consolidateNetDb(sourcePath string, destPath string) error {
+func consolidateNetDb(sourcePath, destPath string) error {
 	if err := os.MkdirAll(destPath, 0o755); err != nil {
 		return oops.Errorf("failed to create destination directory: %v", err)
 	}

@@ -173,7 +173,7 @@ func validateSigTypeAndKeySize(sigType uint16, blindedPublicKey []byte) error {
 
 // validateConstructorFlags validates the expires offset, reserved flags, and offline
 // signature consistency for the EncryptedLeaseSet constructor.
-func validateConstructorFlags(expiresOffset uint16, flags uint16, offlineSig *offline_signature.OfflineSignature) error {
+func validateConstructorFlags(expiresOffset, flags uint16, offlineSig *offline_signature.OfflineSignature) error {
 	if expiresOffset == 0 {
 		return oops.Code("zero_expires").
 			Errorf("expires offset cannot be zero")

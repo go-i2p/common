@@ -60,7 +60,7 @@ type Lease [LEASE_SIZE]byte
 // The returned hash can be used to identify and route messages to the appropriate tunnel gateway.
 func (lease Lease) TunnelGateway() (hash data.Hash) {
 	copy(hash[:], lease[:LEASE_TUNNEL_GW_SIZE])
-	return
+	return hash
 }
 
 // TunnelID returns the tunnel identifier as a 32-bit unsigned integer.
@@ -78,7 +78,7 @@ func (lease Lease) TunnelID() uint32 {
 // and can no longer be used for tunnel message delivery within the I2P network.
 func (lease Lease) Date() (date data.Date) {
 	copy(date[:], lease[LEASE_TUNNEL_GW_SIZE+LEASE_TUNNEL_ID_SIZE:])
-	return
+	return date
 }
 
 // Time returns the expiration time as a Go time.Time value for convenient time operations.

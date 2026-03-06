@@ -683,31 +683,31 @@ func ReadRouterInfo(bytes []byte) (info RouterInfo, remainder []byte, err error)
 	log.WithField("input_length", len(bytes)).Debug("Reading RouterInfo from bytes")
 
 	if err = validateRouterInfoMinSize(bytes); err != nil {
-		return
+		return info, remainder, err
 	}
 
 	info, remainder, err = parseRouterInfoCore(bytes)
 	if err != nil {
-		return
+		return info, remainder, err
 	}
 
 	info.addresses, remainder, err = parseRouterAddresses(info.size, remainder)
 	if err != nil {
-		return
+		return info, remainder, err
 	}
 
 	info.peer_size, info.options, remainder, err = parsePeerSizeAndOptions(remainder)
 	if err != nil {
-		return
+		return info, remainder, err
 	}
 
 	info.signature, remainder, err = parseRouterInfoSignature(info.router_identity, remainder)
 	if err != nil {
-		return
+		return info, remainder, err
 	}
 
 	logReadRouterInfoSuccess(info, remainder)
-	return
+	return info, remainder, err
 }
 
 // validateRouterInfoMinSize checks that data meets minimum size requirements for RouterInfo.
@@ -744,7 +744,7 @@ func parseRouterInfoCore(bytes []byte) (info RouterInfo, remainder []byte, err e
 			"required_len": ROUTER_INFO_MIN_SIZE,
 			"reason":       "not enough data",
 		}).Error("error parsing router info")
-		return
+		return info, remainder, err
 	}
 
 	info.published, remainder, err = data.NewDate(remainder)
@@ -755,7 +755,7 @@ func parseRouterInfoCore(bytes []byte) (info RouterInfo, remainder []byte, err e
 			"required_len": data.DATE_SIZE,
 			"reason":       "not enough data",
 		}).Error("error parsing router info")
-		return
+		return info, remainder, err
 	}
 
 	info.size, remainder, err = data.NewInteger(remainder, 1)
@@ -766,10 +766,10 @@ func parseRouterInfoCore(bytes []byte) (info RouterInfo, remainder []byte, err e
 			"required_len": 1,
 			"reason":       "read error",
 		}).Error("error parsing router info size")
-		return
+		return info, remainder, err
 	}
 
-	return
+	return info, remainder, err
 }
 
 // parseRouterAddresses reads the specified number of RouterAddress structures from bytes.

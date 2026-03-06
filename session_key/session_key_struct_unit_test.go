@@ -2,12 +2,13 @@ package session_key
 
 import (
 	"bytes"
-	"github.com/go-i2p/crypto/rand"
 	"encoding"
 	"encoding/base64"
 	"encoding/hex"
 	"sync"
 	"testing"
+
+	"github.com/go-i2p/crypto/rand"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

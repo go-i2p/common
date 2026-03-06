@@ -18,7 +18,7 @@ import (
 // buildRouterInfoPayload constructs a minimal synthetic RouterInfo-like byte
 // stream: [header bytes][signature bytes][trailing bytes].  This mirrors the
 // on-wire layout where a RouterInfo ends with a Signature field.
-func buildRouterInfoPayload(headerLen, sigType int) (payload []byte, sigData []byte) {
+func buildRouterInfoPayload(headerLen, sigType int) (payload, sigData []byte) {
 	sigLen, err := getSignatureLength(sigType)
 	if err != nil {
 		panic(err)

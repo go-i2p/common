@@ -1,8 +1,9 @@
 package router_identity
 
 import (
-	"github.com/go-i2p/crypto/rand"
 	"testing"
+
+	"github.com/go-i2p/crypto/rand"
 
 	"github.com/go-i2p/common/certificate"
 	"github.com/go-i2p/common/key_certificate"

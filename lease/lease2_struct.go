@@ -66,7 +66,7 @@ type Lease2 [LEASE2_SIZE]byte
 // The returned hash can be used to identify and route messages to the appropriate tunnel gateway.
 func (lease2 Lease2) TunnelGateway() (hash data.Hash) {
 	copy(hash[:], lease2[:LEASE_TUNNEL_GW_SIZE])
-	return
+	return hash
 }
 
 // TunnelID returns the tunnel identifier as a 32-bit unsigned integer.
@@ -100,7 +100,7 @@ func (lease2 Lease2) Time() time.Time {
 func (lease2 Lease2) Date() (date data.Date) {
 	millis := uint64(lease2.EndDate()) * 1000
 	binary.BigEndian.PutUint64(date[:], millis)
-	return
+	return date
 }
 
 // IsExpired returns true if the lease2's expiration time is before the current time.

@@ -1,12 +1,13 @@
 package session_key
 
 import (
-	"github.com/go-i2p/crypto/rand"
 	"crypto/subtle"
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
 	"io"
+
+	"github.com/go-i2p/crypto/rand"
 
 	"github.com/go-i2p/logger"
 	"github.com/samber/oops"
@@ -83,7 +84,7 @@ func NewSessionKey(data []byte) (sessionKey *SessionKey, remainder []byte, err e
 	}
 	sessionKey = &sk
 	log.Debug("Successfully created new SessionKey")
-	return
+	return sessionKey, remainder, err
 }
 
 // NewSessionKeyFromArray creates a SessionKey from a fixed-size byte array.
@@ -103,7 +104,7 @@ func ReadSessionKey(bytes []byte) (sessionKey SessionKey, remainder []byte, err 
 			"required":    SESSION_KEY_SIZE,
 		}).Error("data too short for SessionKey")
 		err = oops.Errorf("ReadSessionKey: data too short, need %d bytes, got %d", SESSION_KEY_SIZE, len(bytes))
-		return
+		return sessionKey, remainder, err
 	}
 
 	copy(sessionKey[:], bytes[:SESSION_KEY_SIZE])
@@ -113,7 +114,7 @@ func ReadSessionKey(bytes []byte) (sessionKey SessionKey, remainder []byte, err 
 		"remainder_length": len(remainder),
 	}).Debug("Successfully read SessionKey from data")
 
-	return
+	return sessionKey, remainder, err
 }
 
 // GenerateSessionKey creates a new SessionKey filled with cryptographically

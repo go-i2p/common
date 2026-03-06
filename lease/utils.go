@@ -19,7 +19,7 @@ func ReadLease(data []byte) (lease Lease, remainder []byte, err error) {
 			"data_length":     len(data),
 			"required_length": LEASE_SIZE,
 		}).Error("Failed to read lease: insufficient data")
-		return
+		return lease, remainder, err
 	}
 
 	// Copy exactly LEASE_SIZE bytes to create the lease structure
@@ -32,7 +32,7 @@ func ReadLease(data []byte) (lease Lease, remainder []byte, err error) {
 		"remainder_length": len(remainder),
 	}).Debug("Successfully read Lease")
 
-	return
+	return lease, remainder, err
 }
 
 // NewLeaseFromBytes creates a new Lease pointer from raw byte data using ReadLease.
@@ -63,7 +63,7 @@ func NewLeaseFromBytes(data []byte) (lease *Lease, remainder []byte, err error) 
 		"remainder_length": len(remainder),
 	}).Debug("Successfully created Lease from bytes")
 
-	return
+	return lease, remainder, err
 }
 
 // ReadLease2 parses a Lease2 structure from raw byte data according to I2P specification 0.9.67.
@@ -83,7 +83,7 @@ func ReadLease2(data []byte) (lease2 Lease2, remainder []byte, err error) {
 			"data_length":     len(data),
 			"required_length": LEASE2_SIZE,
 		}).Error("Failed to read Lease2: insufficient data")
-		return
+		return lease2, remainder, err
 	}
 
 	// Copy exactly LEASE2_SIZE bytes to create the lease2 structure
@@ -98,7 +98,7 @@ func ReadLease2(data []byte) (lease2 Lease2, remainder []byte, err error) {
 		"remainder_length": len(remainder),
 	}).Debug("Successfully read Lease2")
 
-	return
+	return lease2, remainder, err
 }
 
 // NewLease2FromBytes creates a new Lease2 pointer from raw byte data using ReadLease2.
@@ -135,5 +135,5 @@ func NewLease2FromBytes(data []byte) (lease2 *Lease2, remainder []byte, err erro
 		"remainder_length": len(remainder),
 	}).Debug("Successfully created Lease2 from bytes")
 
-	return
+	return lease2, remainder, err
 }

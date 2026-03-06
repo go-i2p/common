@@ -252,8 +252,10 @@ func TestBuildFlags(t *testing.T) {
 		{"secret only", true, false, false, FlagSecretRequired},
 		{"per-client only", false, true, false, FlagPerClientAuth},
 		{"two-byte only", false, false, true, FlagTwoByteSigTypes},
-		{"all flags", true, true, true,
-			FlagTwoByteSigTypes | FlagSecretRequired | FlagPerClientAuth},
+		{
+			"all flags", true, true, true,
+			FlagTwoByteSigTypes | FlagSecretRequired | FlagPerClientAuth,
+		},
 	}
 
 	for _, tt := range tests {

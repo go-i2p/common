@@ -451,19 +451,19 @@ func (lease_set LeaseSet) Destination() destination.Destination {
 func (lease_set LeaseSet) PublicKey() (public_key elgamal.ElgPublicKey, err error) {
 	if lease_set.encryptionKey == nil {
 		err = oops.Errorf("encryption key is nil")
-		return
+		return public_key, err
 	}
 
 	// Convert to ElgPublicKey
 	encKeyBytes := lease_set.encryptionKey.Bytes()
 	if len(encKeyBytes) != LEASE_SET_PUBKEY_SIZE {
 		err = oops.Errorf("invalid encryption key size: got %d, expected %d", len(encKeyBytes), LEASE_SET_PUBKEY_SIZE)
-		return
+		return public_key, err
 	}
 
 	copy(public_key[:], encKeyBytes)
 	log.Debug("Successfully retrieved publicKey from LeaseSet")
-	return
+	return public_key, err
 }
 
 // SigningKey returns the signing public key as crypto.SigningPublicKey.
@@ -472,7 +472,7 @@ func (lease_set LeaseSet) SigningKey() (signing_public_key types.SigningPublicKe
 	log.Debug("Retrieving SigningKey from LeaseSet")
 	signing_public_key = lease_set.signingKey
 	log.Debug("Retrieved signingPublicKey from struct")
-	return
+	return signing_public_key, err
 }
 
 // LeaseCount returns the number of leases specified by the LeaseCount value as int.

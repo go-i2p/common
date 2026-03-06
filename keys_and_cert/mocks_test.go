@@ -280,7 +280,7 @@ func createWrongSizeSigningKey() types.SigningPublicKey {
 //   - block[256:384] – first 128 bytes of P521 signing key
 //   - cert header:     CERT_KEY(0x05) | len_hi(0x00) | len_lo(0x08)
 //   - cert payload:    SpkType(0x00,0x03) | CpkType(0x00,0x00) | excess[0:4]
-func buildP521WireData(t *testing.T) (wireData []byte, fullSigningKey []byte) {
+func buildP521WireData(t *testing.T) (wireData, fullSigningKey []byte) {
 	t.Helper()
 
 	block := make([]byte, KEYS_AND_CERT_DATA_SIZE) // 384 bytes
@@ -315,7 +315,7 @@ func buildP521WireData(t *testing.T) (wireData []byte, fullSigningKey []byte) {
 	wireData = append(block, certBytes...)
 	// Per I2P spec, full signing key = excess || inline (cert payload bytes first)
 	fullSigningKey = append(excessBytes, inlineBytes...)
-	return
+	return wireData, fullSigningKey
 }
 
 // buildRSAWireData builds valid wire data for an RSA signing key type + ElGamal.
@@ -323,7 +323,7 @@ func buildP521WireData(t *testing.T) (wireData []byte, fullSigningKey []byte) {
 // excessSize: the number of excess signing key bytes stored in the cert payload
 // (RSA-2048=128, RSA-3072=256, RSA-4096=384).
 // Returns the wire bytes and the full signing key (excess || inline) for assertion.
-func buildRSAWireData(t *testing.T, sigType int, excessSize int) (wireData []byte, fullSigningKey []byte) {
+func buildRSAWireData(t *testing.T, sigType, excessSize int) (wireData, fullSigningKey []byte) {
 	t.Helper()
 
 	block := make([]byte, KEYS_AND_CERT_DATA_SIZE)
@@ -352,23 +352,23 @@ func buildRSAWireData(t *testing.T, sigType int, excessSize int) (wireData []byt
 	wireData = append(block, certBytes...)
 	// Per I2P spec, full signing key = excess || inline
 	fullSigningKey = append(excessBytes, inlineBytes...)
-	return
+	return wireData, fullSigningKey
 }
 
 // buildRSA2048WireData builds valid wire data for RSA-2048 (sigKeySize=256) + ElGamal.
-func buildRSA2048WireData(t *testing.T) (wireData []byte, fullSigningKey []byte) {
+func buildRSA2048WireData(t *testing.T) (wireData, fullSigningKey []byte) {
 	t.Helper()
 	return buildRSAWireData(t, key_certificate.KEYCERT_SIGN_RSA2048, 128)
 }
 
 // buildRSA3072WireData builds valid wire data for RSA-3072 (sigKeySize=384) + ElGamal.
-func buildRSA3072WireData(t *testing.T) (wireData []byte, fullSigningKey []byte) {
+func buildRSA3072WireData(t *testing.T) (wireData, fullSigningKey []byte) {
 	t.Helper()
 	return buildRSAWireData(t, key_certificate.KEYCERT_SIGN_RSA3072, 256)
 }
 
 // buildRSA4096WireData builds valid wire data for RSA-4096 (sigKeySize=512) + ElGamal.
-func buildRSA4096WireData(t *testing.T) (wireData []byte, fullSigningKey []byte) {
+func buildRSA4096WireData(t *testing.T) (wireData, fullSigningKey []byte) {
 	t.Helper()
 	return buildRSAWireData(t, key_certificate.KEYCERT_SIGN_RSA4096, 384)
 }

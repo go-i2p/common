@@ -19,44 +19,44 @@ func ReadRouterAddress(routerAddressData []byte) (ra RouterAddress, remainder []
 	log.WithField("data_length", len(routerAddressData)).Debug("Reading RouterAddress from data")
 
 	if err = validateRouterAddressData(routerAddressData); err != nil {
-		return
+		return ra, remainder, err
 	}
 
 	remainder, err = parseTransportCost(&ra, routerAddressData)
 	if err != nil {
-		return
+		return ra, remainder, err
 	}
 
 	var expirationWarning error
 	remainder, expirationWarning, err = handleExpirationWarning(&ra, remainder)
 	if err != nil {
-		return
+		return ra, remainder, err
 	}
 
 	remainder, err = parseTransportType(&ra, remainder)
 	if err != nil {
-		return
+		return ra, remainder, err
 	}
 
 	remainder, err = parseTransportOptions(&ra, remainder)
 	if err == nil {
 		err = expirationWarning
 	}
-	return
+	return ra, remainder, err
 }
 
 // handleExpirationWarning processes the expiration date parsing result, separating
 // fatal errors from the non-fatal ErrNonZeroExpiration warning per I2P spec.
-func handleExpirationWarning(ra *RouterAddress, data []byte) (remainder []byte, warning error, err error) {
+func handleExpirationWarning(ra *RouterAddress, data []byte) (remainder []byte, warning, err error) {
 	remainder, err = parseExpirationDate(ra, data)
 	if err != nil {
 		if !errors.Is(err, ErrNonZeroExpiration) {
-			return // fatal parse error
+			return remainder, warning, err // fatal parse error
 		}
 		warning = err
 		err = nil
 	}
-	return
+	return remainder, warning, err
 }
 
 // validateRouterAddressData validates that data meets the minimum size requirement.

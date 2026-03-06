@@ -94,7 +94,7 @@ func ReadECIESSessionTag(data []byte) (info ECIESSessionTag, remainder []byte, e
 			"data too short: need %d bytes, got %d",
 			ECIESSessionTagSize, len(data),
 		)
-		return
+		return info, remainder, err
 	}
 
 	copy(info.value[:], data[:ECIESSessionTagSize])
@@ -104,7 +104,7 @@ func ReadECIESSessionTag(data []byte) (info ECIESSessionTag, remainder []byte, e
 		"remainder_length": len(remainder),
 	}).Debug("Successfully read ECIESSessionTag from data")
 
-	return
+	return info, remainder, err
 }
 
 // NewECIESSessionTag creates a new ECIESSessionTag from a byte slice.

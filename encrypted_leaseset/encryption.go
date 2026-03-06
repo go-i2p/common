@@ -1,10 +1,11 @@
 package encrypted_leaseset
 
 import (
-	"github.com/go-i2p/crypto/rand"
 	"crypto/sha256"
 	"encoding/binary"
 	"io"
+
+	"github.com/go-i2p/crypto/rand"
 
 	"github.com/go-i2p/common/lease_set2"
 	"github.com/go-i2p/logger"

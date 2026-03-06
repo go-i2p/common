@@ -19,7 +19,7 @@ func ReadSessionTag(bytes []byte) (info SessionTag, remainder []byte, err error)
 			"required":    SessionTagSize,
 		}).Error("data too short for SessionTag")
 		err = oops.Errorf("ReadSessionTag: data too short, need %d bytes, got %d", SessionTagSize, len(bytes))
-		return
+		return info, remainder, err
 	}
 
 	copy(info.value[:], bytes[:SessionTagSize])
@@ -29,7 +29,7 @@ func ReadSessionTag(bytes []byte) (info SessionTag, remainder []byte, err error)
 		"remainder_length": len(remainder),
 	}).Debug("Successfully read SessionTag from data")
 
-	return
+	return info, remainder, err
 }
 
 // NewSessionTag creates a new *SessionTag from []byte using ReadSessionTag.
@@ -45,5 +45,5 @@ func NewSessionTag(data []byte) (sessionTag *SessionTag, remainder []byte, err e
 	log.WithFields(logger.Fields{
 		"remainder_length": len(remainder),
 	}).Debug("Successfully created new SessionTag")
-	return
+	return sessionTag, remainder, err
 }

@@ -125,7 +125,7 @@ func createTestEncryptionContext(t *testing.T) (ls2 *lease_set2.LeaseSet2, encry
 	var err error
 	encryptedData, err = EncryptInnerLeaseSet2(ls2, subcredential, published)
 	require.NoError(t, err)
-	return
+	return ls2, encryptedData, subcredential, published
 }
 
 // createSpecCompliantELS builds a minimal spec-compliant EncryptedLeaseSet wire blob.

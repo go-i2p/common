@@ -143,7 +143,7 @@ func createTestDestination(t *testing.T, sigType uint16) []byte {
 
 // createTestEntry creates a test MetaLeaseSetEntry in spec wire format (40 bytes).
 // Per spec: hash(32) + flags(3) + cost(1) + end_date(4) = 40 bytes.
-func createTestEntry(leaseType uint8, cost uint8) []byte {
+func createTestEntry(leaseType, cost uint8) []byte {
 	data := make([]byte, 0, META_LEASESET_ENTRY_SIZE)
 
 	// Hash (32 bytes)
@@ -167,7 +167,7 @@ func createTestEntry(leaseType uint8, cost uint8) []byte {
 }
 
 // createTestEntryStruct creates a MetaLeaseSetEntry struct for tests
-func createTestEntryStruct(leaseType uint8, cost uint8) MetaLeaseSetEntry {
+func createTestEntryStruct(leaseType, cost uint8) MetaLeaseSetEntry {
 	hash := sha256.Sum256([]byte(fmt.Sprintf("test entry %d", cost)))
 	endDate := uint32(time.Now().Unix() + 3600)
 
@@ -190,7 +190,7 @@ func createTestDestinationStruct(t *testing.T) destination.Destination {
 
 // buildMetaLeaseSetHeaderData builds the common MetaLeaseSet preamble:
 // destination + published(4) + expires(2) + flags(2) + empty options(2).
-func buildMetaLeaseSetHeaderData(t *testing.T, published uint32, expires uint16, flags uint16) []byte {
+func buildMetaLeaseSetHeaderData(t *testing.T, published uint32, expires, flags uint16) []byte {
 	t.Helper()
 	data := createTestDestination(t, key_certificate.KEYCERT_SIGN_ED25519)
 

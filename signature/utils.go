@@ -16,15 +16,15 @@ import (
 func ReadSignature(data []byte, sigType int) (sig Signature, remainder []byte, err error) {
 	sigLength, err := getSignatureLength(sigType)
 	if err != nil {
-		return
+		return sig, remainder, err
 	}
 
 	if err = validateSignatureData(data, sigLength); err != nil {
-		return
+		return sig, remainder, err
 	}
 
 	sig, remainder = extractSignatureData(data, sigType, sigLength)
-	return
+	return sig, remainder, err
 }
 
 // SignatureSize returns the expected byte length for the given signature algorithm type.
@@ -142,7 +142,7 @@ func validateSignatureData(data []byte, sigLength int) error {
 // extractSignatureData extracts signature bytes and prepares remainder for further processing.
 // Creates a new Signature struct with validated data and type information.
 // Data is defensively copied to prevent aliasing of the caller's buffer.
-func extractSignatureData(data []byte, sigType int, sigLength int) (Signature, []byte) {
+func extractSignatureData(data []byte, sigType, sigLength int) (Signature, []byte) {
 	sigData := make([]byte, sigLength)
 	copy(sigData, data[:sigLength])
 	sig := Signature{

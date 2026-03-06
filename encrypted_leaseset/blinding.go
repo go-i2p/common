@@ -207,7 +207,7 @@ func extractEd25519SigningKey(dest destination.Destination) ([32]byte, error) {
 
 // compareBlindedKeys computes the expected blinded key from the original key and alpha,
 // then compares it against the actual blinded key bytes.
-func compareBlindedKeys(origPubKey [32]byte, blindedPubKey [32]byte, alpha [32]byte) bool {
+func compareBlindedKeys(origPubKey, blindedPubKey, alpha [32]byte) bool {
 	expectedBlindedKey, err := ed25519.BlindPublicKey(origPubKey, alpha)
 	if err != nil {
 		return false

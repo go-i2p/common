@@ -304,7 +304,7 @@ func ReadMappingValues(remainder []byte, map_length Integer) (values *MappingVal
 
 	if err := validateMappingInput(remainder); err != nil {
 		errs = []error{err}
-		return
+		return values, remainder_bytes, errs
 	}
 
 	map_values := make(MappingValues, 0)
@@ -333,7 +333,7 @@ func ReadMappingValues(remainder []byte, map_length Integer) (values *MappingVal
 	}).Debug("Finished reading MappingValues")
 
 	remainder_bytes = remainder_updated
-	return
+	return values, remainder_bytes, errs
 }
 
 // validateMappingSortOrder checks that keys in the parsed MappingValues are sorted
@@ -472,7 +472,7 @@ func shouldStopLoop(pairCount int, remainder []byte, previousLength int) bool {
 
 // checkForwardProgress detects infinite loops by verifying the parser consumes bytes
 // on each iteration after the first pair.
-func checkForwardProgress(pairCount int, currentLength int, previousLength int) error {
+func checkForwardProgress(pairCount, currentLength, previousLength int) error {
 	if currentLength >= previousLength && pairCount > 0 {
 		log.WithFields(logger.Fields{
 			"at":              "(Mapping) Values",

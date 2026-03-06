@@ -159,7 +159,7 @@ func validateTransientKeyType(sigtype uint16) (int, error) {
 
 // validateTransientKeyData validates that sufficient data exists for the transient public key.
 // Returns error if insufficient data remains for the key.
-func validateTransientKeyData(dataLen int, transientKeySize int) error {
+func validateTransientKeyData(dataLen, transientKeySize int) error {
 	if dataLen < transientKeySize {
 		return fmt.Errorf("%w: need %d bytes for transient key, got %d",
 			ErrInsufficientData, transientKeySize, dataLen)
@@ -188,7 +188,7 @@ func validateDestinationSignatureType(destinationSigType uint16) (int, error) {
 
 // validateSignatureData validates that sufficient data exists for the signature.
 // Returns error if insufficient data remains for the signature.
-func validateSignatureData(dataLen int, signatureSize int) error {
+func validateSignatureData(dataLen, signatureSize int) error {
 	if dataLen < signatureSize {
 		return fmt.Errorf("%w: need %d bytes for signature, got %d",
 			ErrInsufficientData, signatureSize, dataLen)

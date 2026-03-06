@@ -58,7 +58,7 @@ func ReadMetaLeaseSet(data []byte) (mls MetaLeaseSet, remainder []byte, err erro
 	// Parse and apply common header fields shared with LeaseSet2
 	data, err = rootcommon.ParseAndApplyCommonPrefix(&mls, data, META_LEASESET_MIN_SIZE, "MetaLeaseSet")
 	if err != nil {
-		return
+		return mls, remainder, err
 	}
 
 	log.WithFields(logger.Fields{
@@ -70,22 +70,22 @@ func ReadMetaLeaseSet(data []byte) (mls MetaLeaseSet, remainder []byte, err erro
 	// Parse entries
 	data, err = parseEntries(&mls, data)
 	if err != nil {
-		return
+		return mls, remainder, err
 	}
 
 	// Parse revocations (numr + revocation hashes)
 	data, err = parseRevocations(&mls, data)
 	if err != nil {
-		return
+		return mls, remainder, err
 	}
 
 	// Parse signature and finalize
 	remainder, err = parseSignatureAndFinalize(&mls, data)
 	if err != nil {
-		return
+		return mls, remainder, err
 	}
 
-	return
+	return mls, remainder, err
 }
 
 // parseEntries parses the MetaLeaseSet entries from the data.
@@ -166,7 +166,7 @@ func parseSingleEntry(mls *MetaLeaseSet, entryIndex int, data []byte) ([]byte, e
 
 // validateEntryMinSize checks that there is enough data remaining to read the
 // fixed-size header fields of a MetaLeaseSet entry.
-func validateEntryMinSize(entryIndex int, dataLen int) error {
+func validateEntryMinSize(entryIndex, dataLen int) error {
 	if dataLen < META_LEASESET_ENTRY_SIZE {
 		err := oops.
 			Code("entry_too_short").

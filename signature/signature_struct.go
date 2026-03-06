@@ -57,7 +57,7 @@ func NewSignature(data []byte, sigType int) (signature *Signature, remainder []b
 		"signature_length": sig.Len(),
 		"remainder_length": len(remainder),
 	}).Debug("Successfully created new Signature")
-	return
+	return signature, remainder, err
 }
 
 // NewSignatureFromBytes creates a Signature struct from raw bytes with type and length validation.

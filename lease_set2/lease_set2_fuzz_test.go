@@ -96,7 +96,7 @@ func FuzzNewLeaseSet2Constructor(f *testing.F) {
 	f.Add(uint32(0), uint16(0), uint16(0), uint8(1), uint8(1))
 	f.Add(uint32(4294967295), uint16(65535), uint16(7), uint8(16), uint8(16))
 
-	f.Fuzz(func(t *testing.T, published uint32, expires uint16, flags uint16, numKeys uint8, numLeases uint8) {
+	f.Fuzz(func(t *testing.T, published uint32, expires, flags uint16, numKeys, numLeases uint8) {
 		if numKeys < 1 || numKeys > 16 {
 			return
 		}

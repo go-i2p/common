@@ -109,7 +109,7 @@ func FuzzNewOfflineSignature(f *testing.F) {
 		p256Sig, uint16(signature.SIGNATURE_TYPE_ECDSA_SHA256_P256))
 
 	f.Fuzz(func(t *testing.T, expires uint32, transientSigType uint16,
-		transientPublicKey []byte, sig []byte, destinationSigType uint16,
+		transientPublicKey, sig []byte, destinationSigType uint16,
 	) {
 		offlineSig, err := NewOfflineSignature(expires, transientSigType,
 			transientPublicKey, sig, destinationSigType)

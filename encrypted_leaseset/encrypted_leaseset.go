@@ -25,20 +25,20 @@ func ReadEncryptedLeaseSet(data []byte) (els EncryptedLeaseSet, remainder []byte
 	log.Debug("Parsing EncryptedLeaseSet structure")
 
 	if err = validateEncryptedLeaseSetSize(data); err != nil {
-		return
+		return els, remainder, err
 	}
 
 	remainder, err = parseAllEncryptedLeaseSetFields(&els, data)
 	if err != nil {
-		return
+		return els, remainder, err
 	}
 
 	if err = els.Validate(); err != nil {
-		return
+		return els, remainder, err
 	}
 
 	logParsedEncryptedLeaseSet(&els)
-	return
+	return els, remainder, err
 }
 
 // validateEncryptedLeaseSetSize checks that the input data meets the minimum size

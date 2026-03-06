@@ -57,7 +57,7 @@ func createTestLease2(t *testing.T, index int) *lease.Lease2 {
 // buildLeaseSet2HeaderData builds the common LeaseSet2 preamble:
 // destination + published(4) + expires(2) + flags(2) + empty options(2).
 // Callers append encryption keys, leases, and signature as needed.
-func buildLeaseSet2HeaderData(t *testing.T, sigType uint16, flags uint16) []byte {
+func buildLeaseSet2HeaderData(t *testing.T, sigType, flags uint16) []byte {
 	t.Helper()
 	destData := createTestDestination(t, sigType)
 	data := destData

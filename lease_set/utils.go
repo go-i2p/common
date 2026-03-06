@@ -55,7 +55,7 @@ func parseCertificateFromLeaseSet(data []byte, certDataStart int) (int, int, err
 
 // calculateDestinationLength computes the total destination length from certificate data.
 // Returns the calculated length and logs debug information.
-func calculateDestinationLength(certDataStart int, certLength int) int {
+func calculateDestinationLength(certDataStart, certLength int) int {
 	certTotalLength := 3 + certLength
 	destinationLength := certDataStart + certTotalLength
 
@@ -104,24 +104,24 @@ func ReadDestinationFromLeaseSet(data []byte) (dest destination.Destination, rem
 	log.WithField("input_length", len(data)).Debug("Reading Destination from LeaseSet")
 
 	if err = validateDestinationMinSize(len(data)); err != nil {
-		return
+		return dest, remainder, err
 	}
 
 	const certDataStart = 384
 	kind, certLength, err := parseCertificateFromLeaseSet(data, certDataStart)
 	if err != nil {
-		return
+		return dest, remainder, err
 	}
 	log.WithField("cert_type", kind).Debug("Parsed certificate from LeaseSet")
 
 	destinationLength := calculateDestinationLength(certDataStart, certLength)
 
 	if err = validateDestinationDataSize(len(data), destinationLength); err != nil {
-		return
+		return dest, remainder, err
 	}
 
 	dest, remainder, err = extractDestinationFromData(data, destinationLength)
-	return
+	return dest, remainder, err
 }
 
 // ReadLeaseSet reads a lease set from byte data.
@@ -174,15 +174,15 @@ func parseLeaseSetComponents(data []byte) (LeaseSet, error) {
 func parseLeaseSetCryptoKeys(data []byte, dest destination.Destination) (encKey elgamal.ElgPublicKey, sigKey types.SigningPublicKey, remainder []byte, err error) {
 	encKey, remainder, err = parseEncryptionKey(data)
 	if err != nil {
-		return
+		return encKey, sigKey, remainder, err
 	}
 	sigKey, remainder, err = parseSigningKey(remainder, dest)
 	if err != nil {
-		return
+		return encKey, sigKey, remainder, err
 	}
 	// Validate signing key type matches destination's signing key type (spec: 0.9.26+)
 	err = validateParsedSigningKeyType(sigKey, dest)
-	return
+	return encKey, sigKey, remainder, err
 }
 
 // validateLeaseSetDataLength checks if data has minimum required length for a LeaseSet.

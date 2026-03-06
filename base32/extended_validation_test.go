@@ -28,6 +28,7 @@ func TestEncodeExtendedAddress_EmptyPublicKey(t *testing.T) {
 	_, err = EncodeExtendedAddress(addr)
 	assert.ErrorIs(t, err, ErrEmptyPublicKey)
 }
+
 func TestEncodeExtendedAddress_KeyTooShort(t *testing.T) {
 	// A 1-byte key with 1-byte sigtypes = 4 bytes total ≤ 32,
 	// which would produce ≤52 base32 chars (indistinguishable from standard).
@@ -49,6 +50,7 @@ func TestEncodeExtendedAddress_KeyTooShort(t *testing.T) {
 	_, err = EncodeExtendedAddress(addr)
 	assert.NoError(t, err)
 }
+
 func TestDecodeExtendedAddress_InvalidSuffix(t *testing.T) {
 	tests := []struct {
 		name     string

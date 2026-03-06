@@ -55,10 +55,10 @@ func ParseAndApplyCommonPrefix(
 	var fields LeaseSetCommonFields
 	fields, remainder, err = ParseLeaseSetCommonPrefix(inputData, minSize, structName)
 	if err != nil {
-		return
+		return remainder, err
 	}
 	target.ApplyCommonFields(fields)
-	return
+	return remainder, err
 }
 
 var lsLog = logger.GetGoI2PLogger()
@@ -72,16 +72,16 @@ func ParseLeaseSetCommonPrefix(
 	inputData []byte, minSize int, structName string,
 ) (fields LeaseSetCommonFields, remainder []byte, err error) {
 	if err = ValidateMinDataSize(len(inputData), minSize, structName); err != nil {
-		return
+		return fields, remainder, err
 	}
 
 	fields.Destination, remainder, err = ParseDestinationFromData(inputData, structName)
 	if err != nil {
-		return
+		return fields, remainder, err
 	}
 
 	if err = ValidateLeaseSetHeaderSize(len(remainder), structName); err != nil {
-		return
+		return fields, remainder, err
 	}
 
 	fields.Published, fields.Expires, fields.Flags, remainder = ParseLeaseSetHeaderFields(remainder)
@@ -93,11 +93,11 @@ func ParseLeaseSetCommonPrefix(
 		hasOfflineKeys, destSigType, remainder, structName,
 	)
 	if err != nil {
-		return
+		return fields, remainder, err
 	}
 
 	fields.Options, remainder, err = ParseEmbeddedMapping(remainder, structName)
-	return
+	return fields, remainder, err
 }
 
 // SerializeLeaseSetHeader serializes the common header fields shared by
@@ -380,7 +380,7 @@ func AppendBigEndianUint32(buf []byte, val uint32) []byte {
 func ValidateMinDataSize(dataLen, minSize int, structName string) error {
 	if dataLen < minSize {
 		err := oops.
-			Code(strings.ToLower(strings.ReplaceAll(structName, " ", "_")) + "_too_short").
+			Code(strings.ToLower(strings.ReplaceAll(structName, " ", "_"))+"_too_short").
 			With("data_length", dataLen).
 			With("minimum_required", minSize).
 			Errorf("data too short for %s: got %d bytes, need at least %d", structName, dataLen, minSize)
@@ -434,7 +434,7 @@ func ParseDestinationFromData(inputData []byte, structName string) (destination.
 // ParseLeaseSetHeaderFields parses the published timestamp (4 bytes), expires
 // offset (2 bytes), and flags (2 bytes) from data, consolidating the identical
 // parseHeaderFields logic from lease_set2 and meta_leaseset packages.
-func ParseLeaseSetHeaderFields(inputData []byte) (published uint32, expires uint16, flags uint16, remainder []byte) {
+func ParseLeaseSetHeaderFields(inputData []byte) (published uint32, expires, flags uint16, remainder []byte) {
 	published = binary.BigEndian.Uint32(inputData[:4])
 	inputData = inputData[4:]
 	expires = binary.BigEndian.Uint16(inputData[:2])
@@ -442,7 +442,7 @@ func ParseLeaseSetHeaderFields(inputData []byte) (published uint32, expires uint
 	flags = binary.BigEndian.Uint16(inputData[:2])
 	inputData = inputData[2:]
 	remainder = inputData
-	return
+	return published, expires, flags, remainder
 }
 
 // ParseEmbeddedMapping parses an options mapping from data, filtering the

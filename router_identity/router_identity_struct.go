@@ -124,7 +124,7 @@ func ReadRouterIdentity(data []byte) (ri *RouterIdentity, remainder []byte, err 
 	kac, remainder, err := keys_and_cert.ReadKeysAndCert(data)
 	if err != nil {
 		log.WithError(err).Error("Failed to read KeysAndCert for RouterIdentity")
-		return
+		return ri, remainder, err
 	}
 	if err = validateRouterIdentityKeyTypes(kac); err != nil {
 		return nil, remainder, err
@@ -136,7 +136,7 @@ func ReadRouterIdentity(data []byte) (ri *RouterIdentity, remainder []byte, err 
 	log.WithFields(logger.Fields{
 		"remainder_length": len(remainder),
 	}).Debug("Successfully read RouterIdentity")
-	return
+	return ri, remainder, err
 }
 
 // AsDestination converts the RouterIdentity to a Destination.

@@ -62,7 +62,7 @@ func FuzzBytesRoundTrip(f *testing.F) {
 	f.Add(uint8(255), "NTCP2", "::1", "443")
 	f.Add(uint8(10), "SSU", "192.168.1.1", "8080")
 
-	f.Fuzz(func(t *testing.T, cost uint8, transport string, host string, port string) {
+	f.Fuzz(func(t *testing.T, cost uint8, transport, host, port string) {
 		if transport == "" {
 			return
 		}

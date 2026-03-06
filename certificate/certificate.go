@@ -146,7 +146,7 @@ func validateTypeSpecificPayload(cert Certificate) error {
 }
 
 // validateEmptyTypePayload checks that NULL and HIDDEN certificates have zero-length payloads.
-func validateEmptyTypePayload(certType int, payloadLen int) error {
+func validateEmptyTypePayload(certType, payloadLen int) error {
 	if payloadLen != 0 {
 		return oops.Errorf("certificate type %d should have empty payload, got %d bytes", certType, payloadLen)
 	}
@@ -226,7 +226,7 @@ func calculateRemainder(data []byte, certificate Certificate) []byte {
 }
 
 // logCertificateReadCompletion logs detailed information about the completed certificate reading operation.
-func logCertificateReadCompletion(certificate Certificate, data []byte, remainder []byte) {
+func logCertificateReadCompletion(certificate Certificate, data, remainder []byte) {
 	log.WithFields(logger.Fields{
 		"certificate_length": certificate.length(),
 		"input_length":       len(data),

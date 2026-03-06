@@ -62,7 +62,7 @@ func (date Date) Time() (date_time time.Time) {
 		return time.Time{}
 	}
 	date_time = time.UnixMilli(int64(uval))
-	return
+	return date_time
 }
 
 // ReadDate creates a Date from []byte using the first DATE_SIZE bytes.
@@ -73,7 +73,7 @@ func ReadDate(data []byte) (date Date, remainder []byte, err error) {
 			"data": data,
 		}).Error("ReadDate: data is too short")
 		err = oops.Errorf("ReadDate: data is too short")
-		return
+		return date, remainder, err
 	}
 	copy(date[:], data[:8])
 	remainder = data[8:]
@@ -81,7 +81,7 @@ func ReadDate(data []byte) (date Date, remainder []byte, err error) {
 		"date_value":       date.Int(),
 		"remainder_length": len(remainder),
 	}).Debug("Successfully read Date from data")
-	return
+	return date, remainder, err
 }
 
 // NewDate creates a new Date from []byte using ReadDate.
@@ -98,7 +98,7 @@ func NewDate(data []byte) (date *Date, remainder []byte, err error) {
 		"date_value":       date.Int(),
 		"remainder_length": len(remainder),
 	}).Debug("Successfully created new Date")
-	return
+	return date, remainder, err
 }
 
 // DateFromTime takes a time.Time and returns a data.Date.
@@ -125,7 +125,7 @@ func DateFromTime(t time.Time) (date *Date, err error) {
 		"time": t,
 	}).Debug("Successfully created Date from time.Time")
 
-	return
+	return date, err
 }
 
 // NewDateFromUnix creates a Date from a Unix timestamp (seconds) with validation.

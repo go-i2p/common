@@ -199,7 +199,7 @@ func ReadLeaseSet2(data []byte) (ls2 LeaseSet2, remainder []byte, err error) {
 	// Parse and apply common header fields shared with MetaLeaseSet
 	data, err = rootcommon.ParseAndApplyCommonPrefix(&ls2, data, LEASESET2_MIN_SIZE, "LeaseSet2")
 	if err != nil {
-		return
+		return ls2, remainder, err
 	}
 
 	// Warn if reserved flag bits (bits 15-3) are set per spec:
@@ -220,7 +220,7 @@ func ReadLeaseSet2(data []byte) (ls2 LeaseSet2, remainder []byte, err error) {
 		log.WithFields(logger.Fields{
 			"flags": ls2.flags,
 		}).Error(err.Error())
-		return
+		return ls2, remainder, err
 	}
 
 	log.WithFields(logger.Fields{
@@ -231,11 +231,11 @@ func ReadLeaseSet2(data []byte) (ls2 LeaseSet2, remainder []byte, err error) {
 
 	// Spec: "LS2 options MUST be sorted by key, so the signature is invariant."
 	if err = validateOptionsSorted(ls2.options); err != nil {
-		return
+		return ls2, remainder, err
 	}
 
 	remainder, err = parseKeysLeasesAndSignature(&ls2, data)
-	return
+	return ls2, remainder, err
 }
 
 // parseKeysLeasesAndSignature parses the encryption keys, lease structures,
@@ -366,7 +366,7 @@ func parseSingleEncryptionKey(ls2 *LeaseSet2, keyIndex int, data []byte) ([]byte
 
 // validateEncryptionKeyHeaderData validates that data has sufficient bytes for key type and length.
 // Returns error if data is too short for encryption key header.
-func validateEncryptionKeyHeaderData(dataLen int, keyIndex int) error {
+func validateEncryptionKeyHeaderData(dataLen, keyIndex int) error {
 	requiredSize := LEASESET2_ENCRYPTION_KEY_TYPE_SIZE + LEASESET2_ENCRYPTION_KEY_LENGTH_SIZE
 	if dataLen < requiredSize {
 		err := oops.
@@ -427,7 +427,7 @@ func extractEncryptionKeyData(data []byte, keyLen uint16) ([]byte, []byte) {
 // validateEncryptionKeyTypeLength returns an error when the declared keyLen does not
 // match the spec-required size for a known encryption key type.
 // Per spec: "keylen: Must match the specified length of the encryption type."
-func validateEncryptionKeyTypeLength(keyType uint16, keyLen uint16, keyIndex int) error {
+func validateEncryptionKeyTypeLength(keyType, keyLen uint16, keyIndex int) error {
 	expectedSize, ok := key_certificate.CryptoPublicKeySizes[keyType]
 	if !ok {
 		// Unknown type – allow any length (forward compatibility).
@@ -456,7 +456,7 @@ func validateEncryptionKeyTypeLength(keyType uint16, keyLen uint16, keyIndex int
 
 // storeEncryptionKey stores the parsed encryption key in the LeaseSet2 structure.
 // Logs the parsed key information at debug level.
-func storeEncryptionKey(ls2 *LeaseSet2, keyIndex int, keyType uint16, keyLen uint16, keyData []byte) {
+func storeEncryptionKey(ls2 *LeaseSet2, keyIndex int, keyType, keyLen uint16, keyData []byte) {
 	ls2.encryptionKeys[keyIndex] = EncryptionKey{
 		KeyType: keyType,
 		KeyLen:  keyLen,
@@ -682,13 +682,13 @@ func signLeaseSet2Data(dest destination.Destination, offlineSig *offline_signatu
 	sigType := rootcommon.DetermineSignatureType(dest.KeyCertificate.SigningPublicKeyType(), offlineSig)
 	signature, err = rootcommon.CreateLeaseSetSignature(signingKey, dataToSign, sigType, rootcommon.SignLeaseSetData)
 	if err != nil {
-		return
+		return signature, err
 	}
 	log.WithFields(logger.Fields{
 		"signature_type": sigType,
 		"data_size":      len(dataToSign),
 	}).Debug("Created LeaseSet2 signature")
-	return
+	return signature, err
 }
 
 // logLeaseSet2Creation logs the successful creation of a LeaseSet2.

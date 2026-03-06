@@ -72,12 +72,12 @@ func NewInteger(bytes []byte, size int) (integer *Integer, remainder []byte, err
 		return nil, remainder, oops.Errorf("NewInteger: failed to read integer (invalid size or insufficient data)")
 	}
 	integer = &i
-	return
+	return integer, remainder, err
 }
 
 // validateIntegerInput validates that the input value and size are valid for integer creation.
 // Returns error if value is negative or size is invalid.
-func validateIntegerInput(value int, size int) error {
+func validateIntegerInput(value, size int) error {
 	if value < 0 {
 		return oops.Errorf("cannot create integer from negative value: %d", value)
 	}
@@ -98,7 +98,7 @@ func calculateMaxValueForSize(size int) uint64 {
 
 // validateValueBounds checks if the value fits within the maximum allowed for the specified size.
 // Returns error if value exceeds the maximum for the given byte size.
-func validateValueBounds(value int, size int, maxValue uint64) error {
+func validateValueBounds(value, size int, maxValue uint64) error {
 	if uint64(value) > maxValue {
 		return oops.Errorf("value %d exceeds maximum for %d bytes (max: %d)", value, size, maxValue)
 	}
@@ -107,7 +107,7 @@ func validateValueBounds(value int, size int, maxValue uint64) error {
 
 // createIntegerFromBytes creates an Integer from a uint64 value using the specified byte size.
 // Returns the created Integer and any error from the construction process.
-func createIntegerFromBytes(value int, size int) (*Integer, error) {
+func createIntegerFromBytes(value, size int) (*Integer, error) {
 	bytes := make([]byte, MAX_INTEGER_SIZE)
 	binary.BigEndian.PutUint64(bytes, uint64(value))
 
@@ -124,14 +124,14 @@ func createIntegerFromBytes(value int, size int) (*Integer, error) {
 }
 
 // NewIntegerFromInt creates a new Integer from a Go integer of a specified []byte length.
-func NewIntegerFromInt(value int, size int) (integer *Integer, err error) {
+func NewIntegerFromInt(value, size int) (integer *Integer, err error) {
 	if err = validateIntegerInput(value, size); err != nil {
-		return
+		return integer, err
 	}
 
 	maxValue := calculateMaxValueForSize(size)
 	if err = validateValueBounds(value, size, maxValue); err != nil {
-		return
+		return integer, err
 	}
 
 	return createIntegerFromBytes(value, size)

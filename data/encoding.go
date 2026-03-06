@@ -154,7 +154,7 @@ func DecodeInt64(data [8]byte) int64 {
 //
 //	bytes, err := data.EncodeIntN(1234, 2)
 //	// bytes = [4, 210], err = nil
-func EncodeIntN(value int, size int) ([]byte, error) {
+func EncodeIntN(value, size int) ([]byte, error) {
 	if value < 0 {
 		return nil, oops.Errorf("cannot encode negative value: %d", value)
 	}

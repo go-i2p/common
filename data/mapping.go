@@ -206,13 +206,13 @@ func GoMapToMapping(gomap map[string]string) (mapping *Mapping, err error) {
 		if kerr != nil {
 			log.WithError(kerr).Error("Failed to convert key to I2PString")
 			err = kerr
-			return
+			return mapping, err
 		}
 		val_str, verr := ToI2PString(v)
 		if verr != nil {
 			log.WithError(verr).Error("Failed to convert value to I2PString")
 			err = verr
-			return
+			return mapping, err
 		}
 		map_vals = append(
 			map_vals,
@@ -222,12 +222,12 @@ func GoMapToMapping(gomap map[string]string) (mapping *Mapping, err error) {
 	mapping, err = ValuesToMapping(map_vals)
 	if err != nil {
 		log.WithError(err).Error("Failed to convert MappingValues to Mapping")
-		return
+		return mapping, err
 	}
 	log.WithFields(logger.Fields{
 		"mapping_size": len(map_vals),
 	}).Debug("Successfully converted Go map to Mapping")
-	return
+	return mapping, err
 }
 
 // ReadMapping returns Mapping from a []byte.
@@ -240,7 +240,7 @@ func ReadMapping(bytes []byte) (mapping Mapping, remainder []byte, err []error) 
 
 	if inputValidationErr := validateMappingInputData(bytes); inputValidationErr != nil {
 		err = append(err, inputValidationErr)
-		return
+		return mapping, remainder, err
 	}
 
 	size, remainder, sizeErr := parseMappingSize(bytes)
@@ -254,7 +254,7 @@ func ReadMapping(bytes []byte) (mapping Mapping, remainder []byte, err []error) 
 		log.Warn("Mapping size is zero")
 		emptyVals := make(MappingValues, 0)
 		mapping.vals = &emptyVals
-		return
+		return mapping, remainder, err
 	}
 
 	return processMappingData(mapping, remainder, size, err)
@@ -387,5 +387,5 @@ func NewMapping(bytes []byte) (values *Mapping, remainder []byte, err []error) {
 		"remainder_length": len(remainder),
 		"error_count":      len(err),
 	}).Debug("Finished creating new Mapping")
-	return
+	return values, remainder, err
 }

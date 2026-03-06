@@ -79,7 +79,7 @@ func ReadHash(data []byte) (Hash, []byte, error) {
 func HashData(data []byte) (h Hash) {
 	// log.Println("Hashing Data:", data)
 	h = sha256.Sum256(data)
-	return
+	return h
 }
 
 // HashReader returns the SHA256 sum from all data read from an io.Reader.
@@ -91,5 +91,5 @@ func HashReader(r io.Reader) (h Hash, err error) {
 		d := sha.Sum(nil)
 		copy(h[:], d)
 	}
-	return
+	return h, err
 }

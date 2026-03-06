@@ -2,10 +2,11 @@ package router_info
 
 import (
 	"bytes"
-	"github.com/go-i2p/crypto/rand"
 	"fmt"
 	"testing"
 	"time"
+
+	"github.com/go-i2p/crypto/rand"
 
 	"github.com/go-i2p/crypto/ed25519"
 	"github.com/go-i2p/crypto/types"
