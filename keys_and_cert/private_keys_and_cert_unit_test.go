@@ -30,7 +30,7 @@ func TestPrivateKeysAndCert(t *testing.T) {
 		pkac := &PrivateKeysAndCert{
 			KeysAndCert: *kac,
 			PK_KEY:      nil,
-			SPK_KEY:     []byte("test-spk"),
+			SPK_KEY:     createMockSigningPrivateKey(),
 		}
 		err := pkac.Validate()
 		require.Error(t, err)
@@ -41,7 +41,7 @@ func TestPrivateKeysAndCert(t *testing.T) {
 		kac := createValidKeyAndCert(t)
 		pkac := &PrivateKeysAndCert{
 			KeysAndCert: *kac,
-			PK_KEY:      []byte("test-pk"),
+			PK_KEY:      createMockPrivateEncryptionKey(),
 			SPK_KEY:     nil,
 		}
 		err := pkac.Validate()
@@ -53,8 +53,8 @@ func TestPrivateKeysAndCert(t *testing.T) {
 		kac := createValidKeyAndCert(t)
 		pkac := &PrivateKeysAndCert{
 			KeysAndCert: *kac,
-			PK_KEY:      []byte("test-pk"),
-			SPK_KEY:     []byte("test-spk"),
+			PK_KEY:      createMockPrivateEncryptionKey(),
+			SPK_KEY:     createMockSigningPrivateKey(),
 		}
 		err := pkac.Validate()
 		require.NoError(t, err)
@@ -62,15 +62,15 @@ func TestPrivateKeysAndCert(t *testing.T) {
 
 	t.Run("accessor methods return correct values", func(t *testing.T) {
 		kac := createValidKeyAndCert(t)
-		pkData := []byte("test-private-key")
-		spkData := []byte("test-signing-key")
+		encKey := createMockPrivateEncryptionKey()
+		sigKey := createMockSigningPrivateKey()
 		pkac := &PrivateKeysAndCert{
 			KeysAndCert: *kac,
-			PK_KEY:      pkData,
-			SPK_KEY:     spkData,
+			PK_KEY:      encKey,
+			SPK_KEY:     sigKey,
 		}
-		assert.Equal(t, pkData, pkac.PrivateKey().([]byte))
-		assert.Equal(t, spkData, pkac.SigningPrivateKey().([]byte))
+		assert.Equal(t, encKey, pkac.PrivateKey())
+		assert.Equal(t, sigKey, pkac.SigningPrivateKey())
 	})
 }
 
@@ -82,8 +82,8 @@ func TestPrivateKeysAndCertConstruction(t *testing.T) {
 	kac := createValidKeyAndCert(t)
 	pkac := PrivateKeysAndCert{
 		KeysAndCert: *kac,
-		PK_KEY:      []byte("encryption-private-key"),
-		SPK_KEY:     []byte("signing-private-key"),
+		PK_KEY:      createMockPrivateEncryptionKey(),
+		SPK_KEY:     createMockSigningPrivateKey(),
 	}
 
 	assert.NotNil(t, pkac.PK_KEY)
@@ -98,8 +98,8 @@ func TestPrivateKeysAndCertConstruction(t *testing.T) {
 func TestNewPrivateKeysAndCert(t *testing.T) {
 	t.Run("creates valid struct with all fields", func(t *testing.T) {
 		kac := createValidKeyAndCert(t)
-		encPriv := []byte("encryption-private-key")
-		sigPriv := []byte("signing-private-key")
+		encPriv := createMockPrivateEncryptionKey()
+		sigPriv := createMockSigningPrivateKey()
 		pkac, err := NewPrivateKeysAndCert(
 			kac.KeyCertificate,
 			kac.ReceivingPublic,
@@ -110,8 +110,8 @@ func TestNewPrivateKeysAndCert(t *testing.T) {
 		)
 		require.NoError(t, err)
 		assert.NotNil(t, pkac)
-		assert.Equal(t, encPriv, pkac.PrivateKey().([]byte))
-		assert.Equal(t, sigPriv, pkac.SigningPrivateKey().([]byte))
+		assert.Equal(t, encPriv, pkac.PrivateKey())
+		assert.Equal(t, sigPriv, pkac.SigningPrivateKey())
 		assert.True(t, pkac.KeysAndCert.IsValid())
 	})
 
@@ -123,7 +123,7 @@ func TestNewPrivateKeysAndCert(t *testing.T) {
 			kac.Padding,
 			kac.SigningPublic,
 			nil,
-			[]byte("signing-key"),
+			createMockSigningPrivateKey(),
 		)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "encryption private key")
@@ -136,7 +136,7 @@ func TestNewPrivateKeysAndCert(t *testing.T) {
 			kac.ReceivingPublic,
 			kac.Padding,
 			kac.SigningPublic,
-			[]byte("enc-key"),
+			createMockPrivateEncryptionKey(),
 			nil,
 		)
 		require.Error(t, err)
@@ -149,8 +149,8 @@ func TestNewPrivateKeysAndCert(t *testing.T) {
 			createDummyReceivingKey(),
 			make([]byte, 96),
 			createDummySigningKey(),
-			[]byte("enc-key"),
-			[]byte("sig-key"),
+			createMockPrivateEncryptionKey(),
+			createMockSigningPrivateKey(),
 		)
 		require.Error(t, err)
 	})

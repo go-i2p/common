@@ -1,9 +1,6 @@
-// Package keys_and_cert implements the I2P KeysAndCert common data structure
 package keys_and_cert
 
 import (
-	"crypto"
-
 	"github.com/samber/oops"
 
 	"github.com/go-i2p/common/key_certificate"
@@ -12,10 +9,15 @@ import (
 
 // PrivateKeysAndCert contains a KeysAndCert along with the corresponding private keys for the
 // Public Key and the Signing Public Key.
+//
+// PK_KEY and SPK_KEY use typed interfaces (types.PrivateEncryptionKey and
+// types.SigningPrivateKey) instead of the bare crypto.PrivateKey (any) alias,
+// providing compile-time type safety and preventing arbitrary values from being
+// stored without satisfying the required cryptographic contracts.
 type PrivateKeysAndCert struct {
 	KeysAndCert
-	PK_KEY  crypto.PrivateKey // Encryption private key
-	SPK_KEY crypto.PrivateKey // Signing private key
+	PK_KEY  types.PrivateEncryptionKey // Encryption private key
+	SPK_KEY types.SigningPrivateKey    // Signing private key
 }
 
 // NewPrivateKeysAndCert creates a new PrivateKeysAndCert instance with the provided parameters.
@@ -25,8 +27,8 @@ func NewPrivateKeysAndCert(
 	publicKey types.ReceivingPublicKey,
 	padding []byte,
 	signingPublicKey types.SigningPublicKey,
-	encryptionPrivateKey crypto.PrivateKey,
-	signingPrivateKey crypto.PrivateKey,
+	encryptionPrivateKey types.PrivateEncryptionKey,
+	signingPrivateKey types.SigningPrivateKey,
 ) (*PrivateKeysAndCert, error) {
 	if encryptionPrivateKey == nil {
 		return nil, oops.Errorf("encryption private key (PK_KEY) is required")
@@ -48,7 +50,7 @@ func NewPrivateKeysAndCert(
 }
 
 // PrivateKey returns the encryption private key.
-func (pkac *PrivateKeysAndCert) PrivateKey() crypto.PrivateKey {
+func (pkac *PrivateKeysAndCert) PrivateKey() types.PrivateEncryptionKey {
 	if pkac == nil {
 		return nil
 	}
@@ -56,7 +58,7 @@ func (pkac *PrivateKeysAndCert) PrivateKey() crypto.PrivateKey {
 }
 
 // SigningPrivateKey returns the signing private key.
-func (pkac *PrivateKeysAndCert) SigningPrivateKey() crypto.PrivateKey {
+func (pkac *PrivateKeysAndCert) SigningPrivateKey() types.SigningPrivateKey {
 	if pkac == nil {
 		return nil
 	}

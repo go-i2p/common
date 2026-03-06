@@ -12,6 +12,7 @@ import (
 	"github.com/go-i2p/common/key_certificate"
 	"github.com/go-i2p/crypto/ed25519"
 	elgamal "github.com/go-i2p/crypto/elg"
+	"github.com/go-i2p/crypto/types"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -570,6 +571,71 @@ func TestGenerateCompressiblePaddingUniqueness(t *testing.T) {
 		}
 	}
 	assert.False(t, allSame, "GenerateCompressiblePadding should produce different outputs on different calls")
+}
+
+// TestGenerateCompressiblePaddingProposal161Conformance verifies that the padding
+// conforms to I2P Proposal 161: a single 32-byte random seed is repeated to fill the
+// requested size, making the output highly compressible via DEFLATE while retaining
+// at least 256 bits of entropy.
+//
+// Reference: https://geti2p.net/spec/proposals/161-reduce-key-cert-padding
+func TestGenerateCompressiblePaddingProposal161Conformance(t *testing.T) {
+	// Use 320 bytes: the typical X25519+Ed25519 padding size (384-32-32).
+	const paddingSize = 320
+	padding, err := GenerateCompressiblePadding(paddingSize)
+	require.NoError(t, err)
+	require.Equal(t, paddingSize, len(padding))
+
+	// Extract the 32-byte seed (first 32 bytes).
+	seed := padding[:32]
+
+	// Every subsequent 32-byte block must be identical to the seed.
+	for offset := 32; offset < paddingSize; offset += 32 {
+		end := offset + 32
+		if end > paddingSize {
+			end = paddingSize
+		}
+		block := padding[offset:end]
+		assert.Equal(t, seed[:len(block)], block,
+			"Proposal 161: block at offset %d must repeat the 32-byte seed", offset)
+	}
+
+	// Verify the seed itself is non-trivial (not all zeros).
+	allZero := true
+	for _, b := range seed {
+		if b != 0 {
+			allZero = false
+			break
+		}
+	}
+	assert.False(t, allZero, "Proposal 161: seed must be cryptographically random, not all zeros")
+}
+
+// TestPrivateKeysAndCertTypeSafety verifies compile-time type safety by ensuring
+// the PK_KEY and SPK_KEY fields accept only types.PrivateEncryptionKey and
+// types.SigningPrivateKey respectively, not arbitrary values like []byte.
+func TestPrivateKeysAndCertTypeSafety(t *testing.T) {
+	// Compile-time interface assertions (these are verified at compile time).
+	var _ types.PrivateEncryptionKey = (*mockPrivateEncryptionKey)(nil)
+	var _ types.SigningPrivateKey = (*mockSigningPrivateKey)(nil)
+
+	kac := createValidKeyAndCert(t)
+	encKey := createMockPrivateEncryptionKey()
+	sigKey := createMockSigningPrivateKey()
+
+	pkac, err := NewPrivateKeysAndCert(
+		kac.KeyCertificate,
+		kac.ReceivingPublic,
+		kac.Padding,
+		kac.SigningPublic,
+		encKey,
+		sigKey,
+	)
+	require.NoError(t, err)
+
+	// Verify returned types satisfy the interfaces.
+	assert.Implements(t, (*types.PrivateEncryptionKey)(nil), pkac.PrivateKey())
+	assert.Implements(t, (*types.SigningPrivateKey)(nil), pkac.SigningPrivateKey())
 }
 
 // ============================================================================

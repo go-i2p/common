@@ -237,6 +237,36 @@ func (k wrongSizeKey) Bytes() []byte                        { return []byte(k) }
 func (k wrongSizeKey) Len() int                             { return len(k) }
 func (k wrongSizeKey) NewVerifier() (types.Verifier, error) { return nil, nil }
 
+// mockSigningPrivateKey implements types.SigningPrivateKey for testing.
+type mockSigningPrivateKey struct {
+	data []byte
+}
+
+func (m *mockSigningPrivateKey) NewSigner() (types.Signer, error)           { return nil, nil }
+func (m *mockSigningPrivateKey) Len() int                                   { return len(m.data) }
+func (m *mockSigningPrivateKey) Public() (types.SigningPublicKey, error)    { return nil, nil }
+func (m *mockSigningPrivateKey) Generate() (types.SigningPrivateKey, error) { return m, nil }
+
+// mockPrivateEncryptionKey implements types.PrivateEncryptionKey for testing.
+type mockPrivateEncryptionKey struct {
+	data []byte
+}
+
+func (m *mockPrivateEncryptionKey) NewDecrypter() (types.Decrypter, error)     { return nil, nil }
+func (m *mockPrivateEncryptionKey) Public() (types.PublicEncryptionKey, error) { return nil, nil }
+func (m *mockPrivateEncryptionKey) Bytes() []byte                              { return m.data }
+func (m *mockPrivateEncryptionKey) Zero()                                      { /* no-op in test */ }
+
+// createMockSigningPrivateKey creates a mock signing private key for testing.
+func createMockSigningPrivateKey() types.SigningPrivateKey {
+	return &mockSigningPrivateKey{data: []byte("test-signing-key")}
+}
+
+// createMockPrivateEncryptionKey creates a mock encryption private key for testing.
+func createMockPrivateEncryptionKey() types.PrivateEncryptionKey {
+	return &mockPrivateEncryptionKey{data: []byte("test-private-key")}
+}
+
 // createWrongSizeSigningKey creates a 64-byte signing key that
 // would be wrong for a certificate declaring Ed25519 (32 bytes).
 func createWrongSizeSigningKey() types.SigningPublicKey {
