@@ -4,6 +4,7 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/go-i2p/common/certificate"
 	"github.com/go-i2p/common/lease"
 	elgamal "github.com/go-i2p/crypto/elg"
 	"github.com/stretchr/testify/assert"
@@ -277,4 +278,94 @@ func TestValidation_ReadLeaseSetAllZeroEncryptionKeyFailsValidation(t *testing.T
 	err = manualLS.Validate()
 	assert.Error(t, err)
 	assert.True(t, errors.Is(err, ErrAllZeroEncryptionKey))
+}
+
+// --- Validate checks ElGamal type (not just size) ---
+
+func TestValidation_ValidateRejectsNonElGamalEncryptionKey(t *testing.T) {
+	routerInfo, _, _, _, _, err := generateTestRouterInfo(t)
+	require.NoError(t, err)
+
+	leaseSet, err := createTestLeaseSet(t, routerInfo, 1)
+	require.NoError(t, err)
+
+	// Substitute a non-ElGamal 256-byte key
+	var fakeKey mockNonElGamalKey
+	fakeKey[0] = 0x01 // non-zero so it passes the all-zero check
+	manualLS := &LeaseSet{
+		dest:          leaseSet.dest,
+		encryptionKey: fakeKey,
+		signingKey:    leaseSet.signingKey,
+		leaseCount:    leaseSet.leaseCount,
+		leases:        leaseSet.leases,
+		signature:     leaseSet.signature,
+	}
+
+	err = manualLS.Validate()
+	require.Error(t, err)
+	assert.ErrorIs(t, err, ErrNonElGamalEncryptionKey,
+		"Validate() must reject non-ElGamal encryption keys")
+}
+
+// --- Validate checks signing key size against certificate ---
+
+func TestValidation_ValidateChecksSigningKeySize(t *testing.T) {
+	routerInfo, _, _, _, _, err := generateTestRouterInfo(t)
+	require.NoError(t, err)
+
+	leaseSet, err := createTestLeaseSet(t, routerInfo, 1)
+	require.NoError(t, err)
+
+	// Replace signing key with a wrong-sized key
+	wrongSizeKey := mockSigningKey(make([]byte, 64)) // Ed25519 key should be 32 bytes
+	manualLS := &LeaseSet{
+		dest:          leaseSet.dest,
+		encryptionKey: leaseSet.encryptionKey,
+		signingKey:    wrongSizeKey,
+		leaseCount:    leaseSet.leaseCount,
+		leases:        leaseSet.leases,
+		signature:     leaseSet.signature,
+	}
+
+	err = manualLS.Validate()
+	require.Error(t, err)
+	assert.ErrorIs(t, err, ErrSigningKeySizeMismatch,
+		"Validate() must reject signing keys with wrong size for certificate")
+}
+
+func TestValidation_ValidateAcceptsCorrectSigningKeySize(t *testing.T) {
+	routerInfo, _, _, _, _, err := generateTestRouterInfo(t)
+	require.NoError(t, err)
+
+	leaseSet, err := createTestLeaseSet(t, routerInfo, 1)
+	require.NoError(t, err)
+
+	// Valid LeaseSet should pass
+	err = leaseSet.Validate()
+	assert.NoError(t, err, "valid LeaseSet with correct signing key size should pass Validate()")
+}
+
+// --- validateNullCertSigningKey rejects legacy crypto ---
+
+func TestValidation_NullCertSigningKeyRejectsLegacy(t *testing.T) {
+	dest, _, sigKey, _, err := generateTestDestination(t)
+	require.NoError(t, err)
+
+	// Override dest certificate to NULL (DSA-SHA1)
+	oldCert := dest.Certificate()
+	nullCert, err := certificate.NewCertificateWithType(certificate.CERT_NULL, nil)
+	require.NoError(t, err)
+	_ = oldCert
+	_ = nullCert
+
+	// validateNullCertSigningKey should reject regardless of key
+	err = validateNullCertSigningKey(sigKey)
+	require.Error(t, err)
+	assert.ErrorIs(t, err, ErrLegacyCryptoNotSupported)
+
+	// Also reject even with correct 128-byte DSA-sized key
+	dsaSizedKey := mockSigningKey(make([]byte, 128))
+	err = validateNullCertSigningKey(dsaSizedKey)
+	require.Error(t, err)
+	assert.ErrorIs(t, err, ErrLegacyCryptoNotSupported)
 }

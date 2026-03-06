@@ -8,7 +8,6 @@ import (
 	"github.com/go-i2p/common/keys_and_cert"
 	"github.com/go-i2p/common/lease"
 	sig "github.com/go-i2p/common/signature"
-	"github.com/go-i2p/crypto/dsa"
 	elgamal "github.com/go-i2p/crypto/elg"
 	"github.com/go-i2p/crypto/types"
 	"github.com/go-i2p/logger"
@@ -257,6 +256,8 @@ func determineSigningKeySize(cert *certificate.Certificate, kind int) int {
 }
 
 // constructSigningKey builds the appropriate signing key based on certificate type.
+// Only KEY certificates with modern algorithms are supported; NULL certificates
+// (implying DSA-SHA1) are rejected as legacy crypto.
 func constructSigningKey(keyData []byte, cert *certificate.Certificate, kind int) (types.SigningPublicKey, error) {
 	if kind == certificate.CERT_KEY {
 		keyCert, err := key_certificate.KeyCertificateFromCertificate(cert)
@@ -269,12 +270,7 @@ func constructSigningKey(keyData []byte, cert *certificate.Certificate, kind int
 		}
 	}
 
-	// Default DSA key
-	dsaKey, err := dsa.NewDSAPublicKey(keyData)
-	if err != nil {
-		return nil, oops.Wrapf(err, "failed to construct DSA public key")
-	}
-	return dsaKey, nil
+	return nil, ErrLegacyCryptoNotSupported
 }
 
 // parseLeases extracts the lease count and individual leases from the data.

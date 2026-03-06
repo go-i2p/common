@@ -17,7 +17,7 @@ Contains all of the currently authorized Leases for a particular Destination, th
 publicKey to which garlic messages can be encrypted, and then the signingPublicKey
 that can be used to revoke this particular version of the structure. The LeaseSet is one
 of the two structures stored in the network database (the other being RouterInfo), and
-is kered under the SHA256 of the contained Destination.
+is keyed under the SHA256 of the contained Destination.
 
 Contents
 Destination, followed by a publicKey for encryption, then a signingPublicKey which
@@ -100,7 +100,14 @@ signature :: Signature
              length -> 40 bytes or as specified in destination's key certificate
 */
 
-// LeaseSet is the represenation of an I2P LeaseSet.
+// LeaseSet is the representation of an I2P LeaseSet.
+//
+// The signingKey field "can be used to revoke this particular version of the
+// structure" per the I2P spec. However, the revocation protocol was never
+// fully specified or implemented in the reference Java router and has been
+// superseded by LeaseSet2 (spec 0.9.38+). This implementation stores the
+// signing key for structural completeness and signature verification, but
+// does not implement revocation.
 //
 // https://geti2p.net/spec/common-structures#leaseset
 type LeaseSet struct {

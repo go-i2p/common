@@ -47,4 +47,18 @@ var (
 	// ErrAllZeroEncryptionKey is returned when a LeaseSet's encryption key is
 	// all zero bytes, which is cryptographically invalid.
 	ErrAllZeroEncryptionKey = oops.Errorf("encryption key is all zeros (cryptographically invalid)")
+
+	// ErrLegacyCryptoNotSupported is returned when a LeaseSet uses a NULL
+	// certificate (implying DSA-SHA1 signing), which is legacy crypto that
+	// this implementation does not support. Use KEY certificates with
+	// modern algorithms (Ed25519, etc.) instead.
+	ErrLegacyCryptoNotSupported = oops.Errorf("NULL certificate (DSA-SHA1) is legacy crypto and not supported; use KEY certificate with modern algorithms")
+
+	// ErrSigningKeySizeMismatch is returned when a LeaseSet's signing key
+	// size does not match the size expected by the destination's certificate.
+	ErrSigningKeySizeMismatch = oops.Errorf("signing key size does not match destination certificate")
+
+	// ErrLeaseCountInvariant is returned when the leaseCount field
+	// disagrees with the actual number of leases stored in the struct.
+	ErrLeaseCountInvariant = oops.Errorf("leaseCount field does not match len(leases)")
 )

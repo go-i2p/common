@@ -22,7 +22,10 @@ import (
 
 var log = logger.GetGoI2PLogger()
 
-// Validate checks if the LeaseSet is properly initialized and valid.
+// Validate performs structural validation of the LeaseSet.
+// It checks that all fields are present, correctly sized, and internally consistent.
+// It does NOT verify the cryptographic signature (use [LeaseSet.Verify] for that)
+// or check temporal validity of individual leases (e.g., expiration).
 // Returns an error if the lease set is nil or has invalid field values.
 func (ls *LeaseSet) Validate() error {
 	if ls == nil {
@@ -50,25 +53,54 @@ func validateLeaseSetCounts(ls *LeaseSet) error {
 	return nil
 }
 
-// validateLeaseSetKeys validates that the encryption key and signing key are present
-// and have the correct sizes.
+// validateLeaseSetKeys validates that the encryption key and signing key are present,
+// have correct sizes, and are of the correct types for LeaseSet v1.
 func validateLeaseSetKeys(ls *LeaseSet) error {
+	if err := validateEncryptionKeyInLeaseSet(ls); err != nil {
+		return err
+	}
+	return validateSigningKeyInLeaseSet(ls)
+}
+
+// validateEncryptionKeyInLeaseSet checks that the encryption key is non-nil,
+// is an ElGamal type, has the correct size, and is not all zeros.
+func validateEncryptionKeyInLeaseSet(ls *LeaseSet) error {
 	if ls.encryptionKey == nil {
 		return oops.Errorf("encryption key is required")
+	}
+	// LeaseSet v1 mandates ElGamal encryption.
+	if !isElGamalKey(ls.encryptionKey) {
+		return oops.Errorf("%w: got %T", ErrNonElGamalEncryptionKey, ls.encryptionKey)
 	}
 	encBytes := ls.encryptionKey.Bytes()
 	if len(encBytes) != LEASE_SET_PUBKEY_SIZE {
 		return oops.Errorf("invalid encryption key size: got %d, expected %d",
 			len(encBytes), LEASE_SET_PUBKEY_SIZE)
 	}
-	// Check for all-zero encryption key (cryptographically invalid).
-	// This also catches the case where parseEncryptionKey produced a value-type
-	// ElgPublicKey from all-zero data — the interface is non-nil but the key is useless.
 	if isAllZero(encBytes) {
 		return ErrAllZeroEncryptionKey
 	}
+	return nil
+}
+
+// validateSigningKeyInLeaseSet checks that the signing key is non-nil and
+// its size matches the destination certificate's expectation.
+func validateSigningKeyInLeaseSet(ls *LeaseSet) error {
 	if ls.signingKey == nil {
 		return oops.Errorf("signing key is required")
+	}
+	cert := ls.dest.Certificate()
+	kind, err := cert.Type()
+	if err != nil {
+		return oops.Errorf("invalid certificate type: %w", err)
+	}
+	expectedSize := determineSigningKeySize(cert, kind)
+	actualSize := len(ls.signingKey.Bytes())
+	if actualSize != expectedSize {
+		return oops.Errorf(
+			"%w: got %d bytes, expected %d for cert type %d",
+			ErrSigningKeySizeMismatch, actualSize, expectedSize, kind,
+		)
 	}
 	return nil
 }
@@ -222,14 +254,11 @@ func validateKeyCertSigningKey(dest destination.Destination, signingKey types.Si
 	return nil
 }
 
-// validateNullCertSigningKey validates the signing key size for a NULL certificate,
-// which uses the default DSA size.
+// validateNullCertSigningKey rejects NULL certificate destinations.
+// NULL certificates imply DSA-SHA1 signing, which is legacy crypto.
+// Only KEY certificates with modern algorithms (Ed25519, etc.) are supported.
 func validateNullCertSigningKey(signingKey types.SigningPublicKey) error {
-	if len(signingKey.Bytes()) != LEASE_SET_SPK_SIZE {
-		return oops.Errorf("invalid signing key size for NULL certificate: got %d, expected %d",
-			len(signingKey.Bytes()), LEASE_SET_SPK_SIZE)
-	}
-	return nil
+	return ErrLegacyCryptoNotSupported
 }
 
 // serializeLeaseSetData builds the byte array containing all LeaseSet data for signing.
@@ -291,12 +320,23 @@ func assembleLeaseSet(dest destination.Destination, encryptionKey types.Receivin
 	}
 	return LeaseSet{
 		dest:          dest,
-		encryptionKey: encryptionKey,
+		encryptionKey: defensiveCopyEncryptionKey(encryptionKey),
 		signingKey:    signingKey,
 		leaseCount:    len(leases),
 		leases:        leases,
 		signature:     signatureVal,
 	}, nil
+}
+
+// defensiveCopyEncryptionKey returns an independent copy of the encryption key.
+// If the key is a pointer to ElgPublicKey, it is dereferenced to prevent the
+// caller from mutating internal LeaseSet state through the retained pointer.
+func defensiveCopyEncryptionKey(key types.ReceivingPublicKey) types.ReceivingPublicKey {
+	if ptr, ok := key.(*elgamal.ElgPublicKey); ok {
+		keyCopy := *ptr
+		return keyCopy
+	}
+	return key
 }
 
 // logLeaseSetCreationSuccess logs detailed information about the successfully created LeaseSet.
@@ -358,7 +398,16 @@ func getSignatureType(cert *certificate.Certificate) int {
 }
 
 // Bytes returns the LeaseSet as a byte array.
+// The lease count byte is derived from len(leases) to guarantee consistency
+// between the count byte and the actual lease entries in the output.
 func (lease_set LeaseSet) Bytes() ([]byte, error) {
+	if lease_set.leaseCount != len(lease_set.leases) {
+		return nil, oops.Errorf(
+			"%w: count field is %d but have %d leases",
+			ErrLeaseCountInvariant, lease_set.leaseCount, len(lease_set.leases),
+		)
+	}
+
 	var result []byte
 
 	// Add destination
@@ -374,8 +423,8 @@ func (lease_set LeaseSet) Bytes() ([]byte, error) {
 	// Add signing key
 	result = append(result, lease_set.signingKey.Bytes()...)
 
-	// Add lease count
-	leaseCountInt, err := data.NewIntegerFromInt(lease_set.leaseCount, 1)
+	// Add lease count — use len(leases) for consistency
+	leaseCountInt, err := data.NewIntegerFromInt(len(lease_set.leases), 1)
 	if err != nil {
 		return nil, err
 	}

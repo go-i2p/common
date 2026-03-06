@@ -1,9 +1,10 @@
 package lease_set
 
 import (
-	"github.com/go-i2p/crypto/rand"
 	"errors"
 	"testing"
+
+	"github.com/go-i2p/crypto/rand"
 
 	"github.com/go-i2p/common/certificate"
 	"github.com/go-i2p/common/data"
@@ -531,14 +532,117 @@ func TestUnit_ConstructSigningKeyNullCert(t *testing.T) {
 	_, err = rand.Read(keyData)
 	require.NoError(t, err)
 
-	sigKey, err := constructSigningKey(keyData, cert, certificate.CERT_NULL)
-	if err != nil {
-		// DSA library may reject random bytes that don't satisfy p constraint.
-		assert.Contains(t, err.Error(), "DSA",
-			"error should mention DSA for NULL cert path")
-	} else {
-		assert.NotNil(t, sigKey)
-		assert.Equal(t, 128, len(sigKey.Bytes()),
-			"DSA signing key should be 128 bytes")
+	// NULL cert implies DSA-SHA1, which is legacy crypto — must be rejected.
+	_, err = constructSigningKey(keyData, cert, certificate.CERT_NULL)
+	require.Error(t, err)
+	assert.ErrorIs(t, err, ErrLegacyCryptoNotSupported,
+		"constructSigningKey should reject NULL cert (legacy DSA-SHA1)")
+}
+
+// --- Bytes() invariant guard ---
+
+func TestUnit_BytesRejectsLeaseCountInvariantViolation(t *testing.T) {
+	routerInfo, _, _, _, _, err := generateTestRouterInfo(t)
+	require.NoError(t, err)
+
+	leaseSet, err := createTestLeaseSet(t, routerInfo, 3)
+	require.NoError(t, err)
+
+	// Directly mutate leaseCount to break the invariant
+	broken := &LeaseSet{
+		dest:          leaseSet.dest,
+		encryptionKey: leaseSet.encryptionKey,
+		signingKey:    leaseSet.signingKey,
+		leaseCount:    5,
+		leases:        leaseSet.leases, // only 3
+		signature:     leaseSet.signature,
 	}
+
+	_, err = broken.Bytes()
+	require.Error(t, err)
+	assert.ErrorIs(t, err, ErrLeaseCountInvariant,
+		"Bytes() must reject leaseCount != len(leases)")
+}
+
+func TestUnit_BytesUsesLenLeasesNotLeaseCount(t *testing.T) {
+	routerInfo, _, _, _, _, err := generateTestRouterInfo(t)
+	require.NoError(t, err)
+
+	leaseSet, err := createTestLeaseSet(t, routerInfo, 2)
+	require.NoError(t, err)
+
+	// Normal case: leaseCount == len(leases)
+	lsBytes, err := leaseSet.Bytes()
+	require.NoError(t, err)
+
+	// Verify the lease count byte in the output matches len(leases)
+	dest := leaseSet.Destination()
+	destBytes, err := dest.KeysAndCert.Bytes()
+	require.NoError(t, err)
+	sigKey, err := leaseSet.SigningKey()
+	require.NoError(t, err)
+	countOffset := len(destBytes) + LEASE_SET_PUBKEY_SIZE + len(sigKey.Bytes())
+	assert.Equal(t, byte(2), lsBytes[countOffset],
+		"lease count byte should match len(leases)")
+}
+
+// --- PublicKey wrong size ---
+
+func TestUnit_PublicKeyWrongSize(t *testing.T) {
+	// Create a LeaseSet with a mock key that has wrong size
+	ls := LeaseSet{
+		encryptionKey: mockNonElGamalKey{}, // 256 bytes, correct size
+	}
+	// PublicKey checks encKeyBytes size against LEASE_SET_PUBKEY_SIZE
+	pubKey, err := ls.PublicKey()
+	assert.NoError(t, err)
+	assert.Equal(t, LEASE_SET_PUBKEY_SIZE, len(pubKey.Bytes()))
+
+	// Now test with a key that reports wrong size via a custom mock
+	ls2 := LeaseSet{
+		encryptionKey: &mockShortKey{},
+	}
+	_, err = ls2.PublicKey()
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "invalid encryption key size")
+}
+
+// --- Defensive copy of encryption key pointer ---
+
+func TestUnit_DefensiveCopyEncryptionKeyPointer(t *testing.T) {
+	var elgKey elgamal.ElgPublicKey
+	_, err := rand.Read(elgKey[:])
+	require.NoError(t, err)
+
+	original := make([]byte, 256)
+	copy(original, elgKey[:])
+
+	// Pass pointer — assembleLeaseSet should make a copy
+	copied := defensiveCopyEncryptionKey(&elgKey)
+
+	// Mutate the original pointer
+	elgKey[0] ^= 0xFF
+
+	// The copy should be unaffected
+	assert.Equal(t, original, copied.Bytes(),
+		"defensive copy should be independent of the original pointer")
+}
+
+func TestUnit_DefensiveCopyEncryptionKeyValue(t *testing.T) {
+	var elgKey elgamal.ElgPublicKey
+	_, err := rand.Read(elgKey[:])
+	require.NoError(t, err)
+
+	// Value type — already a copy, should pass through unchanged
+	copied := defensiveCopyEncryptionKey(elgKey)
+	assert.Equal(t, elgKey.Bytes(), copied.Bytes())
+}
+
+// --- validateNullCertSigningKey rejects legacy ---
+
+func TestUnit_ValidateNullCertSigningKeyRejectsLegacy(t *testing.T) {
+	keyData := make([]byte, 128)
+	err := validateNullCertSigningKey(mockSigningKey(keyData))
+	require.Error(t, err)
+	assert.ErrorIs(t, err, ErrLegacyCryptoNotSupported)
 }

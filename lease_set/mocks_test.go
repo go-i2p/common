@@ -2,9 +2,10 @@ package lease_set
 
 import (
 	"bytes"
-	"github.com/go-i2p/crypto/rand"
 	"testing"
 	"time"
+
+	"github.com/go-i2p/crypto/rand"
 
 	"github.com/go-i2p/common/certificate"
 	"github.com/go-i2p/common/data"
@@ -31,6 +32,25 @@ func (k mockNonElGamalKey) NewEncrypter() (types.Encrypter, error) { return nil,
 
 // Ensure mockNonElGamalKey satisfies ReceivingPublicKey at compile time.
 var _ types.ReceivingPublicKey = mockNonElGamalKey{}
+
+// mockShortKey is a key with wrong size for testing PublicKey() error path.
+type mockShortKey struct{}
+
+func (k *mockShortKey) Bytes() []byte                          { return make([]byte, 100) }
+func (k *mockShortKey) Len() int                               { return 100 }
+func (k *mockShortKey) NewEncrypter() (types.Encrypter, error) { return nil, nil }
+
+var _ types.ReceivingPublicKey = &mockShortKey{}
+
+// mockSigningKey wraps a byte slice to satisfy types.SigningPublicKey for testing.
+type mockSigningKey []byte
+
+func (k mockSigningKey) Bytes() []byte                        { return []byte(k) }
+func (k mockSigningKey) Len() int                             { return len(k) }
+func (k mockSigningKey) NewVerifier() (types.Verifier, error) { return nil, nil }
+func (k mockSigningKey) SigningPublicKeyType() int            { return 0 }
+
+var _ types.SigningPublicKey = mockSigningKey{}
 
 // generateTestRouterInfo creates a full RouterInfo with Ed25519 signing keys
 // and ElGamal encryption keys, returning all key material needed for LeaseSet tests.
