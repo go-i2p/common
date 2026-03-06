@@ -72,6 +72,9 @@ func CreateBlindedDestination(dest destination.Destination, secret []byte, date 
 // validateBlindingSigType checks that the destination uses an Ed25519-compatible
 // signature type suitable for blinding operations.
 func validateBlindingSigType(dest destination.Destination) error {
+	if dest.KeysAndCert == nil || dest.KeyCertificate == nil {
+		return oops.Wrapf(ErrUnsupportedSignatureType, "destination has nil KeysAndCert or KeyCertificate")
+	}
 	sigType := dest.KeyCertificate.SigningPublicKeyType()
 	if sigType != key_certificate.KEYCERT_SIGN_ED25519 &&
 		sigType != key_certificate.KEYCERT_SIGN_REDDSA_ED25519 {
