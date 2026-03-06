@@ -26,12 +26,13 @@ func NewRouterIdentityFromKeysAndCert(keysAndCert *keys_and_cert.KeysAndCert) (*
 	if err := validateKeysAndCertInput(keysAndCert); err != nil {
 		return nil, err
 	}
-	logDeprecatedKeyTypes(keysAndCert.KeyCertificate)
 
 	kacCopy, err := deepCopyKeysAndCert(keysAndCert)
 	if err != nil {
 		return nil, err
 	}
+
+	logDeprecatedKeyTypes(kacCopy.KeyCertificate)
 
 	return &RouterIdentity{
 		KeysAndCert: kacCopy,

@@ -4,6 +4,7 @@ package router_identity
 import (
 	"crypto/sha256"
 	"crypto/subtle"
+	"encoding"
 	"encoding/hex"
 	"fmt"
 
@@ -14,6 +15,12 @@ import (
 	"github.com/go-i2p/crypto/types"
 	"github.com/go-i2p/logger"
 	"github.com/samber/oops"
+)
+
+// Compile-time interface assertions.
+var (
+	_ encoding.BinaryMarshaler   = (*RouterIdentity)(nil)
+	_ encoding.BinaryUnmarshaler = (*RouterIdentity)(nil)
 )
 
 var log = logger.GetGoI2PLogger()
@@ -134,35 +141,30 @@ func ReadRouterIdentity(data []byte) (ri *RouterIdentity, remainder []byte, err 
 
 // AsDestination converts the RouterIdentity to a Destination.
 // Returns a deep copy; mutating the returned Destination does not affect
-// the original RouterIdentity. Pointer-valued fields (KeyCertificate) and
-// slice backing arrays (Padding) are cloned.
+// the original RouterIdentity. The KeyCertificate is cloned by re-parsing
+// its serialized bytes (producing independent backing arrays for all slice
+// fields). Padding is cloned via make+copy.
+//
+// ReceivingPublic and SigningPublic are interface values copied by struct
+// assignment. For production key types backed by fixed-size Go arrays,
+// this creates independent values. Slice-backed implementations may share
+// the underlying array.
+//
 // Returns a zero-value Destination if the receiver or its KeysAndCert is nil.
 // NOTE: The returned Destination is NOT validated against Destination-specific
-// key type restrictions. RouterIdentities may use key types (e.g., RedDSA) that
-// are prohibited for Destinations. Callers should call dest.Validate() on the
-// returned Destination if Destination-specific validation is required.
+// key type restrictions. Callers should call dest.Validate() on the returned
+// Destination if Destination-specific validation is required.
 func (ri *RouterIdentity) AsDestination() destination.Destination {
 	if ri == nil || ri.KeysAndCert == nil {
 		return destination.Destination{}
 	}
-	// Shallow struct copy first
-	shallowCopy := *ri.KeysAndCert
-
-	// Deep copy KeyCertificate pointer
-	if ri.KeysAndCert.KeyCertificate != nil {
-		keyCertCopy := *ri.KeysAndCert.KeyCertificate
-		shallowCopy.KeyCertificate = &keyCertCopy
+	kacCopy, err := deepCopyKeysAndCert(ri.KeysAndCert)
+	if err != nil {
+		log.WithError(err).Error("AsDestination: failed to deep-copy KeysAndCert")
+		return destination.Destination{}
 	}
-
-	// Deep copy Padding slice backing array
-	if ri.KeysAndCert.Padding != nil {
-		paddingCopy := make([]byte, len(ri.KeysAndCert.Padding))
-		copy(paddingCopy, ri.KeysAndCert.Padding)
-		shallowCopy.Padding = paddingCopy
-	}
-
 	return destination.Destination{
-		KeysAndCert: &shallowCopy,
+		KeysAndCert: kacCopy,
 	}
 }
 
@@ -188,6 +190,27 @@ func (ri *RouterIdentity) Bytes() ([]byte, error) {
 		return nil, oops.Errorf("RouterIdentity is not initialized")
 	}
 	return ri.KeysAndCert.Bytes()
+}
+
+// MarshalBinary implements encoding.BinaryMarshaler.
+// Returns the wire-format serialization of the RouterIdentity.
+func (ri *RouterIdentity) MarshalBinary() ([]byte, error) {
+	return ri.Bytes()
+}
+
+// UnmarshalBinary implements encoding.BinaryUnmarshaler.
+// Parses a RouterIdentity from its wire-format representation.
+// The input must be exactly the length of a RouterIdentity (no trailing data allowed).
+func (ri *RouterIdentity) UnmarshalBinary(data []byte) error {
+	parsed, remainder, err := ReadRouterIdentity(data)
+	if err != nil {
+		return err
+	}
+	if len(remainder) > 0 {
+		return oops.Errorf("trailing data after RouterIdentity: %d bytes", len(remainder))
+	}
+	*ri = *parsed
+	return nil
 }
 
 // Equal returns true if two RouterIdentities are byte-for-byte identical.

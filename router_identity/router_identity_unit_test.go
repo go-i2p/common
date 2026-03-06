@@ -1,10 +1,11 @@
 package router_identity
 
 import (
-	"github.com/go-i2p/crypto/rand"
 	"crypto/sha256"
 	"strings"
 	"testing"
+
+	"github.com/go-i2p/crypto/rand"
 
 	"github.com/go-i2p/common/certificate"
 	"github.com/go-i2p/common/key_certificate"
@@ -750,5 +751,109 @@ func TestNewRouterIdentityWithCompressiblePadding_ErrorPaths(t *testing.T) {
 		if err != nil {
 			assert.Nil(t, ri)
 		}
+	})
+}
+
+// TestAsDestination_CertificatePayloadIsolation verifies that mutating the
+// Certificate payload bytes within the returned Destination does not affect
+// the original RouterIdentity. This exercises the deep copy of slice backing
+// arrays inside the KeyCertificate.
+func TestAsDestination_CertificatePayloadIsolation(t *testing.T) {
+	kac := buildKeysAndCertForTypes(t,
+		key_certificate.KEYCERT_SIGN_ED25519,
+		key_certificate.KEYCERT_CRYPTO_X25519,
+	)
+	ri, err := NewRouterIdentityFromKeysAndCert(kac)
+	require.NoError(t, err)
+
+	origBytes, err := ri.Bytes()
+	require.NoError(t, err)
+
+	dest := ri.AsDestination()
+	require.NotNil(t, dest.KeysAndCert)
+	require.NotNil(t, dest.KeysAndCert.KeyCertificate)
+
+	// Mutate the Certificate payload inside the Destination's KeyCertificate
+	destPayload, _ := dest.KeysAndCert.KeyCertificate.Certificate.Data()
+	if len(destPayload) > 0 {
+		destPayload[0] ^= 0xFF
+	}
+
+	afterBytes, err := ri.Bytes()
+	require.NoError(t, err)
+	assert.Equal(t, origBytes, afterBytes,
+		"mutating Destination's Certificate payload must not affect original RouterIdentity")
+}
+
+// TestMarshalBinary verifies the encoding.BinaryMarshaler interface.
+func TestMarshalBinary(t *testing.T) {
+	t.Run("produces same bytes as Bytes()", func(t *testing.T) {
+		kac := createValidKeysAndCert(t)
+		ri, err := NewRouterIdentityFromKeysAndCert(kac)
+		require.NoError(t, err)
+
+		marshaledBytes, err := ri.MarshalBinary()
+		require.NoError(t, err)
+
+		directBytes, err := ri.Bytes()
+		require.NoError(t, err)
+
+		assert.Equal(t, directBytes, marshaledBytes)
+	})
+
+	t.Run("nil receiver returns error", func(t *testing.T) {
+		var ri *RouterIdentity
+		_, err := ri.MarshalBinary()
+		require.Error(t, err)
+	})
+}
+
+// TestUnmarshalBinary verifies the encoding.BinaryUnmarshaler interface.
+func TestUnmarshalBinary(t *testing.T) {
+	t.Run("round trip with MarshalBinary", func(t *testing.T) {
+		kac := createValidKeysAndCert(t)
+		ri1, err := NewRouterIdentityFromKeysAndCert(kac)
+		require.NoError(t, err)
+
+		data, err := ri1.MarshalBinary()
+		require.NoError(t, err)
+
+		ri2 := &RouterIdentity{}
+		err = ri2.UnmarshalBinary(data)
+		require.NoError(t, err)
+		assert.True(t, ri1.Equal(ri2), "round-trip via MarshalBinary/UnmarshalBinary must preserve equality")
+	})
+
+	t.Run("rejects trailing data", func(t *testing.T) {
+		data := createValidRouterIdentityBytes(t)
+		dataWithExtra := append(data, 0xDE, 0xAD)
+
+		ri := &RouterIdentity{}
+		err := ri.UnmarshalBinary(dataWithExtra)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "trailing data")
+	})
+
+	t.Run("rejects invalid data", func(t *testing.T) {
+		ri := &RouterIdentity{}
+		err := ri.UnmarshalBinary([]byte{0x00, 0x01})
+		require.Error(t, err)
+	})
+
+	t.Run("round trip with Ed25519/X25519", func(t *testing.T) {
+		wireData := buildRouterIdentityBytes(t,
+			key_certificate.KEYCERT_SIGN_ED25519,
+			key_certificate.KEYCERT_CRYPTO_X25519,
+		)
+		ri1, _, err := ReadRouterIdentity(wireData)
+		require.NoError(t, err)
+
+		marshaled, err := ri1.MarshalBinary()
+		require.NoError(t, err)
+
+		ri2 := &RouterIdentity{}
+		err = ri2.UnmarshalBinary(marshaled)
+		require.NoError(t, err)
+		assert.True(t, ri1.Equal(ri2))
 	})
 }
