@@ -2,10 +2,11 @@ package encrypted_leaseset
 
 import (
 	"crypto/ed25519"
-	"github.com/go-i2p/crypto/rand"
 	"encoding/binary"
 	"testing"
 	"time"
+
+	"github.com/go-i2p/crypto/rand"
 
 	"github.com/go-i2p/common/data"
 	"github.com/go-i2p/common/destination"
@@ -112,6 +113,19 @@ func createTestLeaseSet2(t *testing.T) *lease_set2.LeaseSet2 {
 func createTestLeaseSet2ForEncryption(t *testing.T) *lease_set2.LeaseSet2 {
 	t.Helper()
 	return createTestLeaseSet2(t)
+}
+
+// createTestEncryptionContext builds a LeaseSet2, encrypts it with a random
+// subcredential, and returns everything a test might need.
+func createTestEncryptionContext(t *testing.T) (ls2 *lease_set2.LeaseSet2, encryptedData []byte, subcredential [32]byte, published uint32) {
+	t.Helper()
+	ls2 = createTestLeaseSet2(t)
+	_, _ = rand.Read(subcredential[:])
+	published = uint32(time.Now().Unix())
+	var err error
+	encryptedData, err = EncryptInnerLeaseSet2(ls2, subcredential, published)
+	require.NoError(t, err)
+	return
 }
 
 // createSpecCompliantELS builds a minimal spec-compliant EncryptedLeaseSet wire blob.

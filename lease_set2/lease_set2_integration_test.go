@@ -10,7 +10,6 @@ import (
 	"github.com/go-i2p/crypto/rand"
 
 	common "github.com/go-i2p/common/data"
-	"github.com/go-i2p/common/destination"
 	"github.com/go-i2p/common/key_certificate"
 	"github.com/go-i2p/common/lease"
 	"github.com/go-i2p/common/offline_signature"
@@ -24,70 +23,7 @@ import (
 //
 
 func TestLeaseSet2Bytes(t *testing.T) {
-	destData := createTestDestination(t, key_certificate.KEYCERT_SIGN_ED25519)
-	_, _, err := destination.ReadDestination(destData)
-	require.NoError(t, err)
-
-	data := destData
-	published := uint32(1735689600)
-	publishedBytes := make([]byte, 4)
-	binary.BigEndian.PutUint32(publishedBytes, published)
-	data = append(data, publishedBytes...)
-
-	expires := uint16(600)
-	expiresBytes := make([]byte, 2)
-	binary.BigEndian.PutUint16(expiresBytes, expires)
-	data = append(data, expiresBytes...)
-
-	flags := uint16(0)
-	flagsBytes := make([]byte, 2)
-	binary.BigEndian.PutUint16(flagsBytes, flags)
-	data = append(data, flagsBytes...)
-
-	optionsSize := uint16(0)
-	optionsSizeBytes := make([]byte, 2)
-	binary.BigEndian.PutUint16(optionsSizeBytes, optionsSize)
-	data = append(data, optionsSizeBytes...)
-
-	numKeys := byte(1)
-	data = append(data, numKeys)
-
-	keyType := uint16(key_certificate.KEYCERT_CRYPTO_X25519)
-	keyLen := uint16(32)
-	keyTypeBytes := make([]byte, 2)
-	binary.BigEndian.PutUint16(keyTypeBytes, keyType)
-	data = append(data, keyTypeBytes...)
-	keyLenBytes := make([]byte, 2)
-	binary.BigEndian.PutUint16(keyLenBytes, keyLen)
-	data = append(data, keyLenBytes...)
-	keyData := make([]byte, 32)
-	for i := 0; i < 32; i++ {
-		keyData[i] = byte(i)
-	}
-	data = append(data, keyData...)
-
-	numLeases := byte(1)
-	data = append(data, numLeases)
-
-	hash := make([]byte, 32)
-	for i := 0; i < 32; i++ {
-		hash[i] = byte(0xAA)
-	}
-	data = append(data, hash...)
-	tunnelID := uint32(12345)
-	tunnelIDBytes := make([]byte, 4)
-	binary.BigEndian.PutUint32(tunnelIDBytes, tunnelID)
-	data = append(data, tunnelIDBytes...)
-	endDate := uint32(1735690200)
-	endDateBytes := make([]byte, 4)
-	binary.BigEndian.PutUint32(endDateBytes, endDate)
-	data = append(data, endDateBytes...)
-
-	signatureData := make([]byte, signature.EdDSA_SHA512_Ed25519_SIZE)
-	for i := 0; i < signature.EdDSA_SHA512_Ed25519_SIZE; i++ {
-		signatureData[i] = byte(0xFF - i)
-	}
-	data = append(data, signatureData...)
+	data := buildMinimalLeaseSet2Data(t, key_certificate.KEYCERT_SIGN_ED25519, 1, 0)
 
 	ls2, remainder, err := ReadLeaseSet2(data)
 	require.NoError(t, err, "Failed to parse LeaseSet2")

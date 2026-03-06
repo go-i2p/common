@@ -318,32 +318,28 @@ func buildP521WireData(t *testing.T) (wireData []byte, fullSigningKey []byte) {
 	return
 }
 
-// buildRSA2048WireData builds valid wire data for RSA-2048 (sigKeySize=256) + ElGamal.
-// RSA-2048 signing key: 256 bytes. 128 bytes inline + 128 bytes excess in cert payload.
-// Returns the wire bytes and the full 256-byte RSA-2048 signing key for assertion.
-func buildRSA2048WireData(t *testing.T) (wireData []byte, fullSigningKey []byte) {
+// buildRSAWireData builds valid wire data for an RSA signing key type + ElGamal.
+// sigType: the KEYCERT_SIGN_RSA* constant (e.g. KEYCERT_SIGN_RSA2048).
+// excessSize: the number of excess signing key bytes stored in the cert payload
+// (RSA-2048=128, RSA-3072=256, RSA-4096=384).
+// Returns the wire bytes and the full signing key (excess || inline) for assertion.
+func buildRSAWireData(t *testing.T, sigType int, excessSize int) (wireData []byte, fullSigningKey []byte) {
 	t.Helper()
 
 	block := make([]byte, KEYS_AND_CERT_DATA_SIZE)
-
-	// Random ElGamal key
 	_, err := rand.Read(block[0:256])
 	require.NoError(t, err)
 
-	// Generate inline (128 bytes) and excess (128 bytes) separately
 	inlineBytes := make([]byte, 128)
 	_, err = rand.Read(inlineBytes)
 	require.NoError(t, err)
-	excessBytes := make([]byte, 128)
+	excessBytes := make([]byte, excessSize)
 	_, err = rand.Read(excessBytes)
 	require.NoError(t, err)
-
-	// Inline bytes go in SPK field
 	copy(block[256:384], inlineBytes)
 
-	// cert payload: SpkType(RSA2048=4) || CpkType(ElGamal=0) || excess(128 bytes)
 	certPayload := make([]byte, 4+len(excessBytes))
-	binary.BigEndian.PutUint16(certPayload[0:2], uint16(key_certificate.KEYCERT_SIGN_RSA2048))
+	binary.BigEndian.PutUint16(certPayload[0:2], uint16(sigType))
 	binary.BigEndian.PutUint16(certPayload[2:4], uint16(key_certificate.KEYCERT_CRYPTO_ELG))
 	copy(certPayload[4:], excessBytes)
 
@@ -354,73 +350,27 @@ func buildRSA2048WireData(t *testing.T) (wireData []byte, fullSigningKey []byte)
 	certBytes = append(certBytes, certPayload...)
 
 	wireData = append(block, certBytes...)
-	// Per I2P spec, full signing key = excess || inline (cert payload bytes first)
+	// Per I2P spec, full signing key = excess || inline
 	fullSigningKey = append(excessBytes, inlineBytes...)
 	return
+}
+
+// buildRSA2048WireData builds valid wire data for RSA-2048 (sigKeySize=256) + ElGamal.
+func buildRSA2048WireData(t *testing.T) (wireData []byte, fullSigningKey []byte) {
+	t.Helper()
+	return buildRSAWireData(t, key_certificate.KEYCERT_SIGN_RSA2048, 128)
 }
 
 // buildRSA3072WireData builds valid wire data for RSA-3072 (sigKeySize=384) + ElGamal.
 func buildRSA3072WireData(t *testing.T) (wireData []byte, fullSigningKey []byte) {
 	t.Helper()
-	block := make([]byte, KEYS_AND_CERT_DATA_SIZE)
-	_, err := rand.Read(block[0:256])
-	require.NoError(t, err)
-
-	inlineBytes := make([]byte, 128)
-	_, err = rand.Read(inlineBytes)
-	require.NoError(t, err)
-	excessBytes := make([]byte, 256)
-	_, err = rand.Read(excessBytes)
-	require.NoError(t, err)
-	copy(block[256:384], inlineBytes)
-
-	certPayload := make([]byte, 4+len(excessBytes))
-	binary.BigEndian.PutUint16(certPayload[0:2], uint16(key_certificate.KEYCERT_SIGN_RSA3072))
-	binary.BigEndian.PutUint16(certPayload[2:4], uint16(key_certificate.KEYCERT_CRYPTO_ELG))
-	copy(certPayload[4:], excessBytes)
-
-	certBytes := []byte{certificate.CERT_KEY}
-	lenBytes := make([]byte, 2)
-	binary.BigEndian.PutUint16(lenBytes, uint16(len(certPayload)))
-	certBytes = append(certBytes, lenBytes...)
-	certBytes = append(certBytes, certPayload...)
-
-	wireData = append(block, certBytes...)
-	// Per I2P spec, full signing key = excess || inline
-	fullSigningKey = append(excessBytes, inlineBytes...)
-	return
+	return buildRSAWireData(t, key_certificate.KEYCERT_SIGN_RSA3072, 256)
 }
 
 // buildRSA4096WireData builds valid wire data for RSA-4096 (sigKeySize=512) + ElGamal.
 func buildRSA4096WireData(t *testing.T) (wireData []byte, fullSigningKey []byte) {
 	t.Helper()
-	block := make([]byte, KEYS_AND_CERT_DATA_SIZE)
-	_, err := rand.Read(block[0:256])
-	require.NoError(t, err)
-
-	inlineBytes := make([]byte, 128)
-	_, err = rand.Read(inlineBytes)
-	require.NoError(t, err)
-	excessBytes := make([]byte, 384)
-	_, err = rand.Read(excessBytes)
-	require.NoError(t, err)
-	copy(block[256:384], inlineBytes)
-
-	certPayload := make([]byte, 4+len(excessBytes))
-	binary.BigEndian.PutUint16(certPayload[0:2], uint16(key_certificate.KEYCERT_SIGN_RSA4096))
-	binary.BigEndian.PutUint16(certPayload[2:4], uint16(key_certificate.KEYCERT_CRYPTO_ELG))
-	copy(certPayload[4:], excessBytes)
-
-	certBytes := []byte{certificate.CERT_KEY}
-	lenBytes := make([]byte, 2)
-	binary.BigEndian.PutUint16(lenBytes, uint16(len(certPayload)))
-	certBytes = append(certBytes, lenBytes...)
-	certBytes = append(certBytes, certPayload...)
-
-	wireData = append(block, certBytes...)
-	// Per I2P spec, full signing key = excess || inline
-	fullSigningKey = append(excessBytes, inlineBytes...)
-	return
+	return buildRSAWireData(t, key_certificate.KEYCERT_SIGN_RSA4096, 384)
 }
 
 // buildMLKEMWireData builds valid wire data for MLKEM+X25519 crypto + Ed25519 signing.

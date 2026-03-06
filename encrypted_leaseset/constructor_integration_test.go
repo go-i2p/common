@@ -1,9 +1,9 @@
 package encrypted_leaseset
 
 import (
-	"github.com/go-i2p/crypto/rand"
 	"testing"
-	"time"
+
+	"github.com/go-i2p/crypto/rand"
 
 	"github.com/go-i2p/common/key_certificate"
 	goi2ped25519 "github.com/go-i2p/crypto/ed25519"
@@ -17,14 +17,7 @@ import (
 // ————————————————————————————————————————————————
 
 func TestNewEncryptedLeaseSetRoundTrip(t *testing.T) {
-	ls2 := createTestLeaseSet2(t)
-
-	var subcredential [32]byte
-	_, _ = rand.Read(subcredential[:])
-	published := uint32(time.Now().Unix())
-
-	encryptedData, err := EncryptInnerLeaseSet2(ls2, subcredential, published)
-	require.NoError(t, err)
+	ls2, encryptedData, subcredential, published := createTestEncryptionContext(t)
 
 	_, signingPriv, err := goi2ped25519.GenerateEd25519KeyPair()
 	require.NoError(t, err)
@@ -67,14 +60,7 @@ func TestNewEncryptedLeaseSetRoundTrip(t *testing.T) {
 }
 
 func TestEncryptedLeaseSetValidateViaConstructor(t *testing.T) {
-	ls2 := createTestLeaseSet2(t)
-
-	var subcredential [32]byte
-	_, _ = rand.Read(subcredential[:])
-	published := uint32(time.Now().Unix())
-
-	encryptedData, err := EncryptInnerLeaseSet2(ls2, subcredential, published)
-	require.NoError(t, err)
+	_, encryptedData, _, published := createTestEncryptionContext(t)
 
 	_, signingPriv, err := goi2ped25519.GenerateEd25519KeyPair()
 	require.NoError(t, err)

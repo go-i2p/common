@@ -188,6 +188,28 @@ func createTestDestinationStruct(t *testing.T) destination.Destination {
 	return dest
 }
 
+// buildMetaLeaseSetHeaderData builds the common MetaLeaseSet preamble:
+// destination + published(4) + expires(2) + flags(2) + empty options(2).
+func buildMetaLeaseSetHeaderData(t *testing.T, published uint32, expires uint16, flags uint16) []byte {
+	t.Helper()
+	data := createTestDestination(t, key_certificate.KEYCERT_SIGN_ED25519)
+
+	publishedBytes := make([]byte, 4)
+	binary.BigEndian.PutUint32(publishedBytes, published)
+	data = append(data, publishedBytes...)
+
+	expiresBytes := make([]byte, 2)
+	binary.BigEndian.PutUint16(expiresBytes, expires)
+	data = append(data, expiresBytes...)
+
+	flagsBytes := make([]byte, 2)
+	binary.BigEndian.PutUint16(flagsBytes, flags)
+	data = append(data, flagsBytes...)
+
+	data = append(data, 0x00, 0x00) // Empty options
+	return data
+}
+
 // createTestSignature creates a dummy 64-byte Ed25519 signature for tests
 func createTestSignature() signature.Signature {
 	// Ed25519 signatures are 64 bytes
@@ -204,37 +226,14 @@ func createTestSignature() signature.Signature {
 
 // TestReadMetaLeaseSetMinimalValid tests parsing of a minimal valid MetaLeaseSet
 func TestReadMetaLeaseSetMinimalValid(t *testing.T) {
-	// Create destination
-	destData := createTestDestination(t, key_certificate.KEYCERT_SIGN_ED25519)
-	dest, _, err := destination.ReadDestination(destData)
-	require.NoError(t, err)
-
-	data := destData
-
-	// Published (4 bytes)
 	published := uint32(time.Now().Unix())
-	publishedBytes := make([]byte, 4)
-	binary.BigEndian.PutUint32(publishedBytes, published)
-	data = append(data, publishedBytes...)
-
-	// Expires (2 bytes)
 	expires := uint16(600)
-	expiresBytes := make([]byte, 2)
-	binary.BigEndian.PutUint16(expiresBytes, expires)
-	data = append(data, expiresBytes...)
-
-	// Flags (2 bytes)
 	flags := uint16(0)
-	flagsBytes := make([]byte, 2)
-	binary.BigEndian.PutUint16(flagsBytes, flags)
-	data = append(data, flagsBytes...)
-
-	// Options (empty mapping = 2 bytes)
-	data = append(data, 0x00, 0x00)
+	data := buildMetaLeaseSetHeaderData(t, published, expires, flags)
+	dest := createTestDestinationStruct(t)
 
 	// Number of entries (1 byte)
-	numEntries := byte(1)
-	data = append(data, numEntries)
+	data = append(data, byte(1))
 
 	// Entry
 	entryData := createTestEntry(META_LEASESET_ENTRY_TYPE_LEASESET2, 10)
@@ -271,29 +270,10 @@ func TestReadMetaLeaseSetMinimalValid(t *testing.T) {
 
 // TestReadMetaLeaseSetMultipleEntries tests parsing with multiple entries
 func TestReadMetaLeaseSetMultipleEntries(t *testing.T) {
-	destData := createTestDestination(t, key_certificate.KEYCERT_SIGN_ED25519)
-	data := destData
-
-	published := uint32(time.Now().Unix())
-	publishedBytes := make([]byte, 4)
-	binary.BigEndian.PutUint32(publishedBytes, published)
-	data = append(data, publishedBytes...)
-
-	expires := uint16(3600)
-	expiresBytes := make([]byte, 2)
-	binary.BigEndian.PutUint16(expiresBytes, expires)
-	data = append(data, expiresBytes...)
-
-	flags := uint16(0)
-	flagsBytes := make([]byte, 2)
-	binary.BigEndian.PutUint16(flagsBytes, flags)
-	data = append(data, flagsBytes...)
-
-	data = append(data, 0x00, 0x00) // Empty options
+	data := buildMetaLeaseSetHeaderData(t, uint32(time.Now().Unix()), 3600, 0)
 
 	// 3 entries
-	numEntries := byte(3)
-	data = append(data, numEntries)
+	data = append(data, byte(3))
 
 	// Different types and costs
 	data = append(data, createTestEntry(META_LEASESET_ENTRY_TYPE_LEASESET, 5)...)
@@ -338,25 +318,7 @@ func TestReadMetaLeaseSetInvalidEntryCount(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			destData := createTestDestination(t, key_certificate.KEYCERT_SIGN_ED25519)
-			data := destData
-
-			published := uint32(time.Now().Unix())
-			publishedBytes := make([]byte, 4)
-			binary.BigEndian.PutUint32(publishedBytes, published)
-			data = append(data, publishedBytes...)
-
-			expires := uint16(600)
-			expiresBytes := make([]byte, 2)
-			binary.BigEndian.PutUint16(expiresBytes, expires)
-			data = append(data, expiresBytes...)
-
-			flags := uint16(0)
-			flagsBytes := make([]byte, 2)
-			binary.BigEndian.PutUint16(flagsBytes, flags)
-			data = append(data, flagsBytes...)
-
-			data = append(data, 0x00, 0x00) // Empty options
+			data := buildMetaLeaseSetHeaderData(t, uint32(time.Now().Unix()), 600, 0)
 			data = append(data, tt.numEntries)
 
 			_, _, err := ReadMetaLeaseSet(data)
@@ -371,26 +333,8 @@ func TestReadMetaLeaseSetInvalidEntryCount(t *testing.T) {
 // must no longer cause a hard parse failure; they are accepted with a warning so that
 // future spec revisions or non-conforming peers do not break parsing.
 func TestReadMetaLeaseSetInvalidEntryType(t *testing.T) {
-	destData := createTestDestination(t, key_certificate.KEYCERT_SIGN_ED25519)
-	data := destData
-
-	published := uint32(time.Now().Unix())
-	publishedBytes := make([]byte, 4)
-	binary.BigEndian.PutUint32(publishedBytes, published)
-	data = append(data, publishedBytes...)
-
-	expires := uint16(600)
-	expiresBytes := make([]byte, 2)
-	binary.BigEndian.PutUint16(expiresBytes, expires)
-	data = append(data, expiresBytes...)
-
-	flags := uint16(0)
-	flagsBytes := make([]byte, 2)
-	binary.BigEndian.PutUint16(flagsBytes, flags)
-	data = append(data, flagsBytes...)
-
-	data = append(data, 0x00, 0x00) // Empty options
-	data = append(data, byte(1))    // 1 entry
+	data := buildMetaLeaseSetHeaderData(t, uint32(time.Now().Unix()), 600, 0)
+	data = append(data, byte(1)) // 1 entry
 
 	// Type 7 is currently undefined in the spec — must be accepted for forward compatibility.
 	unknownEntry := createTestEntry(7, 10)
@@ -823,21 +767,7 @@ func TestMetaLeaseSetMakeEntryFlags(t *testing.T) {
 
 // TestMetaLeaseSetRoundTrip verifies parse → serialize → parse consistency.
 func TestMetaLeaseSetRoundTrip(t *testing.T) {
-	destData := createTestDestination(t, key_certificate.KEYCERT_SIGN_ED25519)
-	data := destData
-
-	published := uint32(1700000000) // fixed timestamp
-	publishedBytes := make([]byte, 4)
-	binary.BigEndian.PutUint32(publishedBytes, published)
-	data = append(data, publishedBytes...)
-
-	expires := uint16(3600)
-	expiresBytes := make([]byte, 2)
-	binary.BigEndian.PutUint16(expiresBytes, expires)
-	data = append(data, expiresBytes...)
-
-	data = append(data, 0x00, 0x00) // flags = 0
-	data = append(data, 0x00, 0x00) // empty options
+	data := buildMetaLeaseSetHeaderData(t, 1700000000, 3600, 0)
 
 	// 2 entries
 	data = append(data, 0x02)
@@ -894,21 +824,7 @@ func TestMetaLeaseSetRoundTrip(t *testing.T) {
 
 // TestReadMetaLeaseSetWithRevocations tests parsing a MetaLeaseSet that contains revocations.
 func TestReadMetaLeaseSetWithRevocations(t *testing.T) {
-	destData := createTestDestination(t, key_certificate.KEYCERT_SIGN_ED25519)
-	data := destData
-
-	published := uint32(time.Now().Unix())
-	publishedBytes := make([]byte, 4)
-	binary.BigEndian.PutUint32(publishedBytes, published)
-	data = append(data, publishedBytes...)
-
-	expires := uint16(600)
-	expiresBytes := make([]byte, 2)
-	binary.BigEndian.PutUint16(expiresBytes, expires)
-	data = append(data, expiresBytes...)
-
-	data = append(data, 0x00, 0x00) // flags = 0
-	data = append(data, 0x00, 0x00) // empty options
+	data := buildMetaLeaseSetHeaderData(t, uint32(time.Now().Unix()), 600, 0)
 
 	// 1 entry
 	data = append(data, 0x01)
@@ -961,17 +877,7 @@ func TestMetaLeaseSetRevocationsTruncatedData(t *testing.T) {
 
 // TestReadMetaLeaseSetAllEntryTypes tests parsing with all valid entry types including type 0.
 func TestReadMetaLeaseSetAllEntryTypes(t *testing.T) {
-	destData := createTestDestination(t, key_certificate.KEYCERT_SIGN_ED25519)
-	data := destData
-
-	published := uint32(time.Now().Unix())
-	publishedBytes := make([]byte, 4)
-	binary.BigEndian.PutUint32(publishedBytes, published)
-	data = append(data, publishedBytes...)
-
-	data = append(data, 0x02, 0x58) // expires = 600
-	data = append(data, 0x00, 0x00) // flags = 0
-	data = append(data, 0x00, 0x00) // empty options
+	data := buildMetaLeaseSetHeaderData(t, uint32(time.Now().Unix()), 600, 0)
 
 	// 4 entries with all valid types
 	data = append(data, 0x04)
@@ -1032,17 +938,7 @@ func TestBytesNilDestinationReturnsError(t *testing.T) {
 func TestVerifyReturnsMismatchErrorForZeroSignature(t *testing.T) {
 	// Build a syntactically valid MetaLeaseSet from bytes, then call Verify().
 	// The signature is all-zeros, which will not verify against any real key.
-	destData := createTestDestination(t, key_certificate.KEYCERT_SIGN_ED25519)
-	data := destData
-
-	published := uint32(1700000000)
-	publishedBytes := make([]byte, 4)
-	binary.BigEndian.PutUint32(publishedBytes, published)
-	data = append(data, publishedBytes...)
-
-	data = append(data, 0x02, 0x58) // expires = 600
-	data = append(data, 0x00, 0x00) // flags = 0
-	data = append(data, 0x00, 0x00) // empty options
+	data := buildMetaLeaseSetHeaderData(t, 1700000000, 600, 0)
 
 	data = append(data, 0x01) // 1 entry
 	data = append(data, createTestEntry(META_LEASESET_ENTRY_TYPE_LEASESET2, 5)...)

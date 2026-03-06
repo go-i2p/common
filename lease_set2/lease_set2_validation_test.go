@@ -29,24 +29,7 @@ func TestReadLeaseSet2TooShort(t *testing.T) {
 }
 
 func TestReadLeaseSet2InvalidEncryptionKeyCount(t *testing.T) {
-	destData := createTestDestination(t, key_certificate.KEYCERT_SIGN_ED25519)
-	data := destData
-
-	publishedBytes := make([]byte, 4)
-	binary.BigEndian.PutUint32(publishedBytes, 1735689600)
-	data = append(data, publishedBytes...)
-
-	expiresBytes := make([]byte, 2)
-	binary.BigEndian.PutUint16(expiresBytes, 600)
-	data = append(data, expiresBytes...)
-
-	flagsBytes := make([]byte, 2)
-	binary.BigEndian.PutUint16(flagsBytes, 0)
-	data = append(data, flagsBytes...)
-
-	optionsSizeBytes := make([]byte, 2)
-	binary.BigEndian.PutUint16(optionsSizeBytes, 0)
-	data = append(data, optionsSizeBytes...)
+	data := buildLeaseSet2HeaderData(t, key_certificate.KEYCERT_SIGN_ED25519, 0)
 
 	numKeys := byte(0)
 	data = append(data, numKeys)
@@ -56,24 +39,7 @@ func TestReadLeaseSet2InvalidEncryptionKeyCount(t *testing.T) {
 }
 
 func TestReadLeaseSet2TooManyEncryptionKeys(t *testing.T) {
-	destData := createTestDestination(t, key_certificate.KEYCERT_SIGN_ED25519)
-	data := destData
-
-	publishedBytes := make([]byte, 4)
-	binary.BigEndian.PutUint32(publishedBytes, 1735689600)
-	data = append(data, publishedBytes...)
-
-	expiresBytes := make([]byte, 2)
-	binary.BigEndian.PutUint16(expiresBytes, 600)
-	data = append(data, expiresBytes...)
-
-	flagsBytes := make([]byte, 2)
-	binary.BigEndian.PutUint16(flagsBytes, 0)
-	data = append(data, flagsBytes...)
-
-	optionsSizeBytes := make([]byte, 2)
-	binary.BigEndian.PutUint16(optionsSizeBytes, 0)
-	data = append(data, optionsSizeBytes...)
+	data := buildLeaseSet2HeaderData(t, key_certificate.KEYCERT_SIGN_ED25519, 0)
 
 	numKeys := byte(17)
 	data = append(data, numKeys)
@@ -83,34 +49,8 @@ func TestReadLeaseSet2TooManyEncryptionKeys(t *testing.T) {
 }
 
 func TestReadLeaseSet2TooManyLeases(t *testing.T) {
-	destData := createTestDestination(t, key_certificate.KEYCERT_SIGN_ED25519)
-	data := destData
-
-	publishedBytes := make([]byte, 4)
-	binary.BigEndian.PutUint32(publishedBytes, 1735689600)
-	data = append(data, publishedBytes...)
-
-	expiresBytes := make([]byte, 2)
-	binary.BigEndian.PutUint16(expiresBytes, 600)
-	data = append(data, expiresBytes...)
-
-	flagsBytes := make([]byte, 2)
-	binary.BigEndian.PutUint16(flagsBytes, 0)
-	data = append(data, flagsBytes...)
-
-	optionsSizeBytes := make([]byte, 2)
-	binary.BigEndian.PutUint16(optionsSizeBytes, 0)
-	data = append(data, optionsSizeBytes...)
-
-	numKeys := byte(1)
-	data = append(data, numKeys)
-	keyTypeBytes := make([]byte, 2)
-	binary.BigEndian.PutUint16(keyTypeBytes, key_certificate.KEYCERT_CRYPTO_X25519)
-	data = append(data, keyTypeBytes...)
-	keyLenBytes := make([]byte, 2)
-	binary.BigEndian.PutUint16(keyLenBytes, 32)
-	data = append(data, keyLenBytes...)
-	data = append(data, make([]byte, 32)...)
+	data := buildLeaseSet2HeaderData(t, key_certificate.KEYCERT_SIGN_ED25519, 0)
+	data = appendLeaseSet2EncKey(data)
 
 	numLeases := byte(17)
 	data = append(data, numLeases)
@@ -135,7 +75,7 @@ func TestReadLeaseSet2WithOfflineKeys(t *testing.T) {
 	binary.BigEndian.PutUint16(flagsBytes, LEASESET2_FLAG_OFFLINE_KEYS)
 	data = append(data, flagsBytes...)
 
-	// Truncated offline signature
+	// Truncated offline signature (offline keys are parsed before options)
 	data = append(data, []byte{0x00, 0x00, 0x00}...)
 
 	_, _, err := ReadLeaseSet2(data)
@@ -143,24 +83,7 @@ func TestReadLeaseSet2WithOfflineKeys(t *testing.T) {
 }
 
 func TestReadLeaseSet2InvalidEncryptionKeyData(t *testing.T) {
-	destData := createTestDestination(t, key_certificate.KEYCERT_SIGN_ED25519)
-	data := destData
-
-	publishedBytes := make([]byte, 4)
-	binary.BigEndian.PutUint32(publishedBytes, 1735689600)
-	data = append(data, publishedBytes...)
-
-	expiresBytes := make([]byte, 2)
-	binary.BigEndian.PutUint16(expiresBytes, 600)
-	data = append(data, expiresBytes...)
-
-	flagsBytes := make([]byte, 2)
-	binary.BigEndian.PutUint16(flagsBytes, 0)
-	data = append(data, flagsBytes...)
-
-	optionsSizeBytes := make([]byte, 2)
-	binary.BigEndian.PutUint16(optionsSizeBytes, 0)
-	data = append(data, optionsSizeBytes...)
+	data := buildLeaseSet2HeaderData(t, key_certificate.KEYCERT_SIGN_ED25519, 0)
 
 	numKeys := byte(1)
 	data = append(data, numKeys)
@@ -178,34 +101,8 @@ func TestReadLeaseSet2InvalidEncryptionKeyData(t *testing.T) {
 }
 
 func TestReadLeaseSet2InvalidLeaseData(t *testing.T) {
-	destData := createTestDestination(t, key_certificate.KEYCERT_SIGN_ED25519)
-	data := destData
-
-	publishedBytes := make([]byte, 4)
-	binary.BigEndian.PutUint32(publishedBytes, 1735689600)
-	data = append(data, publishedBytes...)
-
-	expiresBytes := make([]byte, 2)
-	binary.BigEndian.PutUint16(expiresBytes, 600)
-	data = append(data, expiresBytes...)
-
-	flagsBytes := make([]byte, 2)
-	binary.BigEndian.PutUint16(flagsBytes, 0)
-	data = append(data, flagsBytes...)
-
-	optionsSizeBytes := make([]byte, 2)
-	binary.BigEndian.PutUint16(optionsSizeBytes, 0)
-	data = append(data, optionsSizeBytes...)
-
-	numKeys := byte(1)
-	data = append(data, numKeys)
-	keyTypeBytes := make([]byte, 2)
-	binary.BigEndian.PutUint16(keyTypeBytes, key_certificate.KEYCERT_CRYPTO_X25519)
-	data = append(data, keyTypeBytes...)
-	keyLenBytes := make([]byte, 2)
-	binary.BigEndian.PutUint16(keyLenBytes, 32)
-	data = append(data, keyLenBytes...)
-	data = append(data, make([]byte, 32)...)
+	data := buildLeaseSet2HeaderData(t, key_certificate.KEYCERT_SIGN_ED25519, 0)
+	data = appendLeaseSet2EncKey(data)
 
 	numLeases := byte(1)
 	data = append(data, numLeases)
@@ -217,34 +114,8 @@ func TestReadLeaseSet2InvalidLeaseData(t *testing.T) {
 }
 
 func TestReadLeaseSet2InvalidSignature(t *testing.T) {
-	destData := createTestDestination(t, key_certificate.KEYCERT_SIGN_ED25519)
-	data := destData
-
-	publishedBytes := make([]byte, 4)
-	binary.BigEndian.PutUint32(publishedBytes, 1735689600)
-	data = append(data, publishedBytes...)
-
-	expiresBytes := make([]byte, 2)
-	binary.BigEndian.PutUint16(expiresBytes, 600)
-	data = append(data, expiresBytes...)
-
-	flagsBytes := make([]byte, 2)
-	binary.BigEndian.PutUint16(flagsBytes, 0)
-	data = append(data, flagsBytes...)
-
-	optionsSizeBytes := make([]byte, 2)
-	binary.BigEndian.PutUint16(optionsSizeBytes, 0)
-	data = append(data, optionsSizeBytes...)
-
-	numKeys := byte(1)
-	data = append(data, numKeys)
-	keyTypeBytes := make([]byte, 2)
-	binary.BigEndian.PutUint16(keyTypeBytes, key_certificate.KEYCERT_CRYPTO_X25519)
-	data = append(data, keyTypeBytes...)
-	keyLenBytes := make([]byte, 2)
-	binary.BigEndian.PutUint16(keyLenBytes, 32)
-	data = append(data, keyLenBytes...)
-	data = append(data, make([]byte, 32)...)
+	data := buildLeaseSet2HeaderData(t, key_certificate.KEYCERT_SIGN_ED25519, 0)
+	data = appendLeaseSet2EncKey(data)
 
 	numLeases := byte(0)
 	data = append(data, numLeases)
@@ -447,23 +318,9 @@ func TestParserAcceptsReservedFlagBits(t *testing.T) {
 // when a known key type is declared with a mismatched length.
 // (Previously only logged a warning; now spec-compliant — returns error.)
 func TestParserRejectsEncKeyTypeLenMismatch(t *testing.T) {
-	destData := createTestDestination(t, key_certificate.KEYCERT_SIGN_ED25519)
-	data := destData
+	data := buildLeaseSet2HeaderData(t, key_certificate.KEYCERT_SIGN_ED25519, 0)
 
-	publishedBytes := make([]byte, 4)
-	binary.BigEndian.PutUint32(publishedBytes, 1735689600)
-	data = append(data, publishedBytes...)
-
-	expiresBytes := make([]byte, 2)
-	binary.BigEndian.PutUint16(expiresBytes, 600)
-	data = append(data, expiresBytes...)
-
-	flagsBytes := make([]byte, 2)
-	binary.BigEndian.PutUint16(flagsBytes, 0)
-	data = append(data, flagsBytes...)
-
-	data = append(data, 0x00, 0x00) // empty options
-	data = append(data, 0x01)       // 1 key
+	data = append(data, 0x01) // 1 key
 	keyTypeBytes := make([]byte, 2)
 	binary.BigEndian.PutUint16(keyTypeBytes, key_certificate.KEYCERT_CRYPTO_X25519)
 	data = append(data, keyTypeBytes...)
@@ -649,18 +506,9 @@ func TestParserAcceptsBlindedWithUnpublished(t *testing.T) {
 // when options mapping keys are not sorted, per spec:
 // "LS2 options MUST be sorted by key, so the signature is invariant."
 func TestParserRejectsUnsortedOptions(t *testing.T) {
-	destData := createTestDestination(t, key_certificate.KEYCERT_SIGN_ED25519)
-	data := destData
-
-	publishedBytes := make([]byte, 4)
-	binary.BigEndian.PutUint32(publishedBytes, 1735689600)
-	data = append(data, publishedBytes...)
-
-	expiresBytes := make([]byte, 2)
-	binary.BigEndian.PutUint16(expiresBytes, 600)
-	data = append(data, expiresBytes...)
-
-	data = append(data, 0x00, 0x00) // flags
+	// Build header without empty options (trim last 2 bytes)
+	data := buildLeaseSet2HeaderData(t, key_certificate.KEYCERT_SIGN_ED25519, 0)
+	data = data[:len(data)-2]
 
 	// Unsorted mapping: keys "z" before "a"
 	unsortedContent := []byte{
@@ -672,24 +520,9 @@ func TestParserRejectsUnsortedOptions(t *testing.T) {
 	data = append(data, mappingSize...)
 	data = append(data, unsortedContent...)
 
-	data = append(data, 0x01) // 1 encryption key
-	keyTypeBytes := make([]byte, 2)
-	binary.BigEndian.PutUint16(keyTypeBytes, key_certificate.KEYCERT_CRYPTO_X25519)
-	data = append(data, keyTypeBytes...)
-	keyLenBytes := make([]byte, 2)
-	binary.BigEndian.PutUint16(keyLenBytes, 32)
-	data = append(data, keyLenBytes...)
-	data = append(data, make([]byte, 32)...)
-
-	data = append(data, 0x01)                // 1 lease
-	data = append(data, make([]byte, 32)...) // hash
-	tunnelID := make([]byte, 4)
-	binary.BigEndian.PutUint32(tunnelID, 12345)
-	data = append(data, tunnelID...)
-	endDate := make([]byte, 4)
-	binary.BigEndian.PutUint32(endDate, 1735690200)
-	data = append(data, endDate...)
-
+	data = appendLeaseSet2EncKey(data)
+	data = append(data, 0x01) // 1 lease
+	data = appendLeaseSet2Lease(data, 0)
 	data = append(data, make([]byte, signature.EdDSA_SHA512_Ed25519_SIZE)...)
 
 	_, _, err := ReadLeaseSet2(data)
@@ -704,19 +537,7 @@ func TestParserRejectsUnsortedOptions(t *testing.T) {
 // TestParserAcceptsUnknownEncryptionKeyType verifies that the parser accepts
 // encryption keys with unknown key types for forward compatibility.
 func TestParserAcceptsUnknownEncryptionKeyType(t *testing.T) {
-	destData := createTestDestination(t, key_certificate.KEYCERT_SIGN_ED25519)
-	data := destData
-
-	publishedBytes := make([]byte, 4)
-	binary.BigEndian.PutUint32(publishedBytes, 1735689600)
-	data = append(data, publishedBytes...)
-
-	expiresBytes := make([]byte, 2)
-	binary.BigEndian.PutUint16(expiresBytes, 600)
-	data = append(data, expiresBytes...)
-
-	data = append(data, 0x00, 0x00) // flags
-	data = append(data, 0x00, 0x00) // empty options
+	data := buildLeaseSet2HeaderData(t, key_certificate.KEYCERT_SIGN_ED25519, 0)
 
 	// 1 encryption key with unknown type 999
 	data = append(data, 0x01)
@@ -728,15 +549,8 @@ func TestParserAcceptsUnknownEncryptionKeyType(t *testing.T) {
 	data = append(data, keyLenBytes...)
 	data = append(data, make([]byte, 48)...)
 
-	data = append(data, 0x01)                // 1 lease
-	data = append(data, make([]byte, 32)...) // hash
-	tunnelID := make([]byte, 4)
-	binary.BigEndian.PutUint32(tunnelID, 12345)
-	data = append(data, tunnelID...)
-	endDate := make([]byte, 4)
-	binary.BigEndian.PutUint32(endDate, 1735690200)
-	data = append(data, endDate...)
-
+	data = append(data, 0x01) // 1 lease
+	data = appendLeaseSet2Lease(data, 0)
 	data = append(data, make([]byte, signature.EdDSA_SHA512_Ed25519_SIZE)...)
 
 	ls2, _, err := ReadLeaseSet2(data)

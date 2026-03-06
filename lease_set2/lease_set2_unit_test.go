@@ -23,74 +23,16 @@ import (
 //
 
 func TestReadLeaseSet2MinimalValid(t *testing.T) {
-	destData := createTestDestination(t, key_certificate.KEYCERT_SIGN_ED25519)
-	dest, _, err := destination.ReadDestination(destData)
-	require.NoError(t, err)
-
-	data := destData
-	published := uint32(1735689600)
-	publishedBytes := make([]byte, 4)
-	binary.BigEndian.PutUint32(publishedBytes, published)
-	data = append(data, publishedBytes...)
-
-	expires := uint16(600)
-	expiresBytes := make([]byte, 2)
-	binary.BigEndian.PutUint16(expiresBytes, expires)
-	data = append(data, expiresBytes...)
-
-	flags := uint16(0)
-	flagsBytes := make([]byte, 2)
-	binary.BigEndian.PutUint16(flagsBytes, flags)
-	data = append(data, flagsBytes...)
-
-	optionsSize := uint16(0)
-	optionsSizeBytes := make([]byte, 2)
-	binary.BigEndian.PutUint16(optionsSizeBytes, optionsSize)
-	data = append(data, optionsSizeBytes...)
-
-	numKeys := byte(1)
-	data = append(data, numKeys)
-
-	keyType := uint16(key_certificate.KEYCERT_CRYPTO_X25519)
-	keyLen := uint16(32)
-	keyTypeBytes := make([]byte, 2)
-	binary.BigEndian.PutUint16(keyTypeBytes, keyType)
-	data = append(data, keyTypeBytes...)
-	keyLenBytes := make([]byte, 2)
-	binary.BigEndian.PutUint16(keyLenBytes, keyLen)
-	data = append(data, keyLenBytes...)
-
-	keyData := make([]byte, 32)
-	for i := 0; i < 32; i++ {
-		keyData[i] = byte(i)
-	}
-	data = append(data, keyData...)
-
-	numLeases := byte(1)
-	data = append(data, numLeases)
-	// One minimal Lease2: 32-byte gateway hash + 4-byte tunnel ID + 4-byte end date
-	leaseHash := make([]byte, 32)
-	data = append(data, leaseHash...)
-	tunnelID := make([]byte, 4)
-	binary.BigEndian.PutUint32(tunnelID, 12345)
-	data = append(data, tunnelID...)
-	endDate := make([]byte, 4)
-	binary.BigEndian.PutUint32(endDate, 1735690200)
-	data = append(data, endDate...)
-
-	signatureData := make([]byte, signature.EdDSA_SHA512_Ed25519_SIZE)
-	for i := 0; i < signature.EdDSA_SHA512_Ed25519_SIZE; i++ {
-		signatureData[i] = byte(0xFF - i)
-	}
-	data = append(data, signatureData...)
+	data := buildMinimalLeaseSet2Data(t, key_certificate.KEYCERT_SIGN_ED25519, 1, 0)
+	dest := createTestDest(t)
 
 	ls2, remainder, err := ReadLeaseSet2(data)
 
 	assert.NoError(t, err)
 	assert.Empty(t, remainder)
-	assert.Equal(t, published, ls2.Published())
-	assert.Equal(t, expires, ls2.Expires())
-	assert.Equal(t, flags, ls2.Flags())
+	assert.Equal(t, uint32(1735689600), ls2.Published())
+	assert.Equal(t, uint16(600), ls2.Expires())
+	assert.Equal(t, uint16(0), ls2.Flags())
 	assert.False(t, ls2.HasOfflineKeys())
 	assert.False(t, ls2.IsUnpublished())
 	assert.False(t, ls2.IsBlinded())
@@ -105,60 +47,7 @@ func TestReadLeaseSet2MinimalValid(t *testing.T) {
 }
 
 func TestReadLeaseSet2WithMultipleLeases(t *testing.T) {
-	destData := createTestDestination(t, key_certificate.KEYCERT_SIGN_ED25519)
-	data := destData
-
-	published := uint32(1735689600)
-	publishedBytes := make([]byte, 4)
-	binary.BigEndian.PutUint32(publishedBytes, published)
-	data = append(data, publishedBytes...)
-
-	expires := uint16(600)
-	expiresBytes := make([]byte, 2)
-	binary.BigEndian.PutUint16(expiresBytes, expires)
-	data = append(data, expiresBytes...)
-
-	flags := uint16(0)
-	flagsBytes := make([]byte, 2)
-	binary.BigEndian.PutUint16(flagsBytes, flags)
-	data = append(data, flagsBytes...)
-
-	optionsSize := uint16(0)
-	optionsSizeBytes := make([]byte, 2)
-	binary.BigEndian.PutUint16(optionsSizeBytes, optionsSize)
-	data = append(data, optionsSizeBytes...)
-
-	numKeys := byte(1)
-	data = append(data, numKeys)
-	keyType := uint16(key_certificate.KEYCERT_CRYPTO_X25519)
-	keyLen := uint16(32)
-	keyTypeBytes := make([]byte, 2)
-	binary.BigEndian.PutUint16(keyTypeBytes, keyType)
-	data = append(data, keyTypeBytes...)
-	keyLenBytes := make([]byte, 2)
-	binary.BigEndian.PutUint16(keyLenBytes, keyLen)
-	data = append(data, keyLenBytes...)
-	keyData := make([]byte, 32)
-	data = append(data, keyData...)
-
-	numLeases := byte(3)
-	data = append(data, numLeases)
-	for i := 0; i < 3; i++ {
-		hash := make([]byte, 32)
-		for j := 0; j < 32; j++ {
-			hash[j] = byte(i*10 + j)
-		}
-		data = append(data, hash...)
-		tunnelID := make([]byte, 4)
-		binary.BigEndian.PutUint32(tunnelID, uint32(12345+i))
-		data = append(data, tunnelID...)
-		endDate := make([]byte, 4)
-		binary.BigEndian.PutUint32(endDate, uint32(time.Now().Unix()+600))
-		data = append(data, endDate...)
-	}
-
-	signatureData := make([]byte, signature.EdDSA_SHA512_Ed25519_SIZE)
-	data = append(data, signatureData...)
+	data := buildMinimalLeaseSet2Data(t, key_certificate.KEYCERT_SIGN_ED25519, 3, 0)
 
 	ls2, remainder, err := ReadLeaseSet2(data)
 	assert.NoError(t, err)
