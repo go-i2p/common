@@ -12,11 +12,7 @@ import (
 // --- Round-trip: NewLeaseSet -> Bytes -> ReadLeaseSet ---
 
 func TestIntegration_RoundTripSingle(t *testing.T) {
-	routerInfo, _, _, _, _, err := generateTestRouterInfo(t)
-	require.NoError(t, err)
-
-	leaseSet, err := createTestLeaseSet(t, routerInfo, 1)
-	require.NoError(t, err)
+	leaseSet := quickTestLeaseSet(t, 1)
 
 	lsBytes, err := leaseSet.Bytes()
 	require.NoError(t, err)
@@ -32,11 +28,7 @@ func TestIntegration_RoundTripSingle(t *testing.T) {
 }
 
 func TestIntegration_RoundTripMultiple(t *testing.T) {
-	routerInfo, _, _, _, _, err := generateTestRouterInfo(t)
-	require.NoError(t, err)
-
-	leaseSet, err := createTestLeaseSet(t, routerInfo, 3)
-	require.NoError(t, err)
+	leaseSet := quickTestLeaseSet(t, 3)
 
 	lsBytes, err := leaseSet.Bytes()
 	require.NoError(t, err)
@@ -68,53 +60,37 @@ func TestIntegration_ZeroLeaseRoundTrip(t *testing.T) {
 // --- Verify cryptographic signature ---
 
 func TestIntegration_VerifyCryptographic(t *testing.T) {
-	routerInfo, _, _, _, _, err := generateTestRouterInfo(t)
-	require.NoError(t, err)
+	leaseSet := quickTestLeaseSet(t, 1)
 
-	leaseSet, err := createTestLeaseSet(t, routerInfo, 1)
-	require.NoError(t, err)
-
-	err = leaseSet.Verify()
+	err := leaseSet.Verify()
 	assert.NoError(t, err)
 }
 
 func TestIntegration_VerifyMultipleLeases(t *testing.T) {
-	routerInfo, _, _, _, _, err := generateTestRouterInfo(t)
-	require.NoError(t, err)
+	leaseSet := quickTestLeaseSet(t, 2)
 
-	leaseSet, err := createTestLeaseSet(t, routerInfo, 2)
-	require.NoError(t, err)
-
-	err = leaseSet.Verify()
+	err := leaseSet.Verify()
 	assert.NoError(t, err)
 }
 
 // --- Verify detects tampering ---
 
 func TestIntegration_VerifyDetectsTampering(t *testing.T) {
-	routerInfo, _, _, _, _, err := generateTestRouterInfo(t)
-	require.NoError(t, err)
-
-	leaseSet, err := createTestLeaseSet(t, routerInfo, 1)
-	require.NoError(t, err)
+	leaseSet := quickTestLeaseSet(t, 1)
 
 	// Tamper with lease data
 	if len(leaseSet.leases) > 0 {
 		leaseSet.leases[0][10] ^= 0xFF
 	}
 
-	err = leaseSet.Verify()
+	err := leaseSet.Verify()
 	assert.Error(t, err, "Verify should detect tampered lease data")
 }
 
 // --- Round-trip byte fidelity ---
 
 func TestIntegration_RoundTripByteFidelity(t *testing.T) {
-	routerInfo, _, _, _, _, err := generateTestRouterInfo(t)
-	require.NoError(t, err)
-
-	leaseSet, err := createTestLeaseSet(t, routerInfo, 2)
-	require.NoError(t, err)
+	leaseSet := quickTestLeaseSet(t, 2)
 
 	lsBytes, err := leaseSet.Bytes()
 	require.NoError(t, err)
@@ -131,11 +107,7 @@ func TestIntegration_RoundTripByteFidelity(t *testing.T) {
 // --- Components consistency across round-trip ---
 
 func TestIntegration_ComponentsAfterRoundTrip(t *testing.T) {
-	routerInfo, _, _, _, _, err := generateTestRouterInfo(t)
-	require.NoError(t, err)
-
-	leaseSet, err := createTestLeaseSet(t, routerInfo, 3)
-	require.NoError(t, err)
+	leaseSet := quickTestLeaseSet(t, 3)
 
 	lsBytes, err := leaseSet.Bytes()
 	require.NoError(t, err)
@@ -217,11 +189,7 @@ func TestIntegration_VerifyAfterRoundTrip(t *testing.T) {
 }
 
 func TestIntegration_VerifyAfterRoundTripDetectsTampering(t *testing.T) {
-	routerInfo, _, _, _, _, err := generateTestRouterInfo(t)
-	require.NoError(t, err)
-
-	leaseSet, err := createTestLeaseSet(t, routerInfo, 2)
-	require.NoError(t, err)
+	leaseSet := quickTestLeaseSet(t, 2)
 
 	lsBytes, err := leaseSet.Bytes()
 	require.NoError(t, err)
@@ -251,11 +219,7 @@ func TestIntegration_VerifyAfterRoundTripDetectsTampering(t *testing.T) {
 // --- Encryption key type consistency across construction and parsing ---
 
 func TestIntegration_EncryptionKeyTypeConsistency(t *testing.T) {
-	routerInfo, _, _, _, _, err := generateTestRouterInfo(t)
-	require.NoError(t, err)
-
-	leaseSet, err := createTestLeaseSet(t, routerInfo, 1)
-	require.NoError(t, err)
+	leaseSet := quickTestLeaseSet(t, 1)
 
 	// Construction path stores the key
 	constructedPubKey, err := leaseSet.PublicKey()
@@ -283,11 +247,7 @@ func TestIntegration_EncryptionKeyTypeConsistency(t *testing.T) {
 // --- Parsed signing key size matches certificate ---
 
 func TestIntegration_ParsedSigningKeySizeMatchesCert(t *testing.T) {
-	routerInfo, _, _, _, _, err := generateTestRouterInfo(t)
-	require.NoError(t, err)
-
-	leaseSet, err := createTestLeaseSet(t, routerInfo, 1)
-	require.NoError(t, err)
+	leaseSet := quickTestLeaseSet(t, 1)
 
 	lsBytes, err := leaseSet.Bytes()
 	require.NoError(t, err)

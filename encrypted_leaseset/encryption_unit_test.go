@@ -1,10 +1,11 @@
 package encrypted_leaseset
 
 import (
-	"github.com/go-i2p/crypto/rand"
 	"crypto/sha256"
 	"testing"
 	"time"
+
+	"github.com/go-i2p/crypto/rand"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -16,14 +17,7 @@ import (
 // ————————————————————————————————————————————————
 
 func TestEncryptDecryptRoundTrip(t *testing.T) {
-	ls2 := createTestLeaseSet2ForEncryption(t)
-
-	var subcredential [32]byte
-	_, _ = rand.Read(subcredential[:])
-	published := uint32(time.Now().Unix())
-
-	encryptedData, err := EncryptInnerLeaseSet2(ls2, subcredential, published)
-	require.NoError(t, err)
+	ls2, encryptedData, subcredential, published := createTestEncryptionContext(t)
 	assert.NotEmpty(t, encryptedData)
 	// Minimum: outerSalt(32) + authType(1) + innerSalt(32) + plaintext(≥1)
 	assert.GreaterOrEqual(t, len(encryptedData), ENCRYPTED_LEASESET_MIN_ENCRYPTED_SIZE)
@@ -65,14 +59,7 @@ func TestEncryptDecryptWithDifferentSubcredentials(t *testing.T) {
 }
 
 func TestEncryptDecryptWithDifferentPublished(t *testing.T) {
-	ls2 := createTestLeaseSet2ForEncryption(t)
-
-	var subcredential [32]byte
-	_, _ = rand.Read(subcredential[:])
-	published := uint32(time.Now().Unix())
-
-	encryptedData, err := EncryptInnerLeaseSet2(ls2, subcredential, published)
-	require.NoError(t, err)
+	_, encryptedData, subcredential, published := createTestEncryptionContext(t)
 
 	// Use a different published timestamp for decryption
 	els := &EncryptedLeaseSet{
@@ -80,7 +67,7 @@ func TestEncryptDecryptWithDifferentPublished(t *testing.T) {
 		published:          published + 1, // off by one
 	}
 
-	_, err = els.DecryptInnerData(subcredential)
+	_, err := els.DecryptInnerData(subcredential)
 	assert.Error(t, err, "wrong published timestamp should fail to parse")
 }
 

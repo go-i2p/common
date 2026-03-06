@@ -21,6 +21,7 @@ import (
 	elgamal "github.com/go-i2p/crypto/elg"
 	"github.com/go-i2p/crypto/types"
 	"github.com/samber/oops"
+	"github.com/stretchr/testify/require"
 )
 
 // mockNonElGamalKey is a 256-byte key that implements ReceivingPublicKey but is not ElGamal.
@@ -353,4 +354,15 @@ func createTestLeaseSet(t *testing.T, routerInfo *router_info.RouterInfo, leaseC
 	}
 
 	return leaseSet, err
+}
+
+// quickTestLeaseSet generates a RouterInfo and creates a LeaseSet in one call.
+// This eliminates the repeated 4-line setup pattern across most tests.
+func quickTestLeaseSet(t *testing.T, leaseCount int) *LeaseSet {
+	t.Helper()
+	routerInfo, _, _, _, _, err := generateTestRouterInfo(t)
+	require.NoError(t, err)
+	ls, err := createTestLeaseSet(t, routerInfo, leaseCount)
+	require.NoError(t, err)
+	return ls
 }

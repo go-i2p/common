@@ -38,13 +38,9 @@ func TestValidation_ValidateZeroLeases(t *testing.T) {
 // --- Validate detects max leases ---
 
 func TestValidation_ValidateMaxLeases(t *testing.T) {
-	routerInfo, _, _, _, _, err := generateTestRouterInfo(t)
-	require.NoError(t, err)
+	leaseSet := quickTestLeaseSet(t, 16)
 
-	leaseSet, err := createTestLeaseSet(t, routerInfo, 16)
-	require.NoError(t, err)
-
-	err = leaseSet.Validate()
+	err := leaseSet.Validate()
 	assert.NoError(t, err, "16 leases (max) should be valid")
 }
 
@@ -75,11 +71,7 @@ func TestValidation_ReadLeaseSetMalformedInput(t *testing.T) {
 // --- ReadLeaseSet with excessive lease count ---
 
 func TestValidation_ReadLeaseSetExcessiveLeaseCount(t *testing.T) {
-	routerInfo, _, _, _, _, err := generateTestRouterInfo(t)
-	require.NoError(t, err)
-
-	leaseSet, err := createTestLeaseSet(t, routerInfo, 1)
-	require.NoError(t, err)
+	leaseSet := quickTestLeaseSet(t, 1)
 
 	lsBytes, err := leaseSet.Bytes()
 	require.NoError(t, err)
@@ -103,11 +95,7 @@ func TestValidation_ReadLeaseSetExcessiveLeaseCount(t *testing.T) {
 // --- ReadLeaseSet does not verify signature ---
 
 func TestValidation_ReadLeaseSetNoVerify(t *testing.T) {
-	routerInfo, _, _, _, _, err := generateTestRouterInfo(t)
-	require.NoError(t, err)
-
-	leaseSet, err := createTestLeaseSet(t, routerInfo, 1)
-	require.NoError(t, err)
+	leaseSet := quickTestLeaseSet(t, 1)
 
 	lsBytes, err := leaseSet.Bytes()
 	require.NoError(t, err)
@@ -139,11 +127,7 @@ func TestValidation_ParseSignatureErrorHandling(t *testing.T) {
 // --- ParseSignature trailing data ---
 
 func TestValidation_ParseSignatureTrailingData(t *testing.T) {
-	routerInfo, _, _, _, _, err := generateTestRouterInfo(t)
-	require.NoError(t, err)
-
-	leaseSet, err := createTestLeaseSet(t, routerInfo, 1)
-	require.NoError(t, err)
+	leaseSet := quickTestLeaseSet(t, 1)
 
 	lsBytes, err := leaseSet.Bytes()
 	require.NoError(t, err)
@@ -160,11 +144,7 @@ func TestValidation_ParseSignatureTrailingData(t *testing.T) {
 // --- Trailing data rejection (subtests) ---
 
 func TestValidation_TrailingDataRejected(t *testing.T) {
-	routerInfo, _, _, _, _, err := generateTestRouterInfo(t)
-	require.NoError(t, err)
-
-	leaseSet, err := createTestLeaseSet(t, routerInfo, 1)
-	require.NoError(t, err)
+	leaseSet := quickTestLeaseSet(t, 1)
 
 	lsBytes, err := leaseSet.Bytes()
 	require.NoError(t, err)
@@ -191,11 +171,7 @@ func TestValidation_TrailingDataRejected(t *testing.T) {
 }
 
 func TestValidation_TrailingDataWithMultipleLeases(t *testing.T) {
-	routerInfo, _, _, _, _, err := generateTestRouterInfo(t)
-	require.NoError(t, err)
-
-	leaseSet, err := createTestLeaseSet(t, routerInfo, 3)
-	require.NoError(t, err)
+	leaseSet := quickTestLeaseSet(t, 3)
 
 	lsBytes, err := leaseSet.Bytes()
 	require.NoError(t, err)
@@ -209,11 +185,7 @@ func TestValidation_TrailingDataWithMultipleLeases(t *testing.T) {
 // --- Validate detects all-zero encryption key ---
 
 func TestValidation_ValidateRejectsAllZeroEncryptionKey(t *testing.T) {
-	routerInfo, _, _, _, _, err := generateTestRouterInfo(t)
-	require.NoError(t, err)
-
-	leaseSet, err := createTestLeaseSet(t, routerInfo, 1)
-	require.NoError(t, err)
+	leaseSet := quickTestLeaseSet(t, 1)
 
 	var zeroKey elgamal.ElgPublicKey // all zeros
 	manualLS := &LeaseSet{
@@ -224,29 +196,21 @@ func TestValidation_ValidateRejectsAllZeroEncryptionKey(t *testing.T) {
 		leases:        []lease.Lease{},
 	}
 
-	err = manualLS.Validate()
+	err := manualLS.Validate()
 	assert.Error(t, err)
 	assert.True(t, errors.Is(err, ErrAllZeroEncryptionKey),
 		"expected ErrAllZeroEncryptionKey, got: %v", err)
 }
 
 func TestValidation_ValidateAcceptsNonZeroEncryptionKey(t *testing.T) {
-	routerInfo, _, _, _, _, err := generateTestRouterInfo(t)
-	require.NoError(t, err)
+	leaseSet := quickTestLeaseSet(t, 1)
 
-	leaseSet, err := createTestLeaseSet(t, routerInfo, 1)
-	require.NoError(t, err)
-
-	err = leaseSet.Validate()
+	err := leaseSet.Validate()
 	assert.NoError(t, err)
 }
 
 func TestValidation_ReadLeaseSetAllZeroEncryptionKeyFailsValidation(t *testing.T) {
-	routerInfo, _, _, _, _, err := generateTestRouterInfo(t)
-	require.NoError(t, err)
-
-	leaseSet, err := createTestLeaseSet(t, routerInfo, 1)
-	require.NoError(t, err)
+	leaseSet := quickTestLeaseSet(t, 1)
 
 	lsBytes, err := leaseSet.Bytes()
 	require.NoError(t, err)
@@ -283,11 +247,7 @@ func TestValidation_ReadLeaseSetAllZeroEncryptionKeyFailsValidation(t *testing.T
 // --- Validate checks ElGamal type (not just size) ---
 
 func TestValidation_ValidateRejectsNonElGamalEncryptionKey(t *testing.T) {
-	routerInfo, _, _, _, _, err := generateTestRouterInfo(t)
-	require.NoError(t, err)
-
-	leaseSet, err := createTestLeaseSet(t, routerInfo, 1)
-	require.NoError(t, err)
+	leaseSet := quickTestLeaseSet(t, 1)
 
 	// Substitute a non-ElGamal 256-byte key
 	var fakeKey mockNonElGamalKey
@@ -301,7 +261,7 @@ func TestValidation_ValidateRejectsNonElGamalEncryptionKey(t *testing.T) {
 		signature:     leaseSet.signature,
 	}
 
-	err = manualLS.Validate()
+	err := manualLS.Validate()
 	require.Error(t, err)
 	assert.ErrorIs(t, err, ErrNonElGamalEncryptionKey,
 		"Validate() must reject non-ElGamal encryption keys")
@@ -310,11 +270,7 @@ func TestValidation_ValidateRejectsNonElGamalEncryptionKey(t *testing.T) {
 // --- Validate checks signing key size against certificate ---
 
 func TestValidation_ValidateChecksSigningKeySize(t *testing.T) {
-	routerInfo, _, _, _, _, err := generateTestRouterInfo(t)
-	require.NoError(t, err)
-
-	leaseSet, err := createTestLeaseSet(t, routerInfo, 1)
-	require.NoError(t, err)
+	leaseSet := quickTestLeaseSet(t, 1)
 
 	// Replace signing key with a wrong-sized key
 	wrongSizeKey := mockSigningKey(make([]byte, 64)) // Ed25519 key should be 32 bytes
@@ -327,21 +283,17 @@ func TestValidation_ValidateChecksSigningKeySize(t *testing.T) {
 		signature:     leaseSet.signature,
 	}
 
-	err = manualLS.Validate()
+	err := manualLS.Validate()
 	require.Error(t, err)
 	assert.ErrorIs(t, err, ErrSigningKeySizeMismatch,
 		"Validate() must reject signing keys with wrong size for certificate")
 }
 
 func TestValidation_ValidateAcceptsCorrectSigningKeySize(t *testing.T) {
-	routerInfo, _, _, _, _, err := generateTestRouterInfo(t)
-	require.NoError(t, err)
-
-	leaseSet, err := createTestLeaseSet(t, routerInfo, 1)
-	require.NoError(t, err)
+	leaseSet := quickTestLeaseSet(t, 1)
 
 	// Valid LeaseSet should pass
-	err = leaseSet.Validate()
+	err := leaseSet.Validate()
 	assert.NoError(t, err, "valid LeaseSet with correct signing key size should pass Validate()")
 }
 

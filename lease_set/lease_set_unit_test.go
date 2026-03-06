@@ -19,11 +19,7 @@ import (
 // --- Creation tests ---
 
 func TestUnit_LeaseSetCreation(t *testing.T) {
-	routerInfo, _, _, _, _, err := generateTestRouterInfo(t)
-	require.NoError(t, err)
-
-	leaseSet, err := createTestLeaseSet(t, routerInfo, 1)
-	require.NoError(t, err)
+	leaseSet := quickTestLeaseSet(t, 1)
 	require.NotNil(t, leaseSet)
 
 	dest := leaseSet.Destination()
@@ -38,11 +34,7 @@ func TestUnit_LeaseSetCreation(t *testing.T) {
 }
 
 func TestUnit_LeaseSetCreationMultipleLeases(t *testing.T) {
-	routerInfo, _, _, _, _, err := generateTestRouterInfo(t)
-	require.NoError(t, err)
-
-	leaseSet, err := createTestLeaseSet(t, routerInfo, 3)
-	require.NoError(t, err)
+	leaseSet := quickTestLeaseSet(t, 3)
 	require.NotNil(t, leaseSet)
 
 	assert.Equal(t, 3, leaseSet.LeaseCount())
@@ -67,22 +59,14 @@ func TestUnit_NewLeaseSetZeroLeases(t *testing.T) {
 // --- Accessor tests ---
 
 func TestUnit_Destination(t *testing.T) {
-	routerInfo, _, _, _, _, err := generateTestRouterInfo(t)
-	require.NoError(t, err)
-
-	leaseSet, err := createTestLeaseSet(t, routerInfo, 1)
-	require.NoError(t, err)
+	leaseSet := quickTestLeaseSet(t, 1)
 
 	dest := leaseSet.Destination()
 	assert.NotNil(t, dest.KeysAndCert)
 }
 
 func TestUnit_PublicKey(t *testing.T) {
-	routerInfo, _, _, _, _, err := generateTestRouterInfo(t)
-	require.NoError(t, err)
-
-	leaseSet, err := createTestLeaseSet(t, routerInfo, 1)
-	require.NoError(t, err)
+	leaseSet := quickTestLeaseSet(t, 1)
 
 	pubKey, err := leaseSet.PublicKey()
 	assert.NoError(t, err)
@@ -90,11 +74,7 @@ func TestUnit_PublicKey(t *testing.T) {
 }
 
 func TestUnit_SigningKey(t *testing.T) {
-	routerInfo, _, _, _, _, err := generateTestRouterInfo(t)
-	require.NoError(t, err)
-
-	leaseSet, err := createTestLeaseSet(t, routerInfo, 1)
-	require.NoError(t, err)
+	leaseSet := quickTestLeaseSet(t, 1)
 
 	sigKey, err := leaseSet.SigningKey()
 	assert.NoError(t, err)
@@ -103,32 +83,20 @@ func TestUnit_SigningKey(t *testing.T) {
 }
 
 func TestUnit_LeaseCount(t *testing.T) {
-	routerInfo, _, _, _, _, err := generateTestRouterInfo(t)
-	require.NoError(t, err)
-
-	leaseSet, err := createTestLeaseSet(t, routerInfo, 3)
-	require.NoError(t, err)
+	leaseSet := quickTestLeaseSet(t, 3)
 
 	assert.Equal(t, 3, leaseSet.LeaseCount())
 }
 
 func TestUnit_Leases(t *testing.T) {
-	routerInfo, _, _, _, _, err := generateTestRouterInfo(t)
-	require.NoError(t, err)
-
-	leaseSet, err := createTestLeaseSet(t, routerInfo, 3)
-	require.NoError(t, err)
+	leaseSet := quickTestLeaseSet(t, 3)
 
 	leases := leaseSet.Leases()
 	assert.Equal(t, 3, len(leases))
 }
 
 func TestUnit_Signature(t *testing.T) {
-	routerInfo, _, _, _, _, err := generateTestRouterInfo(t)
-	require.NoError(t, err)
-
-	leaseSet, err := createTestLeaseSet(t, routerInfo, 1)
-	require.NoError(t, err)
+	leaseSet := quickTestLeaseSet(t, 1)
 
 	sig := leaseSet.Signature()
 	assert.NotNil(t, sig)
@@ -138,11 +106,7 @@ func TestUnit_Signature(t *testing.T) {
 // --- Expiration tests ---
 
 func TestUnit_NewestExpiration(t *testing.T) {
-	routerInfo, _, _, _, _, err := generateTestRouterInfo(t)
-	require.NoError(t, err)
-
-	leaseSet, err := createTestLeaseSet(t, routerInfo, 3)
-	require.NoError(t, err)
+	leaseSet := quickTestLeaseSet(t, 3)
 
 	newest, err := leaseSet.NewestExpiration()
 	assert.NoError(t, err)
@@ -150,11 +114,7 @@ func TestUnit_NewestExpiration(t *testing.T) {
 }
 
 func TestUnit_OldestExpiration(t *testing.T) {
-	routerInfo, _, _, _, _, err := generateTestRouterInfo(t)
-	require.NoError(t, err)
-
-	leaseSet, err := createTestLeaseSet(t, routerInfo, 3)
-	require.NoError(t, err)
+	leaseSet := quickTestLeaseSet(t, 3)
 
 	oldest, err := leaseSet.OldestExpiration()
 	assert.NoError(t, err)
@@ -162,11 +122,7 @@ func TestUnit_OldestExpiration(t *testing.T) {
 }
 
 func TestUnit_ExpirationOrdering(t *testing.T) {
-	routerInfo, _, _, _, _, err := generateTestRouterInfo(t)
-	require.NoError(t, err)
-
-	leaseSet, err := createTestLeaseSet(t, routerInfo, 3)
-	require.NoError(t, err)
+	leaseSet := quickTestLeaseSet(t, 3)
 
 	newest, err := leaseSet.NewestExpiration()
 	require.NoError(t, err)
@@ -179,11 +135,7 @@ func TestUnit_ExpirationOrdering(t *testing.T) {
 }
 
 func TestUnit_OldestExpirationSentinel(t *testing.T) {
-	routerInfo, _, _, _, _, err := generateTestRouterInfo(t)
-	require.NoError(t, err)
-
-	leaseSet, err := createTestLeaseSet(t, routerInfo, 3)
-	require.NoError(t, err)
+	leaseSet := quickTestLeaseSet(t, 3)
 
 	oldest, err := leaseSet.OldestExpiration()
 	require.NoError(t, err)
@@ -196,11 +148,7 @@ func TestUnit_OldestExpirationSentinel(t *testing.T) {
 }
 
 func TestUnit_NewestExpirationSingleLease(t *testing.T) {
-	routerInfo, _, _, _, _, err := generateTestRouterInfo(t)
-	require.NoError(t, err)
-
-	leaseSet, err := createTestLeaseSet(t, routerInfo, 1)
-	require.NoError(t, err)
+	leaseSet := quickTestLeaseSet(t, 1)
 
 	newest, err := leaseSet.NewestExpiration()
 	require.NoError(t, err)
@@ -241,44 +189,28 @@ func TestUnit_ValidateNilLeaseSet(t *testing.T) {
 }
 
 func TestUnit_ValidateValid(t *testing.T) {
-	routerInfo, _, _, _, _, err := generateTestRouterInfo(t)
-	require.NoError(t, err)
+	leaseSet := quickTestLeaseSet(t, 3)
 
-	leaseSet, err := createTestLeaseSet(t, routerInfo, 3)
-	require.NoError(t, err)
-
-	err = leaseSet.Validate()
+	err := leaseSet.Validate()
 	assert.NoError(t, err)
 }
 
 func TestUnit_ValidateSingleLease(t *testing.T) {
-	routerInfo, _, _, _, _, err := generateTestRouterInfo(t)
-	require.NoError(t, err)
+	leaseSet := quickTestLeaseSet(t, 1)
 
-	leaseSet, err := createTestLeaseSet(t, routerInfo, 1)
-	require.NoError(t, err)
-
-	err = leaseSet.Validate()
+	err := leaseSet.Validate()
 	assert.NoError(t, err)
 }
 
 func TestUnit_ValidateMaxLeases(t *testing.T) {
-	routerInfo, _, _, _, _, err := generateTestRouterInfo(t)
-	require.NoError(t, err)
+	leaseSet := quickTestLeaseSet(t, 16)
 
-	leaseSet, err := createTestLeaseSet(t, routerInfo, 16)
-	require.NoError(t, err)
-
-	err = leaseSet.Validate()
+	err := leaseSet.Validate()
 	assert.NoError(t, err)
 }
 
 func TestUnit_ValidateZeroSignature(t *testing.T) {
-	routerInfo, _, _, _, _, err := generateTestRouterInfo(t)
-	require.NoError(t, err)
-
-	leaseSet, err := createTestLeaseSet(t, routerInfo, 1)
-	require.NoError(t, err)
+	leaseSet := quickTestLeaseSet(t, 1)
 
 	manualLS := &LeaseSet{
 		dest:          leaseSet.dest,
@@ -288,7 +220,7 @@ func TestUnit_ValidateZeroSignature(t *testing.T) {
 		leases:        []lease.Lease{},
 	}
 
-	err = manualLS.Validate()
+	err := manualLS.Validate()
 	assert.NoError(t, err)
 }
 
@@ -300,11 +232,7 @@ func TestUnit_IsValidNil(t *testing.T) {
 }
 
 func TestUnit_IsValidTrue(t *testing.T) {
-	routerInfo, _, _, _, _, err := generateTestRouterInfo(t)
-	require.NoError(t, err)
-
-	leaseSet, err := createTestLeaseSet(t, routerInfo, 2)
-	require.NoError(t, err)
+	leaseSet := quickTestLeaseSet(t, 2)
 	assert.True(t, leaseSet.IsValid())
 }
 
@@ -320,11 +248,7 @@ func TestUnit_PublicKeyNilEncryptionKey(t *testing.T) {
 // --- Bytes with inconsistent leaseCount ---
 
 func TestUnit_BytesInconsistentLeaseCount(t *testing.T) {
-	routerInfo, _, _, _, _, err := generateTestRouterInfo(t)
-	require.NoError(t, err)
-
-	leaseSet, err := createTestLeaseSet(t, routerInfo, 3)
-	require.NoError(t, err)
+	leaseSet := quickTestLeaseSet(t, 3)
 
 	inconsistentLS := &LeaseSet{
 		dest:          leaseSet.dest,
@@ -335,7 +259,7 @@ func TestUnit_BytesInconsistentLeaseCount(t *testing.T) {
 		signature:     leaseSet.signature,
 	}
 
-	err = inconsistentLS.Validate()
+	err := inconsistentLS.Validate()
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "lease count mismatch")
 }
@@ -343,11 +267,7 @@ func TestUnit_BytesInconsistentLeaseCount(t *testing.T) {
 // --- Signing key type check ---
 
 func TestUnit_SigningKeyTypeMatch(t *testing.T) {
-	routerInfo, _, _, _, _, err := generateTestRouterInfo(t)
-	require.NoError(t, err)
-
-	leaseSet, err := createTestLeaseSet(t, routerInfo, 1)
-	require.NoError(t, err)
+	leaseSet := quickTestLeaseSet(t, 1)
 	require.NotNil(t, leaseSet)
 
 	sigKey, err := leaseSet.SigningKey()
@@ -358,11 +278,7 @@ func TestUnit_SigningKeyTypeMatch(t *testing.T) {
 // --- DetermineSignatureSize ---
 
 func TestUnit_DetermineSignatureSizeCorrect(t *testing.T) {
-	routerInfo, _, _, _, _, err := generateTestRouterInfo(t)
-	require.NoError(t, err)
-
-	leaseSet, err := createTestLeaseSet(t, routerInfo, 1)
-	require.NoError(t, err)
+	leaseSet := quickTestLeaseSet(t, 1)
 
 	lsBytes, err := leaseSet.Bytes()
 	require.NoError(t, err)
@@ -388,11 +304,7 @@ func TestUnit_DetermineSignatureSizeCorrect(t *testing.T) {
 // --- DetermineSigningKeySize ---
 
 func TestUnit_DetermineSigningKeySizeUsesCorrectAPI(t *testing.T) {
-	routerInfo, _, _, _, _, err := generateTestRouterInfo(t)
-	require.NoError(t, err)
-
-	leaseSet, err := createTestLeaseSet(t, routerInfo, 1)
-	require.NoError(t, err)
+	leaseSet := quickTestLeaseSet(t, 1)
 
 	dest := leaseSet.Destination()
 	cert := dest.Certificate()
@@ -544,11 +456,7 @@ func TestUnit_ConstructSigningKeyNullCert(t *testing.T) {
 // --- Bytes() invariant guard ---
 
 func TestUnit_BytesRejectsLeaseCountInvariantViolation(t *testing.T) {
-	routerInfo, _, _, _, _, err := generateTestRouterInfo(t)
-	require.NoError(t, err)
-
-	leaseSet, err := createTestLeaseSet(t, routerInfo, 3)
-	require.NoError(t, err)
+	leaseSet := quickTestLeaseSet(t, 3)
 
 	// Directly mutate leaseCount to break the invariant
 	broken := &LeaseSet{
@@ -560,18 +468,14 @@ func TestUnit_BytesRejectsLeaseCountInvariantViolation(t *testing.T) {
 		signature:     leaseSet.signature,
 	}
 
-	_, err = broken.Bytes()
+	_, err := broken.Bytes()
 	require.Error(t, err)
 	assert.ErrorIs(t, err, ErrLeaseCountInvariant,
 		"Bytes() must reject leaseCount != len(leases)")
 }
 
 func TestUnit_BytesUsesLenLeasesNotLeaseCount(t *testing.T) {
-	routerInfo, _, _, _, _, err := generateTestRouterInfo(t)
-	require.NoError(t, err)
-
-	leaseSet, err := createTestLeaseSet(t, routerInfo, 2)
-	require.NoError(t, err)
+	leaseSet := quickTestLeaseSet(t, 2)
 
 	// Normal case: leaseCount == len(leases)
 	lsBytes, err := leaseSet.Bytes()
@@ -876,11 +780,7 @@ func TestUnit_ValidateKeyCertSigningKeyBadKeyCert(t *testing.T) {
 // --- logLeaseSetCreationSuccess error path ---
 
 func TestUnit_LogLeaseSetCreationSuccessNormal(t *testing.T) {
-	routerInfo, _, _, _, _, err := generateTestRouterInfo(t)
-	require.NoError(t, err)
-
-	leaseSet, err := createTestLeaseSet(t, routerInfo, 1)
-	require.NoError(t, err)
+	leaseSet := quickTestLeaseSet(t, 1)
 
 	// Should not panic; exercises the success path of logLeaseSetCreationSuccess
 	logLeaseSetCreationSuccess(*leaseSet)
