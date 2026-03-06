@@ -52,6 +52,19 @@ func (k mockSigningKey) SigningPublicKeyType() int            { return 0 }
 
 var _ types.SigningPublicKey = mockSigningKey{}
 
+// mockSigningKeyWithType is like mockSigningKey but with a configurable type.
+type mockSigningKeyWithType struct {
+	data    []byte
+	keyType int
+}
+
+func (k mockSigningKeyWithType) Bytes() []byte                        { return k.data }
+func (k mockSigningKeyWithType) Len() int                             { return len(k.data) }
+func (k mockSigningKeyWithType) NewVerifier() (types.Verifier, error) { return nil, nil }
+func (k mockSigningKeyWithType) SigningPublicKeyType() int            { return k.keyType }
+
+var _ types.SigningPublicKey = mockSigningKeyWithType{}
+
 // generateTestRouterInfo creates a full RouterInfo with Ed25519 signing keys
 // and ElGamal encryption keys, returning all key material needed for LeaseSet tests.
 func generateTestRouterInfo(t *testing.T) (*router_info.RouterInfo, types.ReceivingPublicKey, types.SigningPublicKey, types.SigningPublicKey, types.SigningPublicKey, error) {
