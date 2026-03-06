@@ -2,6 +2,10 @@
 package lease_set2
 
 import (
+	"bytes"
+	"encoding/binary"
+	"fmt"
+
 	common "github.com/go-i2p/common/data"
 	"github.com/go-i2p/common/destination"
 	"github.com/go-i2p/common/key_certificate"
@@ -151,6 +155,22 @@ type EncryptionKey struct {
 	KeyData []byte // Encryption key data (keyLen bytes)
 }
 
+// Bytes serializes the EncryptionKey into its wire format:
+// 2-byte key type + 2-byte key length + key data.
+func (ek EncryptionKey) Bytes() []byte {
+	buf := make([]byte, 4, 4+len(ek.KeyData))
+	binary.BigEndian.PutUint16(buf[0:2], ek.KeyType)
+	binary.BigEndian.PutUint16(buf[2:4], ek.KeyLen)
+	buf = append(buf, ek.KeyData...)
+	return buf
+}
+
+// String returns a human-readable representation of the EncryptionKey
+// for debugging and logging purposes.
+func (ek EncryptionKey) String() string {
+	return fmt.Sprintf("EncryptionKey{Type: %d, Len: %d}", ek.KeyType, ek.KeyLen)
+}
+
 // Validate checks the structural integrity of the LeaseSet2.
 // It verifies:
 //   - At least 1 encryption key is present
@@ -205,8 +225,7 @@ func validateOfflineSignatureConsistency(hasOfflineKeys bool, offlineSig *offlin
 
 // validateReservedFlagsAndLeases validates that reserved flag bits are zero and the
 // lease count is within the allowed range. Per spec: "All LeaseSet2 variants require
-// at least one Lease." The minimum check is applied in Validate() but not during parsing
-// (parser accepts 0 leases per Postel's law for lenient input handling).
+// at least one Lease." Both the parser and Validate() enforce this minimum.
 func validateReservedFlagsAndLeases(flags uint16, leases []lease.Lease2) error {
 	reservedMask := uint16(0xFFF8)
 	if flags&reservedMask != 0 {
@@ -253,13 +272,5 @@ func (ls2 *LeaseSet2) Equals(other *LeaseSet2) bool {
 	if errA != nil || errB != nil {
 		return false
 	}
-	if len(a) != len(b) {
-		return false
-	}
-	for i := range a {
-		if a[i] != b[i] {
-			return false
-		}
-	}
-	return true
+	return bytes.Equal(a, b)
 }

@@ -769,9 +769,9 @@ func TestParserRejectsZeroLeases(t *testing.T) {
 	assert.Error(t, err, "ReadLeaseSet2 must reject structures with 0 leases")
 }
 
-// TestBlinedFlagRequiresUnpublished verifies that the BLINDED flag co-implication
+// TestBlindedFlagRequiresUnpublished verifies that the BLINDED flag co-implication
 // with UNPUBLISHED is enforced: BLINDED alone (0x04) must be rejected.
-func TestBlinedFlagRequiresUnpublished(t *testing.T) {
+func TestBlindedFlagRequiresUnpublished(t *testing.T) {
 	_, priv, err := ed25519.GenerateKey(rand.Reader)
 	require.NoError(t, err)
 	dest := createTestDest(t)

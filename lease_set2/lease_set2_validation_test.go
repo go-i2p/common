@@ -590,3 +590,158 @@ func TestParserRejectsZeroLeasesParseAndValidate(t *testing.T) {
 	_, _, err := ReadLeaseSet2(data)
 	assert.Error(t, err, "ReadLeaseSet2 must reject 0 leases per I2P spec")
 }
+
+//
+// BLINDED + UNPUBLISHED flag combination tests
+//
+
+// TestConstructorAcceptsBlindedWithUnpublished verifies that BLINDED | UNPUBLISHED
+// is accepted by the constructor. This is the complementary test to
+// TestBlindedFlagRequiresUnpublished which checks that BLINDED alone is rejected.
+func TestConstructorAcceptsBlindedWithUnpublished(t *testing.T) {
+	pub, priv, err := ed25519.GenerateKey(rand.Reader)
+	require.NoError(t, err)
+
+	dest := createTestDestWithKey(t, pub)
+	l := createTestLease2(t, 0)
+	encKey := EncryptionKey{
+		KeyType: key_certificate.KEYCERT_CRYPTO_X25519,
+		KeyLen:  32,
+		KeyData: make([]byte, 32),
+	}
+
+	ls2, err := NewLeaseSet2(
+		dest, uint32(time.Now().Unix()), 600,
+		LEASESET2_FLAG_BLINDED|LEASESET2_FLAG_UNPUBLISHED, nil,
+		common.Mapping{}, []EncryptionKey{encKey}, []lease.Lease2{*l}, priv,
+	)
+	assert.NoError(t, err, "Constructor should accept BLINDED | UNPUBLISHED")
+	assert.True(t, ls2.IsBlinded())
+	assert.True(t, ls2.IsUnpublished())
+}
+
+// TestParserRejectsBlindedWithoutUnpublished verifies that the parser enforces
+// the spec co-implication: BLINDED (bit 2) requires UNPUBLISHED (bit 1).
+func TestParserRejectsBlindedWithoutUnpublished(t *testing.T) {
+	// Build wire data with BLINDED flag set but UNPUBLISHED not set
+	data := buildMinimalLeaseSet2Data(t, key_certificate.KEYCERT_SIGN_ED25519, 1, LEASESET2_FLAG_BLINDED)
+	_, _, err := ReadLeaseSet2(data)
+	assert.Error(t, err, "Parser must reject BLINDED flag without UNPUBLISHED")
+	assert.Contains(t, err.Error(), "UNPUBLISHED")
+}
+
+// TestParserAcceptsBlindedWithUnpublished verifies that the parser accepts
+// the valid flag combination BLINDED | UNPUBLISHED.
+func TestParserAcceptsBlindedWithUnpublished(t *testing.T) {
+	data := buildMinimalLeaseSet2Data(t, key_certificate.KEYCERT_SIGN_ED25519, 1,
+		LEASESET2_FLAG_BLINDED|LEASESET2_FLAG_UNPUBLISHED)
+	ls2, _, err := ReadLeaseSet2(data)
+	assert.NoError(t, err, "Parser should accept BLINDED | UNPUBLISHED")
+	assert.True(t, ls2.IsBlinded())
+	assert.True(t, ls2.IsUnpublished())
+}
+
+//
+// Parser enforces options sort-order tests
+//
+
+// TestParserRejectsUnsortedOptions verifies that the parser returns an error
+// when options mapping keys are not sorted, per spec:
+// "LS2 options MUST be sorted by key, so the signature is invariant."
+func TestParserRejectsUnsortedOptions(t *testing.T) {
+	destData := createTestDestination(t, key_certificate.KEYCERT_SIGN_ED25519)
+	data := destData
+
+	publishedBytes := make([]byte, 4)
+	binary.BigEndian.PutUint32(publishedBytes, 1735689600)
+	data = append(data, publishedBytes...)
+
+	expiresBytes := make([]byte, 2)
+	binary.BigEndian.PutUint16(expiresBytes, 600)
+	data = append(data, expiresBytes...)
+
+	data = append(data, 0x00, 0x00) // flags
+
+	// Unsorted mapping: keys "z" before "a"
+	unsortedContent := []byte{
+		0x01, 'z', '=', 0x01, 'v', ';',
+		0x01, 'a', '=', 0x01, 'v', ';',
+	}
+	mappingSize := make([]byte, 2)
+	binary.BigEndian.PutUint16(mappingSize, uint16(len(unsortedContent)))
+	data = append(data, mappingSize...)
+	data = append(data, unsortedContent...)
+
+	data = append(data, 0x01) // 1 encryption key
+	keyTypeBytes := make([]byte, 2)
+	binary.BigEndian.PutUint16(keyTypeBytes, key_certificate.KEYCERT_CRYPTO_X25519)
+	data = append(data, keyTypeBytes...)
+	keyLenBytes := make([]byte, 2)
+	binary.BigEndian.PutUint16(keyLenBytes, 32)
+	data = append(data, keyLenBytes...)
+	data = append(data, make([]byte, 32)...)
+
+	data = append(data, 0x01)                // 1 lease
+	data = append(data, make([]byte, 32)...) // hash
+	tunnelID := make([]byte, 4)
+	binary.BigEndian.PutUint32(tunnelID, 12345)
+	data = append(data, tunnelID...)
+	endDate := make([]byte, 4)
+	binary.BigEndian.PutUint32(endDate, 1735690200)
+	data = append(data, endDate...)
+
+	data = append(data, make([]byte, signature.EdDSA_SHA512_Ed25519_SIZE)...)
+
+	_, _, err := ReadLeaseSet2(data)
+	assert.Error(t, err, "Parser must reject unsorted options")
+	assert.Contains(t, err.Error(), "sorted")
+}
+
+//
+// Unknown encryption key type tests
+//
+
+// TestParserAcceptsUnknownEncryptionKeyType verifies that the parser accepts
+// encryption keys with unknown key types for forward compatibility.
+func TestParserAcceptsUnknownEncryptionKeyType(t *testing.T) {
+	destData := createTestDestination(t, key_certificate.KEYCERT_SIGN_ED25519)
+	data := destData
+
+	publishedBytes := make([]byte, 4)
+	binary.BigEndian.PutUint32(publishedBytes, 1735689600)
+	data = append(data, publishedBytes...)
+
+	expiresBytes := make([]byte, 2)
+	binary.BigEndian.PutUint16(expiresBytes, 600)
+	data = append(data, expiresBytes...)
+
+	data = append(data, 0x00, 0x00) // flags
+	data = append(data, 0x00, 0x00) // empty options
+
+	// 1 encryption key with unknown type 999
+	data = append(data, 0x01)
+	keyTypeBytes := make([]byte, 2)
+	binary.BigEndian.PutUint16(keyTypeBytes, 999) // unknown type
+	data = append(data, keyTypeBytes...)
+	keyLenBytes := make([]byte, 2)
+	binary.BigEndian.PutUint16(keyLenBytes, 48) // arbitrary length
+	data = append(data, keyLenBytes...)
+	data = append(data, make([]byte, 48)...)
+
+	data = append(data, 0x01)                // 1 lease
+	data = append(data, make([]byte, 32)...) // hash
+	tunnelID := make([]byte, 4)
+	binary.BigEndian.PutUint32(tunnelID, 12345)
+	data = append(data, tunnelID...)
+	endDate := make([]byte, 4)
+	binary.BigEndian.PutUint32(endDate, 1735690200)
+	data = append(data, endDate...)
+
+	data = append(data, make([]byte, signature.EdDSA_SHA512_Ed25519_SIZE)...)
+
+	ls2, _, err := ReadLeaseSet2(data)
+	assert.NoError(t, err, "Parser should accept unknown encryption key type for forward compatibility")
+	assert.Equal(t, 1, ls2.EncryptionKeyCount())
+	assert.Equal(t, uint16(999), ls2.EncryptionKeys()[0].KeyType)
+	assert.Equal(t, uint16(48), ls2.EncryptionKeys()[0].KeyLen)
+}

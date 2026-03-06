@@ -638,3 +638,95 @@ func TestSortStringsSorted(t *testing.T) {
 	assert.True(t, sort.StringsAreSorted([]string{}))
 	assert.True(t, sort.StringsAreSorted([]string{"a"}))
 }
+
+//
+// PublishedTime / ExpirationTime tests
+//
+
+func TestPublishedTimeComputedCorrectly(t *testing.T) {
+	published := uint32(1735689600) // 2025-01-01 00:00:00 UTC
+	ls2 := &LeaseSet2{published: published}
+	expectedTime := time.Unix(int64(published), 0).UTC()
+	assert.Equal(t, expectedTime, ls2.PublishedTime())
+}
+
+func TestExpirationTimeComputedCorrectly(t *testing.T) {
+	published := uint32(1735689600) // 2025-01-01 00:00:00 UTC
+	expires := uint16(600)          // 10 minutes
+	ls2 := &LeaseSet2{published: published, expires: expires}
+
+	expectedPublished := time.Unix(int64(published), 0).UTC()
+	expectedExpiration := expectedPublished.Add(time.Duration(expires) * time.Second)
+
+	assert.Equal(t, expectedExpiration, ls2.ExpirationTime())
+	assert.Equal(t, expectedPublished.Add(10*time.Minute), ls2.ExpirationTime())
+}
+
+func TestExpirationTimeZeroExpires(t *testing.T) {
+	published := uint32(1735689600)
+	ls2 := &LeaseSet2{published: published, expires: 0}
+	assert.Equal(t, ls2.PublishedTime(), ls2.ExpirationTime(),
+		"Zero expires offset should make expiration equal to published time")
+}
+
+//
+// EncryptionKey.Bytes / String tests
+//
+
+func TestEncryptionKeyBytes(t *testing.T) {
+	keyData := make([]byte, 32)
+	for i := range keyData {
+		keyData[i] = byte(i)
+	}
+	ek := EncryptionKey{
+		KeyType: key_certificate.KEYCERT_CRYPTO_X25519,
+		KeyLen:  32,
+		KeyData: keyData,
+	}
+
+	b := ek.Bytes()
+	assert.Equal(t, 4+32, len(b), "Bytes should be 4-byte header + key data")
+
+	// Verify key type
+	gotType := binary.BigEndian.Uint16(b[0:2])
+	assert.Equal(t, uint16(key_certificate.KEYCERT_CRYPTO_X25519), gotType)
+
+	// Verify key length
+	gotLen := binary.BigEndian.Uint16(b[2:4])
+	assert.Equal(t, uint16(32), gotLen)
+
+	// Verify key data
+	assert.Equal(t, keyData, b[4:])
+}
+
+func TestEncryptionKeyString(t *testing.T) {
+	ek := EncryptionKey{
+		KeyType: key_certificate.KEYCERT_CRYPTO_X25519,
+		KeyLen:  32,
+		KeyData: make([]byte, 32),
+	}
+	s := ek.String()
+	assert.Contains(t, s, "EncryptionKey")
+	assert.Contains(t, s, "Type:")
+	assert.Contains(t, s, "Len:")
+}
+
+//
+// NewLeaseSet2FromBytes tests
+//
+
+func TestNewLeaseSet2FromBytes(t *testing.T) {
+	data := buildMinimalLeaseSet2Data(t, key_certificate.KEYCERT_SIGN_ED25519, 1, 0)
+	ls2, remainder, err := NewLeaseSet2FromBytes(data)
+	require.NoError(t, err)
+	assert.NotNil(t, ls2)
+	assert.Empty(t, remainder)
+	assert.Equal(t, 1, ls2.LeaseCount())
+}
+
+func TestNewLeaseSet2FromBytesTooShort(t *testing.T) {
+	data := make([]byte, 100)
+	ls2, _, err := NewLeaseSet2FromBytes(data)
+	assert.Error(t, err)
+	assert.Nil(t, ls2)
+}

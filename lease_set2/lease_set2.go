@@ -212,14 +212,27 @@ func ReadLeaseSet2(data []byte) (ls2 LeaseSet2, remainder []byte, err error) {
 		}).Warn("LeaseSet2 has non-zero reserved flag bits (bits 15-3 should be 0)")
 	}
 
+	// Spec: "If [BLINDED] is set, bit 1 (UNPUBLISHED) should also be set."
+	if (ls2.flags&LEASESET2_FLAG_BLINDED) != 0 && (ls2.flags&LEASESET2_FLAG_UNPUBLISHED) == 0 {
+		err = oops.
+			Code("blinded_requires_unpublished").
+			Errorf("BLINDED flag (bit 2) requires UNPUBLISHED flag (bit 1) to also be set")
+		log.WithFields(logger.Fields{
+			"flags": ls2.flags,
+		}).Error(err.Error())
+		return
+	}
+
 	log.WithFields(logger.Fields{
 		"published": ls2.published,
 		"expires":   ls2.expires,
 		"flags":     ls2.flags,
 	}).Debug("Parsed LeaseSet2 header")
 
-	// Warn if options mapping keys are not sorted per spec
-	warnIfOptionsUnsorted(ls2.options)
+	// Spec: "LS2 options MUST be sorted by key, so the signature is invariant."
+	if err = validateOptionsSorted(ls2.options); err != nil {
+		return
+	}
 
 	remainder, err = parseKeysLeasesAndSignature(&ls2, data)
 	return
@@ -538,10 +551,8 @@ func parseLeases(ls2 *LeaseSet2, data []byte) ([]byte, error) {
 	numLeases := int(data[0])
 	data = data[1:]
 
-	// Note: The parser accepts 0 leases (Postel's law / lenient input handling),
-	// while the constructor and Validate() require at least 1 lease per spec:
-	// "All LeaseSet2 variants require at least one Lease."
-	// This asymmetry is intentional — parsed LeaseSets with 0 leases will fail Validate().
+	// Spec: "All LeaseSet2 variants require at least one Lease."
+	// Both the parser and Validate() enforce the minimum lease count.
 	if err := validateLeaseCount(numLeases); err != nil {
 		return nil, err
 	}
@@ -863,4 +874,14 @@ func serializeLeaseSet2Content(
 	return data, nil
 }
 
-
+// NewLeaseSet2FromBytes is a convenience constructor that parses a LeaseSet2
+// from raw bytes. It is equivalent to calling ReadLeaseSet2 but returns a
+// pointer and discards the remainder, matching the NewXFromBytes pattern
+// used by other packages in this codebase.
+func NewLeaseSet2FromBytes(data []byte) (*LeaseSet2, []byte, error) {
+	ls2, remainder, err := ReadLeaseSet2(data)
+	if err != nil {
+		return nil, remainder, err
+	}
+	return &ls2, remainder, nil
+}

@@ -119,12 +119,12 @@ func FuzzNewLeaseSet2Constructor(f *testing.F) {
 			leases[i] = *l
 		}
 
-		_, pub, err := ed25519.GenerateKey(rand.Reader)
+		_, priv, err := ed25519.GenerateKey(rand.Reader)
 		if err != nil {
 			return
 		}
 
-		ls2, err := NewLeaseSet2(dest, published, expires, flags, nil, common.Mapping{}, encKeys, leases, pub)
+		ls2, err := NewLeaseSet2(dest, published, expires, flags, nil, common.Mapping{}, encKeys, leases, priv)
 		if err != nil {
 			return // validation error is fine
 		}
