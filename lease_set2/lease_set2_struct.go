@@ -247,10 +247,10 @@ func validateEncryptionKeyConsistency(index int, key EncryptionKey) error {
 		return oops.Errorf("encryption key %d: declared KeyLen %d does not match actual KeyData length %d",
 			index, key.KeyLen, len(key.KeyData))
 	}
-	if expectedSize, ok := key_certificate.CryptoPublicKeySizes[key.KeyType]; ok {
-		if int(key.KeyLen) != expectedSize {
+	if info, ok := key_certificate.CryptoKeySizes[int(key.KeyType)]; ok {
+		if int(key.KeyLen) != info.CryptoPublicKeySize {
 			return oops.Errorf("encryption key %d: KeyLen %d does not match expected size %d for key type %d",
-				index, key.KeyLen, expectedSize, key.KeyType)
+				index, key.KeyLen, info.CryptoPublicKeySize, key.KeyType)
 		}
 	}
 	return nil

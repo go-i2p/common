@@ -29,6 +29,7 @@ package offline_signature
 
 import (
 	"crypto"
+	"crypto/ecdh"
 	"crypto/ecdsa"
 	"crypto/ed25519"
 	"crypto/elliptic"
@@ -549,11 +550,27 @@ func verifyECDSA(curve elliptic.Curve, hashFunc crypto.Hash, coordSize int, pubK
 		return false, fmt.Errorf("invalid ECDSA signature size: expected %d, got %d",
 			2*coordSize, len(sig))
 	}
-	x := new(big.Int).SetBytes(pubKey[:coordSize])
-	y := new(big.Int).SetBytes(pubKey[coordSize:])
-	if !curve.IsOnCurve(x, y) {
+	// Validate point is on the curve using crypto/ecdh (uncompressed encoding: 0x04 || X || Y)
+	uncompressed := make([]byte, 1+2*coordSize)
+	uncompressed[0] = 0x04
+	copy(uncompressed[1:1+coordSize], pubKey[:coordSize])
+	copy(uncompressed[1+coordSize:], pubKey[coordSize:])
+	var ecdhCurve ecdh.Curve
+	switch curve {
+	case elliptic.P256():
+		ecdhCurve = ecdh.P256()
+	case elliptic.P384():
+		ecdhCurve = ecdh.P384()
+	case elliptic.P521():
+		ecdhCurve = ecdh.P521()
+	default:
+		return false, fmt.Errorf("unsupported ECDSA curve for on-curve validation")
+	}
+	if _, err := ecdhCurve.NewPublicKey(uncompressed); err != nil {
 		return false, fmt.Errorf("ECDSA public key is not a valid point on the curve")
 	}
+	x := new(big.Int).SetBytes(pubKey[:coordSize])
+	y := new(big.Int).SetBytes(pubKey[coordSize:])
 	h := hashFunc.New()
 	h.Write(message)
 	digest := h.Sum(nil)

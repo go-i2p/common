@@ -352,11 +352,11 @@ func constructCurve25519Key(data []byte) curve25519.Curve25519PublicKey {
 
 // CryptoPublicKeySize returns the size of a public key for the certificate's crypto type
 func (keyCertificate KeyCertificate) CryptoPublicKeySize() (int, error) {
-	size, exists := CryptoPublicKeySizes[uint16(keyCertificate.CpkType.Int())]
+	info, exists := CryptoKeySizes[keyCertificate.CpkType.Int()]
 	if !exists {
 		return 0, oops.Errorf("unknown crypto key type: %d", keyCertificate.CpkType.Int())
 	}
-	return size, nil
+	return info.CryptoPublicKeySize, nil
 }
 
 // SigningPublicKeySize returns the size of a signing public key for the certificate's signing type.

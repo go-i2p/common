@@ -26,12 +26,7 @@ func (router_info *RouterInfo) HasIPv6() bool {
 
 // Check if a router is a FloodFill
 func (router_info *RouterInfo) IsFloodfill() bool {
-	// check for an `f` in the RI options
-	caps := router_info.RouterCapabilities()
-	if !strings.Contains(caps, "f") {
-		return false
-	}
-	return true
+	return strings.Contains(router_info.RouterCapabilities(), "f")
 }
 
 // IsMediumCongested checks if the router indicates medium congestion.

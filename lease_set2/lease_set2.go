@@ -428,11 +428,12 @@ func extractEncryptionKeyData(data []byte, keyLen uint16) ([]byte, []byte) {
 // match the spec-required size for a known encryption key type.
 // Per spec: "keylen: Must match the specified length of the encryption type."
 func validateEncryptionKeyTypeLength(keyType, keyLen uint16, keyIndex int) error {
-	expectedSize, ok := key_certificate.CryptoPublicKeySizes[keyType]
+	info, ok := key_certificate.CryptoKeySizes[int(keyType)]
 	if !ok {
 		// Unknown type – allow any length (forward compatibility).
 		return nil
 	}
+	expectedSize := info.CryptoPublicKeySize
 	if int(keyLen) != expectedSize {
 		err := oops.
 			Code("encryption_key_len_type_mismatch").

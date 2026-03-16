@@ -177,7 +177,7 @@ func (ra RouterAddress) Serialize() ([]byte, error) {
 		log.Warn("Cannot serialize RouterAddress: ExpirationDate is nil")
 		return nil, oops.Errorf("%w", ErrMissingExpirationDate)
 	}
-	if ra.TransportType == nil || len(ra.TransportType) == 0 {
+	if len(ra.TransportType) == 0 {
 		log.Warn("Cannot serialize RouterAddress: TransportType is nil or empty")
 		return nil, oops.Errorf("%w", ErrMissingTransportType)
 	}

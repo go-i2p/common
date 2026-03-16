@@ -95,7 +95,7 @@ func validateRouterAddressFields(ra *RouterAddress) error {
 	if ra.ExpirationDate == nil {
 		return ErrMissingExpirationDate
 	}
-	if ra.TransportType == nil || len(ra.TransportType) == 0 {
+	if len(ra.TransportType) == 0 {
 		return ErrMissingTransportType
 	}
 	// Check that the I2PString content is non-empty, not just the raw slice.
