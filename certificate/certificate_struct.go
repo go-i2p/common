@@ -355,6 +355,34 @@ func (c *Certificate) IsValid() bool {
 	return true
 }
 
+// Validate checks that the Certificate is properly initialized and has
+// consistent internal structure. Returns an error describing the first
+// issue found, or nil if valid.
+func (c *Certificate) Validate() error {
+	if c == nil {
+		return oops.Errorf("certificate is nil")
+	}
+	if len(c.kind) == 0 {
+		return oops.Errorf("certificate type field is empty")
+	}
+	if len(c.len) == 0 {
+		return oops.Errorf("certificate length field is empty")
+	}
+	declaredLen, err := c.Length()
+	if err != nil {
+		return oops.Errorf("certificate length invalid: %w", err)
+	}
+	if declaredLen != len(c.payload) {
+		return oops.Errorf("certificate length mismatch: declared %d, actual payload %d",
+			declaredLen, len(c.payload))
+	}
+	certType, err := c.Type()
+	if err != nil {
+		return oops.Errorf("certificate type invalid: %w", err)
+	}
+	return validateCertPayloadByType(uint8(certType), c.payload)
+}
+
 // certTypeName returns the human-readable name for a certificate type code.
 func certTypeName(certType int) string {
 	switch certType {

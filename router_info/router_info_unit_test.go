@@ -318,7 +318,8 @@ func TestOwnedRouterInfoIsStub(t *testing.T) {
 	keyCert, err := key_certificate.KeyCertificateFromCertificate(cert)
 	require.NoError(t, err)
 
-	ri := OwnedRouterInfo(*keyCert)
+	ri, err2 := OwnedRouterInfo(*keyCert)
+	assert.Error(t, err2)
 	assert.Nil(t, ri)
 }
 

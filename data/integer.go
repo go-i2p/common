@@ -212,3 +212,15 @@ func (i Integer) IsZero() bool {
 func (i Integer) IsValid() bool {
 	return len(i) >= 1 && len(i) <= MAX_INTEGER_SIZE
 }
+
+// Validate checks that the Integer is structurally valid per the I2P spec.
+// Returns an error if the Integer is empty or exceeds the maximum size of 8 bytes.
+func (i Integer) Validate() error {
+	if len(i) == 0 {
+		return oops.Errorf("Integer is empty")
+	}
+	if len(i) > MAX_INTEGER_SIZE {
+		return oops.Errorf("Integer too large: %d bytes (max %d)", len(i), MAX_INTEGER_SIZE)
+	}
+	return nil
+}

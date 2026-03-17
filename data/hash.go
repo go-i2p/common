@@ -55,6 +55,21 @@ func (h Hash) IsZero() bool {
 	return h == ZeroHash
 }
 
+// Validate checks that the Hash is non-zero.
+// A Hash is always exactly 32 bytes (fixed-size array), so the only semantic
+// validation is whether it contains a meaningful (non-zero) value.
+func (h Hash) Validate() error {
+	if h.IsZero() {
+		return oops.Errorf("Hash is zero (undefined)")
+	}
+	return nil
+}
+
+// IsValid returns true if the Hash contains a non-zero value.
+func (h Hash) IsValid() bool {
+	return !h.IsZero()
+}
+
 // Equal returns true if two hashes are identical.
 func (h Hash) Equal(other Hash) bool {
 	return h == other

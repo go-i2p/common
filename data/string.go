@@ -33,6 +33,23 @@ func (str I2PString) IsValid() bool {
 	return len(str) == declaredLen+1 && declaredLen <= STRING_MAX_SIZE
 }
 
+// Validate checks that the I2PString is structurally valid.
+// Returns an error describing the first issue found, or nil if valid.
+func (str I2PString) Validate() error {
+	if len(str) == 0 {
+		return oops.Errorf("I2PString is empty")
+	}
+	declaredLen := int(str[0])
+	actualLen := len(str) - 1
+	if declaredLen > STRING_MAX_SIZE {
+		return oops.Errorf("I2PString declared length %d exceeds max %d", declaredLen, STRING_MAX_SIZE)
+	}
+	if actualLen != declaredLen {
+		return oops.Errorf("I2PString length mismatch: declared %d, actual %d", declaredLen, actualLen)
+	}
+	return nil
+}
+
 // DataSafe returns the I2PString content with strict validation.
 // Unlike Data(), this fails fast on any inconsistency.
 // Returns error if the I2PString structure is invalid.

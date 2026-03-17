@@ -164,3 +164,19 @@ func (d Date) IsZero() bool {
 	}
 	return true
 }
+
+// Validate checks that the Date is structurally valid.
+// A Date is always 8 bytes (fixed-size array), so the only validation is
+// whether it represents a non-zero (defined) time.
+// Returns nil if the Date is valid (non-zero).
+func (d Date) Validate() error {
+	if d.IsZero() {
+		return oops.Errorf("Date is zero (undefined/null)")
+	}
+	return nil
+}
+
+// IsValid returns true if the Date represents a defined (non-zero) time.
+func (d Date) IsValid() bool {
+	return !d.IsZero()
+}

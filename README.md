@@ -12,6 +12,7 @@ This package is strictly scoped to common data structures only and properly stru
 This package MAY use any of the following libraries, and SHOULD use them where possible.
 
  - [go-i2p/crypto](https://github.com/go-i2p/crypto): Cryptographic primitives only
+ - [go-i2p/logger](https://github.com/go-i2p/logger): Structured logging wrapper
 
 This package MUST NOT use any of the following libraries.
 
