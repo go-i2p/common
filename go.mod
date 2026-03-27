@@ -16,9 +16,14 @@ require (
 
 require (
 	filippo.io/edwards25519 v1.2.0 // indirect
+	github.com/armon/circbuf v0.0.0-20190214190532-5111143e8da2 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/go-i2p/elgamal v0.0.2 // indirect
+	github.com/go-i2p/go-datagrams v0.1.4-0.20260129000405-f6a1f1328725 // indirect
+	github.com/go-i2p/go-i2cp v0.1.4-0.20260309213829-4a5c1a1e25e7 // indirect
+	github.com/go-i2p/go-streaming v0.1.4-0.20260129001439-6c0bfdcbdd02 // indirect
+	github.com/go-i2p/noise v1.1.1-0.20260327201800-8e41bb3d9f1e // indirect
 	github.com/kr/pretty v0.3.1 // indirect
 	github.com/oklog/ulid/v2 v2.1.1 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
