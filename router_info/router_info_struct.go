@@ -153,12 +153,20 @@ func NewRouterInfo(
 
 	routerInfo.signature = signature
 
+	// Pre-compute a safe identity representation before entering the logger mutex.
+	// Passing routerIdentity directly deadlocks: RouterIdentity.String() calls
+	// KeysAndCert.Bytes() which calls log.WithFields(), re-acquiring the
+	// non-reentrant sync.Mutex that logrus holds during Format().
+	identHashStr := "<error>"
+	if h, err := routerIdentity.Hash(); err == nil {
+		identHashStr = fmt.Sprintf("%x", h[:8])
+	}
 	log.WithFields(logger.Fields{
-		"router_identity": routerIdentity,
-		"published":       publishedDate,
-		"address_count":   len(addresses),
-		"options":         options,
-		"signature":       signature,
+		"router_identity_hash": identHashStr,
+		"published":            publishedDate,
+		"address_count":        len(addresses),
+		"options":              options,
+		"signature_length":     signature.Len(),
 	}).Debug("Successfully created RouterInfo")
 
 	return routerInfo, nil
@@ -726,11 +734,22 @@ func validateRouterInfoMinSize(bytes []byte) error {
 
 // logReadRouterInfoSuccess logs successful parsing of RouterInfo.
 func logReadRouterInfoSuccess(info RouterInfo, remainder []byte) {
+	// Pre-compute a safe identity representation before entering the logger mutex.
+	// Passing info.router_identity directly deadlocks: RouterIdentity.String() calls
+	// KeysAndCert.Bytes() which re-acquires the non-reentrant logrus mutex.
+	identHashStr := "<nil>"
+	if info.router_identity != nil {
+		if h, err := info.router_identity.Hash(); err == nil {
+			identHashStr = fmt.Sprintf("%x", h[:8])
+		} else {
+			identHashStr = "<error>"
+		}
+	}
 	log.WithFields(logger.Fields{
-		"router_identity":  info.router_identity,
-		"published":        info.published,
-		"address_count":    len(info.addresses),
-		"remainder_length": len(remainder),
+		"router_identity_hash": identHashStr,
+		"published":            info.published,
+		"address_count":        len(info.addresses),
+		"remainder_length":     len(remainder),
 	}).Debug("Successfully read RouterInfo")
 }
 
