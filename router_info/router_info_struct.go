@@ -480,6 +480,45 @@ func (router_info *RouterInfo) AddAddress(address *router_address.RouterAddress)
 	return nil
 }
 
+// ReSign updates the published timestamp and re-computes the RouterInfo signature
+// using the provided private key and signature type. Call this after AddAddress
+// (or any other mutation that invalidates the signature).
+//
+// sigType must be signature.SIGNATURE_TYPE_EDDSA_SHA512_ED25519 (7).
+// signingPrivateKey must be a *ed25519.Ed25519PrivateKey.
+func (router_info *RouterInfo) ReSign(publishedTime time.Time, signingPrivateKey types.SigningPrivateKey, sigType int) error {
+	publishedDate, err := createPublishedDate(publishedTime)
+	if err != nil {
+		return err
+	}
+
+	sizeInt, peerSizeInt, err := createSizeIntegers(router_info.addresses)
+	if err != nil {
+		return err
+	}
+
+	router_info.published = publishedDate
+	router_info.size = sizeInt
+	router_info.peer_size = peerSizeInt
+
+	signer, err := createSignerFromPrivateKey(signingPrivateKey, sigType)
+	if err != nil {
+		return err
+	}
+
+	sig, err := signRouterInfoData(router_info, signer, sigType)
+	if err != nil {
+		return err
+	}
+
+	router_info.signature = sig
+	log.WithFields(logger.Fields{
+		"address_count":    len(router_info.addresses),
+		"signature_length": sig.Len(),
+	}).Debug("RouterInfo re-signed successfully")
+	return nil
+}
+
 // getOptionString retrieves a string value from the RouterInfo options mapping,
 // reducing duplication between RouterCapabilities and RouterVersion.
 func (router_info *RouterInfo) getOptionString(optionKey, fieldLabel string) string {

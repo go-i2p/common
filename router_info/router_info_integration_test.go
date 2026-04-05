@@ -10,6 +10,8 @@ import (
 	"time"
 
 	"github.com/go-i2p/common/data"
+	"github.com/go-i2p/common/router_address"
+	"github.com/go-i2p/common/signature"
 	"github.com/samber/oops"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -330,4 +332,147 @@ func cleanupSingleDirectory(t *testing.T, dir, dirType string) {
 		log.WithError(err).Error("Failed to cleanup " + dirType + " directory")
 		t.Errorf("Failed to cleanup %s directory: %v", dirType, err)
 	}
+}
+
+//
+// ReSign tests
+//
+
+// TestReSignAfterAddAddress verifies that ReSign produces a valid signature after
+// AddAddress has invalidated the original one.
+func TestReSignAfterAddAddress(t *testing.T) {
+	keyPair := generateTestKeyPair(t)
+	routerIdentity := assembleTestRouterIdentity(t, keyPair)
+
+	ntcp2Addr, err := router_address.NewRouterAddress(3, time.Time{}, "NTCP2", map[string]string{
+		"host": "203.0.113.1",
+		"port": "9001",
+	})
+	require.NoError(t, err)
+
+	ri, err := NewRouterInfo(
+		routerIdentity,
+		time.Now(),
+		[]*router_address.RouterAddress{ntcp2Addr},
+		map[string]string{"caps": "LfR", "router.version": "0.9.64"},
+		&keyPair.ed25519PrivKey,
+		signature.SIGNATURE_TYPE_EDDSA_SHA512_ED25519,
+	)
+	require.NoError(t, err)
+
+	// Verify initial signature is valid.
+	valid, err := ri.VerifySignature()
+	require.NoError(t, err)
+	require.True(t, valid, "initial signature should be valid")
+
+	// Add an SSU2 address — this invalidates the signature.
+	ssu2Addr, err := router_address.NewRouterAddress(7, time.Time{}, "SSU2", map[string]string{
+		"host": "203.0.113.1",
+		"port": "9002",
+	})
+	require.NoError(t, err)
+	require.NoError(t, ri.AddAddress(ssu2Addr))
+
+	// Signature field is now nil; Bytes() and VerifySignature() should error.
+	_, err = ri.Bytes()
+	assert.Error(t, err, "Bytes() should fail when signature is nil")
+
+	_, err = ri.VerifySignature()
+	assert.Error(t, err, "VerifySignature() should fail when signature is nil")
+
+	// Re-sign with a new published timestamp.
+	err = ri.ReSign(time.Now(), &keyPair.ed25519PrivKey, signature.SIGNATURE_TYPE_EDDSA_SHA512_ED25519)
+	require.NoError(t, err)
+
+	// Signature should now be valid again.
+	valid, err = ri.VerifySignature()
+	require.NoError(t, err)
+	assert.True(t, valid, "signature should be valid after ReSign")
+
+	// The RouterInfo should have both addresses.
+	assert.Equal(t, 2, ri.RouterAddressCount())
+
+	// Serialization should succeed.
+	_, err = ri.Bytes()
+	assert.NoError(t, err)
+}
+
+// TestReSignPreservesAddresses verifies that ReSign does not drop or reorder the
+// address list.
+func TestReSignPreservesAddresses(t *testing.T) {
+	keyPair := generateTestKeyPair(t)
+	routerIdentity := assembleTestRouterIdentity(t, keyPair)
+
+	addr1, err := router_address.NewRouterAddress(3, time.Time{}, "NTCP2", map[string]string{"host": "1.2.3.4", "port": "9001"})
+	require.NoError(t, err)
+	addr2, err := router_address.NewRouterAddress(7, time.Time{}, "SSU2", map[string]string{"host": "1.2.3.4", "port": "9002"})
+	require.NoError(t, err)
+
+	ri, err := NewRouterInfo(
+		routerIdentity,
+		time.Now(),
+		[]*router_address.RouterAddress{addr1},
+		map[string]string{"caps": "LfR"},
+		&keyPair.ed25519PrivKey,
+		signature.SIGNATURE_TYPE_EDDSA_SHA512_ED25519,
+	)
+	require.NoError(t, err)
+	require.NoError(t, ri.AddAddress(addr2))
+	require.NoError(t, ri.ReSign(time.Now(), &keyPair.ed25519PrivKey, signature.SIGNATURE_TYPE_EDDSA_SHA512_ED25519))
+
+	addrs := ri.RouterAddresses()
+	require.Len(t, addrs, 2)
+
+	style0, err := addrs[0].TransportStyle().Data()
+	require.NoError(t, err)
+	style1, err := addrs[1].TransportStyle().Data()
+	require.NoError(t, err)
+	assert.Equal(t, "NTCP2", style0)
+	assert.Equal(t, "SSU2", style1)
+}
+
+// TestReSignRoundTrip verifies that a re-signed RouterInfo survives a full
+// serialize → parse → verify cycle.
+func TestReSignRoundTrip(t *testing.T) {
+	keyPair := generateTestKeyPair(t)
+	routerIdentity := assembleTestRouterIdentity(t, keyPair)
+
+	addr, err := router_address.NewRouterAddress(3, time.Time{}, "NTCP2", map[string]string{"host": "10.0.0.1", "port": "9001"})
+	require.NoError(t, err)
+
+	ri, err := NewRouterInfo(
+		routerIdentity,
+		time.Now(),
+		[]*router_address.RouterAddress{addr},
+		map[string]string{"caps": "LfR"},
+		&keyPair.ed25519PrivKey,
+		signature.SIGNATURE_TYPE_EDDSA_SHA512_ED25519,
+	)
+	require.NoError(t, err)
+
+	ssu2, err := router_address.NewRouterAddress(7, time.Time{}, "SSU2", map[string]string{"host": "10.0.0.1", "port": "9002"})
+	require.NoError(t, err)
+	require.NoError(t, ri.AddAddress(ssu2))
+	require.NoError(t, ri.ReSign(time.Now(), &keyPair.ed25519PrivKey, signature.SIGNATURE_TYPE_EDDSA_SHA512_ED25519))
+
+	wireBytes, err := ri.Bytes()
+	require.NoError(t, err)
+
+	parsed, remainder, err := ReadRouterInfo(wireBytes)
+	require.NoError(t, err)
+	assert.Empty(t, remainder)
+
+	valid, err := parsed.VerifySignature()
+	require.NoError(t, err)
+	assert.True(t, valid, "signature should verify on parsed re-signed RouterInfo")
+	assert.Equal(t, 2, parsed.RouterAddressCount())
+}
+
+// TestReSignNilKeyReturnsError ensures ReSign propagates the error from a nil key.
+func TestReSignNilKeyReturnsError(t *testing.T) {
+	ri, err := generateTestRouterInfo(t, time.Now())
+	require.NoError(t, err)
+
+	err = ri.ReSign(time.Now(), nil, signature.SIGNATURE_TYPE_EDDSA_SHA512_ED25519)
+	assert.Error(t, err)
 }
