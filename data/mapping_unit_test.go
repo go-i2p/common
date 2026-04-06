@@ -47,7 +47,7 @@ func TestValuesWarnsMissingData(t *testing.T) {
 func TestValuesWarnsExtraData(t *testing.T) {
 	assert := assert.New(t)
 
-	mapping, _, errs := NewMapping([]byte{0x00, 0x06, 0x01, 0x61, 0x3d, 0x01, 0x62, 0x3b, 0x00})
+	mapping, remainder, errs := NewMapping([]byte{0x00, 0x06, 0x01, 0x61, 0x3d, 0x01, 0x62, 0x3b, 0x00})
 	values := mapping.Values()
 
 	key, kerr := values[0][0].Data()
@@ -58,9 +58,10 @@ func TestValuesWarnsExtraData(t *testing.T) {
 	assert.Equal(key, "a", "Values() did not return key in valid data")
 	assert.Equal(val, "b", "Values() did not return value in valid data")
 
-	if assert.Equal(1, len(errs), "Values() reported wrong error count when mapping had extra data") {
-		assert.Equal("warning parsing mapping: data exists beyond length of mapping", errs[0].Error(), "correct error message should be returned")
-	}
+	// Extra data beyond the declared mapping size is not an error;
+	// it is returned as remainder for the caller to handle (embedded mappings).
+	assert.Empty(errs, "No errors expected when extra data is simply trailing remainder")
+	assert.Equal(1, len(remainder), "Extra data should be returned as remainder")
 }
 
 func TestValuesReturnsValues(t *testing.T) {
@@ -185,17 +186,17 @@ func TestHasDuplicateKeysErrorHandling(t *testing.T) {
 	})
 }
 
-// TestExtraDataWarning verifies that ReadMapping warns when there is
-// data beyond the declared mapping size.
+// TestExtraDataWarning verifies that ReadMapping handles extra data
+// beyond the declared mapping size by returning it as remainder.
 func TestExtraDataWarning(t *testing.T) {
 	t.Run("extra byte after mapping", func(t *testing.T) {
 		data := []byte{0x00, 0x06, 0x01, 0x61, 0x3d, 0x01, 0x62, 0x3b, 0x00}
 		_, remainder, errs := ReadMapping(data)
 
-		require.Equal(t, 1, len(errs),
-			"Should produce exactly 1 warning for extra data")
-		assert.Equal(t, "warning parsing mapping: data exists beyond length of mapping",
-			errs[0].Error())
+		// Extra data beyond the declared mapping size is not an error;
+		// it is silently returned as remainder (common for embedded mappings).
+		assert.Empty(t, errs,
+			"No errors expected when extra data is simply trailing remainder")
 		assert.Equal(t, 1, len(remainder),
 			"Extra data should be returned as remainder")
 	})
