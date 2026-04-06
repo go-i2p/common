@@ -57,6 +57,10 @@ func (mapping Mapping) Values() MappingValues {
 // Returns nil if the mapping is not properly initialized or any key-value pair is invalid.
 // Callers should check for nil to detect serialization failures; use Validate() for details.
 // The size field is recalculated from the serialized pairs to ensure consistency.
+// Keys are always emitted in canonical sorted order (Java String.compareTo() / Unicode
+// code-point order) as required by the I2P specification §2.4. This guarantees that
+// cryptographic signatures computed over serialized Mappings are reproducible across
+// implementations, even if the in-memory order differs (e.g. after parsing or mutation).
 func (mapping *Mapping) Data() []byte {
 	if mapping == nil || mapping.size == nil {
 		log.Error("Mapping.Data() called on nil or uninitialized mapping")
@@ -67,7 +71,13 @@ func (mapping *Mapping) Data() []byte {
 		log.WithError(err).Error("Mapping.Data() aborted: mapping contains invalid key-value pairs")
 		return nil
 	}
-	payload := serializeMappingPairs(mapping.Values())
+	// Ensure canonical key order for every serialization, not only when the
+	// Mapping was constructed through ValuesToMapping / GoMapToMapping.
+	// Parsed Mappings (ReadMapping) preserve parse order internally; without
+	// this sort, a parse→serialize round-trip could emit non-canonical bytes
+	// that fail signature verification on remote peers (e.g. i2pd reason 16).
+	sortedValues := mappingOrder(mapping.Values())
+	payload := serializeMappingPairs(sortedValues)
 	sizeBytes := EncodeUint16(uint16(len(payload)))
 	result := make([]byte, 0, 2+len(payload))
 	result = append(result, sizeBytes[:]...)
