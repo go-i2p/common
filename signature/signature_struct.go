@@ -43,17 +43,19 @@ type Signature struct {
 // NewSignature creates a new *Signature from []byte using ReadSignature.
 // Returns a pointer to Signature unlike ReadSignature.
 func NewSignature(data []byte, sigType int) (signature *Signature, remainder []byte, err error) {
-	log.WithField("input_length", len(data)).Debug("Creating new Signature")
+	log.WithFields(logger.Fields{"pkg": "signature", "func": "NewSignature", "input_length": len(data)}).Debug("Creating new Signature")
 
 	// Use ReadSignature to parse and validate the signature data
 	// This ensures proper type validation and length checking before creation
 	sig, remainder, err := ReadSignature(data, sigType)
 	if err != nil {
-		log.WithError(err).Error("Failed to read Signature")
+		log.WithFields(logger.Fields{"pkg": "signature", "func": "NewSignature"}).WithError(err).Error("Failed to read Signature")
 		return nil, remainder, err
 	}
 	signature = &sig
 	log.WithFields(logger.Fields{
+		"pkg":              "signature",
+		"func":             "NewSignature",
 		"signature_length": sig.Len(),
 		"remainder_length": len(remainder),
 	}).Debug("Successfully created new Signature")

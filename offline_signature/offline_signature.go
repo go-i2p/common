@@ -49,6 +49,7 @@ import (
 	"github.com/go-i2p/common/data"
 	"github.com/go-i2p/common/signature"
 	"github.com/go-i2p/crypto/ed25519ph"
+	"github.com/go-i2p/logger"
 )
 
 var (
@@ -90,9 +91,11 @@ var (
 //	    log.Fatal("Failed to parse offline signature:", err)
 //	}
 func ReadOfflineSignature(data []byte, destinationSigType uint16) (OfflineSignature, []byte, error) {
+	log.WithFields(logger.Fields{"pkg": "offline_signature", "func": "ReadOfflineSignature", "data_len": len(data), "dest_sig_type": destinationSigType}).Debug("Reading offline signature")
 	var offlineSig OfflineSignature
 
 	if err := validateMinimumOfflineSignatureData(len(data)); err != nil {
+		log.WithFields(logger.Fields{"pkg": "offline_signature", "func": "ReadOfflineSignature"}).Error(err.Error())
 		return offlineSig, data, err
 	}
 
@@ -102,10 +105,12 @@ func ReadOfflineSignature(data []byte, destinationSigType uint16) (OfflineSignat
 
 	transientKeySize, err := validateTransientKeyType(sigtype)
 	if err != nil {
+		log.WithFields(logger.Fields{"pkg": "offline_signature", "func": "ReadOfflineSignature", "sigtype": sigtype}).Error(err.Error())
 		return offlineSig, data, err
 	}
 
 	if err := validateTransientKeyData(len(rem), transientKeySize); err != nil {
+		log.WithFields(logger.Fields{"pkg": "offline_signature", "func": "ReadOfflineSignature"}).Error(err.Error())
 		return offlineSig, data, err
 	}
 
@@ -114,10 +119,12 @@ func ReadOfflineSignature(data []byte, destinationSigType uint16) (OfflineSignat
 
 	signatureSize, err := validateDestinationSignatureType(destinationSigType)
 	if err != nil {
+		log.WithFields(logger.Fields{"pkg": "offline_signature", "func": "ReadOfflineSignature", "dest_sig_type": destinationSigType}).Error(err.Error())
 		return offlineSig, data, err
 	}
 
 	if err := validateSignatureData(len(rem), signatureSize); err != nil {
+		log.WithFields(logger.Fields{"pkg": "offline_signature", "func": "ReadOfflineSignature"}).Error(err.Error())
 		return offlineSig, data, err
 	}
 
@@ -125,6 +132,7 @@ func ReadOfflineSignature(data []byte, destinationSigType uint16) (OfflineSignat
 	offlineSig.signature = signature
 	offlineSig.destinationSigType = destinationSigType
 
+	log.WithFields(logger.Fields{"pkg": "offline_signature", "func": "ReadOfflineSignature", "expires": offlineSig.expires, "sigtype": offlineSig.sigtype}).Debug("Successfully read offline signature")
 	return offlineSig, remainder, nil
 }
 
@@ -221,18 +229,22 @@ func extractSignature(data []byte, signatureSize int) ([]byte, []byte) {
 func NewOfflineSignature(expires uint32, transientSigType uint16, transientPublicKey []byte,
 	signature []byte, destinationSigType uint16,
 ) (OfflineSignature, error) {
+	log.WithFields(logger.Fields{"pkg": "offline_signature", "func": "NewOfflineSignature", "expires": expires, "transient_sig_type": transientSigType, "dest_sig_type": destinationSigType}).Debug("Creating new offline signature")
 	// Reject zero expiration — ValidateStructure() enforces the same rule.
 	if expires == 0 {
+		log.WithFields(logger.Fields{"pkg": "offline_signature", "func": "NewOfflineSignature"}).Error("expires must be non-zero")
 		return OfflineSignature{}, errors.New("expires must be non-zero")
 	}
 
 	// Validate transient signature type
 	expectedKeySize := SigningPublicKeySize(transientSigType)
 	if expectedKeySize == 0 {
+		log.WithFields(logger.Fields{"pkg": "offline_signature", "func": "NewOfflineSignature", "transient_sig_type": transientSigType}).Error("Unknown transient key type")
 		return OfflineSignature{}, fmt.Errorf("%w: transient key type %d",
 			ErrUnknownSignatureType, transientSigType)
 	}
 	if len(transientPublicKey) != expectedKeySize {
+		log.WithFields(logger.Fields{"pkg": "offline_signature", "func": "NewOfflineSignature", "expected": expectedKeySize, "got": len(transientPublicKey)}).Error("Transient public key size mismatch")
 		return OfflineSignature{}, fmt.Errorf("transient public key size mismatch: expected %d, got %d",
 			expectedKeySize, len(transientPublicKey))
 	}
@@ -240,10 +252,12 @@ func NewOfflineSignature(expires uint32, transientSigType uint16, transientPubli
 	// Validate destination signature type
 	expectedSigSize := SignatureSize(destinationSigType)
 	if expectedSigSize == 0 {
+		log.WithFields(logger.Fields{"pkg": "offline_signature", "func": "NewOfflineSignature", "dest_sig_type": destinationSigType}).Error("Unknown destination signature type")
 		return OfflineSignature{}, fmt.Errorf("%w: destination signature type %d",
 			ErrUnknownSignatureType, destinationSigType)
 	}
 	if len(signature) != expectedSigSize {
+		log.WithFields(logger.Fields{"pkg": "offline_signature", "func": "NewOfflineSignature", "expected": expectedSigSize, "got": len(signature)}).Error("Signature size mismatch")
 		return OfflineSignature{}, fmt.Errorf("signature size mismatch: expected %d, got %d",
 			expectedSigSize, len(signature))
 	}
@@ -255,6 +269,7 @@ func NewOfflineSignature(expires uint32, transientSigType uint16, transientPubli
 	sigData := make([]byte, len(signature))
 	copy(sigData, signature)
 
+	log.WithFields(logger.Fields{"pkg": "offline_signature", "func": "NewOfflineSignature"}).Debug("Successfully created offline signature")
 	return OfflineSignature{
 		expires:            expires,
 		sigtype:            transientSigType,
@@ -320,6 +335,7 @@ func (o *OfflineSignature) IsExpired() bool {
 //
 // Returns the complete binary representation suitable for network transmission or storage.
 func (o *OfflineSignature) Bytes() []byte {
+	log.WithFields(logger.Fields{"pkg": "offline_signature", "func": "OfflineSignature.Bytes"}).Debug("Serializing offline signature to bytes")
 	totalSize := EXPIRES_SIZE + SIGTYPE_SIZE + len(o.transientPublicKey) + len(o.signature)
 	result := make([]byte, totalSize)
 
@@ -371,6 +387,7 @@ func (o *OfflineSignature) String() string {
 // Note: The 4-byte timestamp in OfflineSignature represents seconds, while I2P Date uses milliseconds.
 // This function provides conversion for compatibility with other I2P date structures.
 func (o *OfflineSignature) ExpiresDate() (*data.Date, error) {
+	log.WithFields(logger.Fields{"pkg": "offline_signature", "func": "OfflineSignature.ExpiresDate", "expires": o.expires}).Debug("Converting expires to I2P Date")
 	expiresTime := time.Unix(int64(o.expires), 0).UTC()
 	return data.DateFromTime(expiresTime)
 }
@@ -389,16 +406,25 @@ func (o *OfflineSignature) ExpiresDate() (*data.Date, error) {
 //
 // Returns nil if validation passes, or a descriptive error if validation fails.
 func (o *OfflineSignature) ValidateStructure() error {
+	log.WithFields(logger.Fields{"pkg": "offline_signature", "func": "OfflineSignature.ValidateStructure"}).Debug("Validating offline signature structure")
 	if o == nil {
+		log.WithFields(logger.Fields{"pkg": "offline_signature", "func": "OfflineSignature.ValidateStructure"}).Error("offline signature is nil")
 		return errors.New("offline signature is nil")
 	}
 	if o.expires == 0 {
+		log.WithFields(logger.Fields{"pkg": "offline_signature", "func": "OfflineSignature.ValidateStructure"}).Error("offline signature has zero expiration timestamp")
 		return errors.New("offline signature has zero expiration timestamp")
 	}
 	if err := validateTransientKeySize(o); err != nil {
+		log.WithFields(logger.Fields{"pkg": "offline_signature", "func": "OfflineSignature.ValidateStructure"}).Error(err.Error())
 		return err
 	}
-	return validateDestinationSigSize(o)
+	if err := validateDestinationSigSize(o); err != nil {
+		log.WithFields(logger.Fields{"pkg": "offline_signature", "func": "OfflineSignature.ValidateStructure"}).Error(err.Error())
+		return err
+	}
+	log.WithFields(logger.Fields{"pkg": "offline_signature", "func": "OfflineSignature.ValidateStructure"}).Debug("Structure validation passed")
+	return nil
 }
 
 // validateTransientKeySize checks that the transient public key has the expected
@@ -437,14 +463,17 @@ func validateDestinationSigSize(o *OfflineSignature) error {
 //
 // Returns nil if validation passes, or a descriptive error if validation fails.
 func (o *OfflineSignature) Validate() error {
+	log.WithFields(logger.Fields{"pkg": "offline_signature", "func": "OfflineSignature.Validate"}).Debug("Validating offline signature")
 	if err := o.ValidateStructure(); err != nil {
 		return err
 	}
 	if o.IsExpired() {
+		log.WithFields(logger.Fields{"pkg": "offline_signature", "func": "OfflineSignature.Validate", "expired_at": o.ExpiresTime().Format(time.RFC3339)}).Warn("Offline signature has expired")
 		return fmt.Errorf("%w: expired at %s",
 			ErrExpiredOfflineSignature,
 			o.ExpiresTime().Format(time.RFC3339))
 	}
+	log.WithFields(logger.Fields{"pkg": "offline_signature", "func": "OfflineSignature.Validate"}).Debug("Validation passed")
 	return nil
 }
 
@@ -504,11 +533,19 @@ func computeSignedData(expires uint32, sigtype uint16, transientPublicKey []byte
 // Returns (true, nil) if the signature is valid, (false, nil) if it is invalid,
 // or (false, error) if verification cannot be performed (unsupported type, wrong key size).
 func (o *OfflineSignature) VerifySignature(destinationPublicKey []byte) (bool, error) {
+	log.WithFields(logger.Fields{"pkg": "offline_signature", "func": "OfflineSignature.VerifySignature", "dest_sig_type": o.destinationSigType, "pub_key_len": len(destinationPublicKey)}).Debug("Verifying offline signature")
 	if err := o.ValidateStructure(); err != nil {
+		log.WithFields(logger.Fields{"pkg": "offline_signature", "func": "OfflineSignature.VerifySignature"}).Error("Structural validation failed")
 		return false, fmt.Errorf("structural validation failed: %w", err)
 	}
 	signedData := o.SignedData()
-	return verifyWithDestinationType(o.destinationSigType, destinationPublicKey, signedData, o.signature)
+	valid, err := verifyWithDestinationType(o.destinationSigType, destinationPublicKey, signedData, o.signature)
+	if err != nil {
+		log.WithFields(logger.Fields{"pkg": "offline_signature", "func": "OfflineSignature.VerifySignature"}).Error(err.Error())
+	} else {
+		log.WithFields(logger.Fields{"pkg": "offline_signature", "func": "OfflineSignature.VerifySignature", "valid": valid}).Debug("Signature verification complete")
+	}
+	return valid, err
 }
 
 // verifyWithDestinationType dispatches signature verification based on destination type.
@@ -627,14 +664,18 @@ func CreateOfflineSignature(
 	signer crypto.Signer,
 	destinationSigType uint16,
 ) (OfflineSignature, error) {
+	log.WithFields(logger.Fields{"pkg": "offline_signature", "func": "CreateOfflineSignature", "expires": expires, "transient_sig_type": transientSigType, "dest_sig_type": destinationSigType}).Debug("Creating offline signature with signing")
 	if err := validateCreateParams(expires, transientSigType, transientPublicKey, destinationSigType); err != nil {
+		log.WithFields(logger.Fields{"pkg": "offline_signature", "func": "CreateOfflineSignature"}).Error(err.Error())
 		return OfflineSignature{}, err
 	}
 	signedData := computeSignedData(expires, transientSigType, transientPublicKey)
 	sig, err := signWithDestinationType(destinationSigType, signer, signedData)
 	if err != nil {
+		log.WithFields(logger.Fields{"pkg": "offline_signature", "func": "CreateOfflineSignature"}).Error("Failed to sign offline signature")
 		return OfflineSignature{}, fmt.Errorf("failed to sign: %w", err)
 	}
+	log.WithFields(logger.Fields{"pkg": "offline_signature", "func": "CreateOfflineSignature"}).Debug("Successfully signed offline signature")
 	return NewOfflineSignature(expires, transientSigType, transientPublicKey, sig, destinationSigType)
 }
 

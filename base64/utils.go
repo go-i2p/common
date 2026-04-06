@@ -1,7 +1,11 @@
 // Package base64 utilities for encoding and decoding
 package base64
 
-import "strings"
+import (
+	"strings"
+
+	"github.com/go-i2p/logger"
+)
 
 // EncodeToString converts arbitrary binary data to I2P-compatible base64 string representation.
 // This function takes raw byte data and produces a human-readable string using I2P's modified
@@ -15,6 +19,7 @@ import "strings"
 //
 // Example: EncodeToString([]byte{72, 101, 108, 108, 111}) returns "SGVsbG8=" (Hello in I2P base64)
 func EncodeToString(data []byte) string {
+	log.WithFields(logger.Fields{"pkg": "base64", "func": "EncodeToString"}).Debug("Encoding data to base64 string", "input_len", len(data))
 	return I2PEncoding.EncodeToString(data)
 }
 
@@ -30,6 +35,7 @@ func EncodeToString(data []byte) string {
 // Returns an error if the input contains invalid characters or malformed padding.
 // Example: DecodeString("SGVsbG8=") returns []byte{72, 101, 108, 108, 111}, nil (Hello decoded)
 func DecodeString(str string) ([]byte, error) {
+	log.WithFields(logger.Fields{"pkg": "base64", "func": "DecodeString"}).Debug("Decoding base64 string", "input_len", len(str))
 	return I2PEncoding.DecodeString(str)
 }
 
@@ -38,7 +44,9 @@ func DecodeString(str string) ([]byte, error) {
 // rejects whitespace in base64 strings. Use this function when strict interoperability
 // with the Java implementation is required.
 func DecodeStringStrict(str string) ([]byte, error) {
+	log.WithFields(logger.Fields{"pkg": "base64", "func": "DecodeStringStrict"}).Debug("Strict decoding base64 string", "input_len", len(str))
 	if strings.ContainsAny(str, "\r\n") {
+		log.WithFields(logger.Fields{"pkg": "base64", "func": "DecodeStringStrict"}).Warn("Input contains embedded newline")
 		return nil, ErrContainsNewline
 	}
 	return I2PEncoding.DecodeString(str)
@@ -51,6 +59,7 @@ func DecodeStringStrict(str string) ([]byte, error) {
 // Note: EncodeToStringNoPadding(nil) and EncodeToStringNoPadding([]byte{}) both return ""
 // without error. Use EncodeToStringSafeNoPadding for input validation.
 func EncodeToStringNoPadding(data []byte) string {
+	log.WithFields(logger.Fields{"pkg": "base64", "func": "EncodeToStringNoPadding"}).Debug("Encoding data to unpadded base64 string", "input_len", len(data))
 	return I2PEncodingNoPadding.EncodeToString(data)
 }
 
@@ -58,6 +67,7 @@ func EncodeToStringNoPadding(data []byte) string {
 // This accepts base64 strings without trailing '=' padding, matching the Java I2P
 // reference implementation's leniency (since 0.9.14).
 func DecodeStringNoPadding(str string) ([]byte, error) {
+	log.WithFields(logger.Fields{"pkg": "base64", "func": "DecodeStringNoPadding"}).Debug("Decoding unpadded base64 string", "input_len", len(str))
 	return I2PEncodingNoPadding.DecodeString(str)
 }
 
@@ -68,10 +78,13 @@ func DecodeStringNoPadding(str string) ([]byte, error) {
 // Returns an error if data is empty or exceeds MAX_ENCODE_SIZE.
 // Example: EncodeToStringSafe([]byte{72, 101, 108, 108, 111}) returns "SGVsbG8=", nil
 func EncodeToStringSafe(data []byte) (string, error) {
+	log.WithFields(logger.Fields{"pkg": "base64", "func": "EncodeToStringSafe"}).Debug("Safe encoding data to base64 string", "input_len", len(data))
 	if len(data) == 0 {
+		log.WithFields(logger.Fields{"pkg": "base64", "func": "EncodeToStringSafe"}).Warn("Empty data provided")
 		return "", ErrEmptyData
 	}
 	if len(data) > MAX_ENCODE_SIZE {
+		log.WithFields(logger.Fields{"pkg": "base64", "func": "EncodeToStringSafe"}).Error("Data exceeds maximum encode size", "input_len", len(data), "max", MAX_ENCODE_SIZE)
 		return "", ErrDataTooLarge
 	}
 	return I2PEncoding.EncodeToString(data), nil
@@ -84,10 +97,13 @@ func EncodeToStringSafe(data []byte) (string, error) {
 // Returns an error if the string is empty or exceeds MAX_DECODE_SIZE.
 // Example: DecodeStringSafe("SGVsbG8=") returns []byte{72, 101, 108, 108, 111}, nil
 func DecodeStringSafe(str string) ([]byte, error) {
+	log.WithFields(logger.Fields{"pkg": "base64", "func": "DecodeStringSafe"}).Debug("Safe decoding base64 string", "input_len", len(str))
 	if len(str) == 0 {
+		log.WithFields(logger.Fields{"pkg": "base64", "func": "DecodeStringSafe"}).Warn("Empty input provided")
 		return nil, ErrEmptyString
 	}
 	if len(str) > MAX_DECODE_SIZE {
+		log.WithFields(logger.Fields{"pkg": "base64", "func": "DecodeStringSafe"}).Error("Input exceeds maximum decode size", "input_len", len(str), "max", MAX_DECODE_SIZE)
 		return nil, ErrStringTooLarge
 	}
 	return I2PEncoding.DecodeString(str)
@@ -98,10 +114,13 @@ func DecodeStringSafe(str string) ([]byte, error) {
 // the size validation of EncodeToStringSafe.
 // Returns an error if data is empty or exceeds MAX_ENCODE_SIZE.
 func EncodeToStringSafeNoPadding(data []byte) (string, error) {
+	log.WithFields(logger.Fields{"pkg": "base64", "func": "EncodeToStringSafeNoPadding"}).Debug("Safe encoding data to unpadded base64 string", "input_len", len(data))
 	if len(data) == 0 {
+		log.WithFields(logger.Fields{"pkg": "base64", "func": "EncodeToStringSafeNoPadding"}).Warn("Empty data provided")
 		return "", ErrEmptyData
 	}
 	if len(data) > MAX_ENCODE_SIZE {
+		log.WithFields(logger.Fields{"pkg": "base64", "func": "EncodeToStringSafeNoPadding"}).Error("Data exceeds maximum encode size", "input_len", len(data), "max", MAX_ENCODE_SIZE)
 		return "", ErrDataTooLarge
 	}
 	return I2PEncodingNoPadding.EncodeToString(data), nil
@@ -112,10 +131,13 @@ func EncodeToStringSafeNoPadding(data []byte) (string, error) {
 // of DecodeStringSafe. Use for decoding untrusted unpadded base64 from I2P peers.
 // Returns an error if the string is empty or exceeds MAX_DECODE_SIZE.
 func DecodeStringSafeNoPadding(str string) ([]byte, error) {
+	log.WithFields(logger.Fields{"pkg": "base64", "func": "DecodeStringSafeNoPadding"}).Debug("Safe decoding unpadded base64 string", "input_len", len(str))
 	if len(str) == 0 {
+		log.WithFields(logger.Fields{"pkg": "base64", "func": "DecodeStringSafeNoPadding"}).Warn("Empty input provided")
 		return nil, ErrEmptyString
 	}
 	if len(str) > MAX_DECODE_SIZE {
+		log.WithFields(logger.Fields{"pkg": "base64", "func": "DecodeStringSafeNoPadding"}).Error("Input exceeds maximum decode size", "input_len", len(str), "max", MAX_DECODE_SIZE)
 		return nil, ErrStringTooLarge
 	}
 	return I2PEncodingNoPadding.DecodeString(str)

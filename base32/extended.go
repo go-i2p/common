@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"hash/crc32"
 	"strings"
+
+	"github.com/go-i2p/logger"
 )
 
 // Extended base32 address constants, per the I2P naming spec (0.9.40+).
@@ -80,10 +82,13 @@ type ExtendedAddress struct {
 //
 // Returns the full hostname (e.g., "{56 chars}.b32.i2p") or an error.
 func EncodeExtendedAddress(addr *ExtendedAddress) (string, error) {
+	log.WithFields(logger.Fields{"pkg": "base32", "func": "EncodeExtendedAddress"}).Debug("Encoding extended base32 address")
 	if addr == nil {
+		log.WithFields(logger.Fields{"pkg": "base32", "func": "EncodeExtendedAddress"}).Warn("Nil address provided")
 		return "", ErrEmptyData
 	}
 	if len(addr.PublicKey) == 0 {
+		log.WithFields(logger.Fields{"pkg": "base32", "func": "EncodeExtendedAddress"}).Warn("Empty public key")
 		return "", ErrEmptyPublicKey
 	}
 
@@ -91,6 +96,7 @@ func EncodeExtendedAddress(addr *ExtendedAddress) (string, error) {
 	// Extended addresses must encode to >52 base32 chars (>32 bytes of data)
 	// to be distinguishable from standard base32 addresses per the I2P spec.
 	if len(data) <= 32 {
+		log.WithFields(logger.Fields{"pkg": "base32", "func": "EncodeExtendedAddress"}).Error("Public key too short for extended address", "data_len", len(data))
 		return "", ErrKeyTooShort
 	}
 	applyChecksum(data)
@@ -103,19 +109,24 @@ func EncodeExtendedAddress(addr *ExtendedAddress) (string, error) {
 // Returns ErrNotExtended if the address is standard length (52 chars).
 // Returns ErrInvalidSuffix if the hostname does not end with ".b32.i2p".
 func DecodeExtendedAddress(hostname string) (*ExtendedAddress, error) {
+	log.WithFields(logger.Fields{"pkg": "base32", "func": "DecodeExtendedAddress"}).Debug("Decoding extended base32 address", "hostname_len", len(hostname))
 	b32Part, err := stripSuffix(hostname)
 	if err != nil {
+		log.WithFields(logger.Fields{"pkg": "base32", "func": "DecodeExtendedAddress"}).Warn("Invalid suffix", "error", err)
 		return nil, err
 	}
 	if len(b32Part) <= StandardB32Chars {
+		log.WithFields(logger.Fields{"pkg": "base32", "func": "DecodeExtendedAddress"}).Warn("Address is standard length, not extended")
 		return nil, ErrNotExtended
 	}
 
 	data, err := DecodeStringNoPadding(b32Part)
 	if err != nil {
+		log.WithFields(logger.Fields{"pkg": "base32", "func": "DecodeExtendedAddress"}).Error("Base32 decode failed", "error", err)
 		return nil, fmt.Errorf("base32 decode: %w", err)
 	}
 	if len(data) < minExtendedDataLen {
+		log.WithFields(logger.Fields{"pkg": "base32", "func": "DecodeExtendedAddress"}).Error("Decoded data too short", "data_len", len(data))
 		return nil, ErrAddressTooShort
 	}
 	return unmarshalExtendedData(data)
@@ -124,6 +135,7 @@ func DecodeExtendedAddress(hostname string) (*ExtendedAddress, error) {
 // IsExtendedAddress returns true if the hostname appears to be an extended
 // base32 address (more than 52 characters before the .b32.i2p suffix).
 func IsExtendedAddress(hostname string) bool {
+	log.WithFields(logger.Fields{"pkg": "base32", "func": "IsExtendedAddress"}).Debug("Checking if address is extended", "hostname_len", len(hostname))
 	b32Part, err := stripSuffix(hostname)
 	if err != nil {
 		return false

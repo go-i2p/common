@@ -1,6 +1,7 @@
 package signature
 
 import (
+	"github.com/go-i2p/logger"
 	"github.com/samber/oops"
 )
 
@@ -133,7 +134,7 @@ func getSignatureLength(sigType int) (int, error) {
 func validateSignatureData(data []byte, sigLength int) error {
 	if len(data) < sigLength {
 		err := oops.Errorf("insufficient data to read signature: need %d bytes, have %d", sigLength, len(data))
-		log.WithError(err).Debug("Failed to read Signature")
+		log.WithFields(logger.Fields{"pkg": "signature", "func": "validateSignatureData"}).WithError(err).Debug("Failed to read Signature")
 		return err
 	}
 	return nil

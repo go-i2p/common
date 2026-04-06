@@ -1,11 +1,8 @@
 package signature
 
 import (
-	"github.com/go-i2p/logger"
 	"github.com/samber/oops"
 )
-
-var log = logger.GetGoI2PLogger()
 
 // Validate checks if the Signature is properly initialized and valid.
 // Returns an error if the signature has an unknown type or has incorrect data size.

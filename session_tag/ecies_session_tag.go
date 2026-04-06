@@ -86,6 +86,8 @@ func NewECIESSessionTagFromArray(data [ECIESSessionTagSize]byte) ECIESSessionTag
 func ReadECIESSessionTag(data []byte) (info ECIESSessionTag, remainder []byte, err error) {
 	if len(data) < ECIESSessionTagSize {
 		log.WithFields(logger.Fields{
+			"pkg":         "session_tag",
+			"func":        "ReadECIESSessionTag",
 			"at":          "(ECIESSessionTag) ReadECIESSessionTag",
 			"data_length": len(data),
 			"required":    ECIESSessionTagSize,
@@ -101,6 +103,8 @@ func ReadECIESSessionTag(data []byte) (info ECIESSessionTag, remainder []byte, e
 	remainder = data[ECIESSessionTagSize:]
 
 	log.WithFields(logger.Fields{
+		"pkg":              "session_tag",
+		"func":             "ReadECIESSessionTag",
 		"remainder_length": len(remainder),
 	}).Debug("Successfully read ECIESSessionTag from data")
 

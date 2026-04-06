@@ -29,8 +29,6 @@ Contents
 // https://geti2p.net/spec/common-structures#sessionkey
 type SessionKey [SESSION_KEY_SIZE]byte
 
-var log = logger.GetGoI2PLogger()
-
 // Bytes returns the SessionKey as a byte slice.
 //
 // Because Bytes uses a value receiver, the returned slice is backed by a copy
@@ -76,14 +74,14 @@ func (sk SessionKey) IsZero() bool {
 // NewSessionKey creates a new *SessionKey from []byte using ReadSessionKey.
 // Returns a pointer to SessionKey unlike ReadSessionKey.
 func NewSessionKey(data []byte) (sessionKey *SessionKey, remainder []byte, err error) {
-	log.WithField("input_length", len(data)).Debug("Creating new SessionKey")
+	log.WithFields(logger.Fields{"pkg": "session_key", "func": "NewSessionKey", "input_length": len(data)}).Debug("Creating new SessionKey")
 	sk, remainder, err := ReadSessionKey(data)
 	if err != nil {
-		log.WithError(err).Error("Failed to create new SessionKey")
+		log.WithFields(logger.Fields{"pkg": "session_key", "func": "NewSessionKey"}).WithError(err).Error("Failed to create new SessionKey")
 		return nil, remainder, err
 	}
 	sessionKey = &sk
-	log.Debug("Successfully created new SessionKey")
+	log.WithFields(logger.Fields{"pkg": "session_key", "func": "NewSessionKey"}).Debug("Successfully created new SessionKey")
 	return sessionKey, remainder, err
 }
 
@@ -99,7 +97,8 @@ func NewSessionKeyFromArray(data [SESSION_KEY_SIZE]byte) SessionKey {
 func ReadSessionKey(bytes []byte) (sessionKey SessionKey, remainder []byte, err error) {
 	if len(bytes) < SESSION_KEY_SIZE {
 		log.WithFields(logger.Fields{
-			"at":          "(SessionKey) ReadSessionKey",
+			"pkg":         "session_key",
+			"func":        "ReadSessionKey",
 			"data_length": len(bytes),
 			"required":    SESSION_KEY_SIZE,
 		}).Error("data too short for SessionKey")
@@ -111,6 +110,8 @@ func ReadSessionKey(bytes []byte) (sessionKey SessionKey, remainder []byte, err 
 	remainder = bytes[SESSION_KEY_SIZE:]
 
 	log.WithFields(logger.Fields{
+		"pkg":              "session_key",
+		"func":             "ReadSessionKey",
 		"remainder_length": len(remainder),
 	}).Debug("Successfully read SessionKey from data")
 
@@ -126,7 +127,7 @@ func GenerateSessionKey() (SessionKey, error) {
 	if err != nil {
 		return SessionKey{}, oops.Errorf("GenerateSessionKey: failed to read random bytes: %w", err)
 	}
-	log.Debug("Generated new random SessionKey")
+	log.WithFields(logger.Fields{"pkg": "session_key", "func": "GenerateSessionKey"}).Debug("Generated new random SessionKey")
 	return sk, nil
 }
 

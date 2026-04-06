@@ -1,6 +1,8 @@
 // Package base32 implements utilities for encoding and decoding text using I2P's alphabet
 package base32
 
+import "github.com/go-i2p/logger"
+
 // EncodeToString encodes binary data to a base32 string using I2P's encoding alphabet.
 // It converts arbitrary byte data into a human-readable base32 string representation
 // using the I2P-specific lowercase alphabet defined in RFC 3548.
@@ -11,6 +13,7 @@ package base32
 //
 // Example: EncodeToString([]byte{72, 101, 108, 108, 111}) returns "jbswy3dp"
 func EncodeToString(data []byte) string {
+	log.WithFields(logger.Fields{"pkg": "base32", "func": "EncodeToString"}).Debug("Encoding data to base32 string", "input_len", len(data))
 	// Use I2P-specific base32 encoding with lowercase alphabet
 	// This ensures compatibility with I2P destination addresses and identifiers
 	return I2PEncoding.EncodeToString(data)
@@ -21,6 +24,7 @@ func EncodeToString(data []byte) string {
 // Returns an error if the input contains invalid base32 characters or padding.
 // Example: DecodeString("jbswy3dp") returns []byte{72, 101, 108, 108, 111}, nil
 func DecodeString(data string) ([]byte, error) {
+	log.WithFields(logger.Fields{"pkg": "base32", "func": "DecodeString"}).Debug("Decoding base32 string", "input_len", len(data))
 	// Parse I2P-specific base32 string with error handling
 	// Validates input characters against I2P alphabet before decoding
 	return I2PEncoding.DecodeString(data)
@@ -30,6 +34,7 @@ func DecodeString(data string) ([]byte, error) {
 // This is the standard format for I2P .b32.i2p addresses: a 32-byte SHA-256 hash
 // encodes to exactly 52 characters with no trailing '=' padding.
 func EncodeToStringNoPadding(data []byte) string {
+	log.WithFields(logger.Fields{"pkg": "base32", "func": "EncodeToStringNoPadding"}).Debug("Encoding data to unpadded base32 string", "input_len", len(data))
 	return I2PEncodingNoPadding.EncodeToString(data)
 }
 
@@ -37,6 +42,7 @@ func EncodeToStringNoPadding(data []byte) string {
 // This accepts the standard I2P .b32.i2p address format (52 unpadded characters
 // for a 32-byte hash).
 func DecodeStringNoPadding(data string) ([]byte, error) {
+	log.WithFields(logger.Fields{"pkg": "base32", "func": "DecodeStringNoPadding"}).Debug("Decoding unpadded base32 string", "input_len", len(data))
 	return I2PEncodingNoPadding.DecodeString(data)
 }
 
@@ -47,10 +53,13 @@ func DecodeStringNoPadding(data string) ([]byte, error) {
 // Returns an error if data is empty or exceeds MAX_ENCODE_SIZE.
 // Example: EncodeToStringSafe([]byte{72, 101, 108, 108, 111}) returns "jbswy3dp", nil
 func EncodeToStringSafe(data []byte) (string, error) {
+	log.WithFields(logger.Fields{"pkg": "base32", "func": "EncodeToStringSafe"}).Debug("Safe encoding data to base32 string", "input_len", len(data))
 	if len(data) == 0 {
+		log.WithFields(logger.Fields{"pkg": "base32", "func": "EncodeToStringSafe"}).Warn("Empty data provided")
 		return "", ErrEmptyData
 	}
 	if len(data) > MAX_ENCODE_SIZE {
+		log.WithFields(logger.Fields{"pkg": "base32", "func": "EncodeToStringSafe"}).Error("Data exceeds maximum encode size", "input_len", len(data), "max", MAX_ENCODE_SIZE)
 		return "", ErrDataTooLarge
 	}
 	return I2PEncoding.EncodeToString(data), nil
@@ -62,10 +71,13 @@ func EncodeToStringSafe(data []byte) (string, error) {
 // .b32.i2p addresses from the network).
 // Returns an error if the input is empty or exceeds MAX_DECODE_SIZE.
 func DecodeStringSafe(data string) ([]byte, error) {
+	log.WithFields(logger.Fields{"pkg": "base32", "func": "DecodeStringSafe"}).Debug("Safe decoding base32 string", "input_len", len(data))
 	if len(data) == 0 {
+		log.WithFields(logger.Fields{"pkg": "base32", "func": "DecodeStringSafe"}).Warn("Empty input provided")
 		return nil, ErrEmptyData
 	}
 	if len(data) > MAX_DECODE_SIZE {
+		log.WithFields(logger.Fields{"pkg": "base32", "func": "DecodeStringSafe"}).Error("Input exceeds maximum decode size", "input_len", len(data), "max", MAX_DECODE_SIZE)
 		return nil, ErrInputTooLarge
 	}
 	return I2PEncoding.DecodeString(data)
@@ -75,10 +87,13 @@ func DecodeStringSafe(data string) ([]byte, error) {
 // This combines the unpadded decoding of DecodeStringNoPadding with the size
 // validation of DecodeStringSafe. Use for decoding untrusted .b32.i2p addresses.
 func DecodeStringSafeNoPadding(data string) ([]byte, error) {
+	log.WithFields(logger.Fields{"pkg": "base32", "func": "DecodeStringSafeNoPadding"}).Debug("Safe decoding unpadded base32 string", "input_len", len(data))
 	if len(data) == 0 {
+		log.WithFields(logger.Fields{"pkg": "base32", "func": "DecodeStringSafeNoPadding"}).Warn("Empty input provided")
 		return nil, ErrEmptyData
 	}
 	if len(data) > MAX_DECODE_SIZE {
+		log.WithFields(logger.Fields{"pkg": "base32", "func": "DecodeStringSafeNoPadding"}).Error("Input exceeds maximum decode size", "input_len", len(data), "max", MAX_DECODE_SIZE)
 		return nil, ErrInputTooLarge
 	}
 	return I2PEncodingNoPadding.DecodeString(data)
@@ -92,10 +107,13 @@ func DecodeStringSafeNoPadding(data string) ([]byte, error) {
 // 32-byte SHA-256 hashes.
 // Returns an error if data is empty or exceeds MAX_ENCODE_SIZE.
 func EncodeToStringSafeNoPadding(data []byte) (string, error) {
+	log.WithFields(logger.Fields{"pkg": "base32", "func": "EncodeToStringSafeNoPadding"}).Debug("Safe encoding data to unpadded base32 string", "input_len", len(data))
 	if len(data) == 0 {
+		log.WithFields(logger.Fields{"pkg": "base32", "func": "EncodeToStringSafeNoPadding"}).Warn("Empty data provided")
 		return "", ErrEmptyData
 	}
 	if len(data) > MAX_ENCODE_SIZE {
+		log.WithFields(logger.Fields{"pkg": "base32", "func": "EncodeToStringSafeNoPadding"}).Error("Data exceeds maximum encode size", "input_len", len(data), "max", MAX_ENCODE_SIZE)
 		return "", ErrDataTooLarge
 	}
 	return I2PEncodingNoPadding.EncodeToString(data), nil
