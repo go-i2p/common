@@ -32,6 +32,7 @@ func NewMappingValues(capacity int) MappingValues {
 		capacity = 0
 	}
 	log.WithFields(logger.Fields{
+		"pkg": "data", "func": "NewMappingValues",
 		"capacity": capacity,
 	}).Debug("Creating new MappingValues")
 	return make(MappingValues, 0, capacity)
@@ -58,13 +59,14 @@ func NewMappingValues(capacity int) MappingValues {
 //	mv, err = mv.Add("port", "7654")
 func (mv MappingValues) Add(key, value string) (MappingValues, error) {
 	log.WithFields(logger.Fields{
+		"pkg": "data", "func": "MappingValues.Add",
 		"key":   key,
 		"value": value,
 	}).Debug("Adding key-value pair to MappingValues")
 
 	// Reject empty keys (keys must be non-empty for lookup)
 	if key == "" {
-		log.Error("Empty key not allowed in MappingValues")
+		log.WithFields(logger.Fields{"pkg": "data", "func": "MappingValues.Add"}).Error("Empty key not allowed in MappingValues")
 		return mv, oops.Errorf("empty key not allowed")
 	}
 	// Empty values are allowed per I2P spec: "Length may be 0"
@@ -73,6 +75,7 @@ func (mv MappingValues) Add(key, value string) (MappingValues, error) {
 	keyStr, err := NewI2PString(key)
 	if err != nil {
 		log.WithFields(logger.Fields{
+			"pkg": "data", "func": "MappingValues.Add",
 			"key":   key,
 			"error": err,
 		}).Error("Failed to create I2PString for key")
@@ -83,6 +86,7 @@ func (mv MappingValues) Add(key, value string) (MappingValues, error) {
 	valStr, err := NewI2PString(value)
 	if err != nil {
 		log.WithFields(logger.Fields{
+			"pkg": "data", "func": "MappingValues.Add",
 			"value": value,
 			"error": err,
 		}).Error("Failed to create I2PString for value")
@@ -90,6 +94,7 @@ func (mv MappingValues) Add(key, value string) (MappingValues, error) {
 	}
 
 	log.WithFields(logger.Fields{
+		"pkg": "data", "func": "MappingValues.Add",
 		"key":         key,
 		"value":       value,
 		"pairs_count": len(mv) + 1,
@@ -111,6 +116,7 @@ func (mv MappingValues) Add(key, value string) (MappingValues, error) {
 //	}
 func (mv MappingValues) Validate() error {
 	log.WithFields(logger.Fields{
+		"pkg": "data", "func": "MappingValues.Validate",
 		"pairs_count": len(mv),
 	}).Debug("Validating MappingValues")
 
@@ -118,6 +124,7 @@ func (mv MappingValues) Validate() error {
 		// Validate key
 		if !pair[0].IsValid() {
 			log.WithFields(logger.Fields{
+				"pkg": "data", "func": "MappingValues.Validate",
 				"index": i,
 				"pair":  pair,
 			}).Error("Invalid key in MappingValues")
@@ -127,6 +134,7 @@ func (mv MappingValues) Validate() error {
 		// Validate value
 		if !pair[1].IsValid() {
 			log.WithFields(logger.Fields{
+				"pkg": "data", "func": "MappingValues.Validate",
 				"index": i,
 				"pair":  pair,
 			}).Error("Invalid value in MappingValues")
@@ -136,6 +144,7 @@ func (mv MappingValues) Validate() error {
 		// Validate key can be extracted
 		if _, err := pair[0].DataSafe(); err != nil {
 			log.WithFields(logger.Fields{
+				"pkg": "data", "func": "MappingValues.Validate",
 				"index": i,
 				"error": err,
 			}).Error("Cannot extract key data")
@@ -145,6 +154,7 @@ func (mv MappingValues) Validate() error {
 		// Validate value can be extracted
 		if _, err := pair[1].DataSafe(); err != nil {
 			log.WithFields(logger.Fields{
+				"pkg": "data", "func": "MappingValues.Validate",
 				"index": i,
 				"error": err,
 			}).Error("Cannot extract value data")
@@ -152,7 +162,7 @@ func (mv MappingValues) Validate() error {
 		}
 	}
 
-	log.Debug("MappingValues validation passed")
+	log.WithFields(logger.Fields{"pkg": "data", "func": "MappingValues.Validate"}).Debug("MappingValues validation passed")
 	return nil
 }
 
@@ -172,10 +182,11 @@ func (mv MappingValues) IsValid() bool {
 func (m MappingValues) Get(key I2PString) I2PString {
 	keyBytes, err := key.Data()
 	if err != nil {
-		log.WithError(err).Error("Failed to extract key data in MappingValues.Get()")
+		log.WithFields(logger.Fields{"pkg": "data", "func": "MappingValues.Get"}).WithError(err).Error("Failed to extract key data in MappingValues.Get()")
 		return nil
 	}
 	log.WithFields(logger.Fields{
+		"pkg": "data", "func": "MappingValues.Get",
 		"key": string(keyBytes),
 	}).Debug("Searching for key in MappingValues")
 	for _, pair := range m {
@@ -185,6 +196,7 @@ func (m MappingValues) Get(key I2PString) I2PString {
 		}
 		if kb == keyBytes {
 			log.WithFields(logger.Fields{
+				"pkg": "data", "func": "MappingValues.Get",
 				"key":   string(keyBytes),
 				"value": string(pair[1][1:]),
 			}).Debug("Found matching key in MappingValues")
@@ -192,6 +204,7 @@ func (m MappingValues) Get(key I2PString) I2PString {
 		}
 	}
 	log.WithFields(logger.Fields{
+		"pkg": "data", "func": "MappingValues.Get",
 		"key": string(keyBytes),
 	}).Debug("Key not found in MappingValues")
 	return nil
@@ -217,12 +230,13 @@ func ValuesToMapping(values MappingValues) (*Mapping, error) {
 	}
 
 	log.WithFields(logger.Fields{
+		"pkg": "data", "func": "ValuesToMapping",
 		"mapping_size": baseLength,
 	}).Debug("Created Mapping from MappingValues")
 
 	mappingSize, err := NewIntegerFromInt(baseLength, 2)
 	if err != nil {
-		log.WithError(err).Error("Failed to create mapping size integer")
+		log.WithFields(logger.Fields{"pkg": "data", "func": "ValuesToMapping"}).WithError(err).Error("Failed to create mapping size integer")
 		return nil, oops.Errorf("failed to encode mapping size: %w", err)
 	}
 	return &Mapping{
@@ -247,6 +261,7 @@ func calculateMappingDataSize(sortedValues MappingValues) int {
 func validateMappingDataSize(baseLength int) error {
 	if baseLength > MAX_MAPPING_DATA_SIZE {
 		log.WithFields(logger.Fields{
+			"pkg": "data", "func": "validateMappingDataSize",
 			"mapping_size": baseLength,
 			"max_size":     MAX_MAPPING_DATA_SIZE,
 		}).Error("Mapping data exceeds maximum size")
@@ -298,6 +313,7 @@ func mappingOrder(values MappingValues) MappingValues {
 // Returns a list of errors that occurred during parsing.
 func ReadMappingValues(remainder []byte, map_length Integer) (values *MappingValues, remainder_bytes []byte, errs []error) {
 	log.WithFields(logger.Fields{
+		"pkg": "data", "func": "ReadMappingValues",
 		"input_length": len(remainder),
 		"map_length":   map_length.Int(),
 	}).Debug("Reading MappingValues")
@@ -310,6 +326,7 @@ func ReadMappingValues(remainder []byte, map_length Integer) (values *MappingVal
 	map_values := make(MappingValues, 0)
 	if errs = validateMappingLength(remainder, map_length); len(errs) > 0 {
 		log.WithFields(logger.Fields{
+			"pkg": "data", "func": "ReadMappingValues",
 			"error_count": len(errs),
 		}).Warn("Mapping length validation warnings")
 	}
@@ -320,13 +337,14 @@ func ReadMappingValues(remainder []byte, map_length Integer) (values *MappingVal
 	// Validate that keys are in sorted order per I2P spec.
 	// Out-of-order keys cause signature verification failures in compliant routers.
 	if sortErr := validateMappingSortOrder(map_values); sortErr != nil {
-		log.WithError(sortErr).Warn("mapping format violation: keys not in sorted order")
+		log.WithFields(logger.Fields{"pkg": "data", "func": "ReadMappingValues"}).WithError(sortErr).Warn("mapping format violation: keys not in sorted order")
 		errs = append(errs, sortErr)
 	}
 
 	values = &map_values
 
 	log.WithFields(logger.Fields{
+		"pkg": "data", "func": "ReadMappingValues",
 		"values_count":     len(map_values),
 		"remainder_length": len(remainder_updated),
 		"error_count":      len(errs),
@@ -354,7 +372,7 @@ func validateMappingSortOrder(values MappingValues) error {
 func validateMappingInput(remainder []byte) error {
 	if len(remainder) < 1 {
 		log.WithFields(logger.Fields{
-			"at":     "(Mapping) Values",
+			"pkg": "data", "func": "validateMappingInput",
 			"reason": "data shorter than expected",
 		}).Error("mapping contained no data")
 		return oops.Errorf("mapping contained no data")
@@ -371,7 +389,7 @@ func validateMappingLength(remainder []byte, map_length Integer) []error {
 	if mapping_len > int_map_length {
 		// Extra data is normal for embedded mappings; the surplus is the rest of the parent structure.
 		log.WithFields(logger.Fields{
-			"at":                   "(Mapping) Values",
+			"pkg": "data", "func": "validateMappingLength",
 			"mapping_bytes_length": mapping_len,
 			"mapping_length_field": int_map_length,
 			"reason":               "data longer than expected",
@@ -379,7 +397,7 @@ func validateMappingLength(remainder []byte, map_length Integer) []error {
 		errs = append(errs, oops.Errorf("warning parsing mapping: data exists beyond length of mapping"))
 	} else if int_map_length > mapping_len {
 		log.WithFields(logger.Fields{
-			"at":                   "(Mapping) Values",
+			"pkg": "data", "func": "validateMappingLength",
 			"mapping_bytes_length": mapping_len,
 			"mapping_length_field": int_map_length,
 			"reason":               "data shorter than expected",
@@ -449,7 +467,7 @@ func parseNextPair(remainder []byte, map_values MappingValues, errs []error, enc
 // logKeyValuePairsResult logs the summary of parsing key-value pairs.
 func logKeyValuePairsResult(pairCount, errCount, remainderLen int) {
 	log.WithFields(logger.Fields{
-		"at":              "(Mapping) Values",
+		"pkg": "data", "func": "logKeyValuePairsResult",
 		"pairs_parsed":    pairCount,
 		"errors":          errCount,
 		"remainder_bytes": remainderLen,
@@ -461,7 +479,7 @@ func logKeyValuePairsResult(pairCount, errCount, remainderLen int) {
 func shouldStopLoop(pairCount int, remainder []byte, previousLength int) bool {
 	if pairCount >= MAX_MAPPING_PAIRS {
 		log.WithFields(logger.Fields{
-			"at":         "(Mapping) Values",
+			"pkg": "data", "func": "shouldStopLoop",
 			"pair_count": pairCount,
 			"max_pairs":  MAX_MAPPING_PAIRS,
 			"reason":     "exceeded maximum mapping pairs",
@@ -476,7 +494,7 @@ func shouldStopLoop(pairCount int, remainder []byte, previousLength int) bool {
 func checkForwardProgress(pairCount, currentLength, previousLength int) error {
 	if currentLength >= previousLength && pairCount > 0 {
 		log.WithFields(logger.Fields{
-			"at":              "(Mapping) Values",
+			"pkg": "data", "func": "checkForwardProgress",
 			"pair_count":      pairCount,
 			"current_length":  currentLength,
 			"previous_length": previousLength,
@@ -570,7 +588,7 @@ func hasMinimumBytesForKeyValuePair(remainder []byte) bool {
 	// = 4 bytes minimum
 	if len(remainder) < 4 {
 		log.WithFields(logger.Fields{
-			"at":     "(Mapping) Values",
+			"pkg": "data", "func": "hasMinimumBytesForKeyValuePair",
 			"reason": "mapping format violation",
 		}).Warn("mapping format violation, too few bytes for a kv pair")
 		return false
@@ -597,11 +615,11 @@ func checkForDuplicateKey(key_str I2PString, encounteredKeysMap map[string]bool)
 	_, ok := encounteredKeysMap[keyAsString]
 	if ok {
 		log.WithFields(logger.Fields{
-			"at":     "(Mapping) Values",
+			"pkg": "data", "func": "checkForDuplicateKey",
 			"reason": "duplicate key in mapping",
 			"key":    string(key_str),
 		}).Error("mapping format violation")
-		log.Printf("DUPE: %s", key_str)
+		log.WithFields(logger.Fields{"pkg": "data", "func": "checkForDuplicateKey", "duplicate_key": string(key_str)}).Warn("DUPE")
 		return oops.Errorf("mapping format violation, duplicate key in mapping")
 	}
 	return nil
@@ -611,11 +629,11 @@ func checkForDuplicateKey(key_str I2PString, encounteredKeysMap map[string]bool)
 func validateAndConsumeDelimiter(remainder []byte, delimiter byte, delimiterName string) ([]byte, error) {
 	if !beginsWith(remainder, delimiter) {
 		log.WithFields(logger.Fields{
-			"at":     "(Mapping) Values",
+			"pkg": "data", "func": "validateAndConsumeDelimiter",
 			"reason": "expected " + delimiterName,
-			"value:": string(remainder),
+			"value":  string(remainder),
 		}).Warn("mapping format violation")
-		log.Printf("ERRVAL: %s", remainder)
+		log.WithFields(logger.Fields{"pkg": "data", "func": "validateAndConsumeDelimiter", "remainder": string(remainder)}).Warn("ERRVAL")
 		if delimiter == MAPPING_EQUALS_DELIMITER {
 			return remainder, ErrMappingExpectedEquals
 		}

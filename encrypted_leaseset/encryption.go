@@ -116,6 +116,8 @@ func chacha20Crypt(key [32]byte, iv [12]byte, data []byte) ([]byte, error) {
 // Spec: https://geti2p.net/spec/encryptedleaseset
 func (els *EncryptedLeaseSet) DecryptInnerData(subcredential [32]byte) (*lease_set2.LeaseSet2, error) {
 	log.WithFields(logger.Fields{
+		"pkg":              "encrypted_leaseset",
+		"func":             "EncryptedLeaseSet.DecryptInnerData",
 		"encrypted_length": len(els.encryptedInnerData),
 		"published":        els.published,
 	}).Debug("Decrypting EncryptedLeaseSet inner data")
@@ -200,6 +202,8 @@ func parseAndDecryptLayer2(layer1PT, ikm []byte) ([]byte, error) {
 // Spec: https://geti2p.net/spec/encryptedleaseset
 func EncryptInnerLeaseSet2(ls2 *lease_set2.LeaseSet2, subcredential [32]byte, published uint32) ([]byte, error) {
 	log.WithFields(logger.Fields{
+		"pkg":        "encrypted_leaseset",
+		"func":       "EncryptInnerLeaseSet2",
 		"num_leases": len(ls2.Leases()),
 		"published":  published,
 	}).Debug("Encrypting LeaseSet2 (two-layer ChaCha20)")
@@ -243,7 +247,7 @@ func encryptTwoLayers(plaintext []byte, subcred [32]byte, published uint32) ([]b
 	result = append(result, outerSalt...)
 	result = append(result, layer1CT...)
 
-	log.WithField("encrypted_length", len(result)).
+	log.WithFields(logger.Fields{"pkg": "encrypted_leaseset", "func": "encryptTwoLayers", "encrypted_length": len(result)}).
 		Info("Successfully encrypted LeaseSet2")
 	return result, nil
 }
@@ -270,11 +274,13 @@ func assembleLayer1Plaintext(innerSalt, layer2CT []byte) []byte {
 func parseDecryptedLeaseSet2(plaintext []byte) (*lease_set2.LeaseSet2, error) {
 	innerLS2, _, err := lease_set2.ReadLeaseSet2(plaintext)
 	if err != nil {
-		log.WithError(err).Error("Failed to parse decrypted data as LeaseSet2")
+		log.WithFields(logger.Fields{"pkg": "encrypted_leaseset", "func": "parseDecryptedLeaseSet2"}).WithError(err).Error("Failed to parse decrypted data as LeaseSet2")
 		return nil, oops.Errorf("invalid LeaseSet2 in decrypted data: %w", err)
 	}
 
 	logFields := logger.Fields{
+		"pkg":        "encrypted_leaseset",
+		"func":       "parseDecryptedLeaseSet2",
 		"num_leases": len(innerLS2.Leases()),
 	}
 	if addr, err := innerLS2.Destination().Base32Address(); err == nil {

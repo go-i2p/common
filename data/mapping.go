@@ -47,7 +47,7 @@ type Mapping struct {
 // Values returns the values contained in a Mapping as MappingValues.
 func (mapping Mapping) Values() MappingValues {
 	if mapping.vals == nil {
-		log.Debug("Mapping values are nil, returning empty MappingValues")
+		log.WithFields(logger.Fields{"pkg": "data", "func": "Mapping.Values"}).Debug("Mapping values are nil, returning empty MappingValues")
 		return MappingValues{}
 	}
 	return *mapping.vals
@@ -63,12 +63,12 @@ func (mapping Mapping) Values() MappingValues {
 // implementations, even if the in-memory order differs (e.g. after parsing or mutation).
 func (mapping *Mapping) Data() []byte {
 	if mapping == nil || mapping.size == nil {
-		log.Error("Mapping.Data() called on nil or uninitialized mapping")
+		log.WithFields(logger.Fields{"pkg": "data", "func": "Mapping.Data"}).Error("Mapping.Data() called on nil or uninitialized mapping")
 		return nil
 	}
 	// Pre-validate all pairs so no entries are silently dropped from the output.
 	if err := mapping.Validate(); err != nil {
-		log.WithError(err).Error("Mapping.Data() aborted: mapping contains invalid key-value pairs")
+		log.WithFields(logger.Fields{"pkg": "data", "func": "Mapping.Data"}).WithError(err).Error("Mapping.Data() aborted: mapping contains invalid key-value pairs")
 		return nil
 	}
 	// Ensure canonical key order for every serialization, not only when the
@@ -92,7 +92,7 @@ func serializeMappingPairs(pairs MappingValues) []byte {
 	for _, pair := range pairs {
 		serialized, err := serializeOnePair(pair)
 		if err != nil {
-			log.WithError(err).Warn("Skipping invalid pair in Mapping.Data()")
+			log.WithFields(logger.Fields{"pkg": "data", "func": "serializeMappingPairs"}).WithError(err).Warn("Skipping invalid pair in Mapping.Data()")
 			continue
 		}
 		payload = append(payload, serialized...)
@@ -130,17 +130,19 @@ func serializeOnePair(pair [2]I2PString) ([]byte, error) {
 // HasDuplicateKeys returns true if two keys in a mapping are identical.
 // Returns error if any key in the mapping is invalid.
 func (mapping *Mapping) HasDuplicateKeys() (bool, error) {
-	log.Debug("Checking for duplicate keys in Mapping")
+	log.WithFields(logger.Fields{"pkg": "data", "func": "Mapping.HasDuplicateKeys"}).Debug("Checking for duplicate keys in Mapping")
 	seen_values := make(map[string]bool)
 	values := mapping.Values()
 	for _, pair := range values {
 		key, err := pair[0].Data()
 		if err != nil {
-			log.WithError(err).Error("Invalid key in mapping")
+			log.WithFields(logger.Fields{"pkg": "data", "func": "Mapping.HasDuplicateKeys"}).WithError(err).Error("Invalid key in mapping")
 			return false, oops.Errorf("invalid key in mapping: %w", err)
 		}
 		if _, present := seen_values[key]; present {
 			log.WithFields(logger.Fields{
+				"pkg":           "data",
+				"func":          "Mapping.HasDuplicateKeys",
 				"duplicate_key": key,
 			}).Warn("Found duplicate key in Mapping")
 			return true, nil
@@ -148,7 +150,7 @@ func (mapping *Mapping) HasDuplicateKeys() (bool, error) {
 			seen_values[key] = true
 		}
 	}
-	log.Debug("No duplicate keys found in Mapping")
+	log.WithFields(logger.Fields{"pkg": "data", "func": "Mapping.HasDuplicateKeys"}).Debug("No duplicate keys found in Mapping")
 	return false, nil
 }
 
@@ -173,6 +175,8 @@ func (mapping *Mapping) Validate() error {
 	}
 
 	log.WithFields(logger.Fields{
+		"pkg":          "data",
+		"func":         "Mapping.Validate",
 		"size":         mapping.size.Int(),
 		"values_count": len(values),
 	}).Debug("Mapping validation successful")
@@ -211,19 +215,21 @@ func (mapping *Mapping) ToGoMap() (map[string]string, error) {
 // deterministic and suitable for use in signed structures.
 func GoMapToMapping(gomap map[string]string) (mapping *Mapping, err error) {
 	log.WithFields(logger.Fields{
+		"pkg":            "data",
+		"func":           "GoMapToMapping",
 		"input_map_size": len(gomap),
 	}).Debug("Converting Go map to Mapping")
 	map_vals := MappingValues{}
 	for k, v := range gomap {
 		key_str, kerr := ToI2PString(k)
 		if kerr != nil {
-			log.WithError(kerr).Error("Failed to convert key to I2PString")
+			log.WithFields(logger.Fields{"pkg": "data", "func": "GoMapToMapping"}).WithError(kerr).Error("Failed to convert key to I2PString")
 			err = kerr
 			return mapping, err
 		}
 		val_str, verr := ToI2PString(v)
 		if verr != nil {
-			log.WithError(verr).Error("Failed to convert value to I2PString")
+			log.WithFields(logger.Fields{"pkg": "data", "func": "GoMapToMapping"}).WithError(verr).Error("Failed to convert value to I2PString")
 			err = verr
 			return mapping, err
 		}
@@ -234,10 +240,12 @@ func GoMapToMapping(gomap map[string]string) (mapping *Mapping, err error) {
 	}
 	mapping, err = ValuesToMapping(map_vals)
 	if err != nil {
-		log.WithError(err).Error("Failed to convert MappingValues to Mapping")
+		log.WithFields(logger.Fields{"pkg": "data", "func": "GoMapToMapping"}).WithError(err).Error("Failed to convert MappingValues to Mapping")
 		return mapping, err
 	}
 	log.WithFields(logger.Fields{
+		"pkg":          "data",
+		"func":         "GoMapToMapping",
 		"mapping_size": len(map_vals),
 	}).Debug("Successfully converted Go map to Mapping")
 	return mapping, err
@@ -248,6 +256,8 @@ func GoMapToMapping(gomap map[string]string) (mapping *Mapping, err error) {
 // Returns a list of errors that occurred during parsing.
 func ReadMapping(bytes []byte) (mapping Mapping, remainder []byte, err []error) {
 	log.WithFields(logger.Fields{
+		"pkg":          "data",
+		"func":         "ReadMapping",
 		"input_length": len(bytes),
 	}).Debug("Reading Mapping from bytes")
 
@@ -264,7 +274,7 @@ func ReadMapping(bytes []byte) (mapping Mapping, remainder []byte, err []error) 
 	mapping.size = size
 
 	if size.Int() == 0 {
-		log.Warn("Mapping size is zero")
+		log.WithFields(logger.Fields{"pkg": "data", "func": "ReadMapping"}).Warn("Mapping size is zero")
 		emptyVals := make(MappingValues, 0)
 		mapping.vals = &emptyVals
 		return mapping, remainder, err
@@ -277,7 +287,7 @@ func ReadMapping(bytes []byte) (mapping Mapping, remainder []byte, err []error) 
 func validateMappingInputData(bytes []byte) error {
 	if len(bytes) < MAPPING_MIN_SIZE {
 		log.WithFields(logger.Fields{
-			"at":     "ReadMapping",
+			"pkg": "data", "func": "ReadMapping",
 			"reason": "zero length",
 		}).Warn("mapping format violation")
 		return oops.Errorf("zero length")
@@ -289,7 +299,7 @@ func validateMappingInputData(bytes []byte) error {
 func parseMappingSize(bytes []byte) (*Integer, []byte, error) {
 	i, remainder := ReadInteger(bytes, MAPPING_SIZE_FIELD_LENGTH)
 	if i == nil {
-		log.Error("Failed to read Mapping size")
+		log.WithFields(logger.Fields{"pkg": "data", "func": "parseMappingSize"}).Error("Failed to read Mapping size")
 		return nil, remainder, oops.Errorf("failed to read mapping size")
 	}
 	size := &i
@@ -308,6 +318,8 @@ func processMappingData(mapping Mapping, remainder []byte, size *Integer, err []
 // handleInsufficientData processes mapping when there's insufficient data for the declared size.
 func handleInsufficientData(mapping Mapping, remainder []byte, size *Integer, err []error) (Mapping, []byte, []error) {
 	log.WithFields(logger.Fields{
+		"pkg":           "data",
+		"func":          "handleInsufficientData",
 		"expected_size": size.Int(),
 		"actual_size":   len(remainder),
 	}).Warn("mapping format violation: mapping length exceeds provided data")
@@ -356,6 +368,8 @@ func processNormalMappingData(mapping Mapping, remainder []byte, size *Integer, 
 	// Per spec: "Implementers are cautioned to prohibit excess data."
 	if len(mappingValueErrs) == 0 && len(innerRemainder) > 0 {
 		log.WithFields(logger.Fields{
+			"pkg":            "data",
+			"func":           "processNormalMappingData",
 			"leftover_bytes": len(innerRemainder),
 		}).Warn("mapping format violation: unconsumed bytes within declared mapping window")
 		err = append(err, oops.Errorf("mapping format violation: %d unconsumed byte(s) within declared mapping window", len(innerRemainder)))
@@ -372,7 +386,7 @@ func processNormalMappingData(mapping Mapping, remainder []byte, size *Integer, 
 // logAndAppendMappingValueErrors logs and appends errors from mapping value parsing.
 func logAndAppendMappingValueErrors(err []error) []error {
 	log.WithFields(logger.Fields{
-		"at":     "ReadMapping",
+		"pkg": "data", "func": "ReadMapping",
 		"reason": "error parsing mapping values",
 	}).Warn("mapping format violation")
 
@@ -383,6 +397,8 @@ func logAndAppendMappingValueErrors(err []error) []error {
 // logMappingCompletionDetails logs detailed information about the completed mapping parsing.
 func logMappingCompletionDetails(mapping Mapping, remainder []byte, err []error) {
 	log.WithFields(logger.Fields{
+		"pkg":              "data",
+		"func":             "logMappingCompletionDetails",
 		"mapping_size":     mapping.size.Int(),
 		"values_count":     len(*mapping.vals),
 		"remainder_length": len(remainder),
@@ -394,6 +410,8 @@ func logMappingCompletionDetails(mapping Mapping, remainder []byte, err []error)
 // Returns a pointer to Mapping unlike ReadMapping.
 func NewMapping(bytes []byte) (values *Mapping, remainder []byte, err []error) {
 	log.WithFields(logger.Fields{
+		"pkg":          "data",
+		"func":         "NewMapping",
 		"input_length": len(bytes),
 	}).Debug("Creating new Mapping")
 
@@ -401,6 +419,8 @@ func NewMapping(bytes []byte) (values *Mapping, remainder []byte, err []error) {
 	values = &objvalues
 
 	log.WithFields(logger.Fields{
+		"pkg":              "data",
+		"func":             "NewMapping",
 		"values_count":     len(values.Values()),
 		"remainder_length": len(remainder),
 		"error_count":      len(err),

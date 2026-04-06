@@ -58,7 +58,7 @@ func (date Date) Time() (date_time time.Time) {
 		return time.Time{}
 	}
 	if uval > uint64(math.MaxInt64) {
-		log.Warn("Date.Time(): unsigned millisecond value exceeds math.MaxInt64, returning zero time")
+		log.WithFields(logger.Fields{"pkg": "data", "func": "Date.Time"}).Warn("Date.Time(): unsigned millisecond value exceeds math.MaxInt64, returning zero time")
 		return time.Time{}
 	}
 	date_time = time.UnixMilli(int64(uval))
@@ -70,6 +70,7 @@ func (date Date) Time() (date_time time.Time) {
 func ReadDate(data []byte) (date Date, remainder []byte, err error) {
 	if len(data) < 8 {
 		log.WithFields(logger.Fields{
+			"pkg": "data", "func": "ReadDate",
 			"data": data,
 		}).Error("ReadDate: data is too short")
 		err = oops.Errorf("ReadDate: data is too short")
@@ -78,6 +79,7 @@ func ReadDate(data []byte) (date Date, remainder []byte, err error) {
 	copy(date[:], data[:8])
 	remainder = data[8:]
 	log.WithFields(logger.Fields{
+		"pkg": "data", "func": "ReadDate",
 		"date_value":       date.Int(),
 		"remainder_length": len(remainder),
 	}).Debug("Successfully read Date from data")
@@ -89,12 +91,13 @@ func ReadDate(data []byte) (date Date, remainder []byte, err error) {
 func NewDate(data []byte) (date *Date, remainder []byte, err error) {
 	objdate, remainder, err := ReadDate(data)
 	if err != nil {
-		log.WithError(err).Error("Failed to create new Date")
+		log.WithFields(logger.Fields{"pkg": "data", "func": "NewDate"}).WithError(err).Error("Failed to create new Date")
 		return nil, remainder, err
 	}
 
 	date = &objdate
 	log.WithFields(logger.Fields{
+		"pkg": "data", "func": "NewDate",
 		"date_value":       date.Int(),
 		"remainder_length": len(remainder),
 	}).Debug("Successfully created new Date")
@@ -122,6 +125,7 @@ func DateFromTime(t time.Time) (date *Date, err error) {
 	}
 
 	log.WithFields(logger.Fields{
+		"pkg": "data", "func": "DateFromTime",
 		"time": t,
 	}).Debug("Successfully created Date from time.Time")
 

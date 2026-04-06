@@ -55,6 +55,8 @@ type KeyCertificate struct {
 // Returns a list of errors that occurred during parsing.
 func NewKeyCertificate(bytes []byte) (key_certificate *KeyCertificate, remainder []byte, err error) {
 	log.WithFields(logger.Fields{
+		"pkg":          "key_certificate",
+		"func":         "NewKeyCertificate",
 		"input_length": len(bytes),
 	}).Debug("Creating new keyCertificate")
 
@@ -79,7 +81,7 @@ func NewKeyCertificate(bytes []byte) (key_certificate *KeyCertificate, remainder
 	spkType, cpkType := extractKeyTypes(certData)
 
 	if validationErr := validatePayloadLengthAgainstKeyTypes(certData, spkType, cpkType); validationErr != nil {
-		log.WithError(validationErr).Error("Key certificate payload length mismatch")
+		log.WithFields(logger.Fields{"pkg": "key_certificate", "func": "NewKeyCertificate"}).WithError(validationErr).Error("Key certificate payload length mismatch")
 		return nil, remainder, validationErr
 	}
 
@@ -93,7 +95,7 @@ func NewKeyCertificate(bytes []byte) (key_certificate *KeyCertificate, remainder
 func parseBaseCertificate(bytes []byte) (*certificate.Certificate, []byte, error) {
 	cert, remainder, err := certificate.ReadCertificate(bytes)
 	if err != nil {
-		log.WithError(err).Error("Failed to read Certificate")
+		log.WithFields(logger.Fields{"pkg": "key_certificate", "func": "parseBaseCertificate"}).WithError(err).Error("Failed to read Certificate")
 		return cert, remainder, err
 	}
 	return cert, remainder, nil
@@ -104,7 +106,7 @@ func parseBaseCertificate(bytes []byte) (*certificate.Certificate, []byte, error
 func validateKeyCertificateType(cert *certificate.Certificate) error {
 	kind, err := cert.Type()
 	if err != nil {
-		log.WithFields(logger.Fields{"at": "validateKeyCertificateType", "reason": "invalid certificate type"}).Error(err.Error())
+		log.WithFields(logger.Fields{"pkg": "key_certificate", "func": "validateKeyCertificateType", "reason": "invalid certificate type"}).Error(err.Error())
 		return err
 	}
 	if kind != certificate.CERT_KEY {
@@ -120,6 +122,8 @@ func validateKeyCertificateDataLength(certData []byte) error {
 		return oops.Errorf("key certificate data too short")
 	}
 	log.WithFields(logger.Fields{
+		"pkg":            "key_certificate",
+		"func":           "validateKeyCertificateDataLength",
 		"spk_type_bytes": certData[0:2],
 		"cpk_type_bytes": certData[2:4],
 	}).Debug("Certificate data in NewKeyCertificate")
@@ -140,6 +144,8 @@ func validatePayloadLengthAgainstKeyTypes(certData []byte, spkType, cpkType data
 		// Log a warning since this may indicate a forward-compatibility gap where
 		// the spec's "prohibit excess data" rule is not enforced.
 		log.WithFields(logger.Fields{
+			"pkg":            "key_certificate",
+			"func":           "validatePayloadLengthAgainstKeyTypes",
 			"signing_type":   sigType,
 			"signing_known":  sigExists,
 			"crypto_type":    crypType,
@@ -177,6 +183,8 @@ func extractKeyTypes(certData []byte) (data.Integer, data.Integer) {
 	spkType, _ := data.ReadInteger(certData[0:2], 2)
 	cpkType, _ := data.ReadInteger(certData[2:4], 2)
 	log.WithFields(logger.Fields{
+		"pkg":      "key_certificate",
+		"func":     "extractKeyTypes",
 		"cpk_type": cpkType.Int(),
 		"spk_type": spkType.Int(),
 	}).Debug("Extracted key types in NewKeyCertificate")
@@ -192,6 +200,8 @@ func buildKeyCertificate(cert *certificate.Certificate, spkType, cpkType data.In
 		SpkType:     spkType,
 	}
 	log.WithFields(logger.Fields{
+		"pkg":      "key_certificate",
+		"func":     "buildKeyCertificate",
 		"spk_type": key_certificate.SpkType.Int(),
 		"cpk_type": key_certificate.CpkType.Int(),
 	}).Debug("Successfully created new keyCertificate")
@@ -217,7 +227,7 @@ func KeyCertificateFromCertificate(cert *certificate.Certificate) (*KeyCertifica
 	logExtractedKeyTypes(certData, spkType, cpkType)
 
 	if validationErr := validatePayloadLengthAgainstKeyTypes(certData, spkType, cpkType); validationErr != nil {
-		log.WithError(validationErr).Error("Key certificate payload length mismatch in KeyCertificateFromCertificate")
+		log.WithFields(logger.Fields{"pkg": "key_certificate", "func": "KeyCertificateFromCertificate"}).WithError(validationErr).Error("Key certificate payload length mismatch in KeyCertificateFromCertificate")
 		return nil, validationErr
 	}
 
@@ -228,6 +238,8 @@ func KeyCertificateFromCertificate(cert *certificate.Certificate) (*KeyCertifica
 // logExtractedKeyTypes logs detailed debug information about extracted key types.
 func logExtractedKeyTypes(certData []byte, spkType, cpkType data.Integer) {
 	log.WithFields(logger.Fields{
+		"pkg":          "key_certificate",
+		"func":         "logExtractedKeyTypes",
 		"data_length":  len(certData),
 		"spk_type_int": spkType.Int(),
 		"cpk_type_int": cpkType.Int(),
@@ -243,6 +255,8 @@ func (keyCertificate KeyCertificate) Data() ([]byte, error) {
 		return nil, err
 	}
 	log.WithFields(logger.Fields{
+		"pkg":         "key_certificate",
+		"func":        "KeyCertificate.Data",
 		"data_length": len(data),
 	}).Debug("Retrieved payload data from keyCertificate")
 	return data, nil
@@ -252,6 +266,8 @@ func (keyCertificate KeyCertificate) Data() ([]byte, error) {
 func (keyCertificate KeyCertificate) SigningPublicKeyType() (signing_pubkey_type int) {
 	signing_pubkey_type = keyCertificate.SpkType.Int()
 	log.WithFields(logger.Fields{
+		"pkg":                 "key_certificate",
+		"func":                "KeyCertificate.SigningPublicKeyType",
 		"signing_pubkey_type": signing_pubkey_type,
 	}).Debug("Retrieved signingPublicKey type")
 	return keyCertificate.SpkType.Int()
@@ -261,6 +277,8 @@ func (keyCertificate KeyCertificate) SigningPublicKeyType() (signing_pubkey_type
 func (keyCertificate KeyCertificate) PublicKeyType() (pubkey_type int) {
 	pubkey_type = keyCertificate.CpkType.Int()
 	log.WithFields(logger.Fields{
+		"pkg":         "key_certificate",
+		"func":        "KeyCertificate.PublicKeyType",
 		"pubkey_type": pubkey_type,
 	}).Debug("Retrieved publicKey type")
 	return keyCertificate.CpkType.Int()
@@ -272,6 +290,8 @@ func (keyCertificate KeyCertificate) PublicKeyType() (pubkey_type int) {
 // Returns any errors encountered while parsing.
 func (keyCertificate KeyCertificate) ConstructPublicKey(data []byte) (public_key types.ReceivingPublicKey, err error) {
 	log.WithFields(logger.Fields{
+		"pkg":          "key_certificate",
+		"func":         "KeyCertificate.ConstructPublicKey",
 		"input_length": len(data),
 	}).Debug("Constructing publicKey from keyCertificate")
 	if err = validatePublicKeyDataLength(data); err != nil {
@@ -286,6 +306,8 @@ func (keyCertificate KeyCertificate) ConstructPublicKey(data []byte) (public_key
 func validatePublicKeyDataLength(data []byte) error {
 	if len(data) < KEYCERT_PUBKEY_SIZE {
 		log.WithFields(logger.Fields{
+			"pkg":          "key_certificate",
+			"func":         "validatePublicKeyDataLength",
 			"at":           "(keyCertificate) ConstructPublicKey",
 			"data_len":     len(data),
 			"required_len": KEYCERT_PUBKEY_SIZE,
@@ -314,10 +336,10 @@ func constructPublicKeyByType(key_type int, data []byte) (types.ReceivingPublicK
 		KEYCERT_CRYPTO_MLKEM1024_X25519:
 		return constructCurve25519Key(data), nil
 	case KEYCERT_CRYPTO_RESERVED_NONE:
-		log.Warn("Crypto key type 255 (RESERVED_NONE) is reserved by spec and not implemented")
+		log.WithFields(logger.Fields{"pkg": "key_certificate", "func": "constructPublicKeyByType"}).Warn("Crypto key type 255 (RESERVED_NONE) is reserved by spec and not implemented")
 		return nil, oops.Errorf("reserved crypto key type: RESERVED_NONE (type %d)", KEYCERT_CRYPTO_RESERVED_NONE)
 	default:
-		log.WithFields(logger.Fields{"key_type": key_type}).Warn("Unknown public key type")
+		log.WithFields(logger.Fields{"pkg": "key_certificate", "func": "constructPublicKeyByType", "key_type": key_type}).Warn("Unknown public key type")
 		return nil, oops.Errorf("unknown crypto key type: %d", key_type)
 	}
 }
@@ -326,7 +348,7 @@ func constructPublicKeyByType(key_type int, data []byte) (types.ReceivingPublicK
 func constructElGamalKey(data []byte) elgamal.ElgPublicKey {
 	var elg_key elgamal.ElgPublicKey
 	copy(elg_key[:], data[0:KEYCERT_CRYPTO_ELG_SIZE])
-	log.Debug("Constructed ElgPublicKey")
+	log.WithFields(logger.Fields{"pkg": "key_certificate", "func": "constructElGamalKey"}).Debug("Constructed ElgPublicKey")
 	return elg_key
 }
 
@@ -335,9 +357,9 @@ func constructElGamalKey(data []byte) elgamal.ElgPublicKey {
 func constructECDHKey(data []byte, constructor func([]byte) (types.ReceivingPublicKey, error), name string) (types.ReceivingPublicKey, error) {
 	key, err := constructor(data)
 	if err != nil {
-		log.WithError(err).Warn("Failed to construct " + name + " public key")
+		log.WithFields(logger.Fields{"pkg": "key_certificate", "func": "constructECDHKey"}).WithError(err).Warn("Failed to construct " + name + " public key")
 	} else {
-		log.Debug("Constructed " + name + " public key")
+		log.WithFields(logger.Fields{"pkg": "key_certificate", "func": "constructECDHKey"}).Debug("Constructed " + name + " public key")
 	}
 	return key, err
 }
@@ -346,7 +368,7 @@ func constructECDHKey(data []byte, constructor func([]byte) (types.ReceivingPubl
 func constructCurve25519Key(data []byte) curve25519.Curve25519PublicKey {
 	curve25519_key := make(curve25519.Curve25519PublicKey, KEYCERT_CRYPTO_X25519_SIZE)
 	copy(curve25519_key, data[0:KEYCERT_CRYPTO_X25519_SIZE])
-	log.Debug("Constructed Curve25519PublicKey")
+	log.WithFields(logger.Fields{"pkg": "key_certificate", "func": "constructCurve25519Key"}).Debug("Constructed Curve25519PublicKey")
 	return curve25519_key
 }
 
@@ -367,6 +389,8 @@ func (keyCertificate KeyCertificate) SigningPublicKeySize() int {
 	info, exists := SigningKeySizes[spkType]
 	if !exists {
 		log.WithFields(logger.Fields{
+			"pkg":              "key_certificate",
+			"func":             "KeyCertificate.SigningPublicKeySize",
 			"signing_key_type": spkType,
 		}).Warn("Unknown signing key type for size lookup, returning 0")
 		return 0
@@ -391,6 +415,8 @@ func (keyCertificate KeyCertificate) SigningPublicKeySizeOrError() (int, error) 
 func validateSigningKeyData(dataLen, requiredSize int) error {
 	if dataLen < requiredSize {
 		log.WithFields(logger.Fields{
+			"pkg":          "key_certificate",
+			"func":         "validateSigningKeyData",
 			"at":           "validateSigningKeyData",
 			"data_len":     dataLen,
 			"required_len": requiredSize,
@@ -414,7 +440,7 @@ func constructDSAKey(data []byte) (types.SigningPublicKey, error) {
 	// DSA key size == SPK field size (128 bytes), so the key fills the entire field.
 	// Use end-alignment for consistency: data[SPK_SIZE-DSA_SIZE : SPK_SIZE] == data[0:128].
 	copy(dsa_key[:], data[KEYCERT_SPK_SIZE-KEYCERT_SIGN_DSA_SHA1_SIZE:KEYCERT_SPK_SIZE])
-	log.Debug("Constructed DSAPublicKey")
+	log.WithFields(logger.Fields{"pkg": "key_certificate", "func": "constructDSAKey"}).Debug("Constructed DSAPublicKey")
 	return dsa_key, nil
 }
 
@@ -434,7 +460,7 @@ func constructECDSAP256Key(data []byte) (types.SigningPublicKey, error) {
 		// Raw key data
 		copy(ec_p256_key[:], data[:KEYCERT_SIGN_P256_SIZE])
 	}
-	log.Debug("Constructed P256PublicKey")
+	log.WithFields(logger.Fields{"pkg": "key_certificate", "func": "constructECDSAP256Key"}).Debug("Constructed P256PublicKey")
 	return ec_p256_key, nil
 }
 
@@ -454,7 +480,7 @@ func constructECDSAP384Key(data []byte) (types.SigningPublicKey, error) {
 		// Raw key data
 		copy(ec_p384_key[:], data[:KEYCERT_SIGN_P384_SIZE])
 	}
-	log.Debug("Constructed P384PublicKey")
+	log.WithFields(logger.Fields{"pkg": "key_certificate", "func": "constructECDSAP384Key"}).Debug("Constructed P384PublicKey")
 	return ec_p384_key, nil
 }
 
@@ -471,7 +497,7 @@ func constructECDSAP521Key(data []byte) (types.SigningPublicKey, error) {
 	}
 	var ec_p521_key ecdsa.ECP521PublicKey
 	copy(ec_p521_key[:], data[:KEYCERT_SIGN_P521_SIZE])
-	log.Debug("Constructed P521PublicKey")
+	log.WithFields(logger.Fields{"pkg": "key_certificate", "func": "constructECDSAP521Key"}).Debug("Constructed P521PublicKey")
 	return ec_p521_key, nil
 }
 
@@ -487,7 +513,7 @@ func constructRSA2048Key(data []byte) (types.SigningPublicKey, error) {
 	if err != nil {
 		return nil, oops.Wrapf(err, "failed to construct RSA2048 public key")
 	}
-	log.Debug("Constructed RSA2048PublicKey")
+	log.WithFields(logger.Fields{"pkg": "key_certificate", "func": "constructRSA2048Key"}).Debug("Constructed RSA2048PublicKey")
 	return *key, nil
 }
 
@@ -503,7 +529,7 @@ func constructRSA3072Key(data []byte) (types.SigningPublicKey, error) {
 	if err != nil {
 		return nil, oops.Wrapf(err, "failed to construct RSA3072 public key")
 	}
-	log.Debug("Constructed RSA3072PublicKey")
+	log.WithFields(logger.Fields{"pkg": "key_certificate", "func": "constructRSA3072Key"}).Debug("Constructed RSA3072PublicKey")
 	return *key, nil
 }
 
@@ -519,7 +545,7 @@ func constructRSA4096Key(data []byte) (types.SigningPublicKey, error) {
 	if err != nil {
 		return nil, oops.Wrapf(err, "failed to construct RSA4096 public key")
 	}
-	log.Debug("Constructed RSA4096PublicKey")
+	log.WithFields(logger.Fields{"pkg": "key_certificate", "func": "constructRSA4096Key"}).Debug("Constructed RSA4096PublicKey")
 	return *key, nil
 }
 
@@ -546,7 +572,7 @@ func constructEd25519Key(data []byte) (types.SigningPublicKey, error) {
 	if err != nil {
 		return nil, oops.Wrapf(err, "failed to construct Ed25519 public key")
 	}
-	log.Debug("Constructed Ed25519PublicKey")
+	log.WithFields(logger.Fields{"pkg": "key_certificate", "func": "constructEd25519Key"}).Debug("Constructed Ed25519PublicKey")
 	return ed25519_key, nil
 }
 
@@ -573,7 +599,7 @@ func constructEd25519PHKey(data []byte) (types.SigningPublicKey, error) {
 	if err != nil {
 		return nil, oops.Wrapf(err, "failed to construct Ed25519ph public key")
 	}
-	log.Debug("Constructed Ed25519PHPublicKey")
+	log.WithFields(logger.Fields{"pkg": "key_certificate", "func": "constructEd25519PHKey"}).Debug("Constructed Ed25519PHPublicKey")
 	return ed25519ph_key, nil
 }
 
@@ -602,6 +628,8 @@ func constructRedDSAKey(data []byte) (types.SigningPublicKey, error) {
 //     using the wrong order will result in a truncated / incorrect key.
 func (keyCertificate KeyCertificate) ConstructSigningPublicKey(data []byte) (signing_public_key types.SigningPublicKey, err error) {
 	log.WithFields(logger.Fields{
+		"pkg":          "key_certificate",
+		"func":         "KeyCertificate.ConstructSigningPublicKey",
 		"input_length": len(data),
 	}).Debug("Constructing signingPublicKey from keyCertificate")
 
@@ -619,6 +647,8 @@ func (keyCertificate KeyCertificate) ConstructSigningPublicKey(data []byte) (sig
 // logSigningKeyDebug logs debug information about the signing key construction.
 func logSigningKeyDebug(signing_key_type, data_len int) {
 	log.WithFields(logger.Fields{
+		"pkg":              "key_certificate",
+		"func":             "logSigningKeyDebug",
 		"signing_key_type": signing_key_type,
 		"data_len":         data_len,
 		"required_len":     KEYCERT_SPK_SIZE,
@@ -651,6 +681,8 @@ func selectSigningKeyConstructor(signing_key_type int, data []byte) (types.Signi
 		return constructRedDSAKey(data)
 	default:
 		log.WithFields(logger.Fields{
+			"pkg":              "key_certificate",
+			"func":             "selectSigningKeyConstructor",
 			"signing_key_type": signing_key_type,
 		}).Warn("Unknown signing key type")
 		return nil, oops.Errorf("unknown signing key type: %d", signing_key_type)
@@ -667,11 +699,15 @@ func (keyCertificate KeyCertificate) SignatureSize() (size int) {
 	info, exists := SigningKeySizes[key_type]
 	if !exists {
 		log.WithFields(logger.Fields{
+			"pkg":      "key_certificate",
+			"func":     "KeyCertificate.SignatureSize",
 			"key_type": key_type,
 		}).Warn("Unknown signing key type for signature size lookup")
 		return 0
 	}
 	log.WithFields(logger.Fields{
+		"pkg":            "key_certificate",
+		"func":           "KeyCertificate.SignatureSize",
 		"key_type":       key_type,
 		"signature_size": info.SignatureSize,
 	}).Debug("Retrieved signature size")
@@ -697,11 +733,15 @@ func (keyCertificate KeyCertificate) CryptoSize() (size int) {
 	info, exists := CryptoKeySizes[key_type]
 	if !exists {
 		log.WithFields(logger.Fields{
+			"pkg":      "key_certificate",
+			"func":     "KeyCertificate.CryptoSize",
 			"key_type": key_type,
 		}).Warn("Unknown crypto key type for size lookup")
 		return 0
 	}
 	log.WithFields(logger.Fields{
+		"pkg":         "key_certificate",
+		"func":        "KeyCertificate.CryptoSize",
 		"key_type":    key_type,
 		"crypto_size": info.CryptoPublicKeySize,
 	}).Debug("Retrieved crypto size")

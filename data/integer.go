@@ -48,6 +48,8 @@ func (i Integer) Int() int {
 func ReadInteger(bytes []byte, size int) (Integer, []byte) {
 	if size <= 0 || size > MAX_INTEGER_SIZE {
 		log.WithFields(logger.Fields{
+			"pkg":  "data",
+			"func": "ReadInteger",
 			"size": size,
 			"max":  MAX_INTEGER_SIZE,
 		}).Error("ReadInteger: invalid size parameter")
@@ -55,6 +57,8 @@ func ReadInteger(bytes []byte, size int) (Integer, []byte) {
 	}
 	if len(bytes) < size {
 		log.WithFields(logger.Fields{
+			"pkg":       "data",
+			"func":      "ReadInteger",
 			"available": len(bytes),
 			"requested": size,
 		}).Error("ReadInteger: insufficient data")

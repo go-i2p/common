@@ -5,6 +5,7 @@ import (
 	rootcommon "github.com/go-i2p/common"
 	"github.com/go-i2p/common/key_certificate"
 	"github.com/go-i2p/crypto/types"
+	"github.com/go-i2p/logger"
 	"github.com/samber/oops"
 )
 
@@ -14,7 +15,7 @@ import (
 // The signing public key is the blinded public key, or the transient key if offline
 // signatures are present.
 func (els *EncryptedLeaseSet) Verify() error {
-	log.Debug("Verifying EncryptedLeaseSet signature")
+	log.WithFields(logger.Fields{"pkg": "encrypted_leaseset", "func": "EncryptedLeaseSet.Verify"}).Debug("Verifying EncryptedLeaseSet signature")
 
 	// Serialize: type byte + content without signature
 	dataToVerify, err := els.dataForSigning()

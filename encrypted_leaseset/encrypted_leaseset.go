@@ -13,8 +13,6 @@ import (
 	"github.com/samber/oops"
 )
 
-var log = logger.GetGoI2PLogger()
-
 // ReadEncryptedLeaseSet parses an EncryptedLeaseSet from its spec-compliant wire format.
 //
 // Wire order: sig_type(2) | blinded_public_key(var) | published(4) | expires(2) |
@@ -22,7 +20,7 @@ var log = logger.GetGoI2PLogger()
 //
 // https://geti2p.net/spec/common-structures#encryptedleaseset
 func ReadEncryptedLeaseSet(data []byte) (els EncryptedLeaseSet, remainder []byte, err error) {
-	log.Debug("Parsing EncryptedLeaseSet structure")
+	log.WithFields(logger.Fields{"pkg": "encrypted_leaseset", "func": "ReadEncryptedLeaseSet"}).Debug("Parsing EncryptedLeaseSet structure")
 
 	if err = validateEncryptedLeaseSetSize(data); err != nil {
 		return els, remainder, err
@@ -86,6 +84,8 @@ func parseAllEncryptedLeaseSetFields(els *EncryptedLeaseSet, data []byte) ([]byt
 // an EncryptedLeaseSet.
 func logParsedEncryptedLeaseSet(els *EncryptedLeaseSet) {
 	log.WithFields(logger.Fields{
+		"pkg":            "encrypted_leaseset",
+		"func":           "logParsedEncryptedLeaseSet",
 		"sig_type":       els.sigType,
 		"inner_length":   els.innerLength,
 		"has_offline":    els.HasOfflineKeys(),
@@ -163,6 +163,8 @@ func parseHeaderFields(els *EncryptedLeaseSet, data []byte) ([]byte, error) {
 	}
 
 	log.WithFields(logger.Fields{
+		"pkg":       "encrypted_leaseset",
+		"func":      "parseHeaderFields",
 		"published": els.published,
 		"expires":   els.expires,
 		"flags":     els.flags,
@@ -183,7 +185,7 @@ func parseOfflineSignature(els *EncryptedLeaseSet, data []byte) ([]byte, error) 
 			Wrapf(err, "failed to parse offline signature in EncryptedLeaseSet")
 	}
 	els.offlineSignature = &offlineSig
-	log.Debug("Parsed offline signature")
+	log.WithFields(logger.Fields{"pkg": "encrypted_leaseset", "func": "parseOfflineSignature"}).Debug("Parsed offline signature")
 	return rem, nil
 }
 
@@ -356,6 +358,8 @@ func (els *EncryptedLeaseSet) Bytes() ([]byte, error) {
 	result = append(result, els.signature.Bytes()...)
 
 	log.WithFields(logger.Fields{
+		"pkg":             "encrypted_leaseset",
+		"func":            "EncryptedLeaseSet.Bytes",
 		"total_size":      len(result),
 		"inner_length":    els.innerLength,
 		"has_offline_sig": els.offlineSignature != nil,

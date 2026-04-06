@@ -36,7 +36,7 @@ func NewEncryptedLeaseSet(
 	encryptedInnerData []byte,
 	signingKey interface{},
 ) (*EncryptedLeaseSet, error) {
-	log.Debug("Creating new EncryptedLeaseSet")
+	log.WithFields(logger.Fields{"pkg": "encrypted_leaseset", "func": "NewEncryptedLeaseSet"}).Debug("Creating new EncryptedLeaseSet")
 
 	if err := validateInputs(sigType, blindedPublicKey, expiresOffset, flags, offlineSig, encryptedInnerData); err != nil {
 		return nil, err
@@ -82,6 +82,8 @@ func signEncryptedLeaseSet(els *EncryptedLeaseSet, sigType uint16, offlineSig *o
 // logEncryptedLeaseSetCreation logs the successful creation of an EncryptedLeaseSet.
 func logEncryptedLeaseSetCreation(els *EncryptedLeaseSet) {
 	log.WithFields(logger.Fields{
+		"pkg":            "encrypted_leaseset",
+		"func":           "logEncryptedLeaseSetCreation",
 		"sig_type":       els.sigType,
 		"inner_length":   els.innerLength,
 		"has_offline":    els.HasOfflineKeys(),

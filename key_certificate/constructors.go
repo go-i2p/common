@@ -31,6 +31,8 @@ import (
 //	)
 func NewKeyCertificateWithTypes(signingType, cryptoType int) (*KeyCertificate, error) {
 	log.WithFields(logger.Fields{
+		"pkg":          "key_certificate",
+		"func":         "NewKeyCertificateWithTypes",
 		"signing_type": signingType,
 		"crypto_type":  cryptoType,
 	}).Debug("Creating new key certificate with types")
@@ -61,6 +63,8 @@ func NewKeyCertificateWithTypes(signingType, cryptoType int) (*KeyCertificate, e
 	}
 
 	log.WithFields(logger.Fields{
+		"pkg":          "key_certificate",
+		"func":         "NewKeyCertificateWithTypes",
 		"signing_type": signingType,
 		"crypto_type":  cryptoType,
 	}).Debug("Successfully created key certificate")
@@ -188,6 +192,8 @@ func NewECDSAP384KeyCertificate() (*KeyCertificate, error) {
 // Maintained only for backward compatibility with legacy destinations.
 func NewDSAElGamalKeyCertificate() (*KeyCertificate, error) {
 	log.WithFields(logger.Fields{
+		"pkg":       "key_certificate",
+		"func":      "NewDSAElGamalKeyCertificate",
 		"algorithm": "DSA/ElGamal",
 		"status":    "deprecated",
 	}).Warn("DSA/ElGamal is deprecated as of I2P 0.9.58. Use Ed25519/X25519 instead for new implementations.")

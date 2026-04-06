@@ -56,7 +56,7 @@ func (str I2PString) Validate() error {
 func (str I2PString) DataSafe() (string, error) {
 	if !str.IsValid() {
 		log.WithFields(logger.Fields{
-			"at":     "(I2PString) DataSafe",
+			"pkg": "data", "func": "I2PString.DataSafe",
 			"reason": "invalid I2PString structure",
 		}).Error("invalid I2PString structure")
 		return "", oops.Errorf("invalid I2PString structure")
@@ -64,7 +64,7 @@ func (str I2PString) DataSafe() (string, error) {
 	// At this point we know the structure is valid
 	length := int(str[0])
 	if length == 0 {
-		log.Debug("I2PString is empty (valid zero-length string)")
+		log.WithFields(logger.Fields{"pkg": "data", "func": "I2PString.DataSafe"}).Debug("I2PString is empty (valid zero-length string)")
 		return "", nil
 	}
 	data := string(str[1 : length+1])
@@ -76,7 +76,7 @@ func (str I2PString) DataSafe() (string, error) {
 func (str I2PString) Length() (length int, err error) {
 	if len(str) == 0 {
 		log.WithFields(logger.Fields{
-			"at":     "(I2PString) Length",
+			"pkg": "data", "func": "I2PString.Length",
 			"reason": "no data",
 		}).Error("error parsing string")
 		err = ErrZeroLength
@@ -84,7 +84,7 @@ func (str I2PString) Length() (length int, err error) {
 	}
 	l, _ := ReadInteger(str[:], 1)
 	if l == nil {
-		log.Error("Failed to read Integer from I2PString")
+		log.WithFields(logger.Fields{"pkg": "data", "func": "I2PString.Length"}).Error("Failed to read Integer from I2PString")
 		return 0, oops.Errorf("failed to read I2PString length byte")
 	}
 	length = l.Int()
@@ -92,7 +92,7 @@ func (str I2PString) Length() (length int, err error) {
 
 	if length > (str_len - 1) {
 		log.WithFields(logger.Fields{
-			"at":                  "(I2PString) Length",
+			"pkg": "data", "func": "I2PString.Length",
 			"string_bytes_length": str_len,
 			"string_length_field": length,
 			"reason":              "data less than specified by length",
@@ -102,7 +102,7 @@ func (str I2PString) Length() (length int, err error) {
 
 	if (str_len - 1) > length {
 		log.WithFields(logger.Fields{
-			"at":                  "(I2PString) Length",
+			"pkg": "data", "func": "I2PString.Length",
 			"string_bytes_length": str_len,
 			"string_length_field": length,
 			"reason":              "data contains extra bytes beyond specified length",
@@ -120,10 +120,10 @@ func (str I2PString) Data() (data string, err error) {
 	if err != nil {
 		switch err {
 		case ErrZeroLength:
-			log.WithError(err).Warn("Zero length I2PString")
+			log.WithFields(logger.Fields{"pkg": "data", "func": "I2PString.Data"}).WithError(err).Warn("Zero length I2PString")
 			return "", err
 		case ErrDataTooShort:
-			log.WithError(err).Warn("I2PString data shorter than specified length")
+			log.WithFields(logger.Fields{"pkg": "data", "func": "I2PString.Data"}).WithError(err).Warn("I2PString data shorter than specified length")
 			/*
 				if is, e := ToI2PString(string(str[:])); e != nil {
 					log.WithError(e).Error("Failed to convert short I2PString")
@@ -134,15 +134,15 @@ func (str I2PString) Data() (data string, err error) {
 			*/ //Recovery attempt
 			return "", err
 		case ErrDataTooLong:
-			log.WithError(err).Warn("I2PString contains data beyond specified length")
+			log.WithFields(logger.Fields{"pkg": "data", "func": "I2PString.Data"}).WithError(err).Warn("I2PString contains data beyond specified length")
 			return "", err
 		default:
-			log.WithError(err).Error("Unknown error encountered in I2PString.Data()")
+			log.WithFields(logger.Fields{"pkg": "data", "func": "I2PString.Data"}).WithError(err).Error("Unknown error encountered in I2PString.Data()")
 			return "", err
 		}
 	}
 	if length == 0 {
-		log.Debug("I2PString is empty")
+		log.WithFields(logger.Fields{"pkg": "data", "func": "I2PString.Data"}).Debug("I2PString is empty")
 		return "", nil
 	}
 	data = string(str[1 : length+1])
@@ -154,11 +154,13 @@ func (str I2PString) Data() (data string, err error) {
 // This is the preferred constructor for creating I2PStrings from Go strings.
 func NewI2PString(content string) (I2PString, error) {
 	log.WithFields(logger.Fields{
+		"pkg":          "data",
+		"func":         "NewI2PString",
 		"input_length": len(content),
 	}).Debug("Creating new I2PString from string")
 	if len(content) > STRING_MAX_SIZE {
 		log.WithFields(logger.Fields{
-			"at":         "NewI2PString",
+			"pkg": "data", "func": "NewI2PString",
 			"string_len": len(content),
 			"max_len":    STRING_MAX_SIZE,
 			"reason":     "string too long",
@@ -177,16 +179,18 @@ func NewI2PString(content string) (I2PString, error) {
 // This is the preferred constructor for creating I2PStrings from byte slices.
 func NewI2PStringFromBytes(data []byte) (I2PString, error) {
 	log.WithFields(logger.Fields{
+		"pkg":          "data",
+		"func":         "NewI2PStringFromBytes",
 		"input_length": len(data),
 	}).Debug("Creating I2PString from bytes")
 	if len(data) == 0 {
-		log.Error("I2PString data cannot be empty")
+		log.WithFields(logger.Fields{"pkg": "data", "func": "NewI2PStringFromBytes"}).Error("I2PString data cannot be empty")
 		return nil, oops.Errorf("I2PString data cannot be empty")
 	}
 	declaredLen := int(data[0])
 	if len(data) != declaredLen+1 {
 		log.WithFields(logger.Fields{
-			"at":           "NewI2PStringFromBytes",
+			"pkg": "data", "func": "NewI2PStringFromBytes",
 			"declared_len": declaredLen,
 			"actual_len":   len(data) - 1,
 			"reason":       "length mismatch",
@@ -196,7 +200,7 @@ func NewI2PStringFromBytes(data []byte) (I2PString, error) {
 	}
 	if declaredLen > STRING_MAX_SIZE {
 		log.WithFields(logger.Fields{
-			"at":           "NewI2PStringFromBytes",
+			"pkg": "data", "func": "NewI2PStringFromBytes",
 			"declared_len": declaredLen,
 			"max_len":      STRING_MAX_SIZE,
 			"reason":       "string too long",
@@ -214,12 +218,14 @@ func NewI2PStringFromBytes(data []byte) (I2PString, error) {
 // Deprecated: Use NewI2PString instead for better clarity and consistency.
 func ToI2PString(data string) (str I2PString, err error) {
 	log.WithFields(logger.Fields{
+		"pkg":          "data",
+		"func":         "ToI2PString",
 		"input_length": len(data),
 	}).Debug("Converting string to I2PString")
 	data_len := len(data)
 	if data_len > STRING_MAX_SIZE {
 		log.WithFields(logger.Fields{
-			"at":         "ToI2PI2PString",
+			"pkg": "data", "func": "ToI2PString",
 			"string_len": data_len,
 			"max_len":    STRING_MAX_SIZE,
 			"reason":     "too much data",
@@ -242,6 +248,8 @@ func ReadI2PString(data []byte) (str I2PString, remainder []byte, err error) {
 	}
 
 	log.WithFields(logger.Fields{
+		"pkg":          "data",
+		"func":         "ReadI2PString",
 		"input_length": len(data),
 	}).Debug("Reading I2PString from bytes")
 
@@ -269,7 +277,7 @@ func ReadI2PString(data []byte) (str I2PString, remainder []byte, err error) {
 func validateI2PStringData(data []byte) error {
 	if len(data) == 0 {
 		err := ErrZeroLength
-		log.WithError(err).Error("Passed data with len == 0")
+		log.WithFields(logger.Fields{"pkg": "data", "func": "validateI2PStringData"}).WithError(err).Error("Passed data with len == 0")
 		return err
 	}
 	return nil
@@ -280,7 +288,7 @@ func validateI2PStringData(data []byte) error {
 func parseI2PStringLength(data []byte) (int, error) {
 	l, _ := ReadInteger(data, 1)
 	if l == nil {
-		log.Error("Failed to read I2PString length")
+		log.WithFields(logger.Fields{"pkg": "data", "func": "parseI2PStringLength"}).Error("Failed to read I2PString length")
 		return 0, oops.Errorf("failed to read I2PString length")
 	}
 	return l.Int(), nil
@@ -291,9 +299,9 @@ func parseI2PStringLength(data []byte) (int, error) {
 func validateI2PStringDataLength(data []byte, length int) error {
 	data_len := length + 1
 	if data_len > len(data) {
-		log.Errorf("I2PString length %d exceeds available data %d", length, len(data)-1)
+		log.WithFields(logger.Fields{"pkg": "data", "func": "validateI2PStringDataLength"}).Errorf("I2PString length %d exceeds available data %d", length, len(data)-1)
 		err := ErrDataTooShort
-		log.WithError(err).Error("Failed to read I2PString")
+		log.WithFields(logger.Fields{"pkg": "data", "func": "validateI2PStringDataLength"}).WithError(err).Error("Failed to read I2PString")
 		return err
 	}
 	return nil
@@ -319,6 +327,8 @@ func verifyI2PStringLength(str I2PString, expectedLength int) error {
 	actualDataLen := len(str) - 1
 	if actualDataLen != expectedLength {
 		log.WithFields(logger.Fields{
+			"pkg":             "data",
+			"func":            "verifyI2PStringLength",
 			"expected_length": expectedLength,
 			"actual_data_len": actualDataLen,
 		}).Error("I2PString length mismatch")

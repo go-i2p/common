@@ -51,6 +51,8 @@ func (cb *CertificateBuilder) WithType(certType uint8) (*CertificateBuilder, err
 	}
 	cb.certType = certType
 	log.WithFields(logger.Fields{
+		"pkg":       "certificate",
+		"func":      "CertificateBuilder.WithType",
 		"cert_type": certType,
 	}).Debug("Certificate builder: type set")
 	return cb, nil
@@ -92,6 +94,8 @@ func (cb *CertificateBuilder) WithKeyTypes(signingType, cryptoType int) (*Certif
 	cb.payloadSet = false // Key types will generate payload in Build()
 
 	log.WithFields(logger.Fields{
+		"pkg":          "certificate",
+		"func":         "CertificateBuilder.WithKeyTypes",
 		"signing_type": signingType,
 		"crypto_type":  cryptoType,
 	}).Debug("Certificate builder: key types set")
@@ -118,6 +122,8 @@ func (cb *CertificateBuilder) WithPayload(payload []byte) (*CertificateBuilder, 
 	cb.payloadSet = true
 
 	log.WithFields(logger.Fields{
+		"pkg":            "certificate",
+		"func":           "CertificateBuilder.WithPayload",
 		"payload_length": len(payload),
 	}).Debug("Certificate builder: custom payload set")
 
@@ -150,6 +156,8 @@ func (cb *CertificateBuilder) Build() (*Certificate, error) {
 	}
 
 	log.WithFields(logger.Fields{
+		"pkg":            "certificate",
+		"func":           "CertificateBuilder.Build",
 		"cert_type":      cb.certType,
 		"payload_length": len(cb.payload),
 	}).Debug("Certificate builder: successfully built certificate")
@@ -205,7 +213,7 @@ func (cb *CertificateBuilder) validateKeyCertificateFields() error {
 // are set, since key types will be ignored.
 func (cb *CertificateBuilder) warnPayloadConflict() {
 	if cb.payloadSet && cb.signingType != nil {
-		log.Warn("Both explicit payload and key types set - key types will be ignored")
+		log.WithFields(logger.Fields{"pkg": "certificate", "func": "CertificateBuilder.warnPayloadConflict"}).Warn("Both explicit payload and key types set - key types will be ignored")
 	}
 }
 

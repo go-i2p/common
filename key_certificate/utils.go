@@ -1,15 +1,6 @@
 // Package key_certificate implements the I2P KeyCertificate common data structure
 package key_certificate
 
-import (
-	"github.com/go-i2p/logger"
-)
-
-// log is the logger instance for the key_certificate package
-// This logger provides structured logging for key certificate operations
-// including parsing, validation, and cryptographic key construction.
-var log = logger.GetGoI2PLogger()
-
 // CryptoPublicKeySizes maps crypto key types to their sizes in bytes.
 // This map is derived from the canonical CryptoKeySizes map to avoid
 // duplicate data and manual synchronization.

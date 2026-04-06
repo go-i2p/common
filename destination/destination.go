@@ -8,6 +8,7 @@ import (
 	"github.com/go-i2p/common/key_certificate"
 	"github.com/go-i2p/common/keys_and_cert"
 	"github.com/go-i2p/crypto/types"
+	"github.com/go-i2p/logger"
 	"github.com/samber/oops"
 )
 
@@ -162,7 +163,7 @@ func validateDestinationCryptoType(kac *keys_and_cert.KeysAndCert) error {
 	case key_certificate.KEYCERT_CRYPTO_P256,
 		key_certificate.KEYCERT_CRYPTO_P384,
 		key_certificate.KEYCERT_CRYPTO_P521:
-		log.WithField("crypto_type", cryptoType).Warn(
+		log.WithFields(logger.Fields{"pkg": "destination", "func": "validateDestinationCryptoType", "crypto_type": cryptoType}).Warn(
 			"ECDH crypto type is reserved (proposal 145) and not yet finalized in the I2P spec")
 	}
 	return nil

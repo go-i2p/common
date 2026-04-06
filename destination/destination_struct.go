@@ -14,9 +14,6 @@ import (
 	"github.com/go-i2p/common/base64"
 )
 
-// log provides structured logging for the destination package.
-var log = logger.GetGoI2PLogger()
-
 // Destination is the representation of an I2P Destination.
 // Spec: https://geti2p.net/spec/common-structures#destination
 type Destination struct {
@@ -51,6 +48,7 @@ func readDestinationRaw(data []byte) (Destination, []byte, error) {
 // regardless of the wire encoding used by the sender.
 func ReadDestination(data []byte) (Destination, []byte, error) {
 	log.WithFields(logger.Fields{
+		"pkg": "destination", "func": "ReadDestination",
 		"input_length": len(data),
 	}).Debug("Reading Destination from bytes")
 
@@ -68,6 +66,7 @@ func ReadDestination(data []byte) (Destination, []byte, error) {
 	}
 
 	log.WithFields(logger.Fields{
+		"pkg": "destination", "func": "ReadDestination",
 		"remainder_length": len(remainder),
 	}).Debug("Successfully read Destination from bytes")
 
@@ -83,7 +82,7 @@ func (d Destination) Bytes() ([]byte, error) {
 	if d.KeysAndCert == nil {
 		return nil, oops.Errorf("destination is not initialized: nil KeysAndCert")
 	}
-	log.Debug("Serializing Destination to bytes")
+	log.WithFields(logger.Fields{"pkg": "destination", "func": "Destination.Bytes"}).Debug("Serializing Destination to bytes")
 
 	b, err := d.KeysAndCert.Bytes()
 	if err != nil {
@@ -91,6 +90,7 @@ func (d Destination) Bytes() ([]byte, error) {
 	}
 
 	log.WithFields(logger.Fields{
+		"pkg": "destination", "func": "Destination.Bytes",
 		"bytes_length": len(b),
 	}).Debug("Successfully serialized Destination to bytes")
 
@@ -105,7 +105,7 @@ func (d Destination) Base32Address() (string, error) {
 	if d.KeysAndCert == nil {
 		return "", oops.Errorf("destination is not initialized: nil KeysAndCert")
 	}
-	log.Debug("Generating Base32 address for Destination")
+	log.WithFields(logger.Fields{"pkg": "destination", "func": "Destination.Base32Address"}).Debug("Generating Base32 address for Destination")
 
 	dest, err := d.KeysAndCert.Bytes()
 	if err != nil {
@@ -115,7 +115,7 @@ func (d Destination) Base32Address() (string, error) {
 	str := base32.EncodeToStringNoPadding(hash[:])
 	str = str + I2PBase32Suffix
 
-	log.Debug("Generated Base32 address for Destination")
+	log.WithFields(logger.Fields{"pkg": "destination", "func": "Destination.Base32Address"}).Debug("Generated Base32 address for Destination")
 
 	return str, nil
 }
@@ -128,7 +128,7 @@ func (d Destination) Base64() (string, error) {
 	if d.KeysAndCert == nil {
 		return "", oops.Errorf("destination is not initialized: nil KeysAndCert")
 	}
-	log.Debug("Generating Base64 address for Destination")
+	log.WithFields(logger.Fields{"pkg": "destination", "func": "Destination.Base64"}).Debug("Generating Base64 address for Destination")
 
 	dest, err := d.KeysAndCert.Bytes()
 	if err != nil {
@@ -136,7 +136,7 @@ func (d Destination) Base64() (string, error) {
 	}
 	base64Address := base64.EncodeToString(dest)
 
-	log.Debug("Generated Base64 address for Destination")
+	log.WithFields(logger.Fields{"pkg": "destination", "func": "Destination.Base64"}).Debug("Generated Base64 address for Destination")
 
 	return base64Address, nil
 }

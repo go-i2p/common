@@ -25,7 +25,8 @@ func ReadCertificate(data []byte) (certificate *Certificate, remainder []byte, e
 	// Unknown certificate types (>CERT_KEY) are logged as warnings for forward compatibility.
 	if err := validateTypeSpecificPayload(cert); err != nil {
 		log.WithFields(logger.Fields{
-			"at":     "ReadCertificate",
+			"pkg":    "certificate",
+			"func":   "ReadCertificate",
 			"reason": err.Error(),
 		}).Error("certificate type-specific validation failed")
 		return nil, data, err
@@ -54,7 +55,8 @@ func parseCertificateFromData(bytes []byte) (Certificate, error) {
 // handleEmptyCertificateData processes the case where no data is provided.
 func handleEmptyCertificateData(certificate Certificate) (Certificate, error) {
 	log.WithFields(logger.Fields{
-		"at":     "(Certificate) ReadCertificate",
+		"pkg":    "certificate",
+		"func":   "handleEmptyCertificateData",
 		"reason": "too short (len < CERT_MIN_SIZE), empty input",
 	}).Error("invalid certificate, empty")
 	return certificate, oops.Errorf("error parsing certificate: certificate is empty")
@@ -63,7 +65,8 @@ func handleEmptyCertificateData(certificate Certificate) (Certificate, error) {
 // handleShortCertificateData processes the case where insufficient data is provided.
 func handleShortCertificateData(certificate Certificate, bytes []byte) (Certificate, error) {
 	log.WithFields(logger.Fields{
-		"at":                       "(Certificate) ReadCertificate",
+		"pkg":                      "certificate",
+		"func":                     "handleShortCertificateData",
 		"certificate_bytes_length": len(bytes),
 		"reason":                   fmt.Sprintf("too short (len < CERT_MIN_SIZE), got %d bytes", len(bytes)),
 	}).Error("invalid certificate, too short")
@@ -96,6 +99,8 @@ func handleValidCertificateData(certificate Certificate, bytes []byte) (Certific
 	certificate.payload = payloadCopy
 
 	log.WithFields(logger.Fields{
+		"pkg":    "certificate",
+		"func":   "handleValidCertificateData",
 		"type":   certificate.kind.Int(),
 		"length": certificate.len.Int(),
 	}).Debug("Successfully created new certificate")
@@ -108,7 +113,8 @@ func validateCertificatePayloadLength(certificate Certificate, bytes []byte, pay
 	if certificate.len.Int() > len(bytes)-CERT_MIN_SIZE {
 		err := oops.Errorf("certificate parsing warning: certificate data is shorter than specified by length")
 		log.WithFields(logger.Fields{
-			"at":                         "(Certificate) ReadCertificate",
+			"pkg":                        "certificate",
+			"func":                       "validateCertificatePayloadLength",
 			"certificate_bytes_length":   certificate.len.Int(),
 			"certificate_payload_length": payloadLength,
 			"input_length":               len(bytes),
@@ -198,6 +204,8 @@ func validateKeyTypePayload(payloadLen int) error {
 func handleUnknownCertType(certType int) error {
 	if certType > CERT_KEY {
 		log.WithFields(logger.Fields{
+			"pkg":       "certificate",
+			"func":      "handleUnknownCertType",
 			"cert_type": certType,
 		}).Warn("unknown certificate type")
 	}
@@ -228,6 +236,8 @@ func calculateRemainder(data []byte, certificate Certificate) []byte {
 // logCertificateReadCompletion logs detailed information about the completed certificate reading operation.
 func logCertificateReadCompletion(certificate Certificate, data, remainder []byte) {
 	log.WithFields(logger.Fields{
+		"pkg":                "certificate",
+		"func":               "logCertificateReadCompletion",
 		"certificate_length": certificate.length(),
 		"input_length":       len(data),
 		"remainder_length":   len(remainder),
@@ -239,7 +249,7 @@ func logCertificateReadCompletion(certificate Certificate, data, remainder []byt
 func GetSignatureTypeFromCertificate(cert Certificate) (int, error) {
 	kind, err := cert.Type()
 	if err != nil {
-		log.WithFields(logger.Fields{"at": "GetSignatureTypeFromCertificate", "reason": "invalid certificate type"}).Error(err.Error())
+		log.WithFields(logger.Fields{"pkg": "certificate", "func": "GetSignatureTypeFromCertificate", "reason": "invalid certificate type"}).Error(err.Error())
 		return -1, err
 	}
 	if kind != CERT_KEY {
@@ -258,7 +268,7 @@ func GetSignatureTypeFromCertificate(cert Certificate) (int, error) {
 func GetCryptoTypeFromCertificate(cert Certificate) (int, error) {
 	kind, err := cert.Type()
 	if err != nil {
-		log.WithFields(logger.Fields{"at": "GetCryptoTypeFromCertificate", "reason": "invalid certificate type"}).Error(err.Error())
+		log.WithFields(logger.Fields{"pkg": "certificate", "func": "GetCryptoTypeFromCertificate", "reason": "invalid certificate type"}).Error(err.Error())
 		return -1, err
 	}
 	if kind != CERT_KEY {

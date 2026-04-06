@@ -9,8 +9,6 @@ import (
 	"github.com/samber/oops"
 )
 
-var log = logger.GetGoI2PLogger()
-
 // intFromBytes interprets a slice of bytes from length 0 to length 8 as a big-endian
 // integer and returns an int representation.
 // Used in: integer.go
@@ -19,7 +17,7 @@ var log = logger.GetGoI2PLogger()
 func intFromBytes(number []byte) (value int, err error) {
 	numLen := len(number)
 	if numLen == 0 {
-		log.WithFields(logger.Fields{"at": "intFromBytes", "reason": "empty input slice"}).Error("cannot convert empty byte slice to integer")
+		log.WithFields(logger.Fields{"pkg": "data", "func": "intFromBytes", "reason": "empty input slice"}).Error("cannot convert empty byte slice to integer")
 		err = oops.Errorf("intFromBytes: empty input slice")
 		return 0, err
 	}
@@ -69,7 +67,7 @@ func PrintErrors(errs []error) {
 func stopValueRead(err error) bool {
 	result := errors.Is(err, ErrZeroLength)
 	if result {
-		log.WithError(err).Debug("Stopping value read due to zero length error")
+		log.WithFields(logger.Fields{"pkg": "data", "func": "stopValueRead"}).WithError(err).Debug("Stopping value read due to zero length error")
 	}
 	return result
 }
@@ -79,6 +77,8 @@ func stopValueRead(err error) bool {
 func beginsWith(bytes []byte, chr byte) bool {
 	result := len(bytes) != 0 && bytes[0] == chr
 	log.WithFields(logger.Fields{
+		"pkg":           "data",
+		"func":          "beginsWith",
 		"bytes_length":  len(bytes),
 		"expected_char": string(chr),
 		"result":        result,

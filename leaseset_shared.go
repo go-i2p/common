@@ -61,8 +61,6 @@ func ParseAndApplyCommonPrefix(
 	return remainder, err
 }
 
-var lsLog = logger.GetGoI2PLogger()
-
 // ParseLeaseSetCommonPrefix parses the common wire-format prefix shared by
 // LeaseSet2 and MetaLeaseSet: destination, published, expires, flags, optional
 // offline signature, and options mapping. This consolidates the identical
@@ -228,13 +226,14 @@ func ParseOfflineSignatureField(
 		err = oops.
 			Code("offline_signature_parse_failed").
 			Wrapf(err, "failed to parse offline signature in %s", structName)
-		lsLog.WithFields(logger.Fields{
-			"at":     "ParseOfflineSignatureField",
+		log.WithFields(logger.Fields{
+			"pkg":    "common",
+			"func":   "ParseOfflineSignatureField",
 			"reason": "offline signature parse failed",
 		}).Error(err.Error())
 		return nil, nil, err
 	}
-	lsLog.Debug("Parsed offline signature")
+	log.WithFields(logger.Fields{"pkg": "common", "func": "ParseOfflineSignatureField"}).Debug("Parsed offline signature")
 
 	return &offlineSig, rem, nil
 }
@@ -254,11 +253,11 @@ func VerifySignatureData(
 	}
 
 	if err := verifier.Verify(dataToVerify, sigBytes); err != nil {
-		lsLog.WithError(err).Warn(typeName + " signature verification failed")
+		log.WithFields(logger.Fields{"pkg": "common", "func": "VerifySignatureData"}).WithError(err).Warn(typeName + " signature verification failed")
 		return oops.Errorf("%s signature verification failed: %w", typeName, err)
 	}
 
-	lsLog.Debug(typeName + " signature verification succeeded")
+	log.WithFields(logger.Fields{"pkg": "common", "func": "VerifySignatureData"}).Debug(typeName + " signature verification succeeded")
 	return nil
 }
 
@@ -384,8 +383,9 @@ func ValidateMinDataSize(dataLen, minSize int, structName string) error {
 			With("data_length", dataLen).
 			With("minimum_required", minSize).
 			Errorf("data too short for %s: got %d bytes, need at least %d", structName, dataLen, minSize)
-		lsLog.WithFields(logger.Fields{
-			"at":          "ValidateMinDataSize",
+		log.WithFields(logger.Fields{
+			"pkg":         "common",
+			"func":        "ValidateMinDataSize",
 			"data_length": dataLen,
 			"min_size":    minSize,
 		}).Error(err.Error())
@@ -404,8 +404,9 @@ func ValidateLeaseSetHeaderSize(dataLen int, structName string) error {
 			With("remaining_length", dataLen).
 			With("required_size", LeaseSetHeaderFieldsSize).
 			Errorf("insufficient data for %s header fields", structName)
-		lsLog.WithFields(logger.Fields{
-			"at":               "ValidateLeaseSetHeaderSize",
+		log.WithFields(logger.Fields{
+			"pkg":              "common",
+			"func":             "ValidateLeaseSetHeaderSize",
 			"remaining_length": dataLen,
 			"required_size":    LeaseSetHeaderFieldsSize,
 		}).Error(err.Error())
@@ -422,8 +423,9 @@ func ParseDestinationFromData(inputData []byte, structName string) (destination.
 		err = oops.
 			Code("destination_parse_failed").
 			Wrapf(err, "failed to parse destination in %s", structName)
-		lsLog.WithFields(logger.Fields{
-			"at":     "ParseDestinationFromData",
+		log.WithFields(logger.Fields{
+			"pkg":    "common",
+			"func":   "ParseDestinationFromData",
 			"reason": "destination parse failed",
 		}).Error(err.Error())
 		return destination.Destination{}, nil, err
@@ -455,7 +457,7 @@ func ParseEmbeddedMapping(inputData []byte, structName string) (data.Mapping, []
 		var fatal []error
 		for _, e := range errs {
 			if strings.Contains(e.Error(), "data exists beyond length of mapping") {
-				lsLog.Debug("options mapping: ignoring 'data beyond length' warning (expected in embedded context)")
+				log.WithFields(logger.Fields{"pkg": "common", "func": "ParseEmbeddedMapping"}).Debug("options mapping: ignoring 'data beyond length' warning (expected in embedded context)")
 				continue
 			}
 			fatal = append(fatal, e)
@@ -464,14 +466,15 @@ func ParseEmbeddedMapping(inputData []byte, structName string) (data.Mapping, []
 			err := oops.
 				Code("options_parse_failed").
 				Wrapf(fatal[0], "failed to parse options mapping in %s", structName)
-			lsLog.WithFields(logger.Fields{
-				"at":     "ParseEmbeddedMapping",
+			log.WithFields(logger.Fields{
+				"pkg":    "common",
+				"func":   "ParseEmbeddedMapping",
 				"reason": "options mapping parse failed",
 			}).Error(err.Error())
 			return data.Mapping{}, nil, err
 		}
 	}
-	lsLog.Debug("Parsed options mapping")
+	log.WithFields(logger.Fields{"pkg": "common", "func": "ParseEmbeddedMapping"}).Debug("Parsed options mapping")
 	return mapping, rem, nil
 }
 
@@ -496,8 +499,9 @@ func ParseLeaseSetSignature(
 			Code("signature_parse_failed").
 			With("sig_type", sigType).
 			Wrapf(err, "failed to parse signature in %s", structName)
-		lsLog.WithFields(logger.Fields{
-			"at":       "ParseLeaseSetSignature",
+		log.WithFields(logger.Fields{
+			"pkg":      "common",
+			"func":     "ParseLeaseSetSignature",
 			"sig_type": sigType,
 		}).Error(err.Error())
 		return sig.Signature{}, nil, err
