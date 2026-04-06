@@ -345,7 +345,9 @@ func (ra RouterAddress) Host() (net.Addr, error) {
 // RouterAddress option. Returns an error if the option is missing, nil, or empty.
 func extractOptionBytes(ra RouterAddress, key string, option data.I2PString) (string, error) {
 	if !ra.CheckOption(key) {
-		log.Warn("RouterAddress missing required " + key + " key")
+		// Debug: many legitimate address types omit optional keys (e.g. host for
+		// introducer-only addresses). Callers decide severity from the returned error.
+		log.Debug("RouterAddress option not present: " + key)
 		return "", oops.Errorf("RouterAddress missing required '%s' key in options mapping", key)
 	}
 	if option == nil {

@@ -195,7 +195,10 @@ func (mapping *Mapping) ToGoMap() (map[string]string, error) {
 	return result, nil
 }
 
-// GoMapToMapping converts a Go map of unformatted strings to *Mapping.
+// GoMapToMapping converts a Go map to a Mapping. The Go map iteration order
+// is intentionally non-deterministic; the resulting Mapping is always sorted
+// by Java String.compareTo() order via ValuesToMapping(), so the output IS
+// deterministic and suitable for use in signed structures.
 func GoMapToMapping(gomap map[string]string) (mapping *Mapping, err error) {
 	log.WithFields(logger.Fields{
 		"input_map_size": len(gomap),

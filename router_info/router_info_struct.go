@@ -104,13 +104,14 @@ signature :: Signature
 //
 // https://geti2p.net/spec/common-structures#routerinfo
 type RouterInfo struct {
-	router_identity *router_identity.RouterIdentity
-	published       *data.Date
-	size            *data.Integer
-	addresses       []*router_address.RouterAddress
-	peer_size       *data.Integer
-	options         *data.Mapping
-	signature       *signature.Signature
+	router_identity    *router_identity.RouterIdentity
+	published          *data.Date
+	size               *data.Integer
+	addresses          []*router_address.RouterAddress
+	peer_size          *data.Integer
+	options            *data.Mapping
+	signature          *signature.Signature
+	signedPayloadCache []byte // exact bytes over which signature was computed
 }
 
 // NewRouterInfo creates a new RouterInfo with the specified parameters.
@@ -291,6 +292,11 @@ func signRouterInfoData(routerInfo *RouterInfo, signer types.Signer, sigType int
 		return nil, oops.Errorf("failed to create signature: %v", err)
 	}
 
+	// Cache the exact serialized bytes over which the signature was computed,
+	// so that Bytes() returns identical content without re-serializing.
+	routerInfo.signedPayloadCache = make([]byte, len(dataBytes))
+	copy(routerInfo.signedPayloadCache, dataBytes)
+
 	return &sig, nil
 }
 
@@ -300,6 +306,16 @@ func (router_info RouterInfo) Bytes() ([]byte, error) {
 	log.Debug("Converting RouterInfo to bytes")
 	if err := validateBytesPrerequisites(&router_info); err != nil {
 		return nil, err
+	}
+	// If we have a cached payload from signing, return exactly those bytes
+	// concatenated with the signature to guarantee sign/serialize agreement.
+	if router_info.signedPayloadCache != nil && router_info.signature != nil {
+		sigBytes := router_info.signature.Bytes()
+		result := make([]byte, len(router_info.signedPayloadCache)+len(sigBytes))
+		copy(result, router_info.signedPayloadCache)
+		copy(result[len(router_info.signedPayloadCache):], sigBytes)
+		log.WithField("bytes_length", len(result)).Debug("Converted RouterInfo to bytes (cached)")
+		return result, nil
 	}
 	bytes, err := serializeRouterInfoFields(&router_info)
 	if err != nil {
@@ -474,9 +490,10 @@ func (router_info *RouterInfo) AddAddress(address *router_address.RouterAddress)
 	}
 	router_info.addresses = append(router_info.addresses, address)
 	router_info.size = newSize
-	// Invalidate the existing signature since the data has changed.
+	// Invalidate the existing signature and cached payload since the data has changed.
 	// Callers must re-sign the RouterInfo after adding addresses.
 	router_info.signature = nil
+	router_info.signedPayloadCache = nil
 	return nil
 }
 

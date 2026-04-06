@@ -377,3 +377,16 @@ func TestSerializeOnePairRoundTrip(t *testing.T) {
 	assert.Equal(t, byte('='), result[5], "missing equals delimiter")
 	assert.Equal(t, byte(';'), result[16], "missing semicolon delimiter")
 }
+
+func TestGoMapToMappingDeterminism(t *testing.T) {
+	m := map[string]string{"z": "1", "a": "2", "m": "3", "host": "127.0.0.1"}
+	results := make([][]byte, 100)
+	for i := range results {
+		mapping, err := GoMapToMapping(m)
+		require.NoError(t, err)
+		results[i] = mapping.Data()
+	}
+	for i := 1; i < len(results); i++ {
+		assert.Equal(t, results[0], results[i], "GoMapToMapping must be deterministic (iteration %d)", i)
+	}
+}
