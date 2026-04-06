@@ -317,14 +317,17 @@ func processNormalMappingData(mapping Mapping, remainder []byte, size *Integer, 
 	// Extra data beyond the declared mapping size is normal when a mapping is embedded
 	// inside a larger structure (RouterAddress options, RouterInfo options, etc.).
 	// The surplus bytes are returned as remainder and handled by the caller.
-	if len(remainder) > size.Int() {
-		log.WithFields(logger.Fields{
-			"declared_size": size.Int(),
-			"actual_size":   len(remainder),
-		}).Debug("mapping contains data beyond declared length")
-		e := oops.Errorf("warning parsing mapping: data exists beyond length of mapping")
-		err = append(err, e)
-	}
+	/*
+		We disable this logging even in debug mode because it's common for mappings to be embedded in larger structures, and the presence of extra data beyond the mapping's declared size is not necessarily a format violation in that context. Logging this as a warning could lead to excessive noise in the logs without providing actionable insights, especially when the caller is designed to handle such cases gracefully.
+			if len(remainder) > size.Int() {
+				log.WithFields(logger.Fields{
+					"declared_size": size.Int(),
+					"actual_size":   len(remainder),
+				}).Debug("mapping contains data beyond declared length")
+				e := oops.Errorf("warning parsing mapping: data exists beyond length of mapping")
+				err = append(err, e)
+			}
+	*/
 
 	// Proceed normally with the declared size
 	map_bytes := remainder[:size.Int()]
