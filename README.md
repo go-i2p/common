@@ -316,9 +316,40 @@ func main() {
 
 ---
 
+## Logging
+
+This library uses [`github.com/go-i2p/logger`](https://github.com/go-i2p/logger) for comprehensive structured logging. Every log message includes `pkg` and `func` fields identifying the source package and function.
+
+### Enabling Debug Logging
+
+```bash
+# Enable debug output
+DEBUG_I2P=debug go run your-program.go
+
+# Enable warnings-as-fatal (for strict validation)
+WARNFAIL_I2P=true go run your-program.go
+```
+
+### Log Output Format
+
+All log messages include structured fields for filtering and diagnostics:
+
+```
+time=2025-01-01 12:00:00 level=debug msg=Reading Destination from bytes func=ReadDestination input_length=387 pkg=destination
+time=2025-01-01 12:00:00 level=error msg=data too short func=ReadDate pkg=data
+```
+
+### Per-Package Logging
+
+Each package has a dedicated `log.go` file declaring its logger instance. The following packages emit structured logs:
+
+`base32`, `base64`, `certificate`, `common`, `data`, `destination`, `encrypted_leaseset`, `key_certificate`, `keys_and_cert`, `lease`, `lease_set`, `lease_set2`, `meta_leaseset`, `offline_signature`, `router_address`, `router_identity`, `router_info`, `session_key`, `session_tag`, `signature`
+
+---
+
 ## Requirements
 
-- **Go Version**: 1.24.5 or later
+- **Go Version**: 1.25.0 or later
 - **I2P Specification**: 0.9.67 (June 2025)
 - **Dependencies**:
   - `github.com/go-i2p/crypto` - I2P cryptographic primitives
@@ -340,6 +371,9 @@ make test
 go test ./certificate/...
 go test ./destination/...
 go test ./router_info/...
+
+# Run tests with debug logging enabled
+DEBUG_I2P=debug go test ./...
 
 # Run fuzz tests
 go test -fuzz=FuzzCertificate ./certificate/
