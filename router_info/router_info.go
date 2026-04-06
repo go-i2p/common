@@ -7,8 +7,6 @@ import (
 	"github.com/samber/oops"
 )
 
-var log = logger.GetGoI2PLogger()
-
 // VerifySignature verifies the RouterInfo signature against the serialized data
 // using the signing public key from the router identity.
 // Supports all modern signature types (Ed25519, ECDSA P256/P384/P521, Ed25519ph,
@@ -73,6 +71,8 @@ func verifyRouterInfoSignature(ri *RouterInfo, dataBytes []byte) (bool, error) {
 	err = verifier.Verify(dataBytes, sigBytes)
 	if err != nil {
 		log.WithFields(logger.Fields{
+			"pkg":      "router_info",
+			"func":     "verifyRouterInfoSignature",
 			"sig_type": sigType,
 			"error":    err,
 		}).Debug("Signature verification failed")

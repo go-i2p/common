@@ -23,8 +23,6 @@ var (
 	_ encoding.BinaryUnmarshaler = (*RouterIdentity)(nil)
 )
 
-var log = logger.GetGoI2PLogger()
-
 /*
 [RouterIdentity]
 Accurate for version 0.9.67
@@ -49,20 +47,20 @@ type RouterIdentity struct {
 // compressible padding, use NewRouterIdentityWithCompressiblePadding instead.
 // Moved from: router_identity.go
 func NewRouterIdentity(publicKey types.ReceivingPublicKey, signingPublicKey types.SigningPublicKey, cert *certificate.Certificate, padding []byte) (*RouterIdentity, error) {
-	log.Debug("Creating new RouterIdentity")
+	log.WithFields(logger.Fields{"pkg": "router_identity", "func": "NewRouterIdentity"}).Debug("Creating new RouterIdentity")
 
 	// Step 1: Create keyCertificate from the provided certificate.
 	// Assuming NewKeyCertificate is a constructor that takes a Certificate and returns a keyCertificate.
 	keyCert, err := key_certificate.KeyCertificateFromCertificate(cert)
 	if err != nil {
-		log.WithError(err).Error("KeyCertificateFromCertificate failed.")
+		log.WithFields(logger.Fields{"pkg": "router_identity", "func": "NewRouterIdentity"}).WithError(err).Error("KeyCertificateFromCertificate failed.")
 		return nil, err
 	}
 
 	// Step 2: Create KeysAndCert instance.
 	keysAndCert, err := keys_and_cert.NewKeysAndCert(keyCert, publicKey, padding, signingPublicKey)
 	if err != nil {
-		log.WithError(err).Error("NewKeysAndCert failed.")
+		log.WithFields(logger.Fields{"pkg": "router_identity", "func": "NewRouterIdentity"}).WithError(err).Error("NewKeysAndCert failed.")
 		return nil, err
 	}
 
@@ -80,6 +78,8 @@ func NewRouterIdentity(publicKey types.ReceivingPublicKey, signingPublicKey type
 	}
 
 	log.WithFields(logger.Fields{
+		"pkg":                     "router_identity",
+		"func":                    "NewRouterIdentity",
 		"public_key_type":         keyCert.PublicKeyType(),
 		"signing_public_key_type": keyCert.SigningPublicKeyType(),
 		"padding_length":          len(padding),
@@ -119,11 +119,13 @@ func NewRouterIdentityWithCompressiblePadding(
 // Moved from: router_identity.go
 func ReadRouterIdentity(data []byte) (ri *RouterIdentity, remainder []byte, err error) {
 	log.WithFields(logger.Fields{
+		"pkg":          "router_identity",
+		"func":         "ReadRouterIdentity",
 		"input_length": len(data),
 	}).Debug("Reading RouterIdentity from data")
 	kac, remainder, err := keys_and_cert.ReadKeysAndCert(data)
 	if err != nil {
-		log.WithError(err).Error("Failed to read KeysAndCert for RouterIdentity")
+		log.WithFields(logger.Fields{"pkg": "router_identity", "func": "ReadRouterIdentity"}).WithError(err).Error("Failed to read KeysAndCert for RouterIdentity")
 		return ri, remainder, err
 	}
 	if err = validateRouterIdentityKeyTypes(kac); err != nil {
@@ -134,6 +136,8 @@ func ReadRouterIdentity(data []byte) (ri *RouterIdentity, remainder []byte, err 
 		kac,
 	}
 	log.WithFields(logger.Fields{
+		"pkg":              "router_identity",
+		"func":             "ReadRouterIdentity",
 		"remainder_length": len(remainder),
 	}).Debug("Successfully read RouterIdentity")
 	return ri, remainder, err
@@ -160,7 +164,7 @@ func (ri *RouterIdentity) AsDestination() destination.Destination {
 	}
 	kacCopy, err := deepCopyKeysAndCert(ri.KeysAndCert)
 	if err != nil {
-		log.WithError(err).Error("AsDestination: failed to deep-copy KeysAndCert")
+		log.WithFields(logger.Fields{"pkg": "router_identity", "func": "RouterIdentity.AsDestination"}).WithError(err).Error("AsDestination: failed to deep-copy KeysAndCert")
 		return destination.Destination{}
 	}
 	return destination.Destination{
@@ -287,9 +291,9 @@ func logDeprecatedKeyTypes(keyCert *key_certificate.KeyCertificate) {
 		return
 	}
 	if keyCert.PublicKeyType() == DEPRECATED_CRYPTO_ELGAMAL {
-		log.Warn("RouterIdentity uses deprecated ElGamal crypto key type (0); use X25519 (4) for new identities")
+		log.WithFields(logger.Fields{"pkg": "router_identity", "func": "logDeprecatedKeyTypes"}).Warn("RouterIdentity uses deprecated ElGamal crypto key type (0); use X25519 (4) for new identities")
 	}
 	if keyCert.SigningPublicKeyType() == DEPRECATED_SIGNING_DSA_SHA1 {
-		log.Warn("RouterIdentity uses deprecated DSA-SHA1 signing key type (0); use Ed25519 (7) for new identities")
+		log.WithFields(logger.Fields{"pkg": "router_identity", "func": "logDeprecatedKeyTypes"}).Warn("RouterIdentity uses deprecated DSA-SHA1 signing key type (0); use Ed25519 (7) for new identities")
 	}
 }

@@ -16,7 +16,7 @@ import (
 // ErrNonZeroExpiration may be returned together with a valid RouterAddress to
 // indicate a spec violation; callers should use errors.Is to test for it.
 func ReadRouterAddress(routerAddressData []byte) (ra RouterAddress, remainder []byte, err error) {
-	log.WithField("data_length", len(routerAddressData)).Debug("Reading RouterAddress from data")
+	log.WithFields(logger.Fields{"pkg": "router_address", "func": "ReadRouterAddress", "data_length": len(routerAddressData)}).Debug("Reading RouterAddress from data")
 
 	if err = validateRouterAddressData(routerAddressData); err != nil {
 		return ra, remainder, err
@@ -63,12 +63,13 @@ func handleExpirationWarning(ra *RouterAddress, data []byte) (remainder []byte, 
 // Returns error if no data is provided or data is too small.
 func validateRouterAddressData(data []byte) error {
 	if len(data) == 0 {
-		log.WithField("at", "(RouterAddress) validateRouterAddressData").Error("error parsing RouterAddress: no data")
+		log.WithFields(logger.Fields{"pkg": "router_address", "func": "validateRouterAddressData"}).Error("error parsing RouterAddress: no data")
 		return oops.Errorf("%w", ErrNoData)
 	}
 	if len(data) < ROUTER_ADDRESS_MIN_SIZE {
 		log.WithFields(logger.Fields{
-			"at":       "(RouterAddress) validateRouterAddressData",
+			"pkg":      "router_address",
+			"func":     "validateRouterAddressData",
 			"expected": ROUTER_ADDRESS_MIN_SIZE,
 			"got":      len(data),
 		}).Error("error parsing RouterAddress: data too small")
@@ -83,7 +84,8 @@ func parseTransportCost(ra *RouterAddress, routerData []byte) ([]byte, error) {
 	cost, remainder, err := data.NewInteger(routerData, 1)
 	if err != nil {
 		log.WithFields(logger.Fields{
-			"at":     "(RouterAddress) parseTransportCost",
+			"pkg":    "router_address",
+			"func":   "parseTransportCost",
 			"reason": "error parsing cost",
 		}).Warn("error parsing RouterAddress")
 		return remainder, err
@@ -100,14 +102,15 @@ func parseExpirationDate(ra *RouterAddress, routerData []byte) ([]byte, error) {
 	expirationDate, remainder, err := data.NewDate(routerData)
 	if err != nil {
 		log.WithFields(logger.Fields{
-			"at":     "(RouterAddress) parseExpirationDate",
+			"pkg":    "router_address",
+			"func":   "parseExpirationDate",
 			"reason": "error parsing expiration",
 		}).Error("error parsing RouterAddress")
 		return remainder, err
 	}
 	ra.ExpirationDate = expirationDate
 	if !isAllZeros(expirationDate[:]) {
-		log.Warn("RouterAddress expiration is non-zero; spec requires all zeros (I2P 0.9.12+)")
+		log.WithFields(logger.Fields{"pkg": "router_address", "func": "parseExpirationDate"}).Warn("RouterAddress expiration is non-zero; spec requires all zeros (I2P 0.9.12+)")
 		return remainder, oops.Errorf("%w", ErrNonZeroExpiration)
 	}
 	return remainder, nil
@@ -130,14 +133,15 @@ func parseTransportType(ra *RouterAddress, routerData []byte) ([]byte, error) {
 	transportType, remainder, err := data.ReadI2PString(routerData)
 	if err != nil {
 		log.WithFields(logger.Fields{
-			"at":     "(RouterAddress) parseTransportType",
+			"pkg":    "router_address",
+			"func":   "parseTransportType",
 			"reason": "error parsing transport_style",
 		}).Error("error parsing RouterAddress")
 		return remainder, err
 	}
 	content, contentErr := transportType.Data()
 	if contentErr == nil && len(content) == 0 {
-		log.WithField("at", "(RouterAddress) parseTransportType").Error("transport_style is empty")
+		log.WithFields(logger.Fields{"pkg": "router_address", "func": "parseTransportType"}).Error("transport_style is empty")
 		return remainder, oops.Errorf("%w", ErrEmptyTransportStyle)
 	}
 	ra.TransportType = transportType
@@ -156,7 +160,8 @@ func parseTransportOptions(ra *RouterAddress, routerData []byte) ([]byte, error)
 	if len(errs) > 0 {
 		for _, mappingErr := range errs {
 			log.WithFields(logger.Fields{
-				"at":     "(RouterAddress) parseTransportOptions",
+				"pkg":    "router_address",
+				"func":   "parseTransportOptions",
 				"reason": "error parsing options",
 				"error":  mappingErr,
 			}).Debug("non-fatal warning parsing RouterAddress options")

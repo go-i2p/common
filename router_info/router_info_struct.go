@@ -123,7 +123,7 @@ func NewRouterInfo(
 	signingPrivateKey types.SigningPrivateKey,
 	sigType int,
 ) (*RouterInfo, error) {
-	log.Debug("Creating new RouterInfo")
+	log.WithFields(logger.Fields{"pkg": "router_info", "func": "NewRouterInfo"}).Debug("Creating new RouterInfo")
 
 	publishedDate, err := createPublishedDate(publishedTime)
 	if err != nil {
@@ -163,6 +163,8 @@ func NewRouterInfo(
 		identHashStr = fmt.Sprintf("%x", h[:8])
 	}
 	log.WithFields(logger.Fields{
+		"pkg":                  "router_info",
+		"func":                 "NewRouterInfo",
 		"router_identity_hash": identHashStr,
 		"published":            publishedDate,
 		"address_count":        len(addresses),
@@ -180,7 +182,7 @@ func createPublishedDate(publishedTime time.Time) (*data.Date, error) {
 	binary.BigEndian.PutUint64(dateBytes, uint64(millis))
 	publishedDate, _, err := data.ReadDate(dateBytes)
 	if err != nil {
-		log.WithError(err).Error("Failed to create Published Date")
+		log.WithFields(logger.Fields{"pkg": "router_info", "func": "createPublishedDate"}).WithError(err).Error("Failed to create Published Date")
 		return nil, oops.Errorf("failed to create published date: %v", err)
 	}
 	return &publishedDate, nil
@@ -190,13 +192,13 @@ func createPublishedDate(publishedTime time.Time) (*data.Date, error) {
 func createSizeIntegers(addresses []*router_address.RouterAddress) (*data.Integer, *data.Integer, error) {
 	sizeInt, err := data.NewIntegerFromInt(len(addresses), 1)
 	if err != nil {
-		log.WithError(err).Error("Failed to create Size Integer")
+		log.WithFields(logger.Fields{"pkg": "router_info", "func": "createSizeIntegers"}).WithError(err).Error("Failed to create Size Integer")
 		return nil, nil, oops.Errorf("failed to create size integer: %v", err)
 	}
 
 	peerSizeInt, err := data.NewIntegerFromInt(0, 1)
 	if err != nil {
-		log.WithError(err).Error("Failed to create PeerSize Integer")
+		log.WithFields(logger.Fields{"pkg": "router_info", "func": "createSizeIntegers"}).WithError(err).Error("Failed to create PeerSize Integer")
 		return nil, nil, oops.Errorf("failed to create peer size integer: %v", err)
 	}
 
@@ -207,7 +209,7 @@ func createSizeIntegers(addresses []*router_address.RouterAddress) (*data.Intege
 func convertOptionsToMapping(options map[string]string) (*data.Mapping, error) {
 	mapping, err := data.GoMapToMapping(options)
 	if err != nil {
-		log.WithError(err).Error("Failed to convert options map to data.Mapping")
+		log.WithFields(logger.Fields{"pkg": "router_info", "func": "convertOptionsToMapping"}).WithError(err).Error("Failed to convert options map to data.Mapping")
 		return nil, oops.Errorf("failed to convert options to mapping: %v", err)
 	}
 	return mapping, nil
@@ -266,7 +268,7 @@ func createEd25519Signer(signingPrivateKey types.SigningPrivateKey) (types.Signe
 	}
 	signer, err := ed25519Key.NewSigner()
 	if err != nil {
-		log.WithError(err).Error("Failed to create Ed25519 signer")
+		log.WithFields(logger.Fields{"pkg": "router_info", "func": "createEd25519Signer"}).WithError(err).Error("Failed to create Ed25519 signer")
 		return nil, oops.Errorf("failed to create signer: %v", err)
 	}
 	return signer, nil
@@ -276,19 +278,19 @@ func createEd25519Signer(signingPrivateKey types.SigningPrivateKey) (types.Signe
 func signRouterInfoData(routerInfo *RouterInfo, signer types.Signer, sigType int) (*signature.Signature, error) {
 	dataBytes, err := routerInfo.serializeWithoutSignature()
 	if err != nil {
-		log.WithError(err).Error("Failed to serialize RouterInfo for signing")
+		log.WithFields(logger.Fields{"pkg": "router_info", "func": "signRouterInfoData"}).WithError(err).Error("Failed to serialize RouterInfo for signing")
 		return nil, oops.Errorf("failed to serialize data: %v", err)
 	}
 
 	signatureBytes, err := signer.Sign(dataBytes)
 	if err != nil {
-		log.WithError(err).Error("Failed to sign RouterInfo data")
+		log.WithFields(logger.Fields{"pkg": "router_info", "func": "signRouterInfoData"}).WithError(err).Error("Failed to sign RouterInfo data")
 		return nil, oops.Errorf("failed to sign data: %v", err)
 	}
 
 	sig, _, err := signature.ReadSignature(signatureBytes, sigType)
 	if err != nil {
-		log.WithError(err).Error("Failed to create Signature from signature bytes")
+		log.WithFields(logger.Fields{"pkg": "router_info", "func": "signRouterInfoData"}).WithError(err).Error("Failed to create Signature from signature bytes")
 		return nil, oops.Errorf("failed to create signature: %v", err)
 	}
 
@@ -303,7 +305,7 @@ func signRouterInfoData(routerInfo *RouterInfo, signer types.Signer, sigType int
 // Bytes returns the RouterInfo as a []byte suitable for writing to a stream.
 // Returns an error if any required field is nil.
 func (router_info RouterInfo) Bytes() ([]byte, error) {
-	log.Debug("Converting RouterInfo to bytes")
+	log.WithFields(logger.Fields{"pkg": "router_info", "func": "RouterInfo.Bytes"}).Debug("Converting RouterInfo to bytes")
 	if err := validateBytesPrerequisites(&router_info); err != nil {
 		return nil, err
 	}
@@ -314,14 +316,14 @@ func (router_info RouterInfo) Bytes() ([]byte, error) {
 		result := make([]byte, len(router_info.signedPayloadCache)+len(sigBytes))
 		copy(result, router_info.signedPayloadCache)
 		copy(result[len(router_info.signedPayloadCache):], sigBytes)
-		log.WithField("bytes_length", len(result)).Debug("Converted RouterInfo to bytes (cached)")
+		log.WithFields(logger.Fields{"pkg": "router_info", "func": "RouterInfo.Bytes", "bytes_length": len(result)}).Debug("Converted RouterInfo to bytes (cached)")
 		return result, nil
 	}
 	bytes, err := serializeRouterInfoFields(&router_info)
 	if err != nil {
 		return nil, err
 	}
-	log.WithField("bytes_length", len(bytes)).Debug("Converted RouterInfo to bytes")
+	log.WithFields(logger.Fields{"pkg": "router_info", "func": "RouterInfo.Bytes", "bytes_length": len(bytes)}).Debug("Converted RouterInfo to bytes")
 	return bytes, nil
 }
 
@@ -372,7 +374,7 @@ func serializeRouterInfoFields(ri *RouterInfo) ([]byte, error) {
 // compatibility with fmt.Stringer and to allow calling on both values and pointers.
 // Returns a placeholder string if any required field is nil.
 func (router_info RouterInfo) String() string {
-	log.Debug("Converting RouterInfo to string")
+	log.WithFields(logger.Fields{"pkg": "router_info", "func": "RouterInfo.String"}).Debug("Converting RouterInfo to string")
 	if router_info.router_identity == nil || router_info.published == nil ||
 		router_info.size == nil || router_info.peer_size == nil ||
 		router_info.options == nil || router_info.signature == nil {
@@ -391,7 +393,7 @@ func (router_info RouterInfo) String() string {
 	str += "Peer Size: " + bytesToString(router_info.peer_size.Bytes()) + "\n"
 	str += "Options: " + bytesToString(router_info.options.Data()) + "\n"
 	str += "Signature: " + bytesToString(router_info.signature.Bytes()) + "\n"
-	log.WithField("string_length", len(str)).Debug("Converted RouterInfo to string")
+	log.WithFields(logger.Fields{"pkg": "router_info", "func": "RouterInfo.String", "string_length": len(str)}).Debug("Converted RouterInfo to string")
 	return str
 }
 
@@ -402,11 +404,11 @@ func (router_info *RouterInfo) RouterIdentity() *router_identity.RouterIdentity 
 
 // IdentHash returns the identity hash (sha256 sum) for this RouterInfo.
 func (router_info *RouterInfo) IdentHash() (data.Hash, error) {
-	log.Debug("Calculating IdentHash for RouterInfo")
+	log.WithFields(logger.Fields{"pkg": "router_info", "func": "RouterInfo.IdentHash"}).Debug("Calculating IdentHash for RouterInfo")
 
 	// Check if router_identity is nil (e.g., uninitialized RouterInfo in tests)
 	if router_info.router_identity == nil {
-		log.Debug("RouterInfo has nil router_identity, cannot calculate IdentHash")
+		log.WithFields(logger.Fields{"pkg": "router_info", "func": "RouterInfo.IdentHash"}).Debug("RouterInfo has nil router_identity, cannot calculate IdentHash")
 		return data.Hash{}, fmt.Errorf("router_identity is nil")
 	}
 
@@ -416,7 +418,7 @@ func (router_info *RouterInfo) IdentHash() (data.Hash, error) {
 		return data.Hash{}, err
 	}
 	hash := data.HashData(identityData)
-	log.WithField("hash", hash).Debug("Calculated IdentHash for RouterInfo")
+	log.WithFields(logger.Fields{"pkg": "router_info", "func": "RouterInfo.IdentHash", "hash": hash}).Debug("Calculated IdentHash for RouterInfo")
 	return hash, nil
 }
 
@@ -432,13 +434,13 @@ func (router_info *RouterInfo) RouterAddressCount() int {
 		return 0
 	}
 	count := router_info.size.Int()
-	log.WithField("count", count).Debug("Retrieved RouterAddressCount from RouterInfo")
+	log.WithFields(logger.Fields{"pkg": "router_info", "func": "RouterInfo.RouterAddressCount", "count": count}).Debug("Retrieved RouterAddressCount from RouterInfo")
 	return count
 }
 
 // RouterAddresses returns all RouterAddresses for this RouterInfo as []*router_address.RouterAddress.
 func (router_info *RouterInfo) RouterAddresses() []*router_address.RouterAddress {
-	log.WithField("address_count", len(router_info.addresses)).Debug("Retrieved RouterAddresses from RouterInfo")
+	log.WithFields(logger.Fields{"pkg": "router_info", "func": "RouterInfo.RouterAddresses", "address_count": len(router_info.addresses)}).Debug("Retrieved RouterAddresses from RouterInfo")
 	return router_info.addresses
 }
 
@@ -530,6 +532,8 @@ func (router_info *RouterInfo) ReSign(publishedTime time.Time, signingPrivateKey
 
 	router_info.signature = sig
 	log.WithFields(logger.Fields{
+		"pkg":              "router_info",
+		"func":             "RouterInfo.ReSign",
 		"address_count":    len(router_info.addresses),
 		"signature_length": sig.Len(),
 	}).Debug("RouterInfo re-signed successfully")
@@ -539,18 +543,18 @@ func (router_info *RouterInfo) ReSign(publishedTime time.Time, signingPrivateKey
 // getOptionString retrieves a string value from the RouterInfo options mapping,
 // reducing duplication between RouterCapabilities and RouterVersion.
 func (router_info *RouterInfo) getOptionString(optionKey, fieldLabel string) string {
-	log.Debug("Retrieving " + fieldLabel)
+	log.WithFields(logger.Fields{"pkg": "router_info", "func": "RouterInfo.getOptionString"}).Debug("Retrieving " + fieldLabel)
 	if router_info.options == nil {
-		log.Debug(fieldLabel + " called with nil options, returning empty string")
+		log.WithFields(logger.Fields{"pkg": "router_info", "func": "RouterInfo.getOptionString"}).Debug(fieldLabel + " called with nil options, returning empty string")
 		return ""
 	}
 	str, err := data.ToI2PString(optionKey)
 	if err != nil {
-		log.WithError(err).Error("Failed to create I2PString for '" + optionKey + "'")
+		log.WithFields(logger.Fields{"pkg": "router_info", "func": "RouterInfo.getOptionString"}).WithError(err).Error("Failed to create I2PString for '" + optionKey + "'")
 		return ""
 	}
 	val := string(router_info.options.Values().Get(str))
-	log.WithField(fieldLabel, val).Debug("Retrieved " + fieldLabel)
+	log.WithFields(logger.Fields{"pkg": "router_info", "func": "RouterInfo.getOptionString", fieldLabel: val}).Debug("Retrieved " + fieldLabel)
 	return val
 }
 
@@ -568,7 +572,7 @@ func (router_info *RouterInfo) RouterVersion() string {
 
 // GoodVersion checks if the RouterInfo version is acceptable.
 func (router_info *RouterInfo) GoodVersion() (bool, error) {
-	log.Debug("Checking if RouterVersion is good")
+	log.WithFields(logger.Fields{"pkg": "router_info", "func": "RouterInfo.GoodVersion"}).Debug("Checking if RouterVersion is good")
 	version := router_info.RouterVersion()
 
 	versionParts, err := parseAndValidateVersionString(version)
@@ -592,11 +596,11 @@ func (router_info *RouterInfo) GoodVersion() (bool, error) {
 	}
 
 	if isValid {
-		log.WithField("version", version).Debug("Version is in good range")
+		log.WithFields(logger.Fields{"pkg": "router_info", "func": "RouterInfo.GoodVersion", "version": version}).Debug("Version is in good range")
 		return true, nil
 	}
 
-	log.WithField("version", version).Warn("Version not in good range")
+	log.WithFields(logger.Fields{"pkg": "router_info", "func": "RouterInfo.GoodVersion", "version": version}).Warn("Version not in good range")
 	return false, oops.Errorf("version not in good range: %s", version)
 }
 
@@ -604,14 +608,14 @@ func (router_info *RouterInfo) GoodVersion() (bool, error) {
 func parseAndValidateVersionString(version string) ([]string, error) {
 	v := strings.Split(version, ".")
 	if len(v) != 3 {
-		log.WithField("version", version).Warn("Invalid version format", v)
+		log.WithFields(logger.Fields{"pkg": "router_info", "func": "parseAndValidateVersionString", "version": version}).Warn("Invalid version format", v)
 		return nil, oops.Errorf("invalid version format: %s", version)
 	}
 
 	v[0] = cleanString(v[0])
 	v[1] = cleanString(v[1])
 	v[2] = cleanString(v[2])
-	log.WithField("version", version).Debugf("Checking version: '%s''%s''%s'", v[0], v[1], v[2])
+	log.WithFields(logger.Fields{"pkg": "router_info", "func": "parseAndValidateVersionString", "version": version}).Debugf("Checking version: '%s''%s''%s'", v[0], v[1], v[2])
 
 	return v, nil
 }
@@ -620,12 +624,12 @@ func parseAndValidateVersionString(version string) ([]string, error) {
 func validateMajorVersion(majorStr, version string) (int, error) {
 	pos0, err := strconv.Atoi(majorStr)
 	if err != nil {
-		log.WithError(err).Error("Failed to parse version component 0")
+		log.WithFields(logger.Fields{"pkg": "router_info", "func": "validateMajorVersion"}).WithError(err).Error("Failed to parse version component 0")
 		return 0, oops.Errorf("Failed to parse version component 0: '%s' '%s'", majorStr, err)
 	}
 
 	if pos0 != 0 {
-		log.WithField("version", version).Debug("Invalid version at position 0:", majorStr)
+		log.WithFields(logger.Fields{"pkg": "router_info", "func": "validateMajorVersion", "version": version}).Debug("Invalid version at position 0:", majorStr)
 		return 0, oops.Errorf("Invalid version at position 0: %s", majorStr)
 	}
 
@@ -640,12 +644,12 @@ func validateMinorVersion(minorStr string, majorVersion int, version string) (in
 
 	pos1, err := strconv.Atoi(minorStr)
 	if err != nil {
-		log.WithError(err).Error("Failed to parse version component 1")
+		log.WithFields(logger.Fields{"pkg": "router_info", "func": "validateMinorVersion"}).WithError(err).Error("Failed to parse version component 1")
 		return 0, oops.Errorf("Failed to parse version component 1: '%s'", minorStr)
 	}
 
 	if pos1 != 9 {
-		log.WithField("version", version).Debug("Invalid version at position 1:", minorStr)
+		log.WithFields(logger.Fields{"pkg": "router_info", "func": "validateMinorVersion", "version": version}).Debug("Invalid version at position 1:", minorStr)
 		return 0, oops.Errorf("Invalid version at position 1: %s", minorStr)
 	}
 
@@ -660,7 +664,7 @@ func validatePatchVersionRange(patchStr string, minorVersion int, version string
 
 	val, err := strconv.Atoi(patchStr)
 	if err != nil {
-		log.WithError(err).Error("Failed to parse version component 2")
+		log.WithFields(logger.Fields{"pkg": "router_info", "func": "validatePatchVersionRange"}).WithError(err).Error("Failed to parse version component 2")
 		return false, oops.Errorf("Failed to parse version component 2: '%s'", patchStr)
 	}
 
@@ -675,35 +679,37 @@ func validatePatchVersionRange(patchStr string, minorVersion int, version string
 //
 // Note: K is a bandwidth class ("Under 12 KBps"), NOT a congestion indicator.
 func (router_info *RouterInfo) UnCongested() bool {
-	log.Debug("Checking if RouterInfo is uncongested")
+	log.WithFields(logger.Fields{"pkg": "router_info", "func": "RouterInfo.UnCongested"}).Debug("Checking if RouterInfo is uncongested")
 	caps := router_info.RouterCapabilities()
 	if strings.Contains(caps, "D") {
-		log.WithField("reason", "D capability (medium congestion)").Warn("RouterInfo is congested")
+		log.WithFields(logger.Fields{"pkg": "router_info", "func": "RouterInfo.UnCongested", "reason": "D capability (medium congestion)"}).Warn("RouterInfo is congested")
 		return false
 	}
 	if strings.Contains(caps, "E") {
-		log.WithField("reason", "E capability (high congestion)").Warn("RouterInfo is congested")
+		log.WithFields(logger.Fields{"pkg": "router_info", "func": "RouterInfo.UnCongested", "reason": "E capability (high congestion)"}).Warn("RouterInfo is congested")
 		return false
 	}
 	if strings.Contains(caps, "G") {
-		log.WithField("reason", "G capability (rejecting tunnels)").Warn("RouterInfo is congested")
+		log.WithFields(logger.Fields{"pkg": "router_info", "func": "RouterInfo.UnCongested", "reason": "G capability (rejecting tunnels)"}).Warn("RouterInfo is congested")
 		return false
 	}
-	log.Debug("RouterInfo is uncongested")
+	log.WithFields(logger.Fields{"pkg": "router_info", "func": "RouterInfo.UnCongested"}).Debug("RouterInfo is uncongested")
 	return true
 }
 
 // Reachable checks if the RouterInfo indicates the router is reachable.
 func (router_info *RouterInfo) Reachable() bool {
-	log.Debug("Checking if RouterInfo is reachable")
+	log.WithFields(logger.Fields{"pkg": "router_info", "func": "RouterInfo.Reachable"}).Debug("Checking if RouterInfo is reachable")
 	caps := router_info.RouterCapabilities()
 	if strings.Contains(caps, "U") {
-		log.WithField("reason", "U capability").Debug("RouterInfo is unreachable")
+		log.WithFields(logger.Fields{"pkg": "router_info", "func": "RouterInfo.Reachable", "reason": "U capability"}).Debug("RouterInfo is unreachable")
 		return false
 	}
 	// return strings.Contains(caps, "R")
 	reachable := strings.Contains(caps, "R")
 	log.WithFields(logger.Fields{
+		"pkg":       "router_info",
+		"func":      "RouterInfo.Reachable",
 		"reachable": reachable,
 		"reason":    "R capability",
 	}).Debug("Checked RouterInfo reachability")
@@ -744,7 +750,7 @@ func (ri *RouterInfo) serializeWithoutSignature() ([]byte, error) {
 // The remaining bytes after the specified length are also returned.
 // Returns a list of errors that occurred during parsing.
 func ReadRouterInfo(bytes []byte) (info RouterInfo, remainder []byte, err error) {
-	log.WithField("input_length", len(bytes)).Debug("Reading RouterInfo from bytes")
+	log.WithFields(logger.Fields{"pkg": "router_info", "func": "ReadRouterInfo", "input_length": len(bytes)}).Debug("Reading RouterInfo from bytes")
 
 	if err = validateRouterInfoMinSize(bytes); err != nil {
 		return info, remainder, err
@@ -778,6 +784,8 @@ func ReadRouterInfo(bytes []byte) (info RouterInfo, remainder []byte, err error)
 func validateRouterInfoMinSize(bytes []byte) error {
 	if len(bytes) < ROUTER_INFO_MIN_SIZE {
 		log.WithFields(logger.Fields{
+			"pkg":          "router_info",
+			"func":         "validateRouterInfoMinSize",
 			"at":           "ReadRouterInfo",
 			"data_len":     len(bytes),
 			"required_len": ROUTER_INFO_MIN_SIZE,
@@ -802,6 +810,8 @@ func logReadRouterInfoSuccess(info RouterInfo, remainder []byte) {
 		}
 	}
 	log.WithFields(logger.Fields{
+		"pkg":                  "router_info",
+		"func":                 "logReadRouterInfoSuccess",
 		"router_identity_hash": identHashStr,
 		"published":            info.published,
 		"address_count":        len(info.addresses),
@@ -814,6 +824,8 @@ func parseRouterInfoCore(bytes []byte) (info RouterInfo, remainder []byte, err e
 	info.router_identity, remainder, err = router_identity.ReadRouterIdentity(bytes)
 	if err != nil {
 		log.WithFields(logger.Fields{
+			"pkg":          "router_info",
+			"func":         "parseRouterInfoCore",
 			"at":           "(RouterInfo) parseRouterInfoCore",
 			"data_len":     len(bytes),
 			"required_len": ROUTER_INFO_MIN_SIZE,
@@ -825,6 +837,8 @@ func parseRouterInfoCore(bytes []byte) (info RouterInfo, remainder []byte, err e
 	info.published, remainder, err = data.NewDate(remainder)
 	if err != nil {
 		log.WithFields(logger.Fields{
+			"pkg":          "router_info",
+			"func":         "parseRouterInfoCore",
 			"at":           "(RouterInfo) parseRouterInfoCore",
 			"data_len":     len(remainder),
 			"required_len": data.DATE_SIZE,
@@ -836,6 +850,8 @@ func parseRouterInfoCore(bytes []byte) (info RouterInfo, remainder []byte, err e
 	info.size, remainder, err = data.NewInteger(remainder, 1)
 	if err != nil {
 		log.WithFields(logger.Fields{
+			"pkg":          "router_info",
+			"func":         "parseRouterInfoCore",
 			"at":           "(RouterInfo) parseRouterInfoCore",
 			"data_len":     len(remainder),
 			"required_len": 1,
@@ -856,6 +872,8 @@ func parseRouterAddresses(size *data.Integer, remainder []byte) ([]*router_addre
 		remainder = more
 		if err != nil {
 			log.WithFields(logger.Fields{
+				"pkg":      "router_info",
+				"func":     "parseRouterAddresses",
 				"at":       "(RouterInfo) parseRouterAddresses",
 				"data_len": len(remainder),
 				"reason":   "not enough data",
@@ -890,11 +908,13 @@ func parsePeerSizeAndOptions(remainder []byte) (*data.Integer, *data.Mapping, []
 func parsePeerSizeFromBytes(remainder []byte) (*data.Integer, []byte, error) {
 	peer_size, remainder, err := data.NewInteger(remainder, 1)
 	if err != nil {
-		log.WithError(err).Error("Failed to read PeerSize")
+		log.WithFields(logger.Fields{"pkg": "router_info", "func": "parsePeerSizeFromBytes"}).WithError(err).Error("Failed to read PeerSize")
 		return nil, remainder, err
 	}
 	if peer_size.Int() != 0 {
 		log.WithFields(logger.Fields{
+			"pkg":       "router_info",
+			"func":      "parsePeerSizeFromBytes",
 			"peer_size": peer_size.Int(),
 		}).Warn("Spec violation: peer_size should always be zero, skipping peer hash data")
 		skipBytes := peer_size.Int() * 32
@@ -940,6 +960,8 @@ func logCriticalMappingErrors(remainder []byte, errs []error) {
 		errMsgs[i] = e.Error()
 	}
 	log.WithFields(logger.Fields{
+		"pkg":      "router_info",
+		"func":     "logCriticalMappingErrors",
 		"at":       "(RouterInfo) parsePeerSizeAndOptions",
 		"data_len": len(remainder),
 		"errors":   strings.Join(errMsgs, "; "),
@@ -951,6 +973,8 @@ func logCriticalMappingErrors(remainder []byte, errs []error) {
 // This is normal when a mapping is embedded inside a larger structure.
 func logMappingWarnings() {
 	log.WithFields(logger.Fields{
+		"pkg":    "router_info",
+		"func":   "logMappingWarnings",
 		"at":     "(RouterInfo) parsePeerSizeAndOptions",
 		"reason": "extra data beyond mapping length",
 	}).Debug("mapping format violation")
@@ -964,6 +988,8 @@ func getCertificateTypeFromIdentity(router_identity *router_identity.RouterIdent
 	kind, err := cert.Type()
 	if err != nil {
 		log.WithFields(logger.Fields{
+			"pkg":    "router_info",
+			"func":   "getCertificateTypeFromIdentity",
 			"at":     "getCertificateTypeFromIdentity",
 			"reason": "invalid certificate type",
 		}).Error("error parsing router info signature")
@@ -972,11 +998,13 @@ func getCertificateTypeFromIdentity(router_identity *router_identity.RouterIdent
 
 	certData, err := cert.Data()
 	if err != nil {
-		log.WithError(err).Error("Failed to read Certificate Data")
+		log.WithFields(logger.Fields{"pkg": "router_info", "func": "getCertificateTypeFromIdentity"}).WithError(err).Error("Failed to read Certificate Data")
 		return 0, nil, err
 	}
 
 	log.WithFields(logger.Fields{
+		"pkg":         "router_info",
+		"func":        "getCertificateTypeFromIdentity",
 		"at":          "getCertificateTypeFromIdentity",
 		"cert_type":   kind,
 		"cert_length": len(certData),
@@ -990,7 +1018,7 @@ func getCertificateTypeFromIdentity(router_identity *router_identity.RouterIdent
 func getSignatureTypeFromCert(cert *certificate.Certificate) (int, error) {
 	sigType, err := certificate.GetSignatureTypeFromCertificate(*cert)
 	if err != nil {
-		log.WithError(err).Error("Failed to get signature type from certificate")
+		log.WithFields(logger.Fields{"pkg": "router_info", "func": "getSignatureTypeFromCert"}).WithError(err).Error("Failed to get signature type from certificate")
 		return 0, oops.Errorf("certificate signature type error: %v", err)
 	}
 	return sigType, nil
@@ -1006,16 +1034,22 @@ func validateSignatureType(sigType int, cert *certificate.Certificate) error {
 	_, err := signature.SignatureSize(sigType)
 	if err != nil {
 		log.WithFields(logger.Fields{
+			"pkg":     "router_info",
+			"func":    "validateSignatureType",
 			"sigType": sigType,
 		}).Error("Invalid signature type detected")
 		return oops.Errorf("invalid signature type: %d: %v", sigType, err)
 	}
 	if sigType <= signature.SIGNATURE_TYPE_RSA_SHA256_2048 {
 		log.WithFields(logger.Fields{
+			"pkg":     "router_info",
+			"func":    "validateSignatureType",
 			"sigType": sigType,
 		}).Warn("Deprecated signature type (types 0-4 are deprecated as of 0.9.58)")
 	}
 	log.WithFields(logger.Fields{
+		"pkg":     "router_info",
+		"func":    "validateSignatureType",
 		"sigType": sigType,
 	}).Debug("Got sigType")
 	return nil
@@ -1027,6 +1061,8 @@ func parseSignatureData(data []byte, sigType int) (*signature.Signature, []byte,
 	sig, remainder, err := signature.NewSignature(data, sigType)
 	if err != nil {
 		log.WithFields(logger.Fields{
+			"pkg":      "router_info",
+			"func":     "parseSignatureData",
 			"at":       "parseSignatureData",
 			"data_len": len(data),
 			"reason":   "not enough data",
@@ -1053,6 +1089,8 @@ func parseRouterInfoSignature(ri *router_identity.RouterIdentity, remainder []by
 		// NULL certificate (type 0) and other non-KEY types default to DSA_SHA1
 		sigType = signature.SIGNATURE_TYPE_DSA_SHA1
 		log.WithFields(logger.Fields{
+			"pkg":       "router_info",
+			"func":      "parseRouterInfoSignature",
 			"cert_type": certType,
 			"sig_type":  sigType,
 		}).Debug("Non-KEY certificate, defaulting to DSA_SHA1 signature type")
