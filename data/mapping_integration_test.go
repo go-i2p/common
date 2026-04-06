@@ -339,3 +339,69 @@ func TestMappingLeftoverBytesError(t *testing.T) {
 	}
 	assert.True(t, found, "an error describing the leftover bytes should be present")
 }
+
+// TestDataCanonicalizesParsedMapping verifies that Mapping.Data() produces
+// canonical (sorted) output even when the in-memory values are in non-canonical
+// parse order. This defends against the i2pd signature verification failure
+// (reason code 16) where the remote re-serializes our Mapping in canonical
+// order and gets different bytes than what we signed.
+func TestDataCanonicalizesParsedMapping(t *testing.T) {
+	// Build a valid Mapping wire encoding with keys in REVERSE sorted order:
+	// "z"="1"; "m"="2"; "a"="3"
+	// This simulates a Mapping parsed from non-canonical wire bytes.
+	pairZ := []byte{0x01, 'z', '=', 0x01, '1', ';'}
+	pairM := []byte{0x01, 'm', '=', 0x01, '2', ';'}
+	pairA := []byte{0x01, 'a', '=', 0x01, '3', ';'}
+	payloadLen := len(pairZ) + len(pairM) + len(pairA)
+
+	var wire []byte
+	sizeBytes := EncodeUint16(uint16(payloadLen))
+	wire = append(wire, sizeBytes[:]...)
+	wire = append(wire, pairZ...)
+	wire = append(wire, pairM...)
+	wire = append(wire, pairA...)
+
+	parsed, remainder, _ := ReadMapping(wire)
+	assert.Empty(t, remainder, "no remainder expected")
+	require.NotNil(t, parsed.Values(), "parsed mapping should have values")
+
+	// Confirm in-memory parse order is non-canonical (z, m, a)
+	vals := parsed.Values()
+	require.Len(t, vals, 3)
+	key0, _ := vals[0][0].Data()
+	assert.Equal(t, "z", key0, "first parsed key should be 'z' (non-canonical)")
+
+	// Serialize via Data() — must produce canonical (a, m, z) key order
+	output := parsed.Data()
+	require.NotNil(t, output, "Data() should produce output for valid mapping")
+
+	// Re-parse the output and verify canonical key order
+	reparsed, _, reparsedErrs := ReadMapping(output)
+	for _, e := range reparsedErrs {
+		if e != nil {
+			// Only fail on critical errors, not warnings
+			assert.NotContains(t, e.Error(), "mapping keys not in sorted order",
+				"re-serialized mapping must be in sorted order")
+		}
+	}
+	reparsedVals := reparsed.Values()
+	require.Len(t, reparsedVals, 3)
+	keys := make([]string, 3)
+	for i, pair := range reparsedVals {
+		k, err := pair[i%2].Data()
+		_ = k
+		k, err = pair[0].Data()
+		require.NoError(t, err)
+		keys[i] = k
+	}
+	assert.Equal(t, []string{"a", "m", "z"}, keys,
+		"Data() must emit keys in canonical sorted order regardless of internal order")
+
+	// Also verify the canonical output is byte-identical to a Mapping created
+	// from sorted values via GoMapToMapping
+	canonical, err := GoMapToMapping(map[string]string{"z": "1", "m": "2", "a": "3"})
+	require.NoError(t, err)
+	canonicalBytes := canonical.Data()
+	assert.Equal(t, canonicalBytes, output,
+		"Data() of parsed non-canonical mapping must match Data() of canonical mapping")
+}
