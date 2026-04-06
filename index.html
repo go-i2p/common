@@ -13,7 +13,7 @@
         <a href="index.html">go-i2p/common</a>
       </h2>
       <div class="repo-meta">
-        📝 339 commits
+        📝 346 commits
          • 📜 MIT License
       </div>
     </div>
@@ -46,7 +46,7 @@
       <div class="repo-stats">
         
         <div class="repo-stat">
-          <span>📝</span> <span>339 commits</span>
+          <span>📝</span> <span>346 commits</span>
         </div>
         
         
@@ -382,10 +382,39 @@ func main() {
 
 <hr>
 
+<h2 id="logging">Logging</h2>
+
+<p>This library uses <a href="https://github.com/go-i2p/logger" target="_blank"><code>github.com/go-i2p/logger</code></a> for comprehensive structured logging. Every log message includes <code>pkg</code> and <code>func</code> fields identifying the source package and function.</p>
+
+<h3 id="enabling-debug-logging">Enabling Debug Logging</h3>
+
+<pre><code class="language-bash"># Enable debug output
+DEBUG_I2P=debug go run your-program.go
+
+# Enable warnings-as-fatal (for strict validation)
+WARNFAIL_I2P=true go run your-program.go
+</code></pre>
+
+<h3 id="log-output-format">Log Output Format</h3>
+
+<p>All log messages include structured fields for filtering and diagnostics:</p>
+
+<pre><code>time=2025-01-01 12:00:00 level=debug msg=Reading Destination from bytes func=ReadDestination input_length=387 pkg=destination
+time=2025-01-01 12:00:00 level=error msg=data too short func=ReadDate pkg=data
+</code></pre>
+
+<h3 id="per-package-logging">Per-Package Logging</h3>
+
+<p>Each package has a dedicated <code>log.go</code> file declaring its logger instance. The following packages emit structured logs:</p>
+
+<p><code>base32</code>, <code>base64</code>, <code>certificate</code>, <code>common</code>, <code>data</code>, <code>destination</code>, <code>encrypted_leaseset</code>, <code>key_certificate</code>, <code>keys_and_cert</code>, <code>lease</code>, <code>lease_set</code>, <code>lease_set2</code>, <code>meta_leaseset</code>, <code>offline_signature</code>, <code>router_address</code>, <code>router_identity</code>, <code>router_info</code>, <code>session_key</code>, <code>session_tag</code>, <code>signature</code></p>
+
+<hr>
+
 <h2 id="requirements">Requirements</h2>
 
 <ul>
-<li><strong>Go Version</strong>: 1.24.5 or later</li>
+<li><strong>Go Version</strong>: 1.25.0 or later</li>
 <li><strong>I2P Specification</strong>: 0.9.67 (June 2025)</li>
 <li><strong>Dependencies</strong>:
 
@@ -410,6 +439,9 @@ make test
 go test ./certificate/...
 go test ./destination/...
 go test ./router_info/...
+
+# Run tests with debug logging enabled
+DEBUG_I2P=debug go test ./...
 
 # Run fuzz tests
 go test -fuzz=FuzzCertificate ./certificate/
@@ -442,7 +474,7 @@ go test -fuzz=FuzzCertificate ./certificate/
                 eyedeekay
               </div>
               <div class="contributor-commits">
-                339 commits
+                346 commits
               </div>
             </div>
           </div>
@@ -454,7 +486,7 @@ go test -fuzz=FuzzCertificate ./certificate/
     </main>
     
     <footer class="page-footer">
-      <p>Generated on 2026-04-06 20:30:33 • <a href="https://github.com/go-i2p/common" target="_blank">View on GitHub</a></p>
+      <p>Generated on 2026-04-06 21:31:09 • <a href="https://github.com/go-i2p/common" target="_blank">View on GitHub</a></p>
     </footer>
   </div>
 </body>
