@@ -3,6 +3,7 @@ package lease_set2
 
 import (
 	rootcommon "github.com/go-i2p/common"
+	"github.com/go-i2p/logger"
 	"github.com/samber/oops"
 )
 
@@ -22,7 +23,7 @@ import (
 //
 // Returns nil if the signature is valid, or an error describing the failure.
 func (ls2 *LeaseSet2) Verify() error {
-	log.Debug("Verifying LeaseSet2 signature")
+	log.WithFields(logger.Fields{"pkg": "lease_set2", "func": "LeaseSet2.Verify"}).Debug("Verifying LeaseSet2 signature")
 
 	// When offline keys are present, verify the authorization chain first.
 	if ls2.HasOfflineKeys() {

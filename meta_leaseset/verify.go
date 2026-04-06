@@ -3,6 +3,7 @@ package meta_leaseset
 
 import (
 	rootcommon "github.com/go-i2p/common"
+	"github.com/go-i2p/logger"
 	"github.com/samber/oops"
 )
 
@@ -24,7 +25,7 @@ const META_LEASESET_DBSTORE_TYPE = 0x07
 //
 // Returns nil if the signature is valid, or an error describing the failure.
 func (mls *MetaLeaseSet) Verify() error {
-	log.Debug("Verifying MetaLeaseSet signature")
+	log.WithFields(logger.Fields{"pkg": "meta_leaseset", "func": "MetaLeaseSet.Verify"}).Debug("Verifying MetaLeaseSet signature")
 
 	// Serialize the full MetaLeaseSet (including the trailing signature)
 	fullBytes, err := mls.Bytes()

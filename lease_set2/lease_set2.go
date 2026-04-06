@@ -17,8 +17,6 @@ import (
 	"github.com/samber/oops"
 )
 
-var log = logger.GetGoI2PLogger()
-
 // ApplyCommonFields stores the parsed common header fields into the LeaseSet2,
 // satisfying the rootcommon.LeaseSetFieldApplier interface to eliminate
 // duplicated field assignment code shared with MetaLeaseSet.
@@ -164,6 +162,8 @@ func (ls2 *LeaseSet2) Bytes() ([]byte, error) {
 	result = append(result, ls2.signature.Bytes()...)
 
 	log.WithFields(logger.Fields{
+		"pkg":             "lease_set2",
+		"func":            "LeaseSet2.Bytes",
 		"total_size":      len(result),
 		"encryption_keys": len(ls2.encryptionKeys),
 		"leases":          len(ls2.leases),
@@ -194,7 +194,7 @@ func (ls2 *LeaseSet2) Bytes() ([]byte, error) {
 //   - Any component parsing fails
 //   - Number of encryption keys or leases exceeds maximum allowed
 func ReadLeaseSet2(data []byte) (ls2 LeaseSet2, remainder []byte, err error) {
-	log.Debug("Parsing LeaseSet2 structure")
+	log.WithFields(logger.Fields{"pkg": "lease_set2", "func": "ReadLeaseSet2"}).Debug("Parsing LeaseSet2 structure")
 
 	// Parse and apply common header fields shared with MetaLeaseSet
 	data, err = rootcommon.ParseAndApplyCommonPrefix(&ls2, data, LEASESET2_MIN_SIZE, "LeaseSet2")
@@ -207,6 +207,8 @@ func ReadLeaseSet2(data []byte) (ls2 LeaseSet2, remainder []byte, err error) {
 	reservedMask := uint16(0xFFF8) // bits 15-3
 	if ls2.flags&reservedMask != 0 {
 		log.WithFields(logger.Fields{
+			"pkg":           "lease_set2",
+			"func":          "ReadLeaseSet2",
 			"flags":         ls2.flags,
 			"reserved_bits": ls2.flags & reservedMask,
 		}).Warn("LeaseSet2 has non-zero reserved flag bits (bits 15-3 should be 0)")
@@ -218,12 +220,16 @@ func ReadLeaseSet2(data []byte) (ls2 LeaseSet2, remainder []byte, err error) {
 			Code("blinded_requires_unpublished").
 			Errorf("BLINDED flag (bit 2) requires UNPUBLISHED flag (bit 1) to also be set")
 		log.WithFields(logger.Fields{
+			"pkg":   "lease_set2",
+			"func":  "ReadLeaseSet2",
 			"flags": ls2.flags,
 		}).Error(err.Error())
 		return ls2, remainder, err
 	}
 
 	log.WithFields(logger.Fields{
+		"pkg":       "lease_set2",
+		"func":      "ReadLeaseSet2",
 		"published": ls2.published,
 		"expires":   ls2.expires,
 		"flags":     ls2.flags,
@@ -273,7 +279,7 @@ func warnIfOptionsUnsorted(mapping common.Mapping) {
 		keys = append(keys, keyData)
 	}
 	if !sort.StringsAreSorted(keys) {
-		log.Warn("LeaseSet2 options mapping keys are not sorted; spec requires sorted keys for signature invariance")
+		log.WithFields(logger.Fields{"pkg": "lease_set2", "func": "warnIfOptionsUnsorted"}).Warn("LeaseSet2 options mapping keys are not sorted; spec requires sorted keys for signature invariance")
 	}
 }
 
@@ -307,7 +313,9 @@ func parseEncryptionKeys(ls2 *LeaseSet2, data []byte) ([]byte, error) {
 			Code("missing_encryption_key_count").
 			Errorf("insufficient data for encryption key count")
 		log.WithFields(logger.Fields{
-			"at": "parseEncryptionKeys",
+			"pkg":  "lease_set2",
+			"func": "parseEncryptionKeys",
+			"at":   "parseEncryptionKeys",
 		}).Error(err.Error())
 		return nil, err
 	}
@@ -322,6 +330,8 @@ func parseEncryptionKeys(ls2 *LeaseSet2, data []byte) ([]byte, error) {
 			With("max_allowed", LEASESET2_MAX_ENCRYPTION_KEYS).
 			Errorf("invalid encryption key count: %d (must be 1-%d)", numKeys, LEASESET2_MAX_ENCRYPTION_KEYS)
 		log.WithFields(logger.Fields{
+			"pkg":      "lease_set2",
+			"func":     "parseEncryptionKeys",
 			"at":       "parseEncryptionKeys",
 			"num_keys": numKeys,
 		}).Error(err.Error())
@@ -375,6 +385,8 @@ func validateEncryptionKeyHeaderData(dataLen, keyIndex int) error {
 			With("remaining_length", dataLen).
 			Errorf("insufficient data for encryption key %d header", keyIndex)
 		log.WithFields(logger.Fields{
+			"pkg":       "lease_set2",
+			"func":      "validateEncryptionKeyHeaderData",
 			"at":        "validateEncryptionKeyHeaderData",
 			"key_index": keyIndex,
 		}).Error(err.Error())
@@ -406,6 +418,8 @@ func validateEncryptionKeyDataLength(dataLen int, keyLen uint16, keyIndex int) e
 			With("remaining_length", dataLen).
 			Errorf("insufficient data for encryption key %d data", keyIndex)
 		log.WithFields(logger.Fields{
+			"pkg":       "lease_set2",
+			"func":      "validateEncryptionKeyDataLength",
 			"at":        "validateEncryptionKeyDataLength",
 			"key_index": keyIndex,
 			"key_len":   keyLen,
@@ -444,6 +458,8 @@ func validateEncryptionKeyTypeLength(keyType, keyLen uint16, keyIndex int) error
 			Errorf("encryption key %d: declared keyLen %d does not match expected %d for type %d",
 				keyIndex, keyLen, expectedSize, keyType)
 		log.WithFields(logger.Fields{
+			"pkg":          "lease_set2",
+			"func":         "validateEncryptionKeyTypeLength",
 			"at":           "validateEncryptionKeyTypeLength",
 			"key_index":    keyIndex,
 			"key_type":     keyType,
@@ -465,6 +481,8 @@ func storeEncryptionKey(ls2 *LeaseSet2, keyIndex int, keyType, keyLen uint16, ke
 	}
 
 	log.WithFields(logger.Fields{
+		"pkg":       "lease_set2",
+		"func":      "storeEncryptionKey",
 		"key_index": keyIndex,
 		"key_type":  keyType,
 		"key_len":   keyLen,
@@ -481,7 +499,9 @@ func validateLeaseCountData(dataLen int) error {
 			Code("missing_lease_count").
 			Errorf("insufficient data for lease count")
 		log.WithFields(logger.Fields{
-			"at": "validateLeaseCountData",
+			"pkg":  "lease_set2",
+			"func": "validateLeaseCountData",
+			"at":   "validateLeaseCountData",
 		}).Error(err.Error())
 		return err
 	}
@@ -497,6 +517,8 @@ func validateLeaseCount(numLeases int) error {
 			With("num_leases", numLeases).
 			Errorf("invalid lease count: %d (spec requires at least 1 lease)", numLeases)
 		log.WithFields(logger.Fields{
+			"pkg":        "lease_set2",
+			"func":       "validateLeaseCount",
 			"at":         "validateLeaseCount",
 			"num_leases": numLeases,
 		}).Error(err.Error())
@@ -509,6 +531,8 @@ func validateLeaseCount(numLeases int) error {
 			With("max_allowed", LEASESET2_MAX_LEASES).
 			Errorf("invalid lease count: %d (max %d)", numLeases, LEASESET2_MAX_LEASES)
 		log.WithFields(logger.Fields{
+			"pkg":         "lease_set2",
+			"func":        "validateLeaseCount",
 			"at":          "validateLeaseCount",
 			"num_leases":  numLeases,
 			"max_allowed": LEASESET2_MAX_LEASES,
@@ -530,6 +554,8 @@ func parseLease2Array(numLeases int, data []byte) ([]lease.Lease2, []byte, error
 				With("lease_index", i).
 				Wrapf(err, "failed to parse Lease2 %d", i)
 			log.WithFields(logger.Fields{
+				"pkg":         "lease_set2",
+				"func":        "parseLease2Array",
 				"at":          "parseLease2Array",
 				"lease_index": i,
 			}).Error(err.Error())
@@ -538,6 +564,8 @@ func parseLease2Array(numLeases int, data []byte) ([]lease.Lease2, []byte, error
 		leases[i] = lease2
 		data = rem
 		log.WithFields(logger.Fields{
+			"pkg":         "lease_set2",
+			"func":        "parseLease2Array",
 			"lease_index": i,
 		}).Debug("Parsed Lease2")
 	}
@@ -581,6 +609,8 @@ func parseSignatureAndFinalize(ls2 *LeaseSet2, data []byte) ([]byte, error) {
 	ls2.signature = signature
 
 	log.WithFields(logger.Fields{
+		"pkg":                 "lease_set2",
+		"func":                "parseSignatureAndFinalize",
 		"num_encryption_keys": len(ls2.encryptionKeys),
 		"num_leases":          len(ls2.leases),
 		"has_offline_keys":    ls2.HasOfflineKeys(),
@@ -636,7 +666,7 @@ func NewLeaseSet2(
 	leases []lease.Lease2,
 	signingKey interface{},
 ) (LeaseSet2, error) {
-	log.Debug("Creating new LeaseSet2")
+	log.WithFields(logger.Fields{"pkg": "lease_set2", "func": "NewLeaseSet2"}).Debug("Creating new LeaseSet2")
 
 	if err := validateLeaseSet2AllInputs(dest, expiresOffset, flags, offlineSig, options, encryptionKeys, leases); err != nil {
 		return LeaseSet2{}, err
@@ -686,6 +716,8 @@ func signLeaseSet2Data(dest destination.Destination, offlineSig *offline_signatu
 		return signature, err
 	}
 	log.WithFields(logger.Fields{
+		"pkg":            "lease_set2",
+		"func":           "signLeaseSet2Data",
 		"signature_type": sigType,
 		"data_size":      len(dataToSign),
 	}).Debug("Created LeaseSet2 signature")
@@ -695,6 +727,8 @@ func signLeaseSet2Data(dest destination.Destination, offlineSig *offline_signatu
 // logLeaseSet2Creation logs the successful creation of a LeaseSet2.
 func logLeaseSet2Creation(ls2 LeaseSet2) {
 	log.WithFields(logger.Fields{
+		"pkg":                 "lease_set2",
+		"func":                "logLeaseSet2Creation",
 		"num_encryption_keys": len(ls2.encryptionKeys),
 		"num_leases":          len(ls2.leases),
 		"has_offline_keys":    ls2.HasOfflineKeys(),

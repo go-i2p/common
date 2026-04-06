@@ -11,19 +11,20 @@ import (
 
 	i2pbase64 "github.com/go-i2p/common/base64"
 	"github.com/go-i2p/common/data"
+	"github.com/go-i2p/logger"
 )
 
 // Network implements net.Addr. It returns the transport type plus 4 or 6.
 // If the IP version cannot be determined, only the transport type is returned.
 func (ra *RouterAddress) Network() string {
-	log.Debug("Getting network for RouterAddress")
+	log.WithFields(logger.Fields{"pkg": "router_address", "func": "RouterAddress.Network"}).Debug("Getting network for RouterAddress")
 	if ra.TransportType == nil {
-		log.Warn("TransportType is nil in RouterAddress")
+		log.WithFields(logger.Fields{"pkg": "router_address", "func": "RouterAddress.Network"}).Warn("TransportType is nil in RouterAddress")
 		return ""
 	}
 	str, err := ra.TransportType.Data()
 	if err != nil {
-		log.WithError(err).Error("Failed to get TransportType data")
+		log.WithFields(logger.Fields{"pkg": "router_address", "func": "RouterAddress.Network"}).WithError(err).Error("Failed to get TransportType data")
 		return ""
 	}
 	ipVer := ra.IPVersion()
@@ -31,7 +32,7 @@ func (ra *RouterAddress) Network() string {
 		return string(str)
 	}
 	network := string(str) + ipVer
-	log.WithField("network", network).Debug("Retrieved network for RouterAddress")
+	log.WithFields(logger.Fields{"pkg": "router_address", "func": "RouterAddress.Network", "network": network}).Debug("Retrieved network for RouterAddress")
 	return network
 }
 
@@ -40,7 +41,7 @@ func (ra *RouterAddress) Network() string {
 // If no valid host IP is present, it falls back to checking the caps option suffix.
 // Returns "" if the version cannot be determined.
 func (ra *RouterAddress) IPVersion() string {
-	log.Debug("Getting IP version for RouterAddress")
+	log.WithFields(logger.Fields{"pkg": "router_address", "func": "RouterAddress.IPVersion"}).Debug("Getting IP version for RouterAddress")
 	// Primary: infer from host address
 	if ver := ra.ipVersionFromHost(); ver != "" {
 		return ver
@@ -64,10 +65,10 @@ func (ra *RouterAddress) ipVersionFromHost() string {
 		return ""
 	}
 	if ip.To4() != nil {
-		log.Debug("IP version is IPv4 (from host)")
+		log.WithFields(logger.Fields{"pkg": "router_address", "func": "RouterAddress.ipVersionFromHost"}).Debug("IP version is IPv4 (from host)")
 		return IPV4_VERSION_STRING
 	}
-	log.Debug("IP version is IPv6 (from host)")
+	log.WithFields(logger.Fields{"pkg": "router_address", "func": "RouterAddress.ipVersionFromHost"}).Debug("IP version is IPv6 (from host)")
 	return IPV6_VERSION_STRING
 }
 
@@ -88,22 +89,22 @@ func (ra *RouterAddress) ipVersionFromCaps() string {
 		return ""
 	}
 	if strings.HasSuffix(str, IPV6_SUFFIX) {
-		log.Debug("IP version is IPv6 (from caps)")
+		log.WithFields(logger.Fields{"pkg": "router_address", "func": "RouterAddress.ipVersionFromCaps"}).Debug("IP version is IPv6 (from caps)")
 		return IPV6_VERSION_STRING
 	}
 	if strings.HasSuffix(str, IPV4_VERSION_STRING) {
-		log.Debug("IP version is IPv4 (from caps)")
+		log.WithFields(logger.Fields{"pkg": "router_address", "func": "RouterAddress.ipVersionFromCaps"}).Debug("IP version is IPv4 (from caps)")
 		return IPV4_VERSION_STRING
 	}
-	log.Debug("IP version cannot be determined from caps")
+	log.WithFields(logger.Fields{"pkg": "router_address", "func": "RouterAddress.ipVersionFromCaps"}).Debug("IP version cannot be determined from caps")
 	return ""
 }
 
 // UDP checks if the RouterAddress is UDP-based
 func (ra *RouterAddress) UDP() bool {
-	log.Debug("Checking if RouterAddress is UDP")
+	log.WithFields(logger.Fields{"pkg": "router_address", "func": "RouterAddress.UDP"}).Debug("Checking if RouterAddress is UDP")
 	isUDP := strings.HasPrefix(strings.ToLower(ra.Network()), SSU_TRANSPORT_PREFIX)
-	log.WithField("is_udp", isUDP).Debug("Checked if RouterAddress is UDP")
+	log.WithFields(logger.Fields{"pkg": "router_address", "func": "RouterAddress.UDP", "is_udp": isUDP}).Debug("Checked if RouterAddress is UDP")
 	return isUDP
 }
 
@@ -136,7 +137,7 @@ func (ra *RouterAddress) IsSSU2() bool {
 // key, IV, introducer data) is deliberately excluded to prevent accidental
 // exposure in logs or error messages. Use GoString() for debug-level detail.
 func (ra *RouterAddress) String() string {
-	log.Debug("Converting RouterAddress to string")
+	log.WithFields(logger.Fields{"pkg": "router_address", "func": "RouterAddress.String"}).Debug("Converting RouterAddress to string")
 	if ra == nil {
 		return ""
 	}
@@ -152,7 +153,7 @@ func (ra *RouterAddress) String() string {
 	appendOption(ra.HostString())
 	appendOption(ra.PortString())
 	str := strings.TrimSpace(strings.Join(rv, " "))
-	log.WithField("router_address_string", str).Debug("Converted RouterAddress to string")
+	log.WithFields(logger.Fields{"pkg": "router_address", "func": "RouterAddress.String", "router_address_string": str}).Debug("Converted RouterAddress to string")
 	return str
 }
 
@@ -168,27 +169,27 @@ func (ra RouterAddress) Bytes() []byte {
 // serialization error.  Callers that need to distinguish a valid empty result
 // from a serialization failure should prefer this method over Bytes.
 func (ra RouterAddress) Serialize() ([]byte, error) {
-	log.Debug("Serializing RouterAddress")
+	log.WithFields(logger.Fields{"pkg": "router_address", "func": "RouterAddress.Serialize"}).Debug("Serializing RouterAddress")
 	if ra.TransportCost == nil {
-		log.Warn("Cannot serialize RouterAddress: TransportCost is nil")
+		log.WithFields(logger.Fields{"pkg": "router_address", "func": "RouterAddress.Serialize"}).Warn("Cannot serialize RouterAddress: TransportCost is nil")
 		return nil, oops.Errorf("%w", ErrMissingTransportCost)
 	}
 	if ra.ExpirationDate == nil {
-		log.Warn("Cannot serialize RouterAddress: ExpirationDate is nil")
+		log.WithFields(logger.Fields{"pkg": "router_address", "func": "RouterAddress.Serialize"}).Warn("Cannot serialize RouterAddress: ExpirationDate is nil")
 		return nil, oops.Errorf("%w", ErrMissingExpirationDate)
 	}
 	if len(ra.TransportType) == 0 {
-		log.Warn("Cannot serialize RouterAddress: TransportType is nil or empty")
+		log.WithFields(logger.Fields{"pkg": "router_address", "func": "RouterAddress.Serialize"}).Warn("Cannot serialize RouterAddress: TransportType is nil or empty")
 		return nil, oops.Errorf("%w", ErrMissingTransportType)
 	}
 	// Verify the I2PString content is non-empty (catches {0x00} — a valid I2PString
 	// encoding that declares zero content bytes).
 	if content, err := ra.TransportType.Data(); err != nil || len(content) == 0 {
-		log.Warn("Cannot serialize RouterAddress: TransportType content is empty")
+		log.WithFields(logger.Fields{"pkg": "router_address", "func": "RouterAddress.Serialize"}).Warn("Cannot serialize RouterAddress: TransportType content is empty")
 		return nil, oops.Errorf("%w", ErrEmptyTransportStyle)
 	}
 	if ra.TransportOptions == nil {
-		log.Warn("Cannot serialize RouterAddress: TransportOptions is nil")
+		log.WithFields(logger.Fields{"pkg": "router_address", "func": "RouterAddress.Serialize"}).Warn("Cannot serialize RouterAddress: TransportOptions is nil")
 		return nil, oops.Errorf("%w", ErrMissingTransportOptions)
 	}
 	var buf []byte
@@ -196,7 +197,7 @@ func (ra RouterAddress) Serialize() ([]byte, error) {
 	buf = append(buf, ra.ExpirationDate.Bytes()...)
 	buf = append(buf, ra.TransportType...)
 	buf = append(buf, ra.TransportOptions.Data()...)
-	log.WithField("bytes_length", len(buf)).Debug("Serialized RouterAddress")
+	log.WithFields(logger.Fields{"pkg": "router_address", "func": "RouterAddress.Serialize", "bytes_length": len(buf)}).Debug("Serialized RouterAddress")
 	return buf, nil
 }
 
@@ -331,7 +332,7 @@ func (ra RouterAddress) IntroducerTagString(num int) data.I2PString {
 // Note: the I2P spec allows hostnames in the host option, but this implementation
 // intentionally rejects them to prevent DNS-based deanonymization attacks.
 func (ra RouterAddress) Host() (net.Addr, error) {
-	log.Debug("Getting host from RouterAddress")
+	log.WithFields(logger.Fields{"pkg": "router_address", "func": "RouterAddress.Host"}).Debug("Getting host from RouterAddress")
 
 	hostBytes, err := extractOptionBytes(ra, HOST_OPTION_KEY, ra.HostString())
 	if err != nil {
@@ -347,20 +348,20 @@ func extractOptionBytes(ra RouterAddress, key string, option data.I2PString) (st
 	if !ra.CheckOption(key) {
 		// Debug: many legitimate address types omit optional keys (e.g. host for
 		// introducer-only addresses). Callers decide severity from the returned error.
-		log.Debug("RouterAddress option not present: " + key)
+		log.WithFields(logger.Fields{"pkg": "router_address", "func": "extractOptionBytes"}).Debug("RouterAddress option not present: " + key)
 		return "", oops.Errorf("RouterAddress missing required '%s' key in options mapping", key)
 	}
 	if option == nil {
-		log.Warn("RouterAddress " + key + " option is nil")
+		log.WithFields(logger.Fields{"pkg": "router_address", "func": "extractOptionBytes"}).Warn("RouterAddress " + key + " option is nil")
 		return "", oops.Errorf("RouterAddress '%s' option is nil", key)
 	}
 	content, err := option.Data()
 	if err != nil {
-		log.WithError(err).Warn("Failed to get " + key + " data")
+		log.WithFields(logger.Fields{"pkg": "router_address", "func": "extractOptionBytes"}).WithError(err).Warn("Failed to get " + key + " data")
 		return "", oops.Wrapf(err, "RouterAddress '%s' option data invalid", key)
 	}
 	if len(content) == 0 {
-		log.Warn("RouterAddress " + key + " option is empty")
+		log.WithFields(logger.Fields{"pkg": "router_address", "func": "extractOptionBytes"}).Warn("RouterAddress " + key + " option is empty")
 		return "", oops.Errorf("RouterAddress '%s' option is empty", key)
 	}
 	return content, nil
@@ -388,18 +389,18 @@ func resolveHostIP(hostBytes string) (net.Addr, error) {
 	if ip != nil {
 		addr, err := net.ResolveIPAddr("", ip.String())
 		if err != nil {
-			log.WithError(err).WithField("ip", ip.String()).Error("Failed to resolve IP address")
+			log.WithFields(logger.Fields{"pkg": "router_address", "func": "resolveHostIP", "ip": ip.String()}).WithError(err).Error("Failed to resolve IP address")
 			return nil, oops.Wrapf(err, "failed to resolve IP address %s", ip.String())
 		}
-		log.WithField("addr", addr).Debug("Retrieved host from RouterAddress (IP)")
+		log.WithFields(logger.Fields{"pkg": "router_address", "func": "resolveHostIP", "addr": addr}).Debug("Retrieved host from RouterAddress (IP)")
 		return addr, nil
 	}
 	// Not an IP literal — check for valid hostname format (RFC 1123 character set).
 	if !isValidHostFormat(hostBytes) {
-		log.WithField("hostBytes", hostBytes).Error("Failed to parse host as IP or valid hostname")
+		log.WithFields(logger.Fields{"pkg": "router_address", "func": "resolveHostIP", "hostBytes": hostBytes}).Error("Failed to parse host as IP or valid hostname")
 		return nil, oops.Errorf("RouterAddress '%s' option contains invalid host: %q", HOST_OPTION_KEY, hostBytes)
 	}
-	log.WithField("hostname", hostBytes).Debug("Retrieved host from RouterAddress (hostname)")
+	log.WithFields(logger.Fields{"pkg": "router_address", "func": "resolveHostIP", "hostname": hostBytes}).Debug("Retrieved host from RouterAddress (hostname)")
 	return HostAddr{hostname: hostBytes}, nil
 }
 
@@ -420,7 +421,7 @@ func isValidHostFormat(s string) bool {
 
 // Port returns the port number as a string
 func (ra RouterAddress) Port() (string, error) {
-	log.Debug("Getting port from RouterAddress")
+	log.WithFields(logger.Fields{"pkg": "router_address", "func": "RouterAddress.Port"}).Debug("Getting port from RouterAddress")
 
 	portBytes, err := extractOptionBytes(ra, PORT_OPTION_KEY, ra.PortString())
 	if err != nil {
@@ -435,17 +436,17 @@ func (ra RouterAddress) Port() (string, error) {
 func validatePortValue(portBytes string) (string, error) {
 	val, err := strconv.Atoi(portBytes)
 	if err != nil {
-		log.WithError(err).WithField("portBytes", portBytes).Error("Failed to convert port to integer")
+		log.WithFields(logger.Fields{"pkg": "router_address", "func": "validatePortValue", "portBytes": portBytes}).WithError(err).Error("Failed to convert port to integer")
 		return "", oops.Wrapf(err, "RouterAddress '%s' option is not a valid number: %q", PORT_OPTION_KEY, portBytes)
 	}
 
 	if val < 1 || val > 65535 {
-		log.WithField("port", val).Error("Port number out of valid range")
+		log.WithFields(logger.Fields{"pkg": "router_address", "func": "validatePortValue", "port": val}).Error("Port number out of valid range")
 		return "", oops.Errorf("RouterAddress '%s' option out of valid range (1-65535): %d", PORT_OPTION_KEY, val)
 	}
 
 	portStr := strconv.Itoa(val)
-	log.WithField("port", portStr).Debug("Retrieved port from RouterAddress")
+	log.WithFields(logger.Fields{"pkg": "router_address", "func": "validatePortValue", "port": portStr}).Debug("Retrieved port from RouterAddress")
 	return portStr, nil
 }
 
@@ -554,7 +555,7 @@ func (ra RouterAddress) ProtocolVersion() (string, error) {
 // Options returns the options for this RouterAddress as an I2P Mapping.
 func (ra RouterAddress) Options() data.Mapping {
 	if ra.TransportOptions == nil {
-		log.Warn("TransportOptions is nil in RouterAddress")
+		log.WithFields(logger.Fields{"pkg": "router_address", "func": "RouterAddress.Options"}).Warn("TransportOptions is nil in RouterAddress")
 		return data.Mapping{}
 	}
 	return *ra.TransportOptions

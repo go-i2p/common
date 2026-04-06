@@ -9,8 +9,6 @@ import (
 	"github.com/samber/oops"
 )
 
-var log = logger.GetGoI2PLogger()
-
 // NewLease creates a new Lease with the provided tunnel gateway, tunnel ID, and expiration time.
 //
 // This function constructs a properly formatted I2P Lease structure according to the specification,
@@ -36,11 +34,11 @@ var log = logger.GetGoI2PLogger()
 //	    log.Fatal(err)
 //	}
 func NewLease(tunnelGateway data.Hash, tunnelID uint32, expirationTime time.Time) (*Lease, error) {
-	log.Debug("Creating new Lease")
+	log.WithFields(logger.Fields{"pkg": "lease", "func": "NewLease"}).Debug("Creating new Lease")
 
 	// Warn if tunnel ID is 0 per spec recommendation
 	if tunnelID == 0 {
-		log.Warn("Tunnel ID is 0; the I2P spec recommends values greater than zero except in special cases")
+		log.WithFields(logger.Fields{"pkg": "lease", "func": "NewLease"}).Warn("Tunnel ID is 0; the I2P spec recommends values greater than zero except in special cases")
 	}
 
 	var lease Lease
@@ -65,6 +63,8 @@ func NewLease(tunnelGateway data.Hash, tunnelID uint32, expirationTime time.Time
 	binary.BigEndian.PutUint64(lease[LEASE_TUNNEL_GW_SIZE+LEASE_TUNNEL_ID_SIZE:], uint64(millis))
 
 	log.WithFields(logger.Fields{
+		"pkg":        "lease",
+		"func":       "NewLease",
 		"tunnel_id":  tunnelID,
 		"expiration": expirationTime,
 	}).Debug("Successfully created new Lease")
@@ -100,11 +100,11 @@ func NewLease(tunnelGateway data.Hash, tunnelID uint32, expirationTime time.Time
 //	    log.Fatal(err)
 //	}
 func NewLease2(tunnelGateway data.Hash, tunnelID uint32, expirationTime time.Time) (*Lease2, error) {
-	log.Debug("Creating new Lease2")
+	log.WithFields(logger.Fields{"pkg": "lease", "func": "NewLease2"}).Debug("Creating new Lease2")
 
 	// Warn if tunnel ID is 0 per spec recommendation
 	if tunnelID == 0 {
-		log.Warn("Tunnel ID is 0; the I2P spec recommends values greater than zero except in special cases")
+		log.WithFields(logger.Fields{"pkg": "lease", "func": "NewLease2"}).Warn("Tunnel ID is 0; the I2P spec recommends values greater than zero except in special cases")
 	}
 
 	// Check for pre-epoch times first: Lease2 stores unsigned seconds, so
@@ -134,6 +134,8 @@ func NewLease2(tunnelGateway data.Hash, tunnelID uint32, expirationTime time.Tim
 	binary.BigEndian.PutUint32(lease2[LEASE_TUNNEL_GW_SIZE+LEASE_TUNNEL_ID_SIZE:], uint32(unixSec))
 
 	log.WithFields(logger.Fields{
+		"pkg":        "lease",
+		"func":       "NewLease2",
 		"tunnel_id":  tunnelID,
 		"expiration": expirationTime,
 		"seconds":    uint32(unixSec),

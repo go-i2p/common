@@ -11,8 +11,6 @@ import (
 	"github.com/samber/oops"
 )
 
-var log = logger.GetGoI2PLogger()
-
 // Compile-time assertion that RouterAddress implements net.Addr.
 var _ net.Addr = (*RouterAddress)(nil)
 
@@ -33,7 +31,7 @@ var (
 //
 // Returns a pointer to RouterAddress.
 func NewRouterAddress(cost uint8, expiration time.Time, transportType string, options map[string]string) (*RouterAddress, error) {
-	log.Debug("Creating new RouterAddress")
+	log.WithFields(logger.Fields{"pkg": "router_address", "func": "NewRouterAddress"}).Debug("Creating new RouterAddress")
 
 	// Validate transport type is not empty
 	if transportType == "" {
@@ -63,6 +61,8 @@ func NewRouterAddress(cost uint8, expiration time.Time, transportType string, op
 	ra := buildRouterAddress(transportCost, expirationDate, transportTypeStr, transportOptions)
 
 	log.WithFields(logger.Fields{
+		"pkg":           "router_address",
+		"func":          "NewRouterAddress",
 		"cost":          cost,
 		"expiration":    expiration,
 		"transportType": transportType,
@@ -120,7 +120,7 @@ func (ra *RouterAddress) IsValid() bool {
 func createTransportCost(cost uint8) (*data.Integer, error) {
 	transportCost, err := data.NewIntegerFromInt(int(cost), 1)
 	if err != nil {
-		log.WithError(err).Error("Failed to create TransportCost Integer")
+		log.WithFields(logger.Fields{"pkg": "router_address", "func": "createTransportCost"}).WithError(err).Error("Failed to create TransportCost Integer")
 		return nil, err
 	}
 	return transportCost, nil
@@ -135,7 +135,7 @@ func createExpirationDate(expiration time.Time) (*data.Date, error) {
 	dateBytes := make([]byte, data.DATE_SIZE) // all zeros per spec
 	expirationDate, _, err := data.NewDate(dateBytes)
 	if err != nil {
-		log.WithError(err).Error("Failed to create ExpirationDate")
+		log.WithFields(logger.Fields{"pkg": "router_address", "func": "createExpirationDate"}).WithError(err).Error("Failed to create ExpirationDate")
 		return nil, err
 	}
 	return expirationDate, nil
@@ -146,7 +146,7 @@ func createExpirationDate(expiration time.Time) (*data.Date, error) {
 func createTransportType(transportType string) (data.I2PString, error) {
 	transportTypeStr, err := data.ToI2PString(transportType)
 	if err != nil {
-		log.WithError(err).Error("Failed to create TransportType I2PString")
+		log.WithFields(logger.Fields{"pkg": "router_address", "func": "createTransportType"}).WithError(err).Error("Failed to create TransportType I2PString")
 		return data.I2PString{}, err
 	}
 	return transportTypeStr, nil
@@ -157,7 +157,7 @@ func createTransportType(transportType string) (data.I2PString, error) {
 func createTransportOptions(options map[string]string) (*data.Mapping, error) {
 	transportOptions, err := data.GoMapToMapping(options)
 	if err != nil {
-		log.WithError(err).Error("Failed to create TransportOptions Mapping")
+		log.WithFields(logger.Fields{"pkg": "router_address", "func": "createTransportOptions"}).WithError(err).Error("Failed to create TransportOptions Mapping")
 		return nil, err
 	}
 	return transportOptions, nil

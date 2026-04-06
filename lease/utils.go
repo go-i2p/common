@@ -10,12 +10,14 @@ import (
 // then extracts the tunnel gateway hash, tunnel ID, and expiration date into a Lease structure.
 // Returns the parsed lease, any remaining unparsed bytes, and an error if parsing fails.
 func ReadLease(data []byte) (lease Lease, remainder []byte, err error) {
-	log.WithField("input_length", len(data)).Debug("Reading Lease from bytes")
+	log.WithFields(logger.Fields{"pkg": "lease", "func": "ReadLease", "input_length": len(data)}).Debug("Reading Lease from bytes")
 
 	// Validate input data length before attempting to parse lease structure
 	if len(data) < LEASE_SIZE {
 		err = oops.Errorf("error parsing lease: not enough data (expected %d bytes, got %d bytes)", LEASE_SIZE, len(data))
 		log.WithFields(logger.Fields{
+			"pkg":             "lease",
+			"func":            "ReadLease",
 			"data_length":     len(data),
 			"required_length": LEASE_SIZE,
 		}).Error("Failed to read lease: insufficient data")
@@ -27,6 +29,8 @@ func ReadLease(data []byte) (lease Lease, remainder []byte, err error) {
 	remainder = data[LEASE_SIZE:]
 
 	log.WithFields(logger.Fields{
+		"pkg":              "lease",
+		"func":             "ReadLease",
 		"tunnel_id":        lease.TunnelID(),
 		"expiration":       lease.Time(),
 		"remainder_length": len(remainder),
@@ -45,19 +49,21 @@ func ReadLease(data []byte) (lease Lease, remainder []byte, err error) {
 // if it was too short). Callers should not rely on remainder contents when err != nil
 // unless they are implementing stream recovery logic.
 func NewLeaseFromBytes(data []byte) (lease *Lease, remainder []byte, err error) {
-	log.WithField("input_length", len(data)).Debug("Creating Lease from bytes")
+	log.WithFields(logger.Fields{"pkg": "lease", "func": "NewLeaseFromBytes", "input_length": len(data)}).Debug("Creating Lease from bytes")
 
 	var l Lease
 	// Use ReadLease to perform the actual parsing and validation
 	l, remainder, err = ReadLease(data)
 	if err != nil {
-		log.WithError(err).Error("Failed to read Lease from bytes")
+		log.WithFields(logger.Fields{"pkg": "lease", "func": "NewLeaseFromBytes"}).WithError(err).Error("Failed to read Lease from bytes")
 		return nil, remainder, err
 	}
 
 	lease = &l
 
 	log.WithFields(logger.Fields{
+		"pkg":              "lease",
+		"func":             "NewLeaseFromBytes",
 		"tunnel_id":        lease.TunnelID(),
 		"expiration":       lease.Time(),
 		"remainder_length": len(remainder),
@@ -73,13 +79,15 @@ func NewLeaseFromBytes(data []byte) (lease *Lease, remainder []byte, err error) 
 //
 // Example: lease2, remainder, err := ReadLease2(networkData)
 func ReadLease2(data []byte) (lease2 Lease2, remainder []byte, err error) {
-	log.WithField("input_length", len(data)).Debug("Reading Lease2 from bytes")
+	log.WithFields(logger.Fields{"pkg": "lease", "func": "ReadLease2", "input_length": len(data)}).Debug("Reading Lease2 from bytes")
 
 	// Validate input data length before attempting to parse lease2 structure
 	// Ensures that buffer underflows cannot occur during lease2 field extraction
 	if len(data) < LEASE2_SIZE {
 		err = oops.Errorf("error parsing lease2: not enough data (expected %d bytes, got %d bytes)", LEASE2_SIZE, len(data))
 		log.WithFields(logger.Fields{
+			"pkg":             "lease",
+			"func":            "ReadLease2",
 			"data_length":     len(data),
 			"required_length": LEASE2_SIZE,
 		}).Error("Failed to read Lease2: insufficient data")
@@ -92,6 +100,8 @@ func ReadLease2(data []byte) (lease2 Lease2, remainder []byte, err error) {
 	remainder = data[LEASE2_SIZE:]
 
 	log.WithFields(logger.Fields{
+		"pkg":              "lease",
+		"func":             "ReadLease2",
 		"tunnel_id":        lease2.TunnelID(),
 		"expiration":       lease2.Time(),
 		"end_date_seconds": lease2.EndDate(),
@@ -113,14 +123,14 @@ func ReadLease2(data []byte) (lease2 Lease2, remainder []byte, err error) {
 //
 // Example: lease2Ptr, remainder, err := NewLease2FromBytes(networkData)
 func NewLease2FromBytes(data []byte) (lease2 *Lease2, remainder []byte, err error) {
-	log.WithField("input_length", len(data)).Debug("Creating Lease2 from bytes")
+	log.WithFields(logger.Fields{"pkg": "lease", "func": "NewLease2FromBytes", "input_length": len(data)}).Debug("Creating Lease2 from bytes")
 
 	var l2 Lease2
 	// Use ReadLease2 to perform the actual parsing and validation
 	// This ensures consistent error handling and logging across both functions
 	l2, remainder, err = ReadLease2(data)
 	if err != nil {
-		log.WithError(err).Error("Failed to read Lease2 from bytes")
+		log.WithFields(logger.Fields{"pkg": "lease", "func": "NewLease2FromBytes"}).WithError(err).Error("Failed to read Lease2 from bytes")
 		return nil, remainder, err
 	}
 
@@ -129,6 +139,8 @@ func NewLease2FromBytes(data []byte) (lease2 *Lease2, remainder []byte, err erro
 	lease2 = &l2
 
 	log.WithFields(logger.Fields{
+		"pkg":              "lease",
+		"func":             "NewLease2FromBytes",
 		"tunnel_id":        lease2.TunnelID(),
 		"expiration":       lease2.Time(),
 		"end_date_seconds": lease2.EndDate(),

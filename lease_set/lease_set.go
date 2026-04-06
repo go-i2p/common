@@ -20,8 +20,6 @@ import (
 	"github.com/go-i2p/logger"
 )
 
-var log = logger.GetGoI2PLogger()
-
 // Validate performs structural validation of the LeaseSet.
 // It checks that all fields are present, correctly sized, and internally consistent.
 // It does NOT verify the cryptographic signature (use [LeaseSet.Verify] for that)
@@ -130,7 +128,7 @@ func NewLeaseSet(
 	leases []lease.Lease,
 	signingPrivateKey types.SigningPrivateKey,
 ) (*LeaseSet, error) {
-	log.Debug("Creating new LeaseSet")
+	log.WithFields(logger.Fields{"pkg": "lease_set", "func": "NewLeaseSet"}).Debug("Creating new LeaseSet")
 
 	if err := validateLeaseSetInputs(dest, encryptionKey, signingKey, leases); err != nil {
 		return nil, err
@@ -281,7 +279,7 @@ func serializeLeaseSetData(dest destination.Destination, encryptionKey types.Rec
 	// Add lease count
 	leaseCount, err := data.NewIntegerFromInt(len(leases), 1)
 	if err != nil {
-		log.WithError(err).Error("Failed to create lease count")
+		log.WithFields(logger.Fields{"pkg": "lease_set", "func": "serializeLeaseSetData"}).WithError(err).Error("Failed to create lease count")
 		return nil, err
 	}
 	dbytes = append(dbytes, leaseCount.Bytes()...)
@@ -298,13 +296,13 @@ func serializeLeaseSetData(dest destination.Destination, encryptionKey types.Rec
 func createLeaseSetSignature(signingPrivateKey types.SigningPrivateKey, dbytes []byte) ([]byte, error) {
 	signer, err := signingPrivateKey.NewSigner()
 	if err != nil {
-		log.WithError(err).Error("Failed to create signer")
+		log.WithFields(logger.Fields{"pkg": "lease_set", "func": "createLeaseSetSignature"}).WithError(err).Error("Failed to create signer")
 		return nil, err
 	}
 
 	signature, err := signer.Sign(dbytes)
 	if err != nil {
-		log.WithError(err).Error("Failed to sign LeaseSet")
+		log.WithFields(logger.Fields{"pkg": "lease_set", "func": "createLeaseSetSignature"}).WithError(err).Error("Failed to sign LeaseSet")
 		return nil, err
 	}
 
@@ -343,10 +341,12 @@ func defensiveCopyEncryptionKey(key types.ReceivingPublicKey) types.ReceivingPub
 func logLeaseSetCreationSuccess(leaseSet LeaseSet) {
 	destBytes, err := leaseSet.dest.KeysAndCert.Bytes()
 	if err != nil {
-		log.WithError(err).Warn("Failed to serialize destination for logging")
+		log.WithFields(logger.Fields{"pkg": "lease_set", "func": "logLeaseSetCreationSuccess"}).WithError(err).Warn("Failed to serialize destination for logging")
 		return
 	}
 	log.WithFields(logger.Fields{
+		"pkg":                   "lease_set",
+		"func":                  "logLeaseSetCreationSuccess",
 		"destination_length":    len(destBytes),
 		"encryption_key_length": len(leaseSet.encryptionKey.Bytes()),
 		"signing_key_length":    len(leaseSet.signingKey.Bytes()),
@@ -383,6 +383,8 @@ func getSignatureType(cert *certificate.Certificate) int {
 	kind, err := cert.Type()
 	if err != nil {
 		log.WithFields(logger.Fields{
+			"pkg":    "lease_set",
+			"func":   "getSignatureType",
 			"at":     "getSignatureType",
 			"reason": "invalid certificate type",
 		}).Error("error parsing certificate type")
@@ -462,16 +464,16 @@ func (lease_set LeaseSet) PublicKey() (public_key elgamal.ElgPublicKey, err erro
 	}
 
 	copy(public_key[:], encKeyBytes)
-	log.Debug("Successfully retrieved publicKey from LeaseSet")
+	log.WithFields(logger.Fields{"pkg": "lease_set", "func": "LeaseSet.PublicKey"}).Debug("Successfully retrieved publicKey from LeaseSet")
 	return public_key, err
 }
 
 // SigningKey returns the signing public key as crypto.SigningPublicKey.
 // returns errors encountered during parsing.
 func (lease_set LeaseSet) SigningKey() (signing_public_key types.SigningPublicKey, err error) {
-	log.Debug("Retrieving SigningKey from LeaseSet")
+	log.WithFields(logger.Fields{"pkg": "lease_set", "func": "LeaseSet.SigningKey"}).Debug("Retrieving SigningKey from LeaseSet")
 	signing_public_key = lease_set.signingKey
-	log.Debug("Retrieved signingPublicKey from struct")
+	log.WithFields(logger.Fields{"pkg": "lease_set", "func": "LeaseSet.SigningKey"}).Debug("Retrieved signingPublicKey from struct")
 	return signing_public_key, err
 }
 
@@ -495,7 +497,7 @@ func (lease_set LeaseSet) Signature() sig.Signature {
 // and is verified against the signing public key from the Destination.
 // Returns nil if the signature is valid, or an error describing the verification failure.
 func (lease_set LeaseSet) Verify() error {
-	log.Debug("Verifying LeaseSet signature")
+	log.WithFields(logger.Fields{"pkg": "lease_set", "func": "LeaseSet.Verify"}).Debug("Verifying LeaseSet signature")
 
 	// Get the full serialized bytes (includes signature at the end)
 	fullBytes, err := lease_set.Bytes()
@@ -541,7 +543,7 @@ func (lease_set LeaseSet) Hash() ([32]byte, error) {
 // comparison function isBetter, reducing duplication between
 // NewestExpiration and OldestExpiration.
 func (lease_set LeaseSet) findExpiration(label string, isBetter func(candidate, current time.Time) bool) (data.Date, error) {
-	log.Debug("Finding " + label + " expiration in LeaseSet")
+	log.WithFields(logger.Fields{"pkg": "lease_set", "func": "LeaseSet.findExpiration"}).Debug("Finding " + label + " expiration in LeaseSet")
 	leases := lease_set.leases
 	if len(leases) == 0 {
 		return data.Date{}, ErrNoLeases
@@ -553,7 +555,7 @@ func (lease_set LeaseSet) findExpiration(label string, isBetter func(candidate, 
 			result = date
 		}
 	}
-	log.WithField(label+"_expiration", result.Time()).Debug("Found " + label + " expiration in LeaseSet")
+	log.WithFields(logger.Fields{"pkg": "lease_set", "func": "LeaseSet.findExpiration"}).WithField(label+"_expiration", result.Time()).Debug("Found " + label + " expiration in LeaseSet")
 	return result, nil
 }
 

@@ -15,8 +15,6 @@ import (
 	"github.com/samber/oops"
 )
 
-var log = logger.GetGoI2PLogger()
-
 // ApplyCommonFields stores the parsed common header fields into the MetaLeaseSet,
 // satisfying the rootcommon.LeaseSetFieldApplier interface to eliminate
 // duplicated field assignment code shared with LeaseSet2.
@@ -53,7 +51,7 @@ func (mls *MetaLeaseSet) ApplyCommonFields(fields rootcommon.LeaseSetCommonField
 //
 // https://geti2p.net/spec/common-structures#metaleaseset
 func ReadMetaLeaseSet(data []byte) (mls MetaLeaseSet, remainder []byte, err error) {
-	log.Debug("Parsing MetaLeaseSet structure")
+	log.WithFields(logger.Fields{"pkg": "meta_leaseset", "func": "ReadMetaLeaseSet"}).Debug("Parsing MetaLeaseSet structure")
 
 	// Parse and apply common header fields shared with LeaseSet2
 	data, err = rootcommon.ParseAndApplyCommonPrefix(&mls, data, META_LEASESET_MIN_SIZE, "MetaLeaseSet")
@@ -62,6 +60,8 @@ func ReadMetaLeaseSet(data []byte) (mls MetaLeaseSet, remainder []byte, err erro
 	}
 
 	log.WithFields(logger.Fields{
+		"pkg":       "meta_leaseset",
+		"func":      "ReadMetaLeaseSet",
 		"published": mls.published,
 		"expires":   mls.expires,
 		"flags":     mls.flags,
@@ -96,7 +96,9 @@ func parseEntries(mls *MetaLeaseSet, data []byte) ([]byte, error) {
 			Code("missing_entry_count").
 			Errorf("insufficient data for entry count")
 		log.WithFields(logger.Fields{
-			"at": "parseEntries",
+			"pkg":  "meta_leaseset",
+			"func": "parseEntries",
+			"at":   "parseEntries",
 		}).Error(err.Error())
 		return nil, err
 	}
@@ -120,6 +122,8 @@ func parseEntries(mls *MetaLeaseSet, data []byte) ([]byte, error) {
 	}
 
 	log.WithFields(logger.Fields{
+		"pkg":         "meta_leaseset",
+		"func":        "parseEntries",
 		"num_entries": numEntries,
 	}).Debug("Parsed all MetaLeaseSet entries")
 
@@ -137,6 +141,8 @@ func validateEntryCount(numEntries int) error {
 			With("max_allowed", META_LEASESET_MAX_ENTRIES).
 			Errorf("invalid entry count: %d (must be %d-%d)", numEntries, META_LEASESET_MIN_ENTRIES, META_LEASESET_MAX_ENTRIES)
 		log.WithFields(logger.Fields{
+			"pkg":         "meta_leaseset",
+			"func":        "validateEntryCount",
 			"at":          "validateEntryCount",
 			"num_entries": numEntries,
 		}).Error(err.Error())
@@ -175,6 +181,8 @@ func validateEntryMinSize(entryIndex, dataLen int) error {
 			With("minimum_required", META_LEASESET_ENTRY_SIZE).
 			Errorf("insufficient data for entry %d", entryIndex)
 		log.WithFields(logger.Fields{
+			"pkg":         "meta_leaseset",
+			"func":        "validateEntryMinSize",
 			"at":          "parseSingleEntry",
 			"entry_index": entryIndex,
 		}).Error(err.Error())
@@ -205,6 +213,8 @@ func parseEntryFixedFields(entry *MetaLeaseSetEntry, data []byte) []byte {
 // logParsedEntry logs diagnostic details after successfully parsing a MetaLeaseSet entry.
 func logParsedEntry(entryIndex int, entry *MetaLeaseSetEntry) {
 	log.WithFields(logger.Fields{
+		"pkg":         "meta_leaseset",
+		"func":        "logParsedEntry",
 		"entry_index": entryIndex,
 		"type":        entry.Type(),
 		"cost":        entry.cost,
@@ -229,6 +239,8 @@ func validateEntryType(leaseType uint8, entryIndex int) error {
 		// Returning an error here would break parsing of MetaLeaseSets
 		// produced by implementations that use future reserved type values.
 		log.WithFields(logger.Fields{
+			"pkg":         "meta_leaseset",
+			"func":        "validateEntryType",
 			"at":          "validateEntryType",
 			"entry_index": entryIndex,
 			"lease_type":  leaseType,
@@ -251,6 +263,8 @@ func parseSignatureAndFinalize(mls *MetaLeaseSet, data []byte) ([]byte, error) {
 	mls.signature = signature
 
 	log.WithFields(logger.Fields{
+		"pkg":              "meta_leaseset",
+		"func":             "parseSignatureAndFinalize",
 		"num_entries":      mls.numEntries,
 		"has_offline_keys": mls.HasOfflineKeys(),
 		"is_unpublished":   mls.IsUnpublished(),
@@ -451,6 +465,8 @@ func (mls *MetaLeaseSet) Bytes() ([]byte, error) {
 	result = append(result, mls.signature.Bytes()...)
 
 	log.WithFields(logger.Fields{
+		"pkg":             "meta_leaseset",
+		"func":            "MetaLeaseSet.Bytes",
 		"total_size":      len(result),
 		"num_entries":     mls.numEntries,
 		"has_offline_sig": mls.offlineSignature != nil,

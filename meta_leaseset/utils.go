@@ -22,7 +22,9 @@ func parseRevocations(mls *MetaLeaseSet, data []byte) ([]byte, error) {
 			Code("missing_revocation_count").
 			Errorf("insufficient data for revocation count")
 		log.WithFields(logger.Fields{
-			"at": "parseRevocations",
+			"pkg":  "meta_leaseset",
+			"func": "parseRevocations",
+			"at":   "parseRevocations",
 		}).Error(err.Error())
 		return nil, err
 	}
@@ -41,6 +43,8 @@ func parseRevocations(mls *MetaLeaseSet, data []byte) ([]byte, error) {
 			With("required_bytes", requiredBytes).
 			Errorf("insufficient data for %d revocation hashes", numRevocations)
 		log.WithFields(logger.Fields{
+			"pkg":              "meta_leaseset",
+			"func":             "parseRevocations",
 			"at":               "parseRevocations",
 			"num_revocations":  numRevocations,
 			"remaining_length": len(data),
@@ -55,6 +59,8 @@ func parseRevocations(mls *MetaLeaseSet, data []byte) ([]byte, error) {
 	}
 
 	log.WithFields(logger.Fields{
+		"pkg":             "meta_leaseset",
+		"func":            "parseRevocations",
 		"num_revocations": numRevocations,
 	}).Debug("Parsed MetaLeaseSet revocations")
 

@@ -30,7 +30,7 @@ func NewMetaLeaseSet(
 	revocations [][32]byte,
 	signingKey interface{},
 ) (MetaLeaseSet, error) {
-	log.Debug("Creating new MetaLeaseSet")
+	log.WithFields(logger.Fields{"pkg": "meta_leaseset", "func": "NewMetaLeaseSet"}).Debug("Creating new MetaLeaseSet")
 
 	if err := validateAllMetaLeaseSetInputs(dest, flags, offlineSig, options, entries); err != nil {
 		return MetaLeaseSet{}, err
@@ -98,6 +98,8 @@ func assembleMetaLeaseSet(
 // logMetaLeaseSetCreation logs the successful creation of a MetaLeaseSet.
 func logMetaLeaseSetCreation(mls MetaLeaseSet) {
 	log.WithFields(logger.Fields{
+		"pkg":              "meta_leaseset",
+		"func":             "logMetaLeaseSetCreation",
 		"num_entries":      len(mls.entries),
 		"num_revocations":  len(mls.revocations),
 		"has_offline_keys": mls.HasOfflineKeys(),
