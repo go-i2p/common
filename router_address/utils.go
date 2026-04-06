@@ -159,7 +159,7 @@ func parseTransportOptions(ra *RouterAddress, routerData []byte) ([]byte, error)
 				"at":     "(RouterAddress) parseTransportOptions",
 				"reason": "error parsing options",
 				"error":  mappingErr,
-			}).Warn("non-fatal warning parsing RouterAddress options")
+			}).Debug("non-fatal warning parsing RouterAddress options")
 		}
 		if transportOptions == nil {
 			return remainder, oops.Errorf("error parsing RouterAddress options: %v", errs[0])

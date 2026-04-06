@@ -930,12 +930,13 @@ func logCriticalMappingErrors(remainder []byte, errs []error) {
 	}).Error("error parsing router info")
 }
 
-// logMappingWarnings logs warnings about extra data beyond mapping length.
+// logMappingWarnings logs debug info about extra data beyond mapping length.
+// This is normal when a mapping is embedded inside a larger structure.
 func logMappingWarnings() {
 	log.WithFields(logger.Fields{
 		"at":     "(RouterInfo) parsePeerSizeAndOptions",
 		"reason": "extra data beyond mapping length",
-	}).Warn("mapping format violation")
+	}).Debug("mapping format violation")
 }
 
 // parseRouterInfoSignature extracts signature type from certificate and reads the signature.

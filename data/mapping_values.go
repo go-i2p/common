@@ -369,12 +369,13 @@ func validateMappingLength(remainder []byte, map_length Integer) []error {
 	mapping_len := len(remainder)
 
 	if mapping_len > int_map_length {
+		// Extra data is normal for embedded mappings; the surplus is the rest of the parent structure.
 		log.WithFields(logger.Fields{
 			"at":                   "(Mapping) Values",
 			"mapping_bytes_length": mapping_len,
 			"mapping_length_field": int_map_length,
 			"reason":               "data longer than expected",
-		}).Warn("mapping format warning")
+		}).Debug("mapping format warning")
 		errs = append(errs, oops.Errorf("warning parsing mapping: data exists beyond length of mapping"))
 	} else if int_map_length > mapping_len {
 		log.WithFields(logger.Fields{

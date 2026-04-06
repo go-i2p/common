@@ -314,12 +314,14 @@ func handleInsufficientData(mapping Mapping, remainder []byte, size *Integer, er
 
 // processNormalMappingData handles the standard case where sufficient data is available.
 func processNormalMappingData(mapping Mapping, remainder []byte, size *Integer, err []error) (Mapping, []byte, []error) {
-	// Warn if there is extra data beyond the declared mapping size
+	// Extra data beyond the declared mapping size is normal when a mapping is embedded
+	// inside a larger structure (RouterAddress options, RouterInfo options, etc.).
+	// The surplus bytes are returned as remainder and handled by the caller.
 	if len(remainder) > size.Int() {
 		log.WithFields(logger.Fields{
 			"declared_size": size.Int(),
 			"actual_size":   len(remainder),
-		}).Warn("mapping contains data beyond declared length")
+		}).Debug("mapping contains data beyond declared length")
 		e := oops.Errorf("warning parsing mapping: data exists beyond length of mapping")
 		err = append(err, e)
 	}
