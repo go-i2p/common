@@ -1,6 +1,6 @@
 module github.com/go-i2p/common
 
-go 1.25.0
+go 1.26.1
 
 require (
 	github.com/go-i2p/crypto v0.1.4-0.20260327201310-96101c044a62
@@ -8,7 +8,7 @@ require (
 	github.com/go-i2p/red25519 v0.0.0-20260302212615-1093a31f680d
 	github.com/samber/oops v1.21.0
 	github.com/stretchr/testify v1.11.1
-	go.step.sm/crypto v0.76.0
+	go.step.sm/crypto v0.77.2
 	golang.org/x/crypto v0.49.0
 )
 
