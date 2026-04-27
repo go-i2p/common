@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // =========================================================================
@@ -43,6 +44,58 @@ func TestHasValidHost(t *testing.T) {
 			assert.Equal(tt.expected, result, "HasValidHost() returned unexpected result")
 		})
 	}
+}
+
+func TestHasRoutableHost(t *testing.T) {
+	tests := []struct {
+		name     string
+		options  map[string]string
+		expected bool
+	}{
+		{"missing host key", map[string]string{"port": "12345"}, false},
+		{"empty host", map[string]string{"host": "", "port": "12345"}, false},
+		{"valid hostname", map[string]string{"host": "router.example.i2p", "port": "12345"}, true},
+		{"valid IPv4 public", map[string]string{"host": "203.0.113.8", "port": "12345"}, true},
+		{"valid IPv6 global", map[string]string{"host": "2001:4860:4860::8888", "port": "12345"}, true},
+		{"unspecified IPv4", map[string]string{"host": "0.0.0.0", "port": "12345"}, false},
+		{"unspecified IPv6", map[string]string{"host": "::", "port": "12345"}, false},
+		{"loopback IPv4", map[string]string{"host": "127.0.0.1", "port": "12345"}, false},
+		{"loopback IPv6", map[string]string{"host": "::1", "port": "12345"}, false},
+		{"link-local IPv4", map[string]string{"host": "169.254.1.1", "port": "12345"}, false},
+		{"link-local IPv6", map[string]string{"host": "fe80::1", "port": "12345"}, false},
+		{"invalid hostname", map[string]string{"host": "not an ip", "port": "12345"}, false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ra, err := NewRouterAddress(3, time.Now().Add(1*time.Hour), "SSU", tt.options)
+			require.NoError(t, err)
+			assert.Equal(t, tt.expected, ra.HasRoutableHost())
+		})
+	}
+}
+
+func TestValidatePublishable(t *testing.T) {
+	t.Run("allows omitted host for introducer-style address", func(t *testing.T) {
+		ra, err := NewRouterAddress(3, time.Now().Add(1*time.Hour), "SSU2", map[string]string{"port": "12345"})
+		require.NoError(t, err)
+		assert.NoError(t, ra.ValidatePublishable())
+	})
+
+	t.Run("rejects unroutable host", func(t *testing.T) {
+		ra, err := NewRouterAddress(3, time.Now().Add(1*time.Hour), "NTCP2", map[string]string{"host": "::", "port": "12345"})
+		require.NoError(t, err)
+		err = ra.ValidatePublishable()
+		require.Error(t, err)
+		assert.ErrorIs(t, err, ErrUnroutableHost)
+		assert.Contains(t, err.Error(), `"::"`)
+	})
+
+	t.Run("allows routable hostname", func(t *testing.T) {
+		ra, err := NewRouterAddress(3, time.Now().Add(1*time.Hour), "NTCP2", map[string]string{"host": "router.example.i2p", "port": "12345"})
+		require.NoError(t, err)
+		assert.NoError(t, ra.ValidatePublishable())
+	})
 }
 
 // =========================================================================

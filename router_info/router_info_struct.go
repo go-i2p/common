@@ -480,10 +480,14 @@ func (router_info RouterInfo) Network() string {
 }
 
 // AddAddress adds a RouterAddress to this RouterInfo and updates the size field.
-// Returns an error if address is nil or if the address count would exceed 255 (max for 1-byte Integer).
+// Returns an error if address is nil, if the address is not publishable, or if
+// the address count would exceed 255 (max for 1-byte Integer).
 func (router_info *RouterInfo) AddAddress(address *router_address.RouterAddress) error {
 	if address == nil {
 		return oops.Errorf("cannot add nil address")
+	}
+	if err := address.ValidatePublishable(); err != nil {
+		return oops.Wrapf(err, "refusing to add unpublishable address")
 	}
 	newCount := len(router_info.addresses) + 1
 	newSize, err := data.NewIntegerFromInt(newCount, 1)

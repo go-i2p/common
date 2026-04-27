@@ -112,6 +112,22 @@ func (ri *RouterInfo) Validate() error {
 	return validateAddressesAndOptions(ri)
 }
 
+// ValidatePublishable extends Validate with per-address publishability checks.
+func (ri *RouterInfo) ValidatePublishable() error {
+	if err := ri.Validate(); err != nil {
+		return err
+	}
+	for i, addr := range ri.RouterAddresses() {
+		if addr == nil {
+			return oops.Errorf("address %d is nil", i)
+		}
+		if err := addr.ValidatePublishable(); err != nil {
+			return oops.Wrapf(err, "address %d is not publishable", i)
+		}
+	}
+	return nil
+}
+
 // validateRouterIdentity validates the router identity is present and valid.
 func validateRouterIdentity(ri *RouterInfo) error {
 	if ri.router_identity == nil {

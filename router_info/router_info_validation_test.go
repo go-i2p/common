@@ -555,3 +555,39 @@ func TestValidateRejectsSizeMismatch(t *testing.T) {
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "size mismatch")
 }
+
+func TestRouterInfoValidatePublishable(t *testing.T) {
+	t.Run("valid router info passes publishable validation", func(t *testing.T) {
+		ri, err := generateTestRouterInfo(t, time.Now())
+		require.NoError(t, err)
+		assert.NoError(t, ri.ValidatePublishable())
+	})
+
+	t.Run("rejects unroutable router address host", func(t *testing.T) {
+		keyPair := generateTestKeyPair(t)
+		routerIdentity := assembleTestRouterIdentity(t, keyPair)
+		publishedDate, err := createPublishedDate(time.Now())
+		require.NoError(t, err)
+		addr, err := router_address.NewRouterAddress(3, time.Now().Add(time.Hour), "NTCP2", map[string]string{"host": "0.0.0.0", "port": "12345"})
+		require.NoError(t, err)
+		sizeInt, peerSizeInt, err := createSizeIntegers([]*router_address.RouterAddress{addr})
+		require.NoError(t, err)
+		options, err := data.GoMapToMapping(map[string]string{"router.version": "0.9.64"})
+		require.NoError(t, err)
+
+		ri := &RouterInfo{
+			router_identity: routerIdentity,
+			published:       publishedDate,
+			size:            sizeInt,
+			addresses:       []*router_address.RouterAddress{addr},
+			peer_size:       peerSizeInt,
+			options:         options,
+			signature:       &signature.Signature{},
+		}
+
+		err = ri.ValidatePublishable()
+		require.Error(t, err)
+		assert.ErrorIs(t, err, router_address.ErrUnroutableHost)
+		assert.Contains(t, err.Error(), "address 0 is not publishable")
+	})
+}

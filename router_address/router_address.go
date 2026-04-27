@@ -86,6 +86,23 @@ func (ra *RouterAddress) Validate() error {
 	return nil
 }
 
+// ValidatePublishable performs semantic validation on top of Validate.
+// It rejects addresses that are structurally valid but would be refused by
+// remote peers due to an unroutable host IP.
+func (ra *RouterAddress) ValidatePublishable() error {
+	if err := ra.Validate(); err != nil {
+		return err
+	}
+	if ra.CheckOption(HOST_OPTION_KEY) && !ra.HasRoutableHost() {
+		host := ""
+		if hs := ra.HostString(); hs != nil {
+			host, _ = hs.Data()
+		}
+		return oops.Errorf("%w: %q", ErrUnroutableHost, host)
+	}
+	return nil
+}
+
 // validateRouterAddressFields checks that all required RouterAddress fields
 // are non-nil and non-empty.
 func validateRouterAddressFields(ra *RouterAddress) error {

@@ -36,6 +36,10 @@ var (
 	// ErrInvalidHost is returned when the host option is not a valid IP address.
 	ErrInvalidHost = errors.New("invalid host IP address")
 
+	// ErrUnroutableHost is returned when the host option contains a parseable but
+	// non-routable IP address such as an unspecified, loopback, or link-local address.
+	ErrUnroutableHost = errors.New("host address is not routable")
+
 	// ErrMissingPort is returned when the port option is missing.
 	ErrMissingPort = errors.New("missing required 'port' option")
 

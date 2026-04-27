@@ -472,6 +472,29 @@ func (ra RouterAddress) HasValidHost() bool {
 	return net.ParseIP(hostBytes) != nil || isValidHostFormat(hostBytes)
 }
 
+// HasRoutableHost returns true when the host option is present and contains
+// either a syntactically valid hostname or an IP literal that is not
+// unspecified, loopback, or link-local.
+func (ra RouterAddress) HasRoutableHost() bool {
+	host := ra.HostString()
+	if host == nil {
+		return false
+	}
+
+	hostBytes, err := host.Data()
+	if err != nil || len(hostBytes) == 0 {
+		return false
+	}
+
+	ip := net.ParseIP(hostBytes)
+	if ip == nil {
+		return isValidHostFormat(hostBytes)
+	}
+
+	return !ip.IsUnspecified() && !ip.IsLoopback() &&
+		!ip.IsLinkLocalUnicast() && !ip.IsLinkLocalMulticast()
+}
+
 // HasValidPort checks if the RouterAddress has a valid and usable port option.
 // This is useful for defensive programming to skip invalid addresses gracefully.
 // Returns true if the port option exists, is non-empty, is a valid number, and is in range 1-65535.

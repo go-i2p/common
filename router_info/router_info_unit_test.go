@@ -356,6 +356,22 @@ func TestAddAddressUpdatesSize(t *testing.T) {
 	assert.Nil(t, ri.signature, "signature should be nil after AddAddress mutation")
 }
 
+func TestAddAddressRejectsUnpublishableHost(t *testing.T) {
+	ri, err := generateTestRouterInfo(t, time.Now())
+	require.NoError(t, err)
+	originalCount := len(ri.addresses)
+
+	addr, err := router_address.NewRouterAddress(3, time.Now().Add(time.Hour), "SSU2", map[string]string{"host": "::", "port": "12345"})
+	require.NoError(t, err)
+
+	err = ri.AddAddress(addr)
+	require.Error(t, err)
+	assert.ErrorIs(t, err, router_address.ErrUnroutableHost)
+	assert.Contains(t, err.Error(), "refusing to add unpublishable address")
+	assert.Len(t, ri.addresses, originalCount)
+	assert.NotNil(t, ri.signature, "signature should remain intact when AddAddress fails")
+}
+
 //
 // Signature type validation
 //
