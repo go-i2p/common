@@ -86,7 +86,8 @@ func deriveLayerKey(salt, ikm []byte, info string) ([32]byte, [12]byte, error) {
 	keyMaterial := make([]byte, 44)
 	if _, err := io.ReadFull(hkdfReader, keyMaterial); err != nil {
 		return [32]byte{}, [12]byte{}, oops.Errorf(
-			"HKDF key derivation failed: %w", err)
+			"HKDF key derivation failed: %w", err,
+		)
 	}
 	var key [32]byte
 	var iv [12]byte
@@ -131,7 +132,8 @@ func (els *EncryptedLeaseSet) DecryptInnerData(subcredential [32]byte) (*lease_s
 	}).Debug("Decrypting EncryptedLeaseSet inner data")
 
 	plaintext, err := decryptTwoLayers(
-		els.encryptedInnerData, subcredential, els.published)
+		els.encryptedInnerData, subcredential, els.published,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -177,13 +179,15 @@ func parseAndDecryptLayer2(layer1PT, ikm []byte) ([]byte, error) {
 	if authType != ENCRYPTED_LEASESET_AUTH_TYPE_NONE {
 		return nil, oops.Errorf(
 			"per-client auth type %d not implemented (only type 0 supported)",
-			authType)
+			authType,
+		)
 	}
 
 	if len(remaining) < ENCRYPTED_LEASESET_INNER_SALT_SIZE {
 		return nil, oops.Errorf(
 			"Layer 1 plaintext too short for inner salt: got %d, need %d",
-			len(remaining), ENCRYPTED_LEASESET_INNER_SALT_SIZE)
+			len(remaining), ENCRYPTED_LEASESET_INNER_SALT_SIZE,
+		)
 	}
 	innerSalt := remaining[:ENCRYPTED_LEASESET_INNER_SALT_SIZE]
 	layer2CT := remaining[ENCRYPTED_LEASESET_INNER_SALT_SIZE:]

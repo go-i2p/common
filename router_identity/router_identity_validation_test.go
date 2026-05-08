@@ -16,7 +16,8 @@ import (
 // TestDisallowedSigningKeyTypes verifies that disallowed signing types are rejected
 func TestDisallowedSigningKeyTypes(t *testing.T) {
 	t.Run("RedDSA via ReadRouterIdentity", func(t *testing.T) {
-		wireData := buildRouterIdentityBytes(t,
+		wireData := buildRouterIdentityBytes(
+			t,
 			key_certificate.KEYCERT_SIGN_REDDSA_ED25519,
 			key_certificate.KEYCERT_CRYPTO_X25519,
 		)
@@ -27,7 +28,8 @@ func TestDisallowedSigningKeyTypes(t *testing.T) {
 	})
 
 	t.Run("RedDSA via NewRouterIdentityFromKeysAndCert", func(t *testing.T) {
-		kac := buildKeysAndCertForTypes(t,
+		kac := buildKeysAndCertForTypes(
+			t,
 			key_certificate.KEYCERT_SIGN_REDDSA_ED25519,
 			key_certificate.KEYCERT_CRYPTO_X25519,
 		)
@@ -38,7 +40,8 @@ func TestDisallowedSigningKeyTypes(t *testing.T) {
 	})
 
 	t.Run("RSA-2048 via NewRouterIdentityFromKeysAndCert", func(t *testing.T) {
-		kac := buildKeysAndCertForTypes(t,
+		kac := buildKeysAndCertForTypes(
+			t,
 			key_certificate.KEYCERT_SIGN_RSA2048,
 			key_certificate.KEYCERT_CRYPTO_X25519,
 		)
@@ -65,7 +68,8 @@ func TestDisallowedSigningKeyTypes(t *testing.T) {
 	})
 
 	t.Run("Ed25519ph via ReadRouterIdentity", func(t *testing.T) {
-		wireData := buildRouterIdentityBytes(t,
+		wireData := buildRouterIdentityBytes(
+			t,
 			key_certificate.KEYCERT_SIGN_ED25519PH,
 			key_certificate.KEYCERT_CRYPTO_X25519,
 		)
@@ -76,7 +80,8 @@ func TestDisallowedSigningKeyTypes(t *testing.T) {
 	})
 
 	t.Run("Ed25519ph via NewRouterIdentityFromKeysAndCert", func(t *testing.T) {
-		kac := buildKeysAndCertForTypes(t,
+		kac := buildKeysAndCertForTypes(
+			t,
 			key_certificate.KEYCERT_SIGN_ED25519PH,
 			key_certificate.KEYCERT_CRYPTO_X25519,
 		)
@@ -88,7 +93,8 @@ func TestDisallowedSigningKeyTypes(t *testing.T) {
 
 	t.Run("Ed25519ph direct validation", func(t *testing.T) {
 		err := validateRouterIdentityKeyTypes(
-			buildMinimalKacWithTypes(t,
+			buildMinimalKacWithTypes(
+				t,
 				key_certificate.KEYCERT_SIGN_ED25519PH,
 				key_certificate.KEYCERT_CRYPTO_X25519,
 			),
@@ -149,7 +155,8 @@ func TestValidateRejectsNilKeyCertificate(t *testing.T) {
 // RouterIdentity-specific key type restrictions, not just KeysAndCert validity.
 func TestValidate_RejectsProhibitedKeyTypes(t *testing.T) {
 	t.Run("RedDSA signing type rejected by Validate", func(t *testing.T) {
-		kac := buildKeysAndCertForTypes(t,
+		kac := buildKeysAndCertForTypes(
+			t,
 			key_certificate.KEYCERT_SIGN_REDDSA_ED25519,
 			key_certificate.KEYCERT_CRYPTO_X25519,
 		)
@@ -161,7 +168,8 @@ func TestValidate_RejectsProhibitedKeyTypes(t *testing.T) {
 	})
 
 	t.Run("Ed25519ph signing type rejected by Validate", func(t *testing.T) {
-		kac := buildKeysAndCertForTypes(t,
+		kac := buildKeysAndCertForTypes(
+			t,
 			key_certificate.KEYCERT_SIGN_ED25519PH,
 			key_certificate.KEYCERT_CRYPTO_X25519,
 		)
@@ -173,7 +181,8 @@ func TestValidate_RejectsProhibitedKeyTypes(t *testing.T) {
 	})
 
 	t.Run("RSA-2048 signing type rejected by Validate", func(t *testing.T) {
-		kac := buildKeysAndCertForTypes(t,
+		kac := buildKeysAndCertForTypes(
+			t,
 			key_certificate.KEYCERT_SIGN_RSA2048,
 			key_certificate.KEYCERT_CRYPTO_X25519,
 		)
@@ -187,7 +196,8 @@ func TestValidate_RejectsProhibitedKeyTypes(t *testing.T) {
 	t.Run("MLKEM512_X25519 crypto type rejected by Validate", func(t *testing.T) {
 		// Use buildKeysAndCertForTypes so padding is computed correctly (384-32-32=320)
 		// and kac.Validate() passes; Validate() must then reject on type grounds.
-		kac := buildKeysAndCertForTypes(t,
+		kac := buildKeysAndCertForTypes(
+			t,
 			key_certificate.KEYCERT_SIGN_ED25519,
 			key_certificate.KEYCERT_CRYPTO_MLKEM512_X25519,
 		)
@@ -199,7 +209,8 @@ func TestValidate_RejectsProhibitedKeyTypes(t *testing.T) {
 	})
 
 	t.Run("Ed25519/X25519 accepted by Validate", func(t *testing.T) {
-		kac := buildKeysAndCertForTypes(t,
+		kac := buildKeysAndCertForTypes(
+			t,
 			key_certificate.KEYCERT_SIGN_ED25519,
 			key_certificate.KEYCERT_CRYPTO_X25519,
 		)
@@ -218,7 +229,8 @@ func TestValidate_RejectsProhibitedKeyTypes(t *testing.T) {
 	})
 
 	t.Run("IsValid reflects Validate key type enforcement", func(t *testing.T) {
-		kac := buildKeysAndCertForTypes(t,
+		kac := buildKeysAndCertForTypes(
+			t,
 			key_certificate.KEYCERT_SIGN_REDDSA_ED25519,
 			key_certificate.KEYCERT_CRYPTO_X25519,
 		)
@@ -231,7 +243,8 @@ func TestValidate_RejectsProhibitedKeyTypes(t *testing.T) {
 // returns a Destination that can be validated by the Destination's own Validate().
 func TestAsDestination_DestinationKeyTypeValidation(t *testing.T) {
 	t.Run("Ed25519/X25519 passes Destination validation", func(t *testing.T) {
-		kac := buildKeysAndCertForTypes(t,
+		kac := buildKeysAndCertForTypes(
+			t,
 			key_certificate.KEYCERT_SIGN_ED25519,
 			key_certificate.KEYCERT_CRYPTO_X25519,
 		)

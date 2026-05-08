@@ -10,7 +10,8 @@ import (
 
 // FuzzNewRouterIdentityFromKeysAndCert fuzzes the constructor via KeysAndCert
 func FuzzNewRouterIdentityFromKeysAndCert(f *testing.F) {
-	seed := buildRouterIdentityBytes(f,
+	seed := buildRouterIdentityBytes(
+		f,
 		key_certificate.KEYCERT_SIGN_ED25519,
 		key_certificate.KEYCERT_CRYPTO_X25519,
 	)
@@ -32,7 +33,8 @@ func FuzzNewRouterIdentityFromKeysAndCert(f *testing.F) {
 
 // FuzzNewRouterIdentityFromBytes fuzzes the byte parser
 func FuzzNewRouterIdentityFromBytes(f *testing.F) {
-	seed := buildRouterIdentityBytes(f,
+	seed := buildRouterIdentityBytes(
+		f,
 		key_certificate.KEYCERT_SIGN_ED25519,
 		key_certificate.KEYCERT_CRYPTO_X25519,
 	)
@@ -59,7 +61,8 @@ func FuzzNewRouterIdentityFromBytes(f *testing.F) {
 // FuzzReadRouterIdentity fuzzes the wire-format parser directly.
 func FuzzReadRouterIdentity(f *testing.F) {
 	// Valid Ed25519/X25519 seed
-	seed := buildRouterIdentityBytes(f,
+	seed := buildRouterIdentityBytes(
+		f,
 		key_certificate.KEYCERT_SIGN_ED25519,
 		key_certificate.KEYCERT_CRYPTO_X25519,
 	)

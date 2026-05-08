@@ -194,7 +194,8 @@ func ResolveSigningPublicKey(
 		transientKeyBytes := offlineSig.TransientPublicKey()
 		transientSigType := offlineSig.TransientSigType()
 		spk, err := key_certificate.ConstructSigningPublicKeyByType(
-			transientKeyBytes, int(transientSigType))
+			transientKeyBytes, int(transientSigType),
+		)
 		if err != nil {
 			return nil, oops.Errorf("failed to construct transient signing public key: %w", err)
 		}

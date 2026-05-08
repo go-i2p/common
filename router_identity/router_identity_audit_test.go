@@ -21,7 +21,8 @@ import (
 // built through the normal helpers can be constructed, serialized, and
 // re-parsed without error.
 func TestRouterIdentityP521Parseable(t *testing.T) {
-	kac := buildKeysAndCertForTypes(t,
+	kac := buildKeysAndCertForTypes(
+		t,
 		key_certificate.KEYCERT_SIGN_P521,
 		key_certificate.KEYCERT_CRYPTO_X25519,
 	)
@@ -42,7 +43,8 @@ func TestRouterIdentityP521Parseable(t *testing.T) {
 
 // TestRouterIdentityP521NotDisallowed confirms P521 is not in disallowedSigningKeyTypes.
 func TestRouterIdentityP521NotDisallowed(t *testing.T) {
-	kac := buildMinimalKacWithTypes(t,
+	kac := buildMinimalKacWithTypes(
+		t,
 		key_certificate.KEYCERT_SIGN_P521,
 		key_certificate.KEYCERT_CRYPTO_X25519,
 	)
@@ -179,7 +181,8 @@ func TestDefensiveCopyKeysInterface(t *testing.T) {
 		// implementations, the interface value copy shares the underlying array.
 		// Production code only uses array-backed key types so this is not exploitable
 		// in practice, but callers using mockPublicKey must be aware.
-		kac := buildKeysAndCertForTypes(t,
+		kac := buildKeysAndCertForTypes(
+			t,
 			key_certificate.KEYCERT_SIGN_ED25519,
 			key_certificate.KEYCERT_CRYPTO_X25519,
 		)

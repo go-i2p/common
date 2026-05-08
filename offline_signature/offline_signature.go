@@ -370,7 +370,8 @@ func (o *OfflineSignature) String() string {
 		expired = " [EXPIRED]"
 	}
 
-	return fmt.Sprintf("OfflineSignature{expires: %d (%s)%s, transient_sigtype: %d, transient_key_len: %d, signature_len: %d, dest_sigtype: %d}",
+	return fmt.Sprintf(
+		"OfflineSignature{expires: %d (%s)%s, transient_sigtype: %d, transient_key_len: %d, signature_len: %d, dest_sigtype: %d}",
 		o.expires,
 		expiresTime.Format(time.RFC3339),
 		expired,
@@ -709,7 +710,8 @@ func signWithDestinationType(destSigType uint16, signer crypto.Signer, message [
 	case signature.SIGNATURE_TYPE_REDDSA_SHA512_ED25519:
 		return nil, errors.New(
 			"RedDSA signing (type 11) is not implemented: standard Ed25519 signatures " +
-				"are not spec-compliant for RedDSA; use a dedicated RedDSA library")
+				"are not spec-compliant for RedDSA; use a dedicated RedDSA library",
+		)
 	case signature.SIGNATURE_TYPE_EDDSA_SHA512_ED25519PH:
 		return ed25519phSign(signer, message)
 	case signature.SIGNATURE_TYPE_ECDSA_SHA256_P256:

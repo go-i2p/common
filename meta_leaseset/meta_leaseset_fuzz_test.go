@@ -20,7 +20,8 @@ func FuzzReadMetaLeaseSet(f *testing.F) {
 	// Seed corpus: well-formed minimal MetaLeaseSet with Ed25519 destination.
 	// Destination: 384 zeros + KEY cert (type=5, len=4, sigType=7, cryptoType=0) = 391 bytes
 	dest := make([]byte, 384)
-	dest = append(dest,
+	dest = append(
+		dest,
 		0x05,       // cert type = KEY
 		0x00, 0x04, // cert length = 4
 		0x00, 0x07, // sig type = Ed25519 (7)

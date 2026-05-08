@@ -40,7 +40,8 @@ func (els *EncryptedLeaseSet) signingPublicKeyForVerification() (types.SigningPu
 		transientKeyBytes := els.offlineSignature.TransientPublicKey()
 		transientSigType := els.offlineSignature.TransientSigType()
 		spk, err := key_certificate.ConstructSigningPublicKeyByType(
-			transientKeyBytes, int(transientSigType))
+			transientKeyBytes, int(transientSigType),
+		)
 		if err != nil {
 			return nil, oops.Errorf("failed to construct transient signing public key: %w", err)
 		}
@@ -49,7 +50,8 @@ func (els *EncryptedLeaseSet) signingPublicKeyForVerification() (types.SigningPu
 
 	// Construct from sigType + blindedPublicKey
 	spk, err := key_certificate.ConstructSigningPublicKeyByType(
-		els.blindedPublicKey, int(els.sigType))
+		els.blindedPublicKey, int(els.sigType),
+	)
 	if err != nil {
 		return nil, oops.Errorf("failed to construct blinded signing public key: %w", err)
 	}

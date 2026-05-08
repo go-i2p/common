@@ -213,7 +213,8 @@ func TestNewRouterIdentityWithCompressiblePadding(t *testing.T) {
 // TestReadRouterIdentity tests the wire-format parser
 func TestReadRouterIdentity(t *testing.T) {
 	t.Run("valid wire data parsed successfully", func(t *testing.T) {
-		wireData := buildRouterIdentityBytes(t,
+		wireData := buildRouterIdentityBytes(
+			t,
 			key_certificate.KEYCERT_SIGN_ED25519,
 			key_certificate.KEYCERT_CRYPTO_X25519,
 		)
@@ -393,14 +394,16 @@ func TestEqual(t *testing.T) {
 	})
 
 	t.Run("structurally different identities not equal", func(t *testing.T) {
-		data1 := buildRouterIdentityBytes(t,
+		data1 := buildRouterIdentityBytes(
+			t,
 			key_certificate.KEYCERT_SIGN_ED25519,
 			key_certificate.KEYCERT_CRYPTO_X25519,
 		)
 		ri1, _, err := ReadRouterIdentity(data1)
 		require.NoError(t, err)
 
-		data2 := buildRouterIdentityBytes(t,
+		data2 := buildRouterIdentityBytes(
+			t,
 			key_certificate.KEYCERT_SIGN_ED25519,
 			key_certificate.KEYCERT_CRYPTO_X25519,
 		)
@@ -412,7 +415,8 @@ func TestEqual(t *testing.T) {
 	})
 
 	t.Run("different key types not equal", func(t *testing.T) {
-		data1 := buildRouterIdentityBytes(t,
+		data1 := buildRouterIdentityBytes(
+			t,
 			key_certificate.KEYCERT_SIGN_ED25519,
 			key_certificate.KEYCERT_CRYPTO_X25519,
 		)
@@ -428,14 +432,16 @@ func TestEqual(t *testing.T) {
 	})
 
 	t.Run("symmetry", func(t *testing.T) {
-		data1 := buildRouterIdentityBytes(t,
+		data1 := buildRouterIdentityBytes(
+			t,
 			key_certificate.KEYCERT_SIGN_ED25519,
 			key_certificate.KEYCERT_CRYPTO_X25519,
 		)
 		ri1, _, err := ReadRouterIdentity(data1)
 		require.NoError(t, err)
 
-		data2 := buildRouterIdentityBytes(t,
+		data2 := buildRouterIdentityBytes(
+			t,
 			key_certificate.KEYCERT_SIGN_ED25519,
 			key_certificate.KEYCERT_CRYPTO_X25519,
 		)
@@ -447,7 +453,8 @@ func TestEqual(t *testing.T) {
 	})
 
 	t.Run("constant time with same bytes", func(t *testing.T) {
-		data := buildRouterIdentityBytes(t,
+		data := buildRouterIdentityBytes(
+			t,
 			key_certificate.KEYCERT_SIGN_ED25519,
 			key_certificate.KEYCERT_CRYPTO_X25519,
 		)
@@ -624,14 +631,16 @@ func TestHash(t *testing.T) {
 	})
 
 	t.Run("different identities produce different hashes", func(t *testing.T) {
-		data1 := buildRouterIdentityBytes(t,
+		data1 := buildRouterIdentityBytes(
+			t,
 			key_certificate.KEYCERT_SIGN_ED25519,
 			key_certificate.KEYCERT_CRYPTO_X25519,
 		)
 		ri1, _, err := ReadRouterIdentity(data1)
 		require.NoError(t, err)
 
-		data2 := buildRouterIdentityBytes(t,
+		data2 := buildRouterIdentityBytes(
+			t,
 			key_certificate.KEYCERT_SIGN_ED25519,
 			key_certificate.KEYCERT_CRYPTO_X25519,
 		)
@@ -711,7 +720,8 @@ func TestNewRouterIdentityWithCompressiblePadding_NilCertificate(t *testing.T) {
 	_, _ = rand.Read(sigKey)
 
 	ri, err := NewRouterIdentityWithCompressiblePadding(
-		mockPublicKey(pubKey), mockSigningPublicKey(sigKey), nil)
+		mockPublicKey(pubKey), mockSigningPublicKey(sigKey), nil,
+	)
 	require.Error(t, err, "nil certificate must be rejected")
 	assert.Nil(t, ri)
 }
@@ -747,7 +757,8 @@ func TestNewRouterIdentityWithCompressiblePadding_ErrorPaths(t *testing.T) {
 		sigKey := make([]byte, 128)
 
 		ri, err := NewRouterIdentityWithCompressiblePadding(
-			mockPublicKey(pubKey), mockSigningPublicKey(sigKey), nullCert)
+			mockPublicKey(pubKey), mockSigningPublicKey(sigKey), nullCert,
+		)
 		if err != nil {
 			assert.Nil(t, ri)
 		}
@@ -759,7 +770,8 @@ func TestNewRouterIdentityWithCompressiblePadding_ErrorPaths(t *testing.T) {
 // the original RouterIdentity. This exercises the deep copy of slice backing
 // arrays inside the KeyCertificate.
 func TestAsDestination_CertificatePayloadIsolation(t *testing.T) {
-	kac := buildKeysAndCertForTypes(t,
+	kac := buildKeysAndCertForTypes(
+		t,
 		key_certificate.KEYCERT_SIGN_ED25519,
 		key_certificate.KEYCERT_CRYPTO_X25519,
 	)
@@ -841,7 +853,8 @@ func TestUnmarshalBinary(t *testing.T) {
 	})
 
 	t.Run("round trip with Ed25519/X25519", func(t *testing.T) {
-		wireData := buildRouterIdentityBytes(t,
+		wireData := buildRouterIdentityBytes(
+			t,
 			key_certificate.KEYCERT_SIGN_ED25519,
 			key_certificate.KEYCERT_CRYPTO_X25519,
 		)

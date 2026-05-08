@@ -164,7 +164,8 @@ func validateDestinationCryptoType(kac *keys_and_cert.KeysAndCert) error {
 		key_certificate.KEYCERT_CRYPTO_P384,
 		key_certificate.KEYCERT_CRYPTO_P521:
 		log.WithFields(logger.Fields{"pkg": "destination", "func": "validateDestinationCryptoType", "crypto_type": cryptoType}).Warn(
-			"ECDH crypto type is reserved (proposal 145) and not yet finalized in the I2P spec")
+			"ECDH crypto type is reserved (proposal 145) and not yet finalized in the I2P spec",
+		)
 	}
 	return nil
 }

@@ -552,7 +552,8 @@ func TestReadKeysAndCertElgAndEd25519_NullCertInput(t *testing.T) {
 
 func TestBuildKeysAndCertBlockNilPadding(t *testing.T) {
 	t.Run("nil padding produces zero-filled padding region", func(t *testing.T) {
-		keyCert := buildTestKeyCert(t,
+		keyCert := buildTestKeyCert(
+			t,
 			key_certificate.KEYCERT_SIGN_ED25519,
 			key_certificate.KEYCERT_CRYPTO_X25519,
 		)
