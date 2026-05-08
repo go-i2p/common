@@ -2,6 +2,7 @@ package encrypted_leaseset
 
 import (
 	"crypto/sha256"
+	"encoding/binary"
 	"testing"
 	"time"
 
@@ -107,8 +108,9 @@ func TestDeriveSubcredentialDeterministic(t *testing.T) {
 	_, _ = rand.Read(destPub)
 	_, _ = rand.Read(blindedPub)
 
-	sc1 := DeriveSubcredential(destPub, blindedPub)
-	sc2 := DeriveSubcredential(destPub, blindedPub)
+	// Ed25519 unblinded (7) → RedDSA blinded (11)
+	sc1 := DeriveSubcredential(destPub, 7, blindedPub, 11)
+	sc2 := DeriveSubcredential(destPub, 7, blindedPub, 11)
 	assert.Equal(t, sc1, sc2, "subcredential derivation must be deterministic")
 }
 
@@ -120,8 +122,8 @@ func TestDeriveSubcredentialDifferentInputsDifferentOutputs(t *testing.T) {
 	_, _ = rand.Read(dest2)
 	_, _ = rand.Read(blinded)
 
-	sc1 := DeriveSubcredential(dest1, blinded)
-	sc2 := DeriveSubcredential(dest2, blinded)
+	sc1 := DeriveSubcredential(dest1, 7, blinded, 11)
+	sc2 := DeriveSubcredential(dest2, 7, blinded, 11)
 	assert.NotEqual(t, sc1, sc2, "different dest keys should produce different subcredentials")
 }
 
@@ -176,20 +178,27 @@ func TestEncryptionLayerStructure(t *testing.T) {
 	assert.Equal(t, byte(0), layer1PT[0], "authType must be 0 (no per-client auth)")
 }
 
-// TestDeriveSubcredentialMatchesSpec verifies the spec formula:
+// TestDeriveSubcredentialMatchesSpec verifies the spec formula
+// (encryptedleaseset.rst §473-499):
 //
-//	credential    = SHA-256("credential" || destSigningPubKey)
-//	subcredential = SHA-256("subcredential" || credential || blindedPubKey)
+//	keydata    = A || stA || stA'
+//	credential = H("credential", keydata)
+//	subcredential = H("subcredential", credential || blindedPublicKey)
 func TestDeriveSubcredentialMatchesSpec(t *testing.T) {
 	destPub := make([]byte, 32)
 	blindedPub := make([]byte, 32)
 	_, _ = rand.Read(destPub)
 	_, _ = rand.Read(blindedPub)
 
-	// Manual computation
+	const sigTypeA uint16 = 7  // Ed25519
+	const sigTypeB uint16 = 11 // RedDSA
+
+	// Manual computation per spec
 	h1 := sha256.New()
 	h1.Write([]byte("credential"))
 	h1.Write(destPub)
+	_ = binary.Write(h1, binary.BigEndian, sigTypeA)
+	_ = binary.Write(h1, binary.BigEndian, sigTypeB)
 	credential := h1.Sum(nil)
 
 	h2 := sha256.New()
@@ -199,7 +208,7 @@ func TestDeriveSubcredentialMatchesSpec(t *testing.T) {
 	var expected [32]byte
 	copy(expected[:], h2.Sum(nil))
 
-	got := DeriveSubcredential(destPub, blindedPub)
+	got := DeriveSubcredential(destPub, sigTypeA, blindedPub, sigTypeB)
 	assert.Equal(t, expected, got, "subcredential must match spec formula")
 }
 

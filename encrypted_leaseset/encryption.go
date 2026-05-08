@@ -17,28 +17,36 @@ import (
 // DeriveSubcredential computes the I2P subcredential for EncryptedLeaseSet
 // encryption and decryption.
 //
-// Per the I2P spec (https://geti2p.net/spec/encryptedleaseset):
+// Per the I2P spec (https://geti2p.net/spec/encryptedleaseset §473–499):
 //
-//	credential    = SHA-256("credential" || destSigningPubKey)
-//	subcredential = SHA-256("subcredential" || credential || blindedPubKey)
+//	A      = destination's signing public key
+//	stA    = signature type of A, 2 bytes big-endian (e.g. 0x0007 for Ed25519, 0x000b for RedDSA)
+//	stA'   = signature type of the blinded key A', 2 bytes big-endian (0x000b for RedDSA)
+//	keydata    = A || stA || stA'
+//	credential = H("credential", keydata)
+//	subcredential = H("subcredential", credential || blindedPublicKey)
 //
 // Parameters:
-//   - destSigningPubKey: The unblinded destination signing public key
-//     (32 bytes for Ed25519/RedDSA)
+//   - destSigningPubKey: The unblinded destination signing public key bytes
+//   - sigTypeA: Signature type of the unblinded key (e.g. 7 for Ed25519, 11 for RedDSA)
 //   - blindedPubKey: The blinded signing public key from the EncryptedLeaseSet
+//   - sigTypeBlinded: Signature type of the blinded key (always 11 for RedDSA)
 //
 // The subcredential binds the encryption to knowledge of the destination,
 // so only clients who know the original destination can decrypt.
-func DeriveSubcredential(destSigningPubKey, blindedPubKey []byte) [32]byte {
-	credential := deriveCredential(destSigningPubKey)
+func DeriveSubcredential(destSigningPubKey []byte, sigTypeA uint16, blindedPubKey []byte, sigTypeBlinded uint16) [32]byte {
+	credential := deriveCredential(destSigningPubKey, sigTypeA, sigTypeBlinded)
 	return deriveSubcredFromCredential(credential, blindedPubKey)
 }
 
-// deriveCredential computes: SHA-256("credential" || destSigningPubKey).
-func deriveCredential(destSigningPubKey []byte) [32]byte {
+// deriveCredential computes: SHA-256("credential" || A || stA || stA')
+// where stA and stA' are the 2-byte big-endian signature type codes.
+func deriveCredential(destSigningPubKey []byte, sigTypeA, sigTypeBlinded uint16) [32]byte {
 	h := sha256.New()
 	h.Write([]byte("credential"))
 	h.Write(destSigningPubKey)
+	_ = binary.Write(h, binary.BigEndian, sigTypeA)
+	_ = binary.Write(h, binary.BigEndian, sigTypeBlinded)
 	var result [32]byte
 	copy(result[:], h.Sum(nil))
 	return result
