@@ -1,6 +1,8 @@
 package data
 
 import (
+	"unicode/utf8"
+
 	"github.com/go-i2p/logger"
 	"github.com/samber/oops"
 )
@@ -46,6 +48,10 @@ func (str I2PString) Validate() error {
 	}
 	if actualLen != declaredLen {
 		return oops.Errorf("I2PString length mismatch: declared %d, actual %d", declaredLen, actualLen)
+	}
+	// Validate UTF-8 encoding
+	if !utf8.Valid(str[1 : declaredLen+1]) {
+		return oops.Errorf("I2PString contains invalid UTF-8 bytes")
 	}
 	return nil
 }
