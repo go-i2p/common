@@ -179,6 +179,7 @@ func (ek EncryptionKey) String() string {
 //   - Each encryption key's KeyLen matches the expected size for its KeyType
 //   - Offline signature flag is consistent with OfflineSignature presence
 //   - Reserved flag bits are zero
+//   - Options mapping keys are sorted per spec (for signature invariance)
 //
 // Returns nil if valid, or an error describing the first issue found.
 func (ls2 *LeaseSet2) Validate() error {
@@ -191,7 +192,12 @@ func (ls2 *LeaseSet2) Validate() error {
 	if err := validateOfflineSignatureConsistency(ls2.HasOfflineKeys(), ls2.offlineSignature); err != nil {
 		return err
 	}
-	return validateReservedFlagsAndLeases(ls2.flags, ls2.leases)
+	if err := validateReservedFlagsAndLeases(ls2.flags, ls2.leases); err != nil {
+		return err
+	}
+	// Spec: "LS2 options MUST be sorted by key, so the signature is invariant."
+	// This check validates that the LeaseSet2 complies with spec-mandated ordering.
+	return validateOptionsSorted(ls2.options)
 }
 
 // validateEncryptionKeys validates the encryption key count and internal consistency

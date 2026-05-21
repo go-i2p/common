@@ -176,8 +176,13 @@ func NewRouterInfo(
 }
 
 // createPublishedDate converts a time.Time to an I2P Date structure.
+// Uses UnixMilli() instead of UnixNano() to avoid overflow for far-future timestamps
+// (UnixNano is undefined outside the range ~[1678, 2262]).
 func createPublishedDate(publishedTime time.Time) (*data.Date, error) {
-	millis := publishedTime.UnixNano() / int64(time.Millisecond)
+	millis := publishedTime.UnixMilli()
+	if millis < 0 {
+		return nil, oops.Errorf("published date is before Unix epoch: %v", publishedTime)
+	}
 	dateBytes := make([]byte, data.DATE_SIZE)
 	binary.BigEndian.PutUint64(dateBytes, uint64(millis))
 	publishedDate, _, err := data.ReadDate(dateBytes)

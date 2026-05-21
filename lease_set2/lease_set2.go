@@ -236,9 +236,8 @@ func ReadLeaseSet2(data []byte) (ls2 LeaseSet2, remainder []byte, err error) {
 	}).Debug("Parsed LeaseSet2 header")
 
 	// Spec: "LS2 options MUST be sorted by key, so the signature is invariant."
-	if err = validateOptionsSorted(ls2.options); err != nil {
-		return ls2, remainder, err
-	}
+	// Lenient parse: warn if unsorted, but don't reject. Strict validation happens in Validate().
+	warnIfOptionsUnsorted(ls2.options)
 
 	remainder, err = parseKeysLeasesAndSignature(&ls2, data)
 	return ls2, remainder, err
