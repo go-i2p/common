@@ -28,9 +28,11 @@ func EncodeToString(data []byte) string {
 // and converting them back to the original byte data. It validates input characters against
 // the I2P alphabet and handles standard base64 padding requirements.
 //
-// Note: Go's encoding/base64 silently strips \r and \n characters before decoding. Use
-// DecodeStringStrict if you need to reject strings containing embedded newlines, matching
-// the Java I2P reference implementation's behavior (since 0.9.14).
+// COMPATIBILITY NOTE: This function is LENIENT — Go's encoding/base64 silently strips
+// \r and \n characters before decoding, which diverges from the Java I2P reference
+// implementation (since 0.9.14) which rejects such whitespace. For strict interoperability
+// with Java I2P and i2pd, use DecodeStringStrict instead. Choose DecodeString only if you
+// are certain your input source has already validated against embedded newlines.
 //
 // Returns an error if the input contains invalid characters or malformed padding.
 // Example: DecodeString("SGVsbG8=") returns []byte{72, 101, 108, 108, 111}, nil (Hello decoded)

@@ -71,6 +71,21 @@ func (sk SessionKey) IsZero() bool {
 	return subtle.ConstantTimeCompare(sk[:], zero[:]) == 1
 }
 
+// Validate returns an error if the SessionKey is uninitialized (all zeros).
+// Per the project convention, a zero session key is invalid and cannot be used for cryptographic operations.
+func (sk SessionKey) Validate() error {
+	if sk.IsZero() {
+		return oops.Errorf("SessionKey is uninitialized (all zeros)")
+	}
+	return nil
+}
+
+// IsValid returns true if the SessionKey is properly initialized (not all zeros).
+// This is a convenience method equivalent to Validate() == nil.
+func (sk SessionKey) IsValid() bool {
+	return sk.Validate() == nil
+}
+
 // NewSessionKey creates a new *SessionKey from []byte using ReadSessionKey.
 // Returns a pointer to SessionKey unlike ReadSessionKey.
 func NewSessionKey(data []byte) (sessionKey *SessionKey, remainder []byte, err error) {

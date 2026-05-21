@@ -68,6 +68,21 @@ func (st ECIESSessionTag) IsZero() bool {
 	return subtle.ConstantTimeCompare(st.value[:], zero[:]) == 1
 }
 
+// Validate returns an error if the ECIESSessionTag is uninitialized (all zeros).
+// Per the project convention, a zero ECIES session tag is invalid and cannot be used for session identification.
+func (st ECIESSessionTag) Validate() error {
+	if st.IsZero() {
+		return oops.Errorf("ECIESSessionTag is uninitialized (all zeros)")
+	}
+	return nil
+}
+
+// IsValid returns true if the ECIESSessionTag is properly initialized (not all zeros).
+// This is a convenience method equivalent to Validate() == nil.
+func (st ECIESSessionTag) IsValid() bool {
+	return st.Validate() == nil
+}
+
 // NewECIESSessionTagFromBytes creates a new ECIESSessionTag from a byte slice.
 // The input must be exactly ECIESSessionTagSize bytes long.
 func NewECIESSessionTagFromBytes(data []byte) (ECIESSessionTag, error) {
