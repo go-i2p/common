@@ -236,7 +236,7 @@ func parseSigningKey(data []byte, dest destination.Destination) (types.SigningPu
 			"at":     "parseSigningKey",
 			"reason": "invalid certificate type",
 		}).Error("error parsing certificate type")
-		return nil, nil, oops.Errorf("invalid certificate type: %v", err)
+		return nil, nil, oops.Wrapf(err, "invalid certificate type")
 	}
 
 	sigKeySize := determineSigningKeySize(cert, kind)

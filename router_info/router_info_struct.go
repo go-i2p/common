@@ -183,7 +183,7 @@ func createPublishedDate(publishedTime time.Time) (*data.Date, error) {
 	publishedDate, _, err := data.ReadDate(dateBytes)
 	if err != nil {
 		log.WithFields(logger.Fields{"pkg": "router_info", "func": "createPublishedDate"}).WithError(err).Error("Failed to create Published Date")
-		return nil, oops.Errorf("failed to create published date: %v", err)
+		return nil, oops.Wrapf(err, "failed to create published date")
 	}
 	return &publishedDate, nil
 }
@@ -193,13 +193,13 @@ func createSizeIntegers(addresses []*router_address.RouterAddress) (*data.Intege
 	sizeInt, err := data.NewIntegerFromInt(len(addresses), 1)
 	if err != nil {
 		log.WithFields(logger.Fields{"pkg": "router_info", "func": "createSizeIntegers"}).WithError(err).Error("Failed to create Size Integer")
-		return nil, nil, oops.Errorf("failed to create size integer: %v", err)
+		return nil, nil, oops.Wrapf(err, "failed to create size integer")
 	}
 
 	peerSizeInt, err := data.NewIntegerFromInt(0, 1)
 	if err != nil {
 		log.WithFields(logger.Fields{"pkg": "router_info", "func": "createSizeIntegers"}).WithError(err).Error("Failed to create PeerSize Integer")
-		return nil, nil, oops.Errorf("failed to create peer size integer: %v", err)
+		return nil, nil, oops.Wrapf(err, "failed to create peer size integer")
 	}
 
 	return sizeInt, peerSizeInt, nil
@@ -210,7 +210,7 @@ func convertOptionsToMapping(options map[string]string) (*data.Mapping, error) {
 	mapping, err := data.GoMapToMapping(options)
 	if err != nil {
 		log.WithFields(logger.Fields{"pkg": "router_info", "func": "convertOptionsToMapping"}).WithError(err).Error("Failed to convert options map to data.Mapping")
-		return nil, oops.Errorf("failed to convert options to mapping: %v", err)
+		return nil, oops.Wrapf(err, "failed to convert options to mapping")
 	}
 	return mapping, nil
 }
@@ -269,7 +269,7 @@ func createEd25519Signer(signingPrivateKey types.SigningPrivateKey) (types.Signe
 	signer, err := ed25519Key.NewSigner()
 	if err != nil {
 		log.WithFields(logger.Fields{"pkg": "router_info", "func": "createEd25519Signer"}).WithError(err).Error("Failed to create Ed25519 signer")
-		return nil, oops.Errorf("failed to create signer: %v", err)
+		return nil, oops.Wrapf(err, "failed to create signer")
 	}
 	return signer, nil
 }
@@ -279,19 +279,19 @@ func signRouterInfoData(routerInfo *RouterInfo, signer types.Signer, sigType int
 	dataBytes, err := routerInfo.serializeWithoutSignature()
 	if err != nil {
 		log.WithFields(logger.Fields{"pkg": "router_info", "func": "signRouterInfoData"}).WithError(err).Error("Failed to serialize RouterInfo for signing")
-		return nil, oops.Errorf("failed to serialize data: %v", err)
+		return nil, oops.Wrapf(err, "failed to serialize data")
 	}
 
 	signatureBytes, err := signer.Sign(dataBytes)
 	if err != nil {
 		log.WithFields(logger.Fields{"pkg": "router_info", "func": "signRouterInfoData"}).WithError(err).Error("Failed to sign RouterInfo data")
-		return nil, oops.Errorf("failed to sign data: %v", err)
+		return nil, oops.Wrapf(err, "failed to sign data")
 	}
 
 	sig, _, err := signature.ReadSignature(signatureBytes, sigType)
 	if err != nil {
 		log.WithFields(logger.Fields{"pkg": "router_info", "func": "signRouterInfoData"}).WithError(err).Error("Failed to create Signature from signature bytes")
-		return nil, oops.Errorf("failed to create signature: %v", err)
+		return nil, oops.Wrapf(err, "failed to create signature")
 	}
 
 	// Cache the exact serialized bytes over which the signature was computed,
@@ -492,7 +492,7 @@ func (router_info *RouterInfo) AddAddress(address *router_address.RouterAddress)
 	newCount := len(router_info.addresses) + 1
 	newSize, err := data.NewIntegerFromInt(newCount, 1)
 	if err != nil {
-		return oops.Errorf("cannot add address: count %d exceeds 1-byte integer max: %v", newCount, err)
+		return oops.Wrapf(err, "cannot add address: count %d exceeds 1-byte integer max", newCount)
 	}
 	router_info.addresses = append(router_info.addresses, address)
 	router_info.size = newSize
@@ -1001,7 +1001,7 @@ func getCertificateTypeFromIdentity(router_identity *router_identity.RouterIdent
 			"at":     "getCertificateTypeFromIdentity",
 			"reason": "invalid certificate type",
 		}).Error("error parsing router info signature")
-		return 0, nil, oops.Errorf("invalid certificate type: %v", err)
+		return 0, nil, oops.Wrapf(err, "invalid certificate type")
 	}
 
 	certData, err := cert.Data()
@@ -1027,7 +1027,7 @@ func getSignatureTypeFromCert(cert *certificate.Certificate) (int, error) {
 	sigType, err := certificate.GetSignatureTypeFromCertificate(*cert)
 	if err != nil {
 		log.WithFields(logger.Fields{"pkg": "router_info", "func": "getSignatureTypeFromCert"}).WithError(err).Error("Failed to get signature type from certificate")
-		return 0, oops.Errorf("certificate signature type error: %v", err)
+		return 0, oops.Wrapf(err, "certificate signature type error")
 	}
 	return sigType, nil
 }
@@ -1046,7 +1046,7 @@ func validateSignatureType(sigType int, cert *certificate.Certificate) error {
 			"func":    "validateSignatureType",
 			"sigType": sigType,
 		}).Error("Invalid signature type detected")
-		return oops.Errorf("invalid signature type: %d: %v", sigType, err)
+		return oops.Wrapf(err, "invalid signature type: %d", sigType)
 	}
 	if sigType <= signature.SIGNATURE_TYPE_RSA_SHA256_2048 {
 		log.WithFields(logger.Fields{

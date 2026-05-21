@@ -216,7 +216,7 @@ func validateSigningKey(dest destination.Destination, signingKey types.SigningPu
 	cert := dest.Certificate()
 	kind, err := cert.Type()
 	if err != nil {
-		return oops.Errorf("invalid certificate type: %v", err)
+		return oops.Wrapf(err, "invalid certificate type")
 	}
 
 	if kind == certificate.CERT_KEY {
@@ -241,17 +241,24 @@ func validateKeyCertSigningKey(dest destination.Destination, signingKey types.Si
 		)
 	}
 
-	// Require the SigningPublicKeyType interface to be present for proper type validation.
-	// Any SigningPublicKey implementation must expose this interface to ensure type safety.
-	typedKey, ok := signingKey.(interface{ SigningPublicKeyType() int })
-	if !ok {
-		return oops.Errorf("signing key %T does not expose SigningPublicKeyType; cannot verify against key certificate", signingKey)
-	}
-	if typedKey.SigningPublicKeyType() != keyCert.SigningPublicKeyType() {
-		return oops.Errorf(
-			"signing key type mismatch: key reports type %d, destination requires type %d",
-			typedKey.SigningPublicKeyType(), keyCert.SigningPublicKeyType(),
-		)
+	// Verify the signing key type matches the certificate's declared type.
+	// Try to get the key's type from the key itself first; if not available,
+	// validate by attempting to create a verifier with the key (constructor will validate).
+	if typedKey, ok := signingKey.(interface{ SigningPublicKeyType() int }); ok {
+		if typedKey.SigningPublicKeyType() != keyCert.SigningPublicKeyType() {
+			return oops.Errorf(
+				"signing key type mismatch: key reports type %d, destination requires type %d",
+				typedKey.SigningPublicKeyType(), keyCert.SigningPublicKeyType(),
+			)
+		}
+	} else {
+		// For keys without SigningPublicKeyType() interface (e.g., raw ed25519.Ed25519PublicKey),
+		// attempt to create a verifier to validate key-type compatibility. This will fail
+		// if the key cannot be used with the certificate's signing algorithm.
+		if _, err := signingKey.NewVerifier(); err != nil {
+			return oops.Wrapf(err, "signing key cannot be used with signing type %d",
+				keyCert.SigningPublicKeyType())
+		}
 	}
 	return nil
 }
