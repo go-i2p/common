@@ -57,10 +57,9 @@ func (mapping Mapping) Values() MappingValues {
 // Returns nil if the mapping is not properly initialized or any key-value pair is invalid.
 // Callers should check for nil to detect serialization failures; use Validate() for details.
 // The size field is recalculated from the serialized pairs to ensure consistency.
-// Keys are always emitted in canonical sorted order (Java String.compareTo() / Unicode
-// code-point order) as required by the I2P specification §2.4. This guarantees that
-// cryptographic signatures computed over serialized Mappings are reproducible across
-// implementations, even if the in-memory order differs (e.g. after parsing or mutation).
+// Data returns the wire format bytes for this Mapping.
+// Deprecated: Use DataSafe() for production serialization paths to ensure proper error handling.
+// This method returns nil on error instead of returning an error, violating the project's error handling contract.
 func (mapping *Mapping) Data() []byte {
 	if mapping == nil || mapping.size == nil {
 		log.WithFields(logger.Fields{"pkg": "data", "func": "Mapping.Data"}).Error("Mapping.Data() called on nil or uninitialized mapping")
@@ -77,7 +76,11 @@ func (mapping *Mapping) Data() []byte {
 	// this sort, a parse→serialize round-trip could emit non-canonical bytes
 	// that fail signature verification on remote peers (e.g. i2pd reason 16).
 	sortedValues := mappingOrder(mapping.Values())
-	payload := serializeMappingPairs(sortedValues)
+	payload, err := serializeMappingPairs(sortedValues)
+	if err != nil {
+		log.WithFields(logger.Fields{"pkg": "data", "func": "Mapping.Data"}).WithError(err).Error("Mapping.Data() aborted: failed to serialize pairs")
+		return nil
+	}
 	sizeBytes := EncodeUint16(uint16(len(payload)))
 	result := make([]byte, 0, 2+len(payload))
 	result = append(result, sizeBytes[:]...)
@@ -85,19 +88,48 @@ func (mapping *Mapping) Data() []byte {
 	return result
 }
 
+// DataSafe returns the wire format bytes for this Mapping with proper error reporting.
+// This is the recommended method for production code that needs serialization with guaranteed error handling.
+// Returns error if validation fails or serialization cannot proceed.
+// Empty or uninitialized mappings return the wire encoding for an empty mapping (0x00, 0x00).
+func (mapping *Mapping) DataSafe() ([]byte, error) {
+	// Empty or uninitialized mapping returns 0x00, 0x00 (2-byte size field = 0)
+	if mapping == nil || mapping.size == nil {
+		return []byte{0x00, 0x00}, nil
+	}
+	// Pre-validate all pairs so no entries are silently dropped from the output.
+	if err := mapping.Validate(); err != nil {
+		return nil, oops.Wrapf(err, "Mapping contains invalid key-value pairs")
+	}
+	// Ensure canonical key order for every serialization, not only when the
+	// Mapping was constructed through ValuesToMapping / GoMapToMapping.
+	// Parsed Mappings (ReadMapping) preserve parse order internally; without
+	// this sort, a parse→serialize round-trip could emit non-canonical bytes
+	// that fail signature verification on remote peers (e.g. i2pd reason 16).
+	sortedValues := mappingOrder(mapping.Values())
+	payload, err := serializeMappingPairs(sortedValues)
+	if err != nil {
+		return nil, oops.Wrapf(err, "failed to serialize mapping pairs")
+	}
+	sizeBytes := EncodeUint16(uint16(len(payload)))
+	result := make([]byte, 0, 2+len(payload))
+	result = append(result, sizeBytes[:]...)
+	result = append(result, payload...)
+	return result, nil
+}
+
 // serializeMappingPairs serializes key-value pairs into their wire format.
-// Pairs that fail to serialize are skipped with a log warning.
-func serializeMappingPairs(pairs MappingValues) []byte {
+// Returns an error if any pair fails to serialize (defense-in-depth; pairs should already be validated).
+func serializeMappingPairs(pairs MappingValues) ([]byte, error) {
 	var payload []byte
 	for _, pair := range pairs {
 		serialized, err := serializeOnePair(pair)
 		if err != nil {
-			log.WithFields(logger.Fields{"pkg": "data", "func": "serializeMappingPairs"}).WithError(err).Warn("Skipping invalid pair in Mapping.Data()")
-			continue
+			return nil, oops.Wrapf(err, "failed to serialize mapping pair")
 		}
 		payload = append(payload, serialized...)
 	}
-	return payload
+	return payload, nil
 }
 
 // serializeOnePair serializes a single key=value; pair.
@@ -172,6 +204,15 @@ func (mapping *Mapping) Validate() error {
 		if _, err := pair[1].Data(); err != nil {
 			return oops.Errorf("invalid value at position %d: %w", i, err)
 		}
+	}
+
+	// Check for duplicate keys (I2P spec requires all keys to be unique)
+	hasDups, err := mapping.HasDuplicateKeys()
+	if err != nil {
+		return oops.Wrapf(err, "failed to check for duplicate keys")
+	}
+	if hasDups {
+		return oops.Errorf("mapping contains duplicate keys")
 	}
 
 	log.WithFields(logger.Fields{

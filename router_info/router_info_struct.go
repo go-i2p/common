@@ -745,7 +745,11 @@ func (ri *RouterInfo) serializeWithoutSignature() ([]byte, error) {
 	bytes = append(bytes, ri.peer_size.Bytes()...)
 
 	// Serialize Options
-	bytes = append(bytes, ri.options.Data()...)
+	optionsData, err := ri.options.DataSafe()
+	if err != nil {
+		return nil, oops.Wrapf(err, "failed to serialize router info options mapping")
+	}
+	bytes = append(bytes, optionsData...)
 
 	return bytes, nil
 }

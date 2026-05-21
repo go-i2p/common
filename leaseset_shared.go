@@ -134,12 +134,13 @@ func SerializeLeaseSetHeader(
 		buf = append(buf, offlineSig.Bytes()...)
 	}
 
-	// Add options mapping — use Data() as the single consistent representation.
-	if optData := options.Data(); len(optData) > 0 {
-		buf = append(buf, optData...)
-	} else {
-		buf = append(buf, 0x00, 0x00)
+	// Add options mapping — use DataSafe() for proper error handling.
+	// Empty or uninitialized mappings automatically return 0x00, 0x00.
+	optData, err := options.DataSafe()
+	if err != nil {
+		return nil, oops.Wrapf(err, "failed to serialize lease set options mapping")
 	}
+	buf = append(buf, optData...)
 
 	return buf, nil
 }

@@ -241,13 +241,17 @@ func validateKeyCertSigningKey(dest destination.Destination, signingKey types.Si
 		)
 	}
 
-	if typedKey, ok := signingKey.(interface{ SigningPublicKeyType() int }); ok {
-		if typedKey.SigningPublicKeyType() != keyCert.SigningPublicKeyType() {
-			return oops.Errorf(
-				"signing key type mismatch: key reports type %d, destination requires type %d",
-				typedKey.SigningPublicKeyType(), keyCert.SigningPublicKeyType(),
-			)
-		}
+	// Require the SigningPublicKeyType interface to be present for proper type validation.
+	// Any SigningPublicKey implementation must expose this interface to ensure type safety.
+	typedKey, ok := signingKey.(interface{ SigningPublicKeyType() int })
+	if !ok {
+		return oops.Errorf("signing key %T does not expose SigningPublicKeyType; cannot verify against key certificate", signingKey)
+	}
+	if typedKey.SigningPublicKeyType() != keyCert.SigningPublicKeyType() {
+		return oops.Errorf(
+			"signing key type mismatch: key reports type %d, destination requires type %d",
+			typedKey.SigningPublicKeyType(), keyCert.SigningPublicKeyType(),
+		)
 	}
 	return nil
 }

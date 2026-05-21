@@ -196,7 +196,11 @@ func (ra RouterAddress) Serialize() ([]byte, error) {
 	buf = append(buf, ra.TransportCost.Bytes()...)
 	buf = append(buf, ra.ExpirationDate.Bytes()...)
 	buf = append(buf, ra.TransportType...)
-	buf = append(buf, ra.TransportOptions.Data()...)
+	optData, err := ra.TransportOptions.DataSafe()
+	if err != nil {
+		return nil, oops.Wrapf(err, "failed to serialize transport options")
+	}
+	buf = append(buf, optData...)
 	log.WithFields(logger.Fields{"pkg": "router_address", "func": "RouterAddress.Serialize", "bytes_length": len(buf)}).Debug("Serialized RouterAddress")
 	return buf, nil
 }

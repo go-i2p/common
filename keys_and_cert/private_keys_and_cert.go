@@ -1,6 +1,8 @@
 package keys_and_cert
 
 import (
+	"bytes"
+
 	"github.com/samber/oops"
 
 	"github.com/go-i2p/common/key_certificate"
@@ -42,11 +44,18 @@ func NewPrivateKeysAndCert(
 		return nil, oops.Wrapf(err, "failed to create embedded KeysAndCert")
 	}
 
-	return &PrivateKeysAndCert{
+	pkac := &PrivateKeysAndCert{
 		KeysAndCert: *kac,
 		PK_KEY:      encryptionPrivateKey,
 		SPK_KEY:     signingPrivateKey,
-	}, nil
+	}
+
+	// Validate key correspondence before returning
+	if err := pkac.validateKeyCorrespondence(); err != nil {
+		return nil, oops.Wrapf(err, "private/public key mismatch")
+	}
+
+	return pkac, nil
 }
 
 // PrivateKey returns the encryption private key.
@@ -80,5 +89,62 @@ func (pkac *PrivateKeysAndCert) Validate() error {
 	if pkac.SPK_KEY == nil {
 		return oops.Errorf("signing private key (SPK_KEY) is required")
 	}
+	// Validate that private keys correspond to the public keys
+	if err := pkac.validateKeyCorrespondence(); err != nil {
+		return oops.Wrapf(err, "key correspondence validation failed")
+	}
+	return nil
+}
+
+// validateKeyCorrespondence checks that the private keys correspond to the stored public keys.
+// Returns an error if the derived public keys do not match or if types are mismatched.
+// If the keys do not support public key derivation, validation is skipped.
+func (pkac *PrivateKeysAndCert) validateKeyCorrespondence() error {
+	if pkac == nil {
+		return oops.Errorf("PrivateKeysAndCert is nil")
+	}
+
+	// Validate encryption key correspondence
+	derivedEncryptionPub, err := pkac.PK_KEY.Public()
+	if err == nil && derivedEncryptionPub != nil {
+		// Get the bytes from the derived public key if available
+		if derivedEncryptionBytes, ok := derivedEncryptionPub.(interface{ Bytes() []byte }); ok {
+			// Compare the derived bytes with the stored public key bytes
+			storedEncryptionBytes := pkac.ReceivingPublic.Bytes()
+			if !bytes.Equal(derivedEncryptionBytes.Bytes(), storedEncryptionBytes) {
+				return oops.Errorf("derived public encryption key does not match stored receiving public key")
+			}
+
+			// Validate type correspondence for encryption key if available
+			if typedEncryptionKey, ok := derivedEncryptionPub.(interface{ PublicKeyType() int }); ok {
+				if typedEncryptionKey.PublicKeyType() != pkac.KeyCertificate.PublicKeyType() {
+					return oops.Errorf("derived encryption key type %d does not match certificate encryption key type %d",
+						typedEncryptionKey.PublicKeyType(), pkac.KeyCertificate.PublicKeyType())
+				}
+			}
+		}
+	}
+
+	// Validate signing key correspondence
+	derivedSigningPub, err := pkac.SPK_KEY.Public()
+	if err == nil && derivedSigningPub != nil {
+		// Get the bytes from the derived public key if available
+		if derivedSigningBytes, ok := derivedSigningPub.(interface{ Bytes() []byte }); ok {
+			// Compare the derived bytes with the stored public key bytes
+			storedSigningBytes := pkac.SigningPublic.Bytes()
+			if !bytes.Equal(derivedSigningBytes.Bytes(), storedSigningBytes) {
+				return oops.Errorf("derived public signing key does not match stored signing public key")
+			}
+
+			// Validate type correspondence for signing key if available
+			if typedSigningKey, ok := derivedSigningPub.(interface{ SigningPublicKeyType() int }); ok {
+				if typedSigningKey.SigningPublicKeyType() != pkac.KeyCertificate.SigningPublicKeyType() {
+					return oops.Errorf("derived signing key type %d does not match certificate signing key type %d",
+						typedSigningKey.SigningPublicKeyType(), pkac.KeyCertificate.SigningPublicKeyType())
+				}
+			}
+		}
+	}
+
 	return nil
 }
