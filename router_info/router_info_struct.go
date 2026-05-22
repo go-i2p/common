@@ -396,7 +396,12 @@ func (router_info RouterInfo) String() string {
 		str += "Address " + strconv.Itoa(index) + ": " + addr.String() + "\n"
 	}
 	str += "Peer Size: " + bytesToString(router_info.peer_size.Bytes()) + "\n"
-	str += "Options: " + bytesToString(router_info.options.Data()) + "\n"
+	optionsBytes, err := router_info.options.DataSafe()
+	if err != nil {
+		str += "Options: <error: " + err.Error() + ">\n"
+	} else {
+		str += "Options: " + bytesToString(optionsBytes) + "\n"
+	}
 	str += "Signature: " + bytesToString(router_info.signature.Bytes()) + "\n"
 	log.WithFields(logger.Fields{"pkg": "router_info", "func": "RouterInfo.String", "string_length": len(str)}).Debug("Converted RouterInfo to string")
 	return str

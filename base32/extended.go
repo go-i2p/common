@@ -2,9 +2,10 @@
 package base32
 
 import (
-	"fmt"
 	"hash/crc32"
 	"strings"
+
+	"github.com/samber/oops"
 
 	"github.com/go-i2p/logger"
 )
@@ -123,7 +124,7 @@ func DecodeExtendedAddress(hostname string) (*ExtendedAddress, error) {
 	data, err := DecodeStringNoPadding(b32Part)
 	if err != nil {
 		log.WithFields(logger.Fields{"pkg": "base32", "func": "DecodeExtendedAddress"}).Error("Base32 decode failed", "error", err)
-		return nil, fmt.Errorf("base32 decode: %w", err)
+		return nil, oops.Wrapf(err, "base32 decode")
 	}
 	if len(data) < minExtendedDataLen {
 		log.WithFields(logger.Fields{"pkg": "base32", "func": "DecodeExtendedAddress"}).Error("Decoded data too short", "data_len", len(data))
