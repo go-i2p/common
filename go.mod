@@ -1,14 +1,14 @@
 module github.com/go-i2p/common
 
-go 1.26.1
+go 1.26.3
 
 require (
 	github.com/go-i2p/crypto v0.1.55
 	github.com/go-i2p/logger v0.1.55
 	github.com/go-i2p/red25519 v0.0.0-20260302212615-1093a31f680d
-	github.com/samber/oops v1.21.0
+	github.com/samber/oops v1.22.0
 	github.com/stretchr/testify v1.11.1
-	go.step.sm/crypto v0.81.0
+	go.step.sm/crypto v0.81.1
 	golang.org/x/crypto v0.52.0
 )
 
@@ -23,8 +23,8 @@ require (
 	github.com/rogpeppe/go-internal v1.14.1 // indirect
 	github.com/samber/lo v1.53.0 // indirect
 	github.com/sirupsen/logrus v1.9.4 // indirect
-	go.opentelemetry.io/otel v1.43.0 // indirect
-	go.opentelemetry.io/otel/trace v1.43.0 // indirect
+	go.opentelemetry.io/otel v1.44.0 // indirect
+	go.opentelemetry.io/otel/trace v1.44.0 // indirect
 	golang.org/x/sys v0.45.0 // indirect
 	golang.org/x/text v0.37.0 // indirect
 	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c // indirect
