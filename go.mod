@@ -8,7 +8,7 @@ require (
 	github.com/go-i2p/red25519 v0.0.0-20260302212615-1093a31f680d
 	github.com/samber/oops v1.22.0
 	github.com/stretchr/testify v1.11.1
-	go.step.sm/crypto v0.82.0
+	go.step.sm/crypto v0.84.0
 	golang.org/x/crypto v0.53.0
 )
 
