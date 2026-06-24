@@ -1,4 +1,4 @@
-Release notes for: `common` Version `0.1.6`
+Release notes for: `common` Version `0.1.61`
 ==============================================
 
 This file is generated automatically in order to keep git tags in sync.
