@@ -271,7 +271,7 @@ func buildClientAuthBlock(cfg *ClientAuthConfig, subcred [32]byte, published uin
 }
 
 // buildDHAuthBlock encrypts authCookie to each client's X25519 public key.
-func buildDHAuthBlock(clientPubKeys [][]byte, authCookie [32]byte, subcred [32]byte, published uint32) ([]byte, error) {
+func buildDHAuthBlock(clientPubKeys [][]byte, authCookie, subcred [32]byte, published uint32) ([]byte, error) {
 	esk := make([]byte, ENCRYPTED_LEASESET_X25519_KEY_SIZE)
 	if _, err := rand.Read(esk); err != nil {
 		return nil, oops.Errorf("ephemeral key generation failed: %w", err)
@@ -303,7 +303,7 @@ func buildDHAuthBlock(clientPubKeys [][]byte, authCookie [32]byte, subcred [32]b
 }
 
 // buildPSKAuthBlock encrypts authCookie to each client's pre-shared key.
-func buildPSKAuthBlock(psks [][]byte, authCookie [32]byte, subcred [32]byte, published uint32) ([]byte, error) {
+func buildPSKAuthBlock(psks [][]byte, authCookie, subcred [32]byte, published uint32) ([]byte, error) {
 	authSalt := make([]byte, ENCRYPTED_LEASESET_AUTH_SALT_SIZE)
 	if _, err := rand.Read(authSalt); err != nil {
 		return nil, oops.Errorf("authSalt generation failed: %w", err)
