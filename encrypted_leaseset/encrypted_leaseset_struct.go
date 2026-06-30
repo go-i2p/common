@@ -1,4 +1,3 @@
-// Package encrypted_leaseset implements the I2P EncryptedLeaseSet common data structure
 package encrypted_leaseset
 
 import (
