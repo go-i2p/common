@@ -1,6 +1,6 @@
 module github.com/go-i2p/common
 
-go 1.26.3
+go 1.26.8
 
 require (
 	github.com/go-i2p/crypto v0.1.60000-0.20260701135847-3ade996b68a0
