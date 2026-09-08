@@ -5,7 +5,7 @@ go 1.26.3
 require (
 	github.com/go-i2p/crypto v0.1.60000-0.20260701135847-3ade996b68a0
 	github.com/go-i2p/logger v0.1.60000-0.20260701134448-2648c3b0e040
-	github.com/go-i2p/red25519 v0.0.0-20260908194341-f23f94ae4c5f
+	github.com/go-i2p/red25519 v0.0.0-20260908204607-9444de34c638
 	github.com/samber/oops v1.23.1
 	github.com/stretchr/testify v1.12.1
 	go.step.sm/crypto v0.90.0
