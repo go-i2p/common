@@ -118,6 +118,7 @@ func chacha20Crypt(key [32]byte, iv [12]byte, data []byte) ([]byte, error) {
 	if err != nil {
 		return nil, oops.Errorf("ChaCha20 cipher init failed: %w", err)
 	}
+	cipher.SetCounter(1) // F365: spec requires counter=1 (not 0)
 	out := make([]byte, len(data))
 	cipher.XORKeyStream(out, data)
 	return out, nil
