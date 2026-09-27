@@ -37,6 +37,28 @@ func TestEncryptDecryptRoundTrip(t *testing.T) {
 	assert.Equal(t, len(ls2.Leases()), len(decryptedLS2.Leases()))
 }
 
+func TestEncryptedLeaseSetInnerPayloadIncludesLeaseSet2TypePrefix(t *testing.T) {
+	ls2 := createTestLeaseSet2ForEncryption(t)
+	var subcredential [32]byte
+	_, err := rand.Read(subcredential[:])
+	require.NoError(t, err)
+	published := uint32(time.Now().Unix())
+
+	ct, err := EncryptInnerLeaseSet2(ls2, subcredential, published)
+	require.NoError(t, err)
+
+	els := &EncryptedLeaseSet{encryptedInnerData: ct, published: published}
+	plaintext, err := decryptTwoLayers(ct, subcredential, published, nil)
+	require.NoError(t, err)
+	assert.GreaterOrEqual(t, len(plaintext), 1)
+	assert.Equal(t, byte(3), plaintext[0], "LeaseSet2 payload must start with the 0x03 DB store type prefix")
+
+	decryptedLS2, err := els.DecryptInnerData(subcredential)
+	require.NoError(t, err)
+	require.NotNil(t, decryptedLS2)
+	assert.Equal(t, ls2.Published(), decryptedLS2.Published())
+}
+
 func TestEncryptDecryptWithDifferentSubcredentials(t *testing.T) {
 	ls2 := createTestLeaseSet2ForEncryption(t)
 

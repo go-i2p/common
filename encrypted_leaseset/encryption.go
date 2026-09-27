@@ -168,7 +168,23 @@ func (els *EncryptedLeaseSet) DecryptInnerDataWithCredential(subcredential [32]b
 		return nil, err
 	}
 
-	return parseDecryptedLeaseSet2(plaintext)
+	innerLS2, err := parseDecryptedLeaseSet2(plaintext)
+	if err != nil {
+		return nil, err
+	}
+
+	// F368 FIX: Verify offline signature if present (CRITICAL / SECURITY).
+	// The spec requires validating the offline signature against the destination's
+	// signing key to prevent forged publication. Without this check, any attacker
+	// can publish a forged encrypted destination by substituting an arbitrary
+	// offline signature.
+	if els.offlineSignature != nil {
+		if err := els.verifyOfflineSignatureChain(innerLS2); err != nil {
+			return nil, err
+		}
+	}
+
+	return innerLS2, nil
 }
 
 // decryptTwoLayers performs the two-layer ChaCha20 decryption.
@@ -279,6 +295,12 @@ func EncryptInnerLeaseSet2WithAuth(ls2 *lease_set2.LeaseSet2, subcredential [32]
 		return nil, oops.Errorf("LeaseSet2 serialization failed: %w", err)
 	}
 
+	// Per the I2P DatabaseStore wire format, LeaseSet2 payloads are signed and
+	// transported with a leading DatabaseStore type byte (0x03) before the
+	// serialized LeaseSet2 content. The encrypted payload must preserve that
+	// structure so the decrypted inner bytes remain a valid LeaseSet2 record.
+	plaintext = rootcommon.PrependLeaseSetTypeByte(lease_set2.LEASESET2_DBSTORE_TYPE, plaintext)
+
 	return encryptTwoLayers(plaintext, subcredential, published, cfg)
 }
 
@@ -366,6 +388,10 @@ func assembleLayer1Plaintext(flagByte byte, authBlock, innerSalt, layer2CT []byt
 
 // parseDecryptedLeaseSet2 parses decrypted plaintext as a LeaseSet2.
 func parseDecryptedLeaseSet2(plaintext []byte) (*lease_set2.LeaseSet2, error) {
+	if len(plaintext) > 0 && plaintext[0] == lease_set2.LEASESET2_DBSTORE_TYPE {
+		plaintext = plaintext[1:]
+	}
+
 	innerLS2, _, err := lease_set2.ReadLeaseSet2(plaintext)
 	if err != nil {
 		log.WithFields(logger.Fields{"pkg": "encrypted_leaseset", "func": "parseDecryptedLeaseSet2"}).WithError(err).Error("Failed to parse decrypted data as LeaseSet2")
