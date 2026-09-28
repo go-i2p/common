@@ -1,8 +1,10 @@
 package encrypted_leaseset
 
 import (
+	"github.com/go-i2p/common/lease_set2"
 	"github.com/go-i2p/common/offline_signature"
 	sig "github.com/go-i2p/common/signature"
+	"github.com/samber/oops"
 )
 
 // EncryptedLeaseSet represents an encrypted I2P LeaseSet2 (Database Store Type 5).
@@ -64,11 +66,11 @@ func (els *EncryptedLeaseSet) verifyOfflineSignatureChain(innerLS2 *lease_set2.L
 	// Extract the destination's long-term signing public key.
 	// This is the key the LeaseSet2 was created for.
 	dest := innerLS2.Destination()
-	if dest == nil {
-		return oops.Errorf("F368: failed to get destination from decrypted LeaseSet2")
+	if !(&dest).IsValid() {
+		return oops.Errorf("F368: invalid destination from decrypted LeaseSet2")
 	}
 
-	destSigningKey, err := dest.SigningPublicKey()
+	destSigningKey, err := (&dest).SigningPublicKey()
 	if err != nil {
 		return oops.Wrapf(err, "F368: failed to extract destination signing public key")
 	}

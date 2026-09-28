@@ -299,7 +299,7 @@ func EncryptInnerLeaseSet2WithAuth(ls2 *lease_set2.LeaseSet2, subcredential [32]
 	// transported with a leading DatabaseStore type byte (0x03) before the
 	// serialized LeaseSet2 content. The encrypted payload must preserve that
 	// structure so the decrypted inner bytes remain a valid LeaseSet2 record.
-	plaintext = rootcommon.PrependLeaseSetTypeByte(lease_set2.LEASESET2_DBSTORE_TYPE, plaintext)
+	plaintext = append([]byte{lease_set2.LEASESET2_DBSTORE_TYPE}, plaintext...)
 
 	return encryptTwoLayers(plaintext, subcredential, published, cfg)
 }
