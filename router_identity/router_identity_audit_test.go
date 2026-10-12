@@ -193,12 +193,12 @@ func TestDefensiveCopyKeysInterface(t *testing.T) {
 		// Mutating kac.ReceivingPublic.Bytes() mutates the shared backing array.
 		// We document this behaviour here without asserting isolation (which would
 		// fail for slice-backed types).
-		originalBytes := make([]byte, len(ri.KeysAndCert.ReceivingPublic.Bytes()))
-		copy(originalBytes, ri.KeysAndCert.ReceivingPublic.Bytes())
+		originalBytes := make([]byte, len(ri.ReceivingPublic.Bytes()))
+		copy(originalBytes, ri.ReceivingPublic.Bytes())
 
 		// The test merely verifies no panic occurs and the RI remains structurally valid.
-		assert.NotNil(t, ri.KeysAndCert.ReceivingPublic, "ReceivingPublic must not be nil")
-		assert.Equal(t, originalBytes, ri.KeysAndCert.ReceivingPublic.Bytes(),
+		assert.NotNil(t, ri.ReceivingPublic, "ReceivingPublic must not be nil")
+		assert.Equal(t, originalBytes, ri.ReceivingPublic.Bytes(),
 			"key bytes must be stable when not externally mutated")
 	})
 }

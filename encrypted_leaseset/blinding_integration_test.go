@@ -115,7 +115,7 @@ func BenchmarkVerifyBlindedSignature(b *testing.B) {
 	dest, _, _ := destination.ReadDestination(destBytes)
 
 	secret := make([]byte, 32)
-	rand.Read(secret)
+	_, _ = rand.Read(secret)
 	date := time.Date(2025, 11, 24, 0, 0, 0, 0, time.UTC)
 
 	blinded, _ := CreateBlindedDestination(dest, secret, date)

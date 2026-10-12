@@ -861,12 +861,10 @@ func TestCreateAndVerifyECDSAOfflineSignature(t *testing.T) {
 			require.NoError(t, err, "CreateOfflineSignature should succeed for %s", cfg.name)
 
 			// Extract raw uncompressed public key bytes: x || y, zero-padded to coordSize.
-			coordSize := (cfg.curve.Params().BitSize + 7) / 8
-			pubKeyBytes := make([]byte, 2*coordSize)
-			xBytes := privKey.PublicKey.X.Bytes()
-			yBytes := privKey.PublicKey.Y.Bytes()
-			copy(pubKeyBytes[coordSize-len(xBytes):coordSize], xBytes)
-			copy(pubKeyBytes[2*coordSize-len(yBytes):], yBytes)
+			// PublicKey.Bytes() returns the uncompressed point encoding 0x04 || x || y.
+			uncompressed, err := privKey.PublicKey.Bytes()
+			require.NoError(t, err, "PublicKey.Bytes() should succeed for %s", cfg.name)
+			pubKeyBytes := uncompressed[1:] // strip the 0x04 prefix → x || y
 
 			t.Run("valid_signature_verifies", func(t *testing.T) {
 				valid, vErr := offlineSig.VerifySignature(pubKeyBytes)
@@ -877,11 +875,9 @@ func TestCreateAndVerifyECDSAOfflineSignature(t *testing.T) {
 			t.Run("wrong_public_key_fails", func(t *testing.T) {
 				otherPriv, keyErr := ecdsa.GenerateKey(cfg.curve, cryptorand.Reader)
 				require.NoError(t, keyErr)
-				otherPub := make([]byte, 2*coordSize)
-				ox := otherPriv.PublicKey.X.Bytes()
-				oy := otherPriv.PublicKey.Y.Bytes()
-				copy(otherPub[coordSize-len(ox):coordSize], ox)
-				copy(otherPub[2*coordSize-len(oy):], oy)
+				otherUncompressed, keyErr := otherPriv.PublicKey.Bytes()
+				require.NoError(t, keyErr)
+				otherPub := otherUncompressed[1:] // strip the 0x04 prefix → x || y
 				valid, vErr := offlineSig.VerifySignature(otherPub)
 				assert.NoError(t, vErr)
 				assert.False(t, valid, "%s signature should not verify with wrong public key", cfg.name)
