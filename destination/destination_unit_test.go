@@ -310,7 +310,7 @@ func TestDestinationString(t *testing.T) {
 		dest, _, err := ReadDestination(data)
 		require.NoError(t, err)
 
-		formatted := fmt.Sprintf("%s", dest)
+		formatted := dest.String()
 		assert.Contains(t, formatted, ".b32.i2p")
 	})
 

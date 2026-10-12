@@ -694,7 +694,7 @@ func TestCertificate_GoString(t *testing.T) {
 
 func TestCertificate_Stringer_Interface(t *testing.T) {
 	cert := NewCertificate()
-	s := fmt.Sprintf("%s", cert)
+	s := cert.String()
 	assert.Contains(t, s, "NULL")
 }
 

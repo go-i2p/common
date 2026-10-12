@@ -110,11 +110,11 @@ func TestNullCertRouterIdentityRoundTrip(t *testing.T) {
 	assert.True(t, ri.IsValid())
 
 	// For NULL certs, keys_and_cert synthesises a KeyCertificate with DSA-SHA1(0)+ElGamal(0).
-	require.NotNil(t, ri.KeysAndCert.KeyCertificate,
+	require.NotNil(t, ri.KeyCertificate,
 		"NULL-cert identity uses a synthetic KeyCertificate with implied DSA-SHA1+ElGamal types")
-	assert.Equal(t, 0, ri.KeysAndCert.KeyCertificate.SigningPublicKeyType(),
+	assert.Equal(t, 0, ri.KeyCertificate.SigningPublicKeyType(),
 		"NULL cert implies DSA-SHA1 signing type (0)")
-	assert.Equal(t, 0, ri.KeysAndCert.KeyCertificate.PublicKeyType(),
+	assert.Equal(t, 0, ri.KeyCertificate.PublicKeyType(),
 		"NULL cert implies ElGamal crypto type (0)")
 
 	// Round-trip: serialize and re-parse.
@@ -217,13 +217,13 @@ func TestKeyCertificatePayloadDeepCopy(t *testing.T) {
 	require.NoError(t, err)
 
 	// The two KeyCertificate pointers must be different allocations.
-	assert.True(t, ri.KeysAndCert.KeyCertificate != kac.KeyCertificate,
+	assert.True(t, ri.KeyCertificate != kac.KeyCertificate,
 		"KeyCertificate pointer must be a separate allocation after deep copy via bytes")
 
 	// Their wire representations must be equal (same logical content).
 	origData, err := kac.KeyCertificate.Data()
 	require.NoError(t, err)
-	copyData, err := ri.KeysAndCert.KeyCertificate.Data()
+	copyData, err := ri.KeyCertificate.Data()
 	require.NoError(t, err)
 	assert.Equal(t, origData, copyData,
 		"deep-copied KeyCertificate must have identical payload content")
@@ -231,10 +231,10 @@ func TestKeyCertificatePayloadDeepCopy(t *testing.T) {
 	// Verify signing type and crypto type are preserved.
 	assert.Equal(t,
 		kac.KeyCertificate.SigningPublicKeyType(),
-		ri.KeysAndCert.KeyCertificate.SigningPublicKeyType(),
+		ri.KeyCertificate.SigningPublicKeyType(),
 		"signing type must be preserved through deep copy")
 	assert.Equal(t,
 		kac.KeyCertificate.PublicKeyType(),
-		ri.KeysAndCert.KeyCertificate.PublicKeyType(),
+		ri.KeyCertificate.PublicKeyType(),
 		"crypto type must be preserved through deep copy")
 }

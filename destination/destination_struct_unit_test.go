@@ -127,19 +127,15 @@ func TestDestinationAddressGeneration(t *testing.T) {
 	assert.NotEmpty(base64Addr)
 	assert.Contains(base32Addr, ".b32.i2p")
 
-	fullDestBytes, err := dest.KeysAndCert.Bytes()
+	fullDestBytes, err := dest.Bytes()
 	assert.Nil(err)
-	cert := dest.KeysAndCert.Certificate()
+	cert := dest.Certificate()
 	certBytes := cert.Bytes()
 
 	assert.NotEqual(len(fullDestBytes), len(certBytes))
 	assert.Greater(len(fullDestBytes), len(certBytes))
 
 	hash := types.SHA256(fullDestBytes)
-	expectedBase32, err := dest.Base32Address()
-	assert.Nil(err)
-
-	assert.Contains(expectedBase32, ".b32.i2p")
 	assert.Greater(len(hash), 0)
 }
 

@@ -57,7 +57,7 @@ func deepCopyKeysAndCert(keysAndCert *keys_and_cert.KeysAndCert) (*keys_and_cert
 	kacCopy := *keysAndCert
 
 	if keysAndCert.KeyCertificate != nil {
-		certBytes := keysAndCert.KeyCertificate.Certificate.RawBytes()
+		certBytes := keysAndCert.KeyCertificate.RawBytes()
 		newKeyCert, _, err := key_certificate.NewKeyCertificate(certBytes)
 		if err != nil {
 			return nil, oops.Errorf("internal error: failed to deep-copy KeyCertificate: %w", err)

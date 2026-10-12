@@ -490,7 +490,7 @@ func TestCreateRouterInfo(t *testing.T) {
 		t.Fatalf("Failed to generate ElGamal private key: %v\n", err)
 	}
 	var elg_pubkey elgamal.ElgPublicKey
-	yBytes := elgamal_privkey.PublicKey.Y.Bytes()
+	yBytes := elgamal_privkey.Y.Bytes()
 	if len(yBytes) > 256 {
 		t.Fatalf("ElGamal public key Y too large")
 	}

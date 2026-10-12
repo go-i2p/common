@@ -2,7 +2,6 @@ package data
 
 import (
 	"errors"
-	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -64,7 +63,7 @@ func verifyMappingOrder(t *testing.T, values MappingValues) {
 // validateKeyAtIndex checks that the key at a specific index matches the expected value.
 func validateKeyAtIndex(t *testing.T, actualKey, expectedKey string, index int) {
 	if actualKey != expectedKey {
-		t.Fatal(fmt.Sprintf("mappingOrder expected key %s, got %s at index %d", expectedKey, actualKey, index))
+		t.Fatalf("mappingOrder expected key %s, got %s at index %d", expectedKey, actualKey, index)
 	}
 }
 

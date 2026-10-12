@@ -169,6 +169,7 @@ func TestConstructSigningPublicKeyReportsWhenDataTooSmall(t *testing.T) {
 	assert := assert.New(t)
 
 	key_cert, _, err := NewKeyCertificate(testKeyCertBytesDSAElGamal)
+	assert.Nil(err, "NewKeyCertificate() with DSA/ElGamal returned err on valid data")
 	data := make([]byte, 127)
 	_, err = key_cert.ConstructSigningPublicKey(data)
 

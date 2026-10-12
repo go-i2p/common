@@ -82,7 +82,7 @@ func BenchmarkCreateBlindedDestination(b *testing.B) {
 
 	if len(secret) == 0 {
 		destBytes := make([]byte, 391)
-		rand.Read(destBytes[:384])
+		_, _ = rand.Read(destBytes[:384])
 		destBytes[384] = 0x05
 		destBytes[385] = 0x00
 		destBytes[386] = 0x04
@@ -92,7 +92,7 @@ func BenchmarkCreateBlindedDestination(b *testing.B) {
 		destBytes[390] = 0x00
 		dest, _, _ = destination.ReadDestination(destBytes)
 		secret = make([]byte, 32)
-		rand.Read(secret)
+		_, _ = rand.Read(secret)
 	}
 
 	date := time.Now()
@@ -104,7 +104,7 @@ func BenchmarkCreateBlindedDestination(b *testing.B) {
 
 func BenchmarkVerifyBlindedSignature(b *testing.B) {
 	destBytes := make([]byte, 391)
-	rand.Read(destBytes[:384])
+	_, _ = rand.Read(destBytes[:384])
 	destBytes[384] = 0x05
 	destBytes[385] = 0x00
 	destBytes[386] = 0x04

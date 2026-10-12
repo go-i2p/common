@@ -113,6 +113,7 @@ func TestConstructSigningPublicKeyWithP256(t *testing.T) {
 	assert := assert.New(t)
 
 	key_cert, _, err := NewKeyCertificate(testKeyCertBytesP256P256)
+	assert.Nil(err, "NewKeyCertificate() with P256 returned err on valid data")
 	data := make([]byte, 128)
 	spk, err := key_cert.ConstructSigningPublicKey(data)
 
@@ -124,6 +125,7 @@ func TestConstructSigningPublicKeyWithP384(t *testing.T) {
 	assert := assert.New(t)
 
 	key_cert, _, err := NewKeyCertificate(testKeyCertBytesP384P384)
+	assert.Nil(err, "NewKeyCertificate() with P384 returned err on valid data")
 	data := make([]byte, 128)
 	spk, err := key_cert.ConstructSigningPublicKey(data)
 

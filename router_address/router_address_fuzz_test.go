@@ -53,7 +53,7 @@ func TestCorrectsFuzzCrasher1(t *testing.T) {
 	}()
 
 	router_address_bytes := []byte{0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x00, 0x30, 0x30}
-	ReadRouterAddress(router_address_bytes)
+	_, _, _ = ReadRouterAddress(router_address_bytes)
 }
 
 func FuzzBytesRoundTrip(f *testing.F) {

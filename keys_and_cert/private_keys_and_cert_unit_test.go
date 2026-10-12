@@ -88,7 +88,7 @@ func TestPrivateKeysAndCertConstruction(t *testing.T) {
 
 	assert.NotNil(t, pkac.PK_KEY)
 	assert.NotNil(t, pkac.SPK_KEY)
-	assert.True(t, pkac.KeysAndCert.IsValid())
+	assert.True(t, pkac.IsValid())
 }
 
 // ============================================================================
@@ -112,7 +112,7 @@ func TestNewPrivateKeysAndCert(t *testing.T) {
 		assert.NotNil(t, pkac)
 		assert.Equal(t, encPriv, pkac.PrivateKey())
 		assert.Equal(t, sigPriv, pkac.SigningPrivateKey())
-		assert.True(t, pkac.KeysAndCert.IsValid())
+		assert.True(t, pkac.IsValid())
 	})
 
 	t.Run("rejects nil encryption private key", func(t *testing.T) {

@@ -116,7 +116,7 @@ func TestGoMapToMappingProducesCorrectMapping(t *testing.T) {
 
 	assert.Nil(err, "GoMapToMapping() returned error with valid data")
 	expected := []byte{0x00, 0x06, 0x01, 0x61, 0x3d, 0x01, 0x62, 0x3b}
-	if bytes.Compare(mapping.Data(), expected) != 0 {
+	if !bytes.Equal(mapping.Data(), expected) {
 		t.Fatal("GoMapToMapping did not produce correct Mapping", mapping, expected)
 	}
 }
@@ -132,7 +132,7 @@ func TestFullGoMapToMappingProducesCorrectMapping(t *testing.T) {
 
 	assert.Nil(err, "GoMapToMapping() returned error with valid data")
 	expected := []byte{0x00, 0x0c, 0x01, 0x61, 0x3d, 0x01, 0x62, 0x3b, 0x01, 0x63, 0x3d, 0x01, 0x64, 0x3b}
-	if bytes.Compare(mapping.Data(), expected) != 0 {
+	if !bytes.Equal(mapping.Data(), expected) {
 		t.Fatal("GoMapToMapping did not produce correct Mapping", mapping, expected)
 	}
 }

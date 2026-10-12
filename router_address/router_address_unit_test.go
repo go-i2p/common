@@ -405,7 +405,7 @@ func TestRouterAddressExpirationReturnsCorrectData(t *testing.T) {
 	expiration := router_address.Expiration()
 
 	assert.Nil(err, "Expiration() returned error with valid data")
-	if bytes.Compare(expiration[:], []byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}) != 0 {
+	if !bytes.Equal(expiration[:], []byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}) {
 		t.Fatal("Expiration did not return correct data:", expiration)
 	}
 }

@@ -122,16 +122,12 @@ func TestVerifyRejectsNilOfflineSigWithFlag(t *testing.T) {
 }
 
 func TestVerifyRejectsInvalidOfflineSignatureChain(t *testing.T) {
-	// Build a LeaseSet2 with offline keys flag and a garbage offline signature
-	data := buildLeaseSet2HeaderData(t, key_certificate.KEYCERT_SIGN_ED25519, LEASESET2_FLAG_OFFLINE_KEYS)
-
-	// Append a minimal-ish offline signature structure.
+	// Build a minimal-ish offline signature structure (garbage, to trigger rejection).
 	// The real offline sig needs: expires(4) + transientSigType(2) + transientPubKey(32) + signature(64)
 	offSigData := make([]byte, 4+2+32+64) // 102 bytes for Ed25519→Ed25519
 	binary.BigEndian.PutUint32(offSigData[0:4], uint32(time.Now().Add(24*time.Hour).Unix()))
 	binary.BigEndian.PutUint16(offSigData[4:6], uint16(signature.SIGNATURE_TYPE_EDDSA_SHA512_ED25519)) // transient sig type
 	// Rest is zeros — invalid signature
-	data = append(data, offSigData...)
 
 	// Re-add the options mapping (empty) since the header already has it
 	// Actually buildLeaseSet2HeaderData already adds empty options, so we need to reconstruct
