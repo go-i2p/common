@@ -134,8 +134,8 @@ func TestEncryptedLeaseSetValidate(t *testing.T) {
 	})
 }
 
-// TestEncryptedInnerDataMinimumCryptoOverhead verifies finding #11:
-// Validate() checks minimum crypto overhead size.
+// TestEncryptedInnerDataMinimumCryptoOverhead verifies that Validate()
+// checks the minimum crypto overhead size of the inner encrypted data.
 func TestEncryptedInnerDataMinimumCryptoOverhead(t *testing.T) {
 	pub, priv, err := ed25519.GenerateKey(nil)
 	assert.NoError(t, err)

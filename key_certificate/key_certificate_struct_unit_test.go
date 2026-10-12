@@ -31,6 +31,7 @@ func TestConstructPublicKeyReturnsCorrectDataWithElg(t *testing.T) {
 	assert := assert.New(t)
 
 	key_cert, _, err := NewKeyCertificate(testKeyCertBytesDSAElGamal)
+	assert.Nil(err, "NewKeyCertificate() returned error with valid data")
 	data := make([]byte, 256)
 	pk, err := key_cert.ConstructPublicKey(data)
 
@@ -100,6 +101,7 @@ func TestConstructSigningPublicKeyWithDSASHA1(t *testing.T) {
 	assert := assert.New(t)
 
 	key_cert, _, err := NewKeyCertificate(testKeyCertBytesDSAElGamal)
+	assert.Nil(err, "NewKeyCertificate() returned error with valid data")
 	data := make([]byte, 128)
 	spk, err := key_cert.ConstructSigningPublicKey(data)
 

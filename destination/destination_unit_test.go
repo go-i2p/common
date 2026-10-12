@@ -353,9 +353,6 @@ func (m *mockSigningPublicKey) NewVerifier() (types.Verifier, error) {
 
 // ============================================================================
 // NewDestinationWithCompressiblePadding
-// Finding: [GAP] No test exercises it with concrete key material
-// Finding: [TEST] No negative test with invalid or non-Key certificate
-// Finding: [BUG] Unknown key types silently produce incorrect padding
 // ============================================================================
 
 func TestNewDestinationWithCompressiblePadding_Concrete(t *testing.T) {

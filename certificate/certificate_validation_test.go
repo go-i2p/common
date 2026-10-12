@@ -669,14 +669,14 @@ func BenchmarkReadCertificate(b *testing.B) {
 	b.Run("NULL_certificate", func(b *testing.B) {
 		data := []byte{CERT_NULL, 0x00, 0x00}
 		for i := 0; i < b.N; i++ {
-			ReadCertificate(data)
+			_, _, _ = ReadCertificate(data)
 		}
 	})
 
 	b.Run("KEY_certificate", func(b *testing.B) {
 		data := []byte{CERT_KEY, 0x00, 0x04, 0x00, 0x07, 0x00, 0x04}
 		for i := 0; i < b.N; i++ {
-			ReadCertificate(data)
+			_, _, _ = ReadCertificate(data)
 		}
 	})
 
@@ -684,14 +684,14 @@ func BenchmarkReadCertificate(b *testing.B) {
 		payload := make([]byte, 1000)
 		data := append([]byte{CERT_KEY, 0x03, 0xE8}, payload...)
 		for i := 0; i < b.N; i++ {
-			ReadCertificate(data)
+			_, _, _ = ReadCertificate(data)
 		}
 	})
 }
 
-// TestValidateCertificatePayloadLengthNoInfoLeak verifies the fix for AUDIT QUALITY:
-// validateCertificatePayloadLength no longer logs raw binary data via string(bytes),
-// which could produce garbage output and leak sensitive payloads.
+// TestValidateCertificatePayloadLengthNoInfoLeak verifies that
+// validateCertificatePayloadLength does not log raw binary data via
+// string(bytes), which could produce garbage output and leak sensitive payloads.
 func TestValidateCertificatePayloadLengthNoInfoLeak(t *testing.T) {
 	// Trigger the short-data error path. The important part is that the code
 	// does NOT log `string(bytes)` anymore — the test verifies the error path

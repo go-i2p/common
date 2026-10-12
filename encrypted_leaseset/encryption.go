@@ -161,6 +161,14 @@ func (els *EncryptedLeaseSet) DecryptInnerDataWithCredential(subcredential [32]b
 		"has_credential":   cred != nil,
 	}).Debug("Decrypting EncryptedLeaseSet inner data")
 
+	// Fail fast on a malformed credential (wrong-sized DH key or PSK) rather
+	// than surfacing the problem deep in the decryption path.
+	if cred != nil {
+		if err := validateClientCredential(cred); err != nil {
+			return nil, err
+		}
+	}
+
 	plaintext, err := decryptTwoLayers(
 		els.encryptedInnerData, subcredential, els.published, cred,
 	)

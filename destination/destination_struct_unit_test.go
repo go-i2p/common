@@ -250,7 +250,6 @@ func TestExcessKeyDataInCertificate(t *testing.T) {
 
 // ============================================================================
 // CanonicalizeDestination with explicit KEY(0,0) input
-// Finding: [TEST] No test for CanonicalizeDestination with a KEY(0,0) cert input
 // ============================================================================
 
 func TestCanonicalizeDestination_KEY00Input(t *testing.T) {

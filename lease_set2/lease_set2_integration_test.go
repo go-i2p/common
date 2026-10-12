@@ -694,7 +694,7 @@ func TestVerifyWithOfflineSignature(t *testing.T) {
 }
 
 //
-// Audit-fix regression tests
+// Regression tests for parser edge cases
 //
 
 // TestParserRejectsZeroLeases verifies that the parser enforces the spec's

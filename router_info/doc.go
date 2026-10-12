@@ -40,10 +40,12 @@
 //
 // # Signature Support
 //
-// Currently, only Ed25519 (signature type 7) is supported for both creation
-// (NewRouterInfo) and verification (VerifySignature). Parsing via ReadRouterInfo
-// handles all signature types for correct field delineation, but cryptographic
-// verification of legacy types (DSA-SHA1, ECDSA, RSA) is not yet implemented.
+// Creation (NewRouterInfo) and verification (VerifySignature) support all
+// modern signature types — Ed25519 (7), Ed25519ph (8), RedDSA (11), and ECDSA
+// P256/P384/P521 (1/2/3) — through the generic verifier interface. Legacy
+// types (DSA-SHA1 and RSA) are rejected with an explicit "legacy unsupported"
+// error, matching their deprecation in I2P 0.9.58. Parsing via ReadRouterInfo
+// handles all signature types for correct field delineation.
 //
 // Spec reference: https://geti2p.net/spec/common-structures#routerinfo
 package router_info

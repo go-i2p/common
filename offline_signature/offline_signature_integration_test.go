@@ -555,7 +555,7 @@ func TestVerifySignatureTamperedFields(t *testing.T) {
 }
 
 // =========================================================================
-// RedDSA signing returns explicit error (AUDIT BUG fix: was silently using Ed25519)
+// RedDSA signing returns an explicit error (RedDSA is not yet implemented)
 // =========================================================================
 
 func TestRedDSASigningReturnsError(t *testing.T) {
@@ -804,7 +804,7 @@ func TestEd25519AndEd25519phNotInterchangeable(t *testing.T) {
 }
 
 // =========================================================================
-// ECDSA end-to-end tests (AUDIT SPEC fix: ECDSA P256/P384/P521 now supported)
+// ECDSA end-to-end tests (P256/P384/P521)
 // =========================================================================
 
 func TestCreateAndVerifyECDSAOfflineSignature(t *testing.T) {
@@ -900,8 +900,8 @@ func TestCreateAndVerifyECDSAOfflineSignature(t *testing.T) {
 	}
 }
 
-// TestNewOfflineSignatureZeroExpiresRejected verifies the AUDIT BUG fix:
-// NewOfflineSignature must reject expires==0 instead of returning a poisoned object.
+// TestNewOfflineSignatureZeroExpiresRejected verifies that NewOfflineSignature
+// rejects expires==0 instead of returning an object that always fails Validate().
 func TestNewOfflineSignatureZeroExpiresRejected(t *testing.T) {
 	transientKey := make([]byte, key_certificate.KEYCERT_SIGN_ED25519_SIZE)
 	sig := make([]byte, signature.EdDSA_SHA512_Ed25519_SIZE)

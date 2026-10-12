@@ -90,7 +90,7 @@ func TestNewSessionKey(t *testing.T) {
 
 	// Test error case
 	shortData := make([]byte, 20)
-	sessionKey, remainder, err = NewSessionKey(shortData)
+	sessionKey, _, err = NewSessionKey(shortData)
 	assert.Error(t, err)
 	assert.Nil(t, sessionKey)
 }

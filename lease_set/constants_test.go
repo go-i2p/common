@@ -40,7 +40,7 @@ func TestConstants_ErrNoLeasesMessage(t *testing.T) {
 	assert.Contains(t, ErrNoLeases.Error(), "no leases")
 }
 
-// --- Sentinel errors for audit findings ---
+// --- Sentinel errors ---
 
 func TestConstants_ErrTrailingDataNotNil(t *testing.T) {
 	assert.NotNil(t, ErrTrailingData)

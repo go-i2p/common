@@ -388,9 +388,7 @@ func TestDataCanonicalizesParsedMapping(t *testing.T) {
 	require.Len(t, reparsedVals, 3)
 	keys := make([]string, 3)
 	for i, pair := range reparsedVals {
-		k, err := pair[i%2].Data()
-		_ = k
-		k, err = pair[0].Data()
+		k, err := pair[0].Data()
 		require.NoError(t, err)
 		keys[i] = k
 	}

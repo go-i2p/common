@@ -117,7 +117,7 @@ func TestSessionKeyNonTrivialPatterns(t *testing.T) {
 			name: "random bytes",
 			pattern: func() []byte {
 				b := make([]byte, SESSION_KEY_SIZE)
-				rand.Read(b)
+				_, _ = rand.Read(b)
 				return b
 			},
 		},

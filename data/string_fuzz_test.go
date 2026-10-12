@@ -12,8 +12,8 @@ func FuzzI2PString(f *testing.F) {
 
 	f.Fuzz(func(t *testing.T, data []byte) {
 		str := I2PString(data)
-		str.Data()
-		str.Length()
+		_, _ = str.Data()
+		_, _ = str.Length()
 	})
 }
 
@@ -25,8 +25,8 @@ func FuzzToI2PString(f *testing.F) {
 	f.Fuzz(func(t *testing.T, input string) {
 		str, err := ToI2PString(input)
 		if err == nil {
-			str.Data()
-			str.Length()
+			_, _ = str.Data()
+			_, _ = str.Length()
 		}
 	})
 }

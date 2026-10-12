@@ -22,7 +22,7 @@ func FuzzReadRouterInfo(f *testing.F) {
 
 	// Add a random seed
 	randomData := make([]byte, ROUTER_INFO_MIN_SIZE+100)
-	rand.Read(randomData)
+	_, _ = rand.Read(randomData)
 	f.Add(randomData)
 
 	f.Fuzz(func(t *testing.T, data []byte) {

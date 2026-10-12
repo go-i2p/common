@@ -333,7 +333,6 @@ func TestValidate_RejectsProhibitedKeyTypes(t *testing.T) {
 
 // ============================================================================
 // ECDH-P* reserved crypto types: accepted with warning (proposal 145)
-// Finding: [SPEC] ECDH-P256/P384/P521 are "Reserved, see proposal 145"
 // ============================================================================
 
 func TestECDHReservedCryptoTypesAcceptedWithWarning(t *testing.T) {
@@ -375,7 +374,6 @@ func TestECDHReservedCryptoTypesAcceptedWithWarning(t *testing.T) {
 
 // ============================================================================
 // Equals() canonicalization: KEY(0,0) and NULL cert forms compare equal
-// Finding: [GAP] Equals() uses raw byte comparison without canonicalization
 // ============================================================================
 
 func TestEqualsCanonicalizesCrossForms(t *testing.T) {
@@ -412,7 +410,6 @@ func TestEqualsCanonicalizesCrossForms(t *testing.T) {
 
 // ============================================================================
 // RSA signing types: validation tests (direct, not via wire parsing)
-// Finding: [TEST] RSA signing type validation tests are SKIPped
 // ============================================================================
 
 func TestRSASigningTypesRejected_Direct(t *testing.T) {

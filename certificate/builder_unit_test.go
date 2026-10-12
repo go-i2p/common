@@ -114,33 +114,34 @@ func TestCertificateBuilder_AllTypes(t *testing.T) {
 			var err error
 
 			builder := NewCertificateBuilder()
-			if certType == CERT_KEY {
+			switch certType {
+			case CERT_KEY:
 				builder, err = builder.WithKeyTypes(7, 4)
 				require.NoError(t, err)
 				cert, err = builder.Build()
-			} else if certType == CERT_NULL || certType == CERT_HIDDEN {
+			case CERT_NULL, CERT_HIDDEN:
 				builder, err = builder.WithType(certType)
 				require.NoError(t, err)
 				cert, err = builder.Build()
-			} else if certType == CERT_SIGNED {
+			case CERT_SIGNED:
 				builder, err = builder.WithType(certType)
 				require.NoError(t, err)
 				builder, err = builder.WithPayload(make([]byte, CERT_SIGNED_PAYLOAD_SHORT))
 				require.NoError(t, err)
 				cert, err = builder.Build()
-			} else if certType == CERT_HASHCASH {
+			case CERT_HASHCASH:
 				builder, err = builder.WithType(certType)
 				require.NoError(t, err)
 				builder, err = builder.WithPayload([]byte("1:20:000000:test@i2p::000000:000000"))
 				require.NoError(t, err)
 				cert, err = builder.Build()
-			} else if certType == CERT_MULTIPLE {
+			case CERT_MULTIPLE:
 				builder, err = builder.WithType(certType)
 				require.NoError(t, err)
 				builder, err = builder.WithPayload([]byte{0x00, 0x00, 0x00}) // minimal sub-cert (NULL)
 				require.NoError(t, err)
 				cert, err = builder.Build()
-			} else {
+			default:
 				builder, err = builder.WithType(certType)
 				require.NoError(t, err)
 				builder, err = builder.WithPayload([]byte{0x01})

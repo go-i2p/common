@@ -7,6 +7,9 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+// TestLeaseSizeConstants pins the legacy Lease wire size to the I2P spec:
+// tunnel_gw (32) + tunnel_id (4) + end_date (8) = 44 bytes.
+// See https://geti2p.net/spec/common-structures#lease
 func TestLeaseSizeConstants(t *testing.T) {
 	assert.Equal(t, 44, LEASE_SIZE, "LEASE_SIZE should be 44 bytes")
 	assert.Equal(t, 32, LEASE_TUNNEL_GW_SIZE, "LEASE_TUNNEL_GW_SIZE should be 32 bytes")
@@ -17,6 +20,10 @@ func TestLeaseSizeConstants(t *testing.T) {
 		"LEASE_SIZE should equal sum of component sizes")
 }
 
+// TestLease2SizeConstants pins the Lease2 wire size to the I2P spec:
+// tunnel_gw (32) + tunnel_id (4) + end_date (4) = 40 bytes. Lease2 uses a
+// 4-byte end_date instead of the legacy 8-byte millisecond timestamp.
+// See https://geti2p.net/spec/common-structures#lease2
 func TestLease2SizeConstants(t *testing.T) {
 	assert.Equal(t, 40, LEASE2_SIZE, "LEASE2_SIZE should be 40 bytes")
 	assert.Equal(t, 4, LEASE2_END_DATE_SIZE, "LEASE2_END_DATE_SIZE should be 4 bytes")

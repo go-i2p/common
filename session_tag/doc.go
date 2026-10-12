@@ -1,12 +1,12 @@
 // Package session_tag implements the I2P SessionTag and ECIESSessionTag common data structures.
 //
-// A SessionTag is a 32-byte random number used for session identification in
-// I2P's ElGamal/AES+SessionTag encryption layer.
-//
 // An ECIESSessionTag is an 8-byte session tag that is a fundamental property
 // of the ECIES-X25519-AEAD-Ratchet protocol. All ECIES-X25519 destinations
-// and routers use 8-byte session tags (regardless of I2NP message type),
-// in contrast to the legacy 32-byte ElGamal/AES+SessionTag form.
+// and routers use 8-byte session tags (regardless of I2NP message type).
+//
+// A SessionTag is a 32-byte random number used for session identification in
+// the legacy ElGamal/AES+SessionTag encryption layer. It is retained for
+// backward compatibility with older I2P versions.
 //
 // Both types provide constant-time equality comparison via crypto/subtle to
 // prevent timing side-channel attacks on session tag lookups.

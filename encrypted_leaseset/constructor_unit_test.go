@@ -233,8 +233,8 @@ func TestNewEncryptedLeaseSetOfflineSignatureFlag(t *testing.T) {
 	assert.Contains(t, err.Error(), "OFFLINE_KEYS flag set but no offline signature provided")
 }
 
-// TestConstructorRejectsReservedFlags verifies finding #9: reserved flag bits
-// must be rejected during construction.
+// TestConstructorRejectsReservedFlags verifies that reserved flag bits are
+// rejected during construction.
 func TestConstructorRejectsReservedFlags(t *testing.T) {
 	pub, _, err := ed25519.GenerateKey(nil)
 	require.NoError(t, err)

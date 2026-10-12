@@ -6,7 +6,8 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// TestEncryptedLeaseSetConstants verifies that package-level constants match the I2P spec.
+// TestEncryptedLeaseSetConstants verifies that package-level constants match
+// the I2P spec. See https://geti2p.net/spec/encryptedleaseset
 func TestEncryptedLeaseSetConstants(t *testing.T) {
 	assert.Equal(t, uint8(5), ENCRYPTED_LEASESET_TYPE)
 	assert.Equal(t, 109, ENCRYPTED_LEASESET_MIN_SIZE)
@@ -15,8 +16,9 @@ func TestEncryptedLeaseSetConstants(t *testing.T) {
 	assert.Equal(t, uint16(0xFFFC), ENCRYPTED_LEASESET_RESERVED_FLAGS_MASK)
 }
 
-// TestNoBlindedflag verifies finding #5: FLAG_BLINDED is removed.
-// EncryptedLeaseSet is always blinded by definition; no such flag exists.
+// TestNoBlindedflag verifies that no FLAG_BLINDED constant exists.
+// EncryptedLeaseSet is always blinded by definition, so the spec defines no
+// such flag; only offline keys (bit 0) and unpublished (bit 1) are valid.
 func TestNoBlindedflag(t *testing.T) {
 	// Verify the constant ENCRYPTED_LEASESET_FLAG_BLINDED does not exist
 	// by ensuring bits 15-2 are all reserved (mask = 0xFFFC).

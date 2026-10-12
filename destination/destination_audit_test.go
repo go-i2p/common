@@ -1,7 +1,6 @@
 package destination
 
-// Tests added to resolve AUDIT.md findings. Each test is annotated with the
-// finding it covers.
+// Additional edge-case tests for Destination construction and serialization.
 
 import (
 	"testing"
@@ -13,9 +12,7 @@ import (
 )
 
 // ============================================================================
-// BUG: ReadDestination must return nil remainder on validation failure
-// Finding: [BUG] `ReadDestination` returns a non-nil `remainder` alongside an
-// error when `validateDestinationKeyTypes` fails — destination_struct.go:51
+// ReadDestination must return nil remainder on validation failure
 // ============================================================================
 
 func TestReadDestinationRemainderNilOnValidationFailure(t *testing.T) {
@@ -34,8 +31,7 @@ func TestReadDestinationRemainderNilOnValidationFailure(t *testing.T) {
 }
 
 // ============================================================================
-// SPEC: ECDSA_P521 parsing succeeds end-to-end (upstream keys_and_cert fixed)
-// Finding: [SPEC] ECDSA_SHA512_P521 destinations cannot be parsed end-to-end
+// ECDSA_P521 parsing succeeds end-to-end
 // ============================================================================
 
 func TestReadDestinationP521EndToEnd(t *testing.T) {
@@ -51,9 +47,7 @@ func TestReadDestinationP521EndToEnd(t *testing.T) {
 }
 
 // ============================================================================
-// SPEC: CanonicalizeDestination normalises ElGamal+DSA-SHA1 to NULL cert form
-// Finding: [SPEC] `NewDestination` and `NewDestinationFromBytes` do not
-// enforce the canonical NULL-certificate form
+// CanonicalizeDestination normalises ElGamal+DSA-SHA1 to NULL cert form
 // ============================================================================
 
 func TestCanonicalizeDestination_ElGamalDSA(t *testing.T) {
@@ -123,20 +117,7 @@ func TestCanonicalizeDestination_HashConvergence(t *testing.T) {
 }
 
 // ============================================================================
-// GAP: Proposal 161 compressible-padding destination builder
-// Finding: [GAP] No Proposal 161 compressible-padding destination builder
-// ============================================================================
-
-func TestNewDestinationWithCompressiblePadding(t *testing.T) {
-	// Superseded by TestNewDestinationWithCompressiblePadding_Concrete in
-	// destination_unit_test.go, which tests with concrete mock key implementations.
-	// Kept for audit traceability.
-	t.Skip("see TestNewDestinationWithCompressiblePadding_Concrete in destination_unit_test.go")
-}
-
-// ============================================================================
-// TEST: NULL certificate round-trip through full parse-and-serialize
-// Finding: [TEST] No `ReadDestination` round-trip test with a NULL certificate
+// NULL certificate round-trip through full parse-and-serialize
 // ============================================================================
 
 func TestReadDestinationNullCertRoundTrip(t *testing.T) {
@@ -183,9 +164,7 @@ func TestReadDestinationNullCertRoundTrip(t *testing.T) {
 }
 
 // ============================================================================
-// TEST: validateDestinationKeyTypes with non-nil KAC that has nil KeyCertificate
-// Finding: [TEST] `validateDestinationKeyTypes` is not tested with a non-nil
-// `KeysAndCert` that has `KeyCertificate == nil`
+// validateDestinationKeyTypes with non-nil KAC that has nil KeyCertificate
 // ============================================================================
 
 func TestValidateDestinationKeyTypesNilKeyCertInKAC(t *testing.T) {

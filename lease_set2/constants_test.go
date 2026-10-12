@@ -6,7 +6,8 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// TestLeaseSet2MinSizeConstant verifies the minimum size constant
+// TestLeaseSet2MinSizeConstant verifies the minimum size constant.
+// See https://geti2p.net/spec/common-structures#leaseset2
 func TestLeaseSet2MinSizeConstant(t *testing.T) {
 	// LEASESET2_MIN_SIZE = 539: header 395 + options 2 + key-header 5 + key 32 +
 	// lease-count 1 + 1 Lease2 (40 bytes) + sig 64 = 539

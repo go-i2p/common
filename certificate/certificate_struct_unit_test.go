@@ -376,9 +376,9 @@ func TestAllMethodsUsePointerReceivers(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.NotPanics(t, func() {
-		cert.Type()
-		cert.Length()
-		cert.Data()
+		_, _ = cert.Type()
+		_, _ = cert.Length()
+		_, _ = cert.Data()
 		cert.Bytes()
 		cert.RawBytes()
 		cert.excessBytes()
@@ -803,8 +803,8 @@ func TestRoundTripAllCertificateTypes(t *testing.T) {
 	}
 }
 
-// TestBuildCertificateGuardUsesLenPayload verifies the fix for AUDIT BUG:
-// buildCertificate now uses `len(payload) > 0` instead of `len(payload) > CERT_EMPTY_PAYLOAD_SIZE`,
+// TestBuildCertificateGuardUsesLenPayload verifies that buildCertificate uses
+// `len(payload) > 0` instead of `len(payload) > CERT_EMPTY_PAYLOAD_SIZE`,
 // ensuring the copy always happens when there are bytes to copy.
 func TestBuildCertificateGuardUsesLenPayload(t *testing.T) {
 	// CERT_KEY with a 4-byte payload: verify the payload is actually copied into the certificate.
@@ -822,8 +822,8 @@ func TestBuildCertificateGuardUsesLenPayload(t *testing.T) {
 	assert.NotEqual(t, payload, data2, "mutating original payload should not affect certificate")
 }
 
-// TestDataReturnsDefensiveCopy verifies the fix for AUDIT GAP:
-// Data() now returns a defensive copy, not a sub-slice of internal storage.
+// TestDataReturnsDefensiveCopy verifies that Data() returns a defensive copy,
+// not a sub-slice of internal storage.
 func TestDataReturnsDefensiveCopy(t *testing.T) {
 	payload := []byte{0x00, 0x07, 0x00, 0x04}
 	cert, err := NewCertificateWithType(CERT_KEY, payload)
@@ -846,8 +846,8 @@ func TestDataReturnsDefensiveCopy(t *testing.T) {
 	assert.Equal(t, byte(0x07), data3[1], "each Data() call must return an independent copy")
 }
 
-// TestHashcashValidation verifies the fix for AUDIT SPEC:
-// HASHCASH certificates must have non-empty ASCII printable payloads per spec.
+// TestHashcashValidation verifies that HASHCASH certificates must have
+// non-empty ASCII printable payloads per spec.
 func TestHashcashValidation(t *testing.T) {
 	t.Run("empty payload rejected", func(t *testing.T) {
 		_, err := NewCertificateWithType(CERT_HASHCASH, []byte{})
@@ -885,8 +885,8 @@ func TestHashcashValidation(t *testing.T) {
 	})
 }
 
-// TestMultipleValidation verifies the fix for AUDIT SPEC:
-// MULTIPLE certificates must have at least CERT_MIN_SIZE (3) bytes of payload.
+// TestMultipleValidation verifies that MULTIPLE certificates must have at
+// least CERT_MIN_SIZE (3) bytes of payload.
 func TestMultipleValidation(t *testing.T) {
 	t.Run("empty payload rejected for construction", func(t *testing.T) {
 		_, err := NewCertificateWithType(CERT_MULTIPLE, []byte{})

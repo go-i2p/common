@@ -28,7 +28,7 @@ func FuzzReadSessionKey(f *testing.F) {
 	}
 	f.Add(allFF)
 	randomBytes := make([]byte, 100)
-	rand.Read(randomBytes)
+	_, _ = rand.Read(randomBytes)
 	f.Add(randomBytes)
 
 	f.Fuzz(func(t *testing.T, data []byte) {

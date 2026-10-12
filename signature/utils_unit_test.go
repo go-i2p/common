@@ -143,7 +143,6 @@ func TestTypeName_ReservedTypes(t *testing.T) {
 	assert.Equal(t, "Experimental", TypeName(65400))
 
 	// Future expansion (65535) — distinct from experimental range and "Unknown"
-	// Ref: AUDIT.md [SPEC] TypeName() FUTURE_EXPANSION fix
 	assert.Equal(t, "FutureExpansion (reserved)", TypeName(SIGNATURE_TYPE_FUTURE_EXPANSION))
 }
 

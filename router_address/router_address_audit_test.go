@@ -1,4 +1,4 @@
-// Package router_address — tests added during 2026-02-25 audit remediation.
+// Package router_address — additional edge-case tests for RouterAddress.
 package router_address
 
 import (
@@ -13,7 +13,7 @@ import (
 )
 
 // =========================================================================
-// [AUDIT] ErrNonZeroExpiration is returned and detectable via errors.Is
+// ErrNonZeroExpiration is returned and detectable via errors.Is
 // =========================================================================
 
 func TestErrNonZeroExpirationIsDetectable(t *testing.T) {
@@ -49,7 +49,7 @@ func TestZeroExpirationNoError(t *testing.T) {
 }
 
 // =========================================================================
-// [AUDIT] Round-trip options equality
+// Round-trip options equality
 // =========================================================================
 
 func TestRoundTripOptionsEquality(t *testing.T) {
@@ -87,7 +87,7 @@ func TestRoundTripOptionsEquality(t *testing.T) {
 }
 
 // =========================================================================
-// [AUDIT] Network() with zero-length but non-nil TransportType
+// Network() with zero-length but non-nil TransportType
 // =========================================================================
 
 func TestNetworkEmptyNonNilTransportType(t *testing.T) {
@@ -105,7 +105,7 @@ func TestNetworkEmptyNonNilTransportType(t *testing.T) {
 }
 
 // =========================================================================
-// [AUDIT] Serialize() returns explicit error on invalid RouterAddress
+// Serialize() returns explicit error on invalid RouterAddress
 // =========================================================================
 
 func TestSerializeReturnsErrorOnInvalidAddress(t *testing.T) {
@@ -184,7 +184,7 @@ func TestSerializeReturnsErrorOnInvalidAddress(t *testing.T) {
 }
 
 // =========================================================================
-// [AUDIT] Host() accepts hostnames per I2P spec
+// Host() accepts hostnames per I2P spec
 // =========================================================================
 
 func TestHostAcceptsI2PHostnames(t *testing.T) {
@@ -211,7 +211,7 @@ func TestHostAcceptsI2PHostnames(t *testing.T) {
 }
 
 // =========================================================================
-// [AUDIT] ROUTER_ADDRESS_MIN_SIZE comment verification
+// ROUTER_ADDRESS_MIN_SIZE comment verification
 // =========================================================================
 
 // TestMinSizeIsPreParseGate ensures ROUTER_ADDRESS_MIN_SIZE (12) is a fast

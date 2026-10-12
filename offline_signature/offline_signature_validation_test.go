@@ -112,8 +112,8 @@ func TestOfflineSignatureValidateZeroExpiration(t *testing.T) {
 	transientKey := make([]byte, key_certificate.KEYCERT_SIGN_ED25519_SIZE)
 	sig := make([]byte, signature.EdDSA_SHA512_Ed25519_SIZE)
 
-	// AUDIT BUG fix: NewOfflineSignature now rejects expires==0 at construction
-	// time, preventing callers from holding an object that always fails Validate().
+	// NewOfflineSignature rejects expires==0 at construction time, preventing
+	// callers from holding an object that always fails Validate().
 	_, err := NewOfflineSignature(
 		0,
 		key_certificate.KEYCERT_SIGN_ED25519,

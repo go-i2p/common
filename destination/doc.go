@@ -8,8 +8,10 @@
 //
 // A Destination contains:
 //
-//   - Public encryption key (ElGamal or X25519)
-//   - Public signing key (DSA, ECDSA, EdDSA, or RSA)
+//   - Public encryption key (X25519 for modern destinations; ElGamal for
+//     legacy ones)
+//   - Public signing key (Ed25519 for modern destinations; ECDSA, RedDSA, and
+//     legacy DSA/RSA for older ones)
 //   - Certificate (typically a KEY certificate with cryptographic parameters)
 //   - Optional padding for alignment
 //

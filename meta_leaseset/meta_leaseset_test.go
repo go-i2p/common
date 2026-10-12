@@ -329,9 +329,9 @@ func TestReadMetaLeaseSetInvalidEntryCount(t *testing.T) {
 
 // TestReadMetaLeaseSetInvalidEntryType tests error handling for invalid entry type
 // TestReadMetaLeaseSetInvalidEntryType verifies forward-compatible handling of unknown
-// MetaLease entry types. Per the AUDIT fix, unrecognised type values (e.g. 2, 4, 7)
-// must no longer cause a hard parse failure; they are accepted with a warning so that
-// future spec revisions or non-conforming peers do not break parsing.
+// MetaLease entry types. Unrecognised type values (e.g. 2, 4, 7) must not
+// cause a hard parse failure; they are accepted with a warning so that future
+// spec revisions or non-conforming peers do not break parsing.
 func TestReadMetaLeaseSetInvalidEntryType(t *testing.T) {
 	data := buildMetaLeaseSetHeaderData(t, uint32(time.Now().Unix()), 600, 0)
 	data = append(data, byte(1)) // 1 entry
@@ -919,8 +919,8 @@ func TestReadMetaLeaseSetAllEntryTypes(t *testing.T) {
 
 // TestBytesNilDestinationReturnsError verifies that Bytes() returns an error
 // (rather than panicking) when the embedded Destination has a nil KeysAndCert.
-// This covers the AUDIT BUG fix: Bytes() now calls mls.destination.Bytes()
-// which guards against nil, instead of mls.destination.KeysAndCert.Bytes().
+// Bytes() calls mls.destination.Bytes() which guards against a nil
+// destination, instead of mls.destination.KeysAndCert.Bytes().
 func TestBytesNilDestinationReturnsError(t *testing.T) {
 	mls := MetaLeaseSet{
 		// destination is zero-value: KeysAndCert is nil

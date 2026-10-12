@@ -1,4 +1,4 @@
-// Package router_identity – tests for AUDIT.md findings.
+// Package router_identity – additional edge-case tests for RouterIdentity.
 package router_identity
 
 import (

@@ -235,10 +235,9 @@ func TestValueReceiverConsistency(t *testing.T) {
 	assert.NotNil(t, sig.Serialize())
 }
 
-// TestEqualZeroValue documents and tests the Fixed behavior for two zero-value
+// TestEqualZeroValue documents and tests the behavior for two zero-value
 // Signature{} instances: Equal() must return false because neither is a valid
-// signature. Previously this returned true (false positive).
-// Ref: AUDIT.md [BUG] Equal() zero-value false-positive.
+// signature.
 func TestEqualZeroValue(t *testing.T) {
 	var s1, s2 Signature
 

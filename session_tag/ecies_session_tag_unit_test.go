@@ -148,7 +148,7 @@ func TestNewECIESSessionTag(t *testing.T) {
 
 	// Test error case
 	shortData := make([]byte, 5)
-	sessionTag, remainder, err = NewECIESSessionTag(shortData)
+	sessionTag, _, err = NewECIESSessionTag(shortData)
 	assert.Error(t, err)
 	assert.Nil(t, sessionTag)
 }

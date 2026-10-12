@@ -13,6 +13,35 @@
 //   - Tunnel management (Lease, LeaseSet, EncryptedLeaseSet)
 //   - Encoding utilities (Base32, Base64)
 //
+// # How the Pieces Fit Together
+//
+// I2P is an anonymous network: every participant is identified by a
+// cryptographic identity, and messages are routed through a series of
+// tunnels. These data structures are the shared vocabulary that routers and
+// clients use to talk to each other. They build on each other in layers:
+//
+//  1. Primitives (data): the raw wire types — integers, strings, dates,
+//     hashes, and key-value maps. Everything else is built from these.
+//
+//  2. Keys and certificates (certificate, key_certificate, keys_and_cert):
+//     a public key plus a certificate that describes how to use it.
+//
+//  3. Identities (destination, router_identity, router_info): a Destination
+//     is a cryptographic identity for a service or endpoint. A
+//     RouterIdentity is the same shape, but for a router. A RouterInfo
+//     bundles a RouterIdentity with the router's network addresses and a
+//     signature, and is what routers publish to the network.
+//
+//  4. Leases (lease, lease_set, lease_set2, encrypted_leaseset): a Lease
+//     says "this tunnel endpoint is valid until this time." A LeaseSet
+//     groups the leases for one destination. An EncryptedLeaseSet hides the
+//     destination and its tunnels behind encryption, which is what hidden
+//     services use.
+//
+// If you are new to I2P, start with the data package, then read
+// destination, then lease_set2, then encrypted_leaseset. Each package's
+// documentation links to the relevant section of the I2P specification.
+//
 // # Design Philosophy
 //
 // This library prioritizes safety and correctness:

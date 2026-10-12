@@ -115,6 +115,7 @@ func TestCreateBlindedDestinationUnsupportedSignatureType(t *testing.T) {
 		padding,
 		nil,
 	)
+	require.NoError(t, err)
 
 	dest := destination.Destination{KeysAndCert: keysAndCert}
 
