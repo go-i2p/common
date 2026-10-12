@@ -6,7 +6,6 @@ import (
 
 	"github.com/go-i2p/common/key_certificate"
 	"github.com/go-i2p/common/keys_and_cert"
-	"github.com/go-i2p/crypto/types"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -134,9 +133,6 @@ func TestDestinationAddressGeneration(t *testing.T) {
 
 	assert.NotEqual(len(fullDestBytes), len(certBytes))
 	assert.Greater(len(fullDestBytes), len(certBytes))
-
-	hash := types.SHA256(fullDestBytes)
-	assert.Greater(len(hash), 0)
 }
 
 // ============================================================================

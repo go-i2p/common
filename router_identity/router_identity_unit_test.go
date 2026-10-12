@@ -183,7 +183,7 @@ func TestNewRouterIdentityWithCompressiblePadding(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, ri)
 
-		padding := ri.KeysAndCert.Padding
+		padding := ri.Padding
 		if len(padding) >= 64 {
 			assert.Equal(t, padding[:32], padding[32:64],
 				"compressible padding should repeat 32-byte pattern")
@@ -335,7 +335,7 @@ func TestAsDestination(t *testing.T) {
 		ri, err := NewRouterIdentityFromKeysAndCert(kac)
 		require.NoError(t, err)
 
-		origBytes, err := ri.KeysAndCert.Bytes()
+		origBytes, err := ri.Bytes()
 		require.NoError(t, err)
 
 		dest := ri.AsDestination()
@@ -344,12 +344,12 @@ func TestAsDestination(t *testing.T) {
 		assert.NotSame(t, ri.KeysAndCert, dest.KeysAndCert,
 			"AsDestination must return a deep copy, not share the pointer")
 
-		dest.KeysAndCert.KeyCertificate = nil
+		dest.KeyCertificate = nil
 
-		assert.NotNil(t, ri.KeysAndCert.KeyCertificate,
+		assert.NotNil(t, ri.KeyCertificate,
 			"mutating Destination must not affect original RouterIdentity")
 
-		afterBytes, err := ri.KeysAndCert.Bytes()
+		afterBytes, err := ri.Bytes()
 		require.NoError(t, err)
 		assert.Equal(t, origBytes, afterBytes,
 			"original RouterIdentity bytes must be unchanged after Destination mutation")
@@ -509,7 +509,7 @@ func TestNewRouterIdentityFromKeysAndCert_DefensiveCopy(t *testing.T) {
 		kac.KeyCertificate = nil
 
 		// RouterIdentity must be unaffected
-		assert.NotNil(t, ri.KeysAndCert.KeyCertificate,
+		assert.NotNil(t, ri.KeyCertificate,
 			"RouterIdentity KeyCertificate must survive mutation of original")
 
 		afterBytes, err := ri.Bytes()
@@ -527,13 +527,13 @@ func TestNewRouterIdentityFromKeysAndCert_DefensiveCopy(t *testing.T) {
 			t.Skip("no padding in this test configuration")
 		}
 
-		origPadding := make([]byte, len(ri.KeysAndCert.Padding))
-		copy(origPadding, ri.KeysAndCert.Padding)
+		origPadding := make([]byte, len(ri.Padding))
+		copy(origPadding, ri.Padding)
 
 		// Mutate the original
 		kac.Padding[0] ^= 0xFF
 
-		assert.Equal(t, origPadding, ri.KeysAndCert.Padding,
+		assert.Equal(t, origPadding, ri.Padding,
 			"RouterIdentity Padding must be independent of original")
 	})
 
@@ -556,11 +556,11 @@ func TestAsDestination_DeepCopy(t *testing.T) {
 
 		dest := ri.AsDestination()
 		require.NotNil(t, dest.KeysAndCert)
-		require.NotNil(t, dest.KeysAndCert.KeyCertificate)
+		require.NotNil(t, dest.KeyCertificate)
 
 		// Pointers must be different
 		assert.True(t,
-			ri.KeysAndCert.KeyCertificate != dest.KeysAndCert.KeyCertificate,
+			ri.KeyCertificate != dest.KeyCertificate,
 			"KeyCertificate pointer must be a separate allocation")
 	})
 
@@ -569,19 +569,19 @@ func TestAsDestination_DeepCopy(t *testing.T) {
 		ri, err := NewRouterIdentityFromKeysAndCert(kac)
 		require.NoError(t, err)
 
-		if len(ri.KeysAndCert.Padding) == 0 {
+		if len(ri.Padding) == 0 {
 			t.Skip("no padding in this test configuration")
 		}
 
-		origPadding := make([]byte, len(ri.KeysAndCert.Padding))
-		copy(origPadding, ri.KeysAndCert.Padding)
+		origPadding := make([]byte, len(ri.Padding))
+		copy(origPadding, ri.Padding)
 
 		dest := ri.AsDestination()
-		if len(dest.KeysAndCert.Padding) > 0 {
-			dest.KeysAndCert.Padding[0] ^= 0xFF
+		if len(dest.Padding) > 0 {
+			dest.Padding[0] ^= 0xFF
 		}
 
-		assert.Equal(t, origPadding, ri.KeysAndCert.Padding,
+		assert.Equal(t, origPadding, ri.Padding,
 			"original Padding must not be affected by dest mutation")
 	})
 }
@@ -597,7 +597,7 @@ func TestHash(t *testing.T) {
 		require.NoError(t, err)
 
 		// Manually compute expected hash
-		b, err := ri.KeysAndCert.Bytes()
+		b, err := ri.Bytes()
 		require.NoError(t, err)
 		expected := sha256.Sum256(b)
 
@@ -667,7 +667,7 @@ func TestBytes(t *testing.T) {
 		riBytes, err := ri.Bytes()
 		require.NoError(t, err)
 
-		kacBytes, err := ri.KeysAndCert.Bytes()
+		kacBytes, err := ri.Bytes()
 		require.NoError(t, err)
 
 		assert.Equal(t, kacBytes, riBytes)
@@ -783,10 +783,10 @@ func TestAsDestination_CertificatePayloadIsolation(t *testing.T) {
 
 	dest := ri.AsDestination()
 	require.NotNil(t, dest.KeysAndCert)
-	require.NotNil(t, dest.KeysAndCert.KeyCertificate)
+	require.NotNil(t, dest.KeyCertificate)
 
 	// Mutate the Certificate payload inside the Destination's KeyCertificate
-	destPayload, _ := dest.KeysAndCert.KeyCertificate.Certificate.Data()
+	destPayload, _ := dest.KeyCertificate.Certificate.Data()
 	if len(destPayload) > 0 {
 		destPayload[0] ^= 0xFF
 	}

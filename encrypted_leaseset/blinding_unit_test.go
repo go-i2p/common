@@ -7,8 +7,6 @@ import (
 	"github.com/go-i2p/crypto/rand"
 
 	"github.com/go-i2p/common/destination"
-	"github.com/go-i2p/common/key_certificate"
-	"github.com/go-i2p/common/keys_and_cert"
 	"github.com/go-i2p/crypto/kdf"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -96,28 +94,31 @@ func TestCreateBlindedDestinationInvalidSecret(t *testing.T) {
 	}
 }
 
+// TestCreateBlindedDestinationUnsupportedSignatureType verifies that
+// CreateBlindedDestination rejects a destination whose signature type is not
+// Ed25519 or RedDSA. Blinding only supports those two signature types, so a
+// destination using the legacy DSA signature type must be refused.
 func TestCreateBlindedDestinationUnsupportedSignatureType(t *testing.T) {
 	secret := make([]byte, 32)
 	_, _ = rand.Read(secret)
 	date := time.Now()
 
-	keyCert, err := key_certificate.NewKeyCertificateWithTypes(
-		0,                                  // DSA SHA1 (type 0, not supported for blinding)
-		key_certificate.KEYCERT_CRYPTO_ELG, // ElGamal encryption
-	)
-	require.NoError(t, err)
+	// Build a 391-byte destination whose key certificate declares the legacy
+	// DSA signature type (0) with ElGamal encryption.
+	destBytes := make([]byte, 391)
+	_, _ = rand.Read(destBytes[:384])
 
-	padding := make([]byte, 0)
+	// Certificate: type=KEY(5), length=4, sigtype=DSA(0), cryptotype=ElGamal(0)
+	destBytes[384] = 0x05
+	destBytes[385] = 0x00
+	destBytes[386] = 0x04
+	destBytes[387] = 0x00
+	destBytes[388] = 0x00
+	destBytes[389] = 0x00
+	destBytes[390] = 0x00
 
-	keysAndCert, err := keys_and_cert.NewKeysAndCert(
-		keyCert,
-		nil,
-		padding,
-		nil,
-	)
-	require.NoError(t, err)
-
-	dest := destination.Destination{KeysAndCert: keysAndCert}
+	dest, _, err := destination.ReadDestination(destBytes)
+	require.NoError(t, err, "Failed to read destination")
 
 	_, err = CreateBlindedDestination(dest, secret, date)
 	assert.Error(t, err, "Should fail with unsupported signature type")
