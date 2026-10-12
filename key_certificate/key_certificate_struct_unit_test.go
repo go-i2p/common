@@ -316,7 +316,7 @@ func TestData_DistinctFromRawBytes(t *testing.T) {
 	data, err := keyCert.Data()
 	require.NoError(t, err)
 
-	rawBytes := keyCert.Certificate.RawBytes()
+	rawBytes := keyCert.RawBytes()
 
 	assert.NotEqual(t, len(data), len(rawBytes),
 		"Data() and RawBytes() should return different lengths")
@@ -354,7 +354,7 @@ func TestData_Godoc_PayloadNotFullCert(t *testing.T) {
 
 	// The full cert is 7 bytes (type + 2-byte length + 4-byte payload)
 	// Data() should return only the 4-byte payload
-	rawBytes := keyCert.Certificate.RawBytes()
+	rawBytes := keyCert.RawBytes()
 	assert.Equal(t, 7, len(rawBytes), "Full cert should be 7 bytes")
 	assert.Equal(t, 4, len(data), "Data() should return only 4-byte payload")
 }

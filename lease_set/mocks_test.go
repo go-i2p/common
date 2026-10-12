@@ -83,13 +83,9 @@ func generateTestRouterInfo(t *testing.T) (*router_info.RouterInfo, types.Receiv
 		t.Fatalf("Generated Ed25519 private key has wrong size: got %d, want 64", len(ed25519_privkey))
 	}
 
-	ed25519_pubkey_raw, err := ed25519_privkey.Public()
+	ed25519_pubkey, err := ed25519_privkey.Public()
 	if err != nil {
 		t.Fatalf("Failed to derive Ed25519 public key: %v\n", err)
-	}
-	ed25519_pubkey, ok := ed25519_pubkey_raw.(types.SigningPublicKey)
-	if !ok {
-		t.Fatalf("Failed to get SigningPublicKey from Ed25519 public key")
 	}
 
 	// Generate encryption key pair (ElGamal)
@@ -107,7 +103,7 @@ func generateTestRouterInfo(t *testing.T) (*router_info.RouterInfo, types.Receiv
 	copy(elg_privkey[256-len(xBytes):], xBytes)
 
 	var elg_pubkey elgamal.ElgPublicKey
-	yBytes := elgamal_privkey.PublicKey.Y.Bytes()
+	yBytes := elgamal_privkey.Y.Bytes()
 	if len(yBytes) > 256 {
 		t.Fatalf("ElGamal public key Y too large")
 	}
@@ -184,14 +180,9 @@ func generateTestRouterInfo(t *testing.T) (*router_info.RouterInfo, types.Receiv
 		t.Fatalf("Generated Ed25519 private key has wrong size: got %d, want 64", len(leaseSetSigningPrivKey))
 	}
 
-	leaseSetSigningPubKeyRaw, err := leaseSetSigningPrivKey.Public()
+	leaseSetSigningPubKey, err := leaseSetSigningPrivKey.Public()
 	if err != nil {
 		t.Fatalf("Failed to derive lease set Ed25519 public key: %v", err)
-	}
-
-	leaseSetSigningPubKey, ok := leaseSetSigningPubKeyRaw.(types.SigningPublicKey)
-	if !ok {
-		t.Fatalf("Failed to get lease set SigningPublicKey from Ed25519 public key")
 	}
 
 	var identityPrivKey ed25519.Ed25519PrivateKey
@@ -240,13 +231,9 @@ func generateTestDestination(t *testing.T) (*destination.Destination, types.Rece
 		t.Fatalf("Generated Ed25519 private key has wrong size: got %d, want 64", len(ed25519_privkey))
 	}
 
-	ed25519_pubkey_raw, err := ed25519_privkey.Public()
+	ed25519_pubkey, err := ed25519_privkey.Public()
 	if err != nil {
 		t.Fatalf("Failed to derive Ed25519 public key: %v\n", err)
-	}
-	ed25519_pubkey, ok := ed25519_pubkey_raw.(types.SigningPublicKey)
-	if !ok {
-		t.Fatalf("Failed to get SigningPublicKey from Ed25519 public key")
 	}
 
 	// Generate client encryption key pair (ElGamal)
@@ -257,7 +244,7 @@ func generateTestDestination(t *testing.T) (*destination.Destination, types.Rece
 	}
 
 	var elg_pubkey elgamal.ElgPublicKey
-	yBytes := elgamal_privkey.PublicKey.Y.Bytes()
+	yBytes := elgamal_privkey.Y.Bytes()
 	if len(yBytes) > 256 {
 		t.Fatalf("ElGamal public key Y too large")
 	}

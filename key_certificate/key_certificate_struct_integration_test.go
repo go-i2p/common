@@ -37,10 +37,10 @@ func TestRoundTripSerialization(t *testing.T) {
 			original, err := NewKeyCertificateWithTypes(tt.signingType, tt.cryptoType)
 			require.NoError(t, err)
 
-			rawData := original.Certificate.RawBytes()
+			rawData := original.RawBytes()
 			require.NotEmpty(t, rawData, "RawBytes() should return non-empty data")
 
-			certBytes := original.Certificate.Bytes()
+			certBytes := original.Bytes()
 			require.NotEmpty(t, certBytes, "Bytes() should return non-empty data")
 
 			reparsed, _, err := NewKeyCertificate(certBytes)

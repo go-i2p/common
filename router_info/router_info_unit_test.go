@@ -479,13 +479,9 @@ func TestCreateRouterInfo(t *testing.T) {
 	if len(ed25519_privkey) != 64 {
 		t.Fatalf("Generated Ed25519 private key has wrong size: got %d, want 64", len(ed25519_privkey))
 	}
-	ed25519_pubkey_raw, err := ed25519_privkey.Public()
+	ed25519_pubkey, err := ed25519_privkey.Public()
 	if err != nil {
 		t.Fatalf("Failed to derive Ed25519 public key: %v\n", err)
-	}
-	ed25519_pubkey, ok := ed25519_pubkey_raw.(types.SigningPublicKey)
-	if !ok {
-		t.Fatalf("Failed to get SigningPublicKey from Ed25519 public key")
 	}
 
 	var elgamal_privkey elgamal.PrivateKey

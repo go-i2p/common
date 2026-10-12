@@ -109,17 +109,15 @@ func createValidKeyAndCert(t *testing.T) *KeysAndCert {
 
 	ed25519_privkey, err := ed25519.GenerateEd25519Key()
 	require.NoError(t, err, "Failed to generate Ed25519 private key")
-	ed25519_pubkey_raw, err := ed25519_privkey.Public()
+	ed25519_pubkey, err := ed25519_privkey.Public()
 	require.NoError(t, err, "Failed to derive Ed25519 public key")
-	ed25519_pubkey, ok := ed25519_pubkey_raw.(types.SigningPublicKey)
-	require.True(t, ok, "Failed to get SigningPublicKey from Ed25519 public key")
 
 	var elgamal_privkey elgamal.PrivateKey
 	err = elgamal.ElgamalGenerate(&elgamal_privkey.PrivateKey, rand.Reader)
 	require.NoError(t, err, "Failed to generate ElGamal private key")
 
 	var elg_pubkey elgamal.ElgPublicKey
-	yBytes := elgamal_privkey.PublicKey.Y.Bytes()
+	yBytes := elgamal_privkey.Y.Bytes()
 	require.LessOrEqual(t, len(yBytes), 256, "ElGamal public key Y too large")
 	copy(elg_pubkey[256-len(yBytes):], yBytes)
 
@@ -155,10 +153,8 @@ func createX25519Ed25519KeysAndCert(t *testing.T) *KeysAndCert {
 
 	ed25519Priv, err := ed25519.GenerateEd25519Key()
 	require.NoError(t, err)
-	ed25519PubRaw, err := ed25519Priv.Public()
+	ed25519Pub, err := ed25519Priv.Public()
 	require.NoError(t, err)
-	ed25519Pub, ok := ed25519PubRaw.(types.SigningPublicKey)
-	require.True(t, ok)
 
 	x25519Key := make(curve25519.Curve25519PublicKey, 32)
 	_, err = rand.Read(x25519Key)

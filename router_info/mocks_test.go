@@ -98,7 +98,7 @@ func generateElGamalKeyPair(t *testing.T) elgamal.ElgPublicKey {
 		t.Fatalf("Failed to generate ElGamal private key: %v\n", err)
 	}
 	var elg_pubkey elgamal.ElgPublicKey
-	yBytes := elgamal_privkey.PublicKey.Y.Bytes()
+	yBytes := elgamal_privkey.Y.Bytes()
 	if len(yBytes) > 256 {
 		t.Fatalf("ElGamal public key Y too large")
 	}
@@ -171,13 +171,9 @@ func generateTestRouterInfoForFuzz() (*RouterInfo, error) {
 		return nil, err
 	}
 	ed25519_privkey := ed25519_signingprivkey.(ed25519.Ed25519PrivateKey)
-	ed25519_pubkey, err := ed25519_privkey.Public()
+	ed25519_sigpubkey, err := ed25519_privkey.Public()
 	if err != nil {
 		return nil, err
-	}
-	ed25519_sigpubkey, ok := ed25519_pubkey.(types.SigningPublicKey)
-	if !ok {
-		return nil, fmt.Errorf("failed to get SigningPublicKey from Ed25519 public key")
 	}
 
 	var elgamal_privkey elgamal.PrivateKey
@@ -186,7 +182,7 @@ func generateTestRouterInfoForFuzz() (*RouterInfo, error) {
 		return nil, err
 	}
 	var elg_pubkey elgamal.ElgPublicKey
-	yBytes := elgamal_privkey.PublicKey.Y.Bytes()
+	yBytes := elgamal_privkey.Y.Bytes()
 	if len(yBytes) > 256 {
 		return nil, fmt.Errorf("ElGamal public key Y too large")
 	}

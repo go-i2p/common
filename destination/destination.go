@@ -213,11 +213,11 @@ func CanonicalizeDestination(d *Destination) (*Destination, error) {
 // needsCanonicalization returns true if the destination uses ElGamal+DSA-SHA1
 // key types and may need to be re-encoded with a NULL certificate.
 func needsCanonicalization(d *Destination) bool {
-	if d.KeysAndCert.KeyCertificate == nil {
+	if d.KeyCertificate == nil {
 		return false
 	}
-	sigType := d.KeysAndCert.KeyCertificate.SigningPublicKeyType()
-	cryptoType := d.KeysAndCert.KeyCertificate.PublicKeyType()
+	sigType := d.KeyCertificate.SigningPublicKeyType()
+	cryptoType := d.KeyCertificate.PublicKeyType()
 	return sigType == key_certificate.KEYCERT_SIGN_DSA_SHA1 &&
 		cryptoType == key_certificate.KEYCERT_CRYPTO_ELG
 }
