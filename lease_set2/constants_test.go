@@ -9,10 +9,13 @@ import (
 // TestLeaseSet2MinSizeConstant verifies the minimum size constant.
 // See https://geti2p.net/spec/common-structures#leaseset2
 func TestLeaseSet2MinSizeConstant(t *testing.T) {
-	// LEASESET2_MIN_SIZE = 539: header 395 + options 2 + key-header 5 + key 32 +
-	// lease-count 1 + 1 Lease2 (40 bytes) + sig 64 = 539
+	// LEASESET2_MIN_SIZE = 515: header 395 + options 2 + key-header 5 + key 32 +
+	// lease-count 1 + 1 Lease2 (40 bytes) + sig 40 (DSA-SHA1 minimum) = 515
 	// Per spec: "All LeaseSet2 variants require at least one Lease."
-	assert.Equal(t, 539, LEASESET2_MIN_SIZE)
+	// Note: The 64-byte EdDSA signature is typical for modern LeaseSet2, but the
+	// spec permits 40-byte DSA-SHA1 signatures. The pre-parse gate uses the
+	// structural minimum to avoid rejecting valid legacy-signed structures.
+	assert.Equal(t, 515, LEASESET2_MIN_SIZE)
 }
 
 // TestLeaseSet2HeaderMinSizeConstant verifies the header minimum size

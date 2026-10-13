@@ -32,8 +32,11 @@ func TestMetaLeaseSetStructExists(t *testing.T) {
 
 	// Verify MIN_SIZE arithmetic:
 	// Destination(387) + published(4) + expires(2) + flags(2) + options(2) +
-	// num(1) + 1 entry(40) + numr(1) + signature(64) = 503
-	assert.Equal(t, 503, META_LEASESET_MIN_SIZE)
+	// num(1) + 1 entry(40) + numr(1) + signature(40) = 479
+	// Note: The 64-byte EdDSA signature is typical for modern MetaLeaseSet, but the
+	// spec permits 40-byte DSA-SHA1 signatures. The pre-parse gate uses the
+	// structural minimum to avoid rejecting valid legacy-signed structures.
+	assert.Equal(t, 479, META_LEASESET_MIN_SIZE)
 	expectedMin := META_LEASESET_MIN_DESTINATION_SIZE +
 		META_LEASESET_PUBLISHED_SIZE +
 		META_LEASESET_EXPIRES_SIZE +
@@ -42,7 +45,7 @@ func TestMetaLeaseSetStructExists(t *testing.T) {
 		META_LEASESET_NUM_ENTRIES_SIZE +
 		META_LEASESET_ENTRY_SIZE +
 		META_LEASESET_NUM_REVOCATIONS_SIZE +
-		64 // minimum EdDSA signature size
+		40 // minimum DSA-SHA1 signature size
 	assert.Equal(t, expectedMin, META_LEASESET_MIN_SIZE)
 
 	// Verify entry size sum: hash(32) + flags(3) + cost(1) + end_date(4) = 40

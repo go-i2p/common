@@ -53,11 +53,11 @@ public_key :: publicKey (partial or full)
 
 padding :: random data
               length -> 0 bytes or as specified in key certificate
-              padding length + signing_key length == 128 bytes
+              public_key length + padding length + signing_key length == 384 bytes
 
 signing__key :: signingPublicKey (partial or full)
               length -> 128 bytes or as specified in key certificate
-              padding length + signing_key length == 128 bytes
+              public_key length + padding length + signing_key length == 384 bytes
 
 certificate :: Certificate
                length -> >= 3 bytes

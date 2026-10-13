@@ -187,6 +187,29 @@
 // This implementation follows I2P specification version 0.9.67 and is designed
 // for use in I2P routers, clients, and utilities.
 //
+// ## Known Specification Deviations / Supported Cryptographic Scope
+//
+// This library intentionally does not support signing or verification with the
+// following legacy cryptographic algorithms, which are deprecated in the I2P
+// specification as of version 0.9.58 (the Ed25519 mandate release):
+//
+// - **DSA-SHA1** (signing type 0): structures using this algorithm parse
+//   correctly, but `VerifySignature()` and related methods return an explicit
+//   "legacy unsupported signature type" error.
+// - **RSA-SHA256-2048** (signing type 4), **RSA-SHA384-3072** (type 5),
+//   **RSA-SHA512-4096** (type 6): same behavior as DSA-SHA1 — parseable but
+//   not verifiable.
+// - **Ed25519ph** (signing type 8): offline/transient use only; not supported
+//   for RouterIdentity or Destination key certificates.
+//
+// Legacy LeaseSet (v1) structures with a NULL certificate (implying DSA-SHA1)
+// are rejected with `ErrLegacyCryptoNotSupported` rather than parsed, as they
+// cannot be verified with modern algorithms.
+//
+// All other algorithms defined in the specification (Ed25519, ECDSA P256/P384/P521,
+// RedDSA, X25519, MLKEM+X25519 hybrids) are fully supported for both parsing
+// and cryptographic operations.
+//
 // # Version Information
 //
 // Use the package constants to check specification version:

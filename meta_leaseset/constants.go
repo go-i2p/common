@@ -10,9 +10,12 @@ const (
 
 	// META_LEASESET_MIN_SIZE is the absolute minimum size for a MetaLeaseSet structure.
 	// Destination (387) + published (4) + expires (2) + flags (2) + options (2) +
-	// num (1) + 1 entry (40) + numr (1) + signature (64 bytes EdDSA)
-	// = 387 + 4 + 2 + 2 + 2 + 1 + 40 + 1 + 64 = 503 bytes minimum
-	META_LEASESET_MIN_SIZE = 503
+	// num (1) + 1 entry (40) + numr (1) + signature (40 bytes DSA-SHA1 minimum)
+	// = 387 + 4 + 2 + 2 + 2 + 1 + 40 + 1 + 40 = 479 bytes minimum
+	// Note: The 64-byte EdDSA signature is typical for modern MetaLeaseSet, but the
+	// spec permits 40-byte DSA-SHA1 signatures. The pre-parse gate uses the
+	// structural minimum to avoid rejecting valid legacy-signed structures.
+	META_LEASESET_MIN_SIZE = 479
 
 	// META_LEASESET_HEADER_MIN_SIZE is the minimum size of MetaLeaseSet header without offline signature.
 	// Destination (387 bytes) + published (4 bytes) + expires (2 bytes) + flags (2 bytes)

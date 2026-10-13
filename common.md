@@ -1,8 +1,8 @@
 # Common Structures Specification
 
 > **Category:** Design  
-> **Last Updated:** 2025-04  
-> **Accurate For:** 0.9.66
+> **Last Updated:** 2025-06  
+> **Accurate For:** 0.9.67
 
 ---
 
