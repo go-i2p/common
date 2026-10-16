@@ -27,7 +27,9 @@
 //
 // # Thread Safety
 //
-// LeaseSet values are immutable after construction. Concurrent reads are safe;
+// LeaseSet values are immutable after construction, with one exception:
+// Leases() returns the internal slice rather than a copy, so callers must not
+// modify the returned slice or its elements. Concurrent reads are safe;
 // no locking is required.
 //
 // # Spec reference

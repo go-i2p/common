@@ -186,8 +186,11 @@ func GetMLKEMHybridKeySize(cryptoType int) (int, error) {
 //	if err != nil {
 //	    return err
 //	}
-//	paddingSize := keys_and_cert.KEYS_AND_CERT_DATA_SIZE -
-//	    (sizes.CryptoPublicKeySize + sizes.SigningPublicKeySize)
+//	// ExpectedPaddingSize caps the inline signing key at the 128-byte wire
+//	// field, so larger signing public keys (P521, RSA) carry the excess in
+//	// the Key Certificate payload instead of reducing the padding.
+//	paddingSize := keys_and_cert.ExpectedPaddingSize(
+//	    sizes.CryptoPublicKeySize, sizes.SigningPublicKeySize)
 func GetKeySizes(signingType, cryptoType int) (KeySizeInfo, error) {
 	signingInfo, signingExists := SigningKeySizes[signingType]
 	if !signingExists {

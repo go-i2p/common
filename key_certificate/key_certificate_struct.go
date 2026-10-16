@@ -52,7 +52,7 @@ type KeyCertificate struct {
 
 // NewKeyCertificate creates a new *KeyCertificate from []byte using ReadCertificate.
 // The remaining bytes after the specified length are also returned.
-// Returns a list of errors that occurred during parsing.
+// Returns an error if parsing failed.
 func NewKeyCertificate(bytes []byte) (key_certificate *KeyCertificate, remainder []byte, err error) {
 	log.WithFields(logger.Fields{
 		"pkg":          "key_certificate",

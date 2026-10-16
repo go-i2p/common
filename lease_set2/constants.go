@@ -6,9 +6,12 @@ package lease_set2
 // according to I2P specification 0.9.67.
 const (
 	// LEASESET2_MIN_SIZE is the absolute minimum size for a LeaseSet2 structure.
-	// This assumes: LeaseSet2Header (395 bytes) + empty options (2 bytes) +
-	// 1 encryption key (5 bytes header + 32 bytes X25519) + 1 lease (1 byte count + 40 bytes Lease2) + signature (40 bytes DSA-SHA1 minimum)
-	// = 395 + 2 + 5 + 32 + 1 + 40 + 40 = 515 bytes minimum
+	// This assumes: LeaseSet2Header (395 bytes: destination 387 + published 4 +
+	// expires 2 + flags 2) + empty options (2 bytes) + encryption key count
+	// (1 byte) + 1 encryption key (4 bytes header: type 2 + length 2, plus
+	// 32 bytes X25519) + lease count (1 byte) + 1 lease (40 bytes Lease2) +
+	// signature (40 bytes DSA-SHA1 minimum)
+	// = 395 + 2 + 1 + 4 + 32 + 1 + 40 + 40 = 515 bytes minimum
 	// Per spec: "All LeaseSet2 variants require at least one Lease."
 	// Note: The 64-byte EdDSA signature is typical for modern LeaseSet2, but the
 	// spec permits 40-byte DSA-SHA1 signatures. The pre-parse gate uses the

@@ -40,7 +40,7 @@ func readDestinationRaw(data []byte) (Destination, []byte, error) {
 
 // ReadDestination returns Destination from a []byte.
 // The remaining bytes after the specified length are also returned.
-// Returns a list of errors that occurred during parsing.
+// Returns an error if parsing failed.
 //
 // For ElGamal+DSA-SHA1 destinations encoded with a KEY(0,0) certificate,
 // the destination is automatically canonicalized to the NULL certificate

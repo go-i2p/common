@@ -13,7 +13,8 @@ import (
 //
 // This function constructs a properly formatted I2P Lease structure according to the specification,
 // encoding the tunnel gateway hash, tunnel ID as big-endian uint32, and expiration time as milliseconds
-// since epoch. No semantic validation is performed on the inputs; use Validate() to check for
+// since epoch. The only structural check is that expirationTime is not before the Unix epoch; no other
+// semantic validation is performed on the inputs, so use Validate() to check for
 // expired leases, zero gateway hashes, or other semantic issues.
 //
 // Parameters:
@@ -22,8 +23,9 @@ import (
 //   - expirationTime: Time when the lease expires
 //
 // Returns:
-//   - *Lease: Pointer to the created 44-byte lease structure
-//   - error: Currently always nil (reserved for future structural validation)
+//   - *Lease: Pointer to the created 44-byte lease structure, or nil on error
+//   - error: ErrPreEpochTimestamp if expirationTime is before the Unix epoch
+//     (pre-epoch times would wrap to far-future values on the wire); nil otherwise
 //
 // Example:
 //
@@ -85,8 +87,10 @@ func NewLease(tunnelGateway data.Hash, tunnelID uint32, expirationTime time.Time
 //   - expirationTime: Time when the lease expires
 //
 // Returns:
-//   - *Lease2: Pointer to the created 40-byte lease2 structure
-//   - error: ErrTimestampOverflow if the time exceeds the uint32 second range (after 2106-02-07)
+//   - *Lease2: Pointer to the created 40-byte lease2 structure, or nil on error
+//   - error: ErrPreEpochTimestamp if the time is before the Unix epoch, or
+//     ErrTimestampOverflow if it exceeds the uint32 second range (after 2106-02-07);
+//     nil otherwise
 //
 // Note: Lease2 uses 4-byte timestamps representing seconds since Unix epoch, providing sufficient
 // range until year 2106 while saving 4 bytes compared to the legacy Lease structure.

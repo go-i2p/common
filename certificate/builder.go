@@ -135,9 +135,15 @@ func (cb *CertificateBuilder) WithPayload(payload []byte) (*CertificateBuilder, 
 //
 // Example:
 //
-//	cert, err := NewCertificateBuilder().
-//	    WithKeyTypes(7, 4).
-//	    Build()
+//	builder := NewCertificateBuilder()
+//	builder, err := builder.WithKeyTypes(7, 4)
+//	if err != nil {
+//	    return err
+//	}
+//	cert, err := builder.Build()
+//	if err != nil {
+//	    return err
+//	}
 func (cb *CertificateBuilder) Build() (*Certificate, error) {
 	// Validate builder configuration
 	if err := cb.Validate(); err != nil {

@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/go-i2p/crypto/rand"
+
 	"github.com/go-i2p/common/certificate"
 	"github.com/go-i2p/common/key_certificate"
 	"github.com/go-i2p/common/keys_and_cert"
@@ -433,4 +435,77 @@ func TestNewDestinationWithCompressiblePadding_Concrete(t *testing.T) {
 			"NewDestinationWithCompressiblePadding must reject nil certificate")
 		assert.Nil(t, dest)
 	})
+}
+
+// TestNewDestinationWithCompressiblePadding_LargeSigningKey is a regression test
+// for signing keys larger than the 128-byte inline wire field (P521, RSA).
+// generatePaddingFromCert must cap the inline signing key at
+// keys_and_cert.KEYS_AND_CERT_SPK_SIZE before subtracting it, per the spec's
+// "Example Layouts" table; an uncapped subtraction produced 220 padding bytes
+// instead of 224 for X25519+P521, which KeysAndCert validation rejected.
+func TestNewDestinationWithCompressiblePadding_LargeSigningKey(t *testing.T) {
+	tests := []struct {
+		name        string
+		sigType     int
+		sigKeySize  int
+		cryptoType  int
+		cryptoSize  int
+		wantPadding int
+	}{
+		{
+			name:        "X25519_P521",
+			sigType:     key_certificate.KEYCERT_SIGN_P521,
+			sigKeySize:  132,
+			cryptoType:  key_certificate.KEYCERT_CRYPTO_X25519,
+			cryptoSize:  32,
+			wantPadding: 224,
+		},
+		{
+			// ElGamal crypto + P521: spec table row says 0 padding, 4 excess.
+			name:        "ElGamal_P521",
+			sigType:     key_certificate.KEYCERT_SIGN_P521,
+			sigKeySize:  132,
+			cryptoType:  key_certificate.KEYCERT_CRYPTO_ELG,
+			cryptoSize:  256,
+			wantPadding: 0,
+		},
+		{
+			name:        "X25519_DSA_SHA1",
+			sigType:     key_certificate.KEYCERT_SIGN_DSA_SHA1,
+			sigKeySize:  128,
+			cryptoType:  key_certificate.KEYCERT_CRYPTO_X25519,
+			cryptoSize:  32,
+			wantPadding: 224,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			// NewKeyCertificateWithTypes reserves payload space for the excess
+			// signing key bytes, which a bare CERT_KEY builder does not.
+			keyCert, err := key_certificate.NewKeyCertificateWithTypes(tc.sigType, tc.cryptoType)
+			require.NoError(t, err)
+
+			pubKey := &mockReceivingPublicKey{data: make([]byte, tc.cryptoSize)}
+			_, _ = rand.Read(pubKey.data)
+			sigKey := &mockSigningPublicKey{data: make([]byte, tc.sigKeySize)}
+			_, _ = rand.Read(sigKey.data)
+
+			dest, err := NewDestinationWithCompressiblePadding(pubKey, sigKey, &keyCert.Certificate)
+			require.NoError(t, err, "constructor must accept signing keys over 128 bytes")
+			require.NotNil(t, dest)
+			assert.True(t, dest.IsValid())
+			require.NotNil(t, dest.KeysAndCert)
+			assert.Len(t, dest.KeysAndCert.Padding, tc.wantPadding,
+				"padding must use the capped inline signing key size")
+
+			b, err := dest.Bytes()
+			require.NoError(t, err)
+
+			dest2, _, err := ReadDestination(b)
+			require.NoError(t, err, "round-trip of a large signing key must parse")
+			assert.True(t, dest.Equals(&dest2),
+				"round-tripped destination must equal the original")
+		})
+	}
 }

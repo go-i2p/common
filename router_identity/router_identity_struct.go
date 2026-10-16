@@ -101,8 +101,11 @@ func NewRouterIdentityWithCompressiblePadding(
 	if err != nil {
 		return nil, err
 	}
-	paddingSize := keys_and_cert.KEYS_AND_CERT_DATA_SIZE -
-		keyCert.CryptoSize() - keyCert.SigningPublicKeySize()
+	// ExpectedPaddingSize caps the inline signing key at the 128-byte wire
+	// field, matching NewKeysAndCert's validation; signing keys larger than
+	// that (P521, RSA) carry the excess in the Key Certificate payload instead
+	// of consuming padding.
+	paddingSize := keys_and_cert.ExpectedPaddingSize(keyCert.CryptoSize(), keyCert.SigningPublicKeySize())
 	if paddingSize < 0 {
 		paddingSize = 0
 	}
@@ -115,7 +118,7 @@ func NewRouterIdentityWithCompressiblePadding(
 
 // ReadRouterIdentity returns RouterIdentity from a []byte.
 // The remaining bytes after the specified length are also returned.
-// Returns a list of errors that occurred during parsing.
+// Returns an error if parsing failed.
 // Moved from: router_identity.go
 func ReadRouterIdentity(data []byte) (ri *RouterIdentity, remainder []byte, err error) {
 	log.WithFields(logger.Fields{

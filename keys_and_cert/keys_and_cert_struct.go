@@ -262,17 +262,30 @@ func validateSigningKeySize(signingPublicKey types.SigningPublicKey, expectedSiz
 	return nil
 }
 
+// ExpectedPaddingSize returns the padding size required by a KeysAndCert with
+// the given crypto and signing public key sizes.
+//
+// Per the I2P spec, the 384-byte data block holds the start-aligned crypto
+// public key, then padding, then the end-aligned signing public key. Only
+// KEYS_AND_CERT_SPK_SIZE (128) bytes of the signing key fit inline; any excess
+// is carried in the Key Certificate payload, so the inline portion is capped
+// before it is subtracted. This matches the spec's "Example Layouts" table,
+// where ElGamal + P521/RSA-* all have 0 padding bytes with the excess key data
+// in the certificate.
+func ExpectedPaddingSize(pubKeySize, sigKeySize int) int {
+	inlineSigKeySize := sigKeySize
+	if inlineSigKeySize > KEYS_AND_CERT_SPK_SIZE {
+		inlineSigKeySize = KEYS_AND_CERT_SPK_SIZE
+	}
+	return KEYS_AND_CERT_DATA_SIZE - pubKeySize - inlineSigKeySize
+}
+
 // validatePaddingSize validates that the padding has the expected size based on key sizes.
 // For signing keys larger than KEYS_AND_CERT_SPK_SIZE (128), only the first 128 bytes
 // are stored inline in the wire block; the excess is carried in the cert payload.
 // Returns error if the padding size is incorrect.
 func validatePaddingSize(padding []byte, pubKeySize, sigKeySize int) error {
-	// Cap the inline signing key size at the wire field capacity.
-	inlineSigKeySize := sigKeySize
-	if inlineSigKeySize > KEYS_AND_CERT_SPK_SIZE {
-		inlineSigKeySize = KEYS_AND_CERT_SPK_SIZE
-	}
-	expectedPaddingSize := KEYS_AND_CERT_DATA_SIZE - pubKeySize - inlineSigKeySize
+	expectedPaddingSize := ExpectedPaddingSize(pubKeySize, sigKeySize)
 	if len(padding) != expectedPaddingSize {
 		log.WithFields(logger.Fields{
 			"pkg":           "keys_and_cert",
@@ -484,13 +497,13 @@ func constructPublicKeyFromCert(keyCert *key_certificate.KeyCertificate, data []
 // Returns concatenated padding [pubKeyPadding || sigKeyPadding] or nil if no padding.
 func extractPaddingFromData(data []byte, pubKeySize, sigKeySize int) []byte {
 	// For signing keys larger than the SPK field, only 128 bytes are inline.
+	paddingSize := ExpectedPaddingSize(pubKeySize, sigKeySize)
+	if paddingSize <= 0 {
+		return nil
+	}
 	inlineSigKeySize := sigKeySize
 	if inlineSigKeySize > KEYS_AND_CERT_SPK_SIZE {
 		inlineSigKeySize = KEYS_AND_CERT_SPK_SIZE
-	}
-	paddingSize := KEYS_AND_CERT_DATA_SIZE - pubKeySize - inlineSigKeySize
-	if paddingSize <= 0 {
-		return nil
 	}
 	padding := make([]byte, paddingSize)
 	pubPaddingSize := KEYS_AND_CERT_PUBKEY_SIZE - pubKeySize
@@ -734,7 +747,7 @@ func logElgEd25519KeysDebug(dataLen int) {
 // logic from getElgEd25519KeySizes and getX25519Ed25519KeySizes.
 func computeKeyLayoutSizes(pubKeySize, sigKeySize int) (totalKeySize, paddingSize, minDataLength int) {
 	totalKeySize = KEYS_AND_CERT_DATA_SIZE
-	paddingSize = totalKeySize - pubKeySize - sigKeySize
+	paddingSize = ExpectedPaddingSize(pubKeySize, sigKeySize)
 	minDataLength = totalKeySize + certificate.CERT_MIN_SIZE
 	return totalKeySize, paddingSize, minDataLength
 }

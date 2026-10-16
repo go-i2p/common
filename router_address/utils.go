@@ -12,7 +12,7 @@ import (
 
 // ReadRouterAddress returns RouterAddress from a []byte.
 // The remaining bytes after the specified length are also returned.
-// Returns a list of errors that occurred during parsing.
+// Returns an error if parsing failed.
 // ErrNonZeroExpiration may be returned together with a valid RouterAddress to
 // indicate a spec violation; callers should use errors.Is to test for it.
 func ReadRouterAddress(routerAddressData []byte) (ra RouterAddress, remainder []byte, err error) {

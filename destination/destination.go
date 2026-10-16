@@ -288,7 +288,11 @@ func generatePaddingFromCert(keyCert *key_certificate.KeyCertificate) ([]byte, e
 	if err != nil {
 		return nil, oops.Errorf("unknown signing key type for padding calculation: %w", err)
 	}
-	paddingSize := keys_and_cert.KEYS_AND_CERT_DATA_SIZE - cryptoSize - sigSize
+	// ExpectedPaddingSize caps the inline signing key at the 128-byte wire
+	// field, matching NewKeysAndCert's validation; signing keys larger than
+	// that (P521, RSA) carry the excess in the Key Certificate payload instead
+	// of consuming padding.
+	paddingSize := keys_and_cert.ExpectedPaddingSize(cryptoSize, sigSize)
 	if paddingSize < 0 {
 		paddingSize = 0
 	}

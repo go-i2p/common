@@ -247,7 +247,7 @@ func ToI2PString(data string) (str I2PString, err error) {
 
 // ReadI2PString returns I2PString from a []byte.
 // The remaining bytes after the specified length are also returned.
-// Returns a list of errors that occurred during parsing.
+// Returns an error if parsing failed.
 func ReadI2PString(data []byte) (str I2PString, remainder []byte, err error) {
 	if err = validateI2PStringData(data); err != nil {
 		return str, remainder, err

@@ -140,7 +140,7 @@ func createTestRouterIdentity(
 	}
 	pubKeySize := keyCert.CryptoSize()
 	sigKeySize := keyCert.SigningPublicKeySize()
-	paddingSize := keys_and_cert.KEYS_AND_CERT_DATA_SIZE - pubKeySize - sigKeySize
+	paddingSize := keys_and_cert.ExpectedPaddingSize(pubKeySize, sigKeySize)
 	padding := make([]byte, paddingSize)
 	_, err = rand.Read(padding)
 	if err != nil {
@@ -210,7 +210,7 @@ func generateTestRouterInfoForFuzz() (*RouterInfo, error) {
 	}
 	pubKeySize := keyCert.CryptoSize()
 	sigKeySize := keyCert.SigningPublicKeySize()
-	paddingSize := keys_and_cert.KEYS_AND_CERT_DATA_SIZE - pubKeySize - sigKeySize
+	paddingSize := keys_and_cert.ExpectedPaddingSize(pubKeySize, sigKeySize)
 	padding := make([]byte, paddingSize)
 	_, err = rand.Read(padding)
 	if err != nil {

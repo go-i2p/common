@@ -520,7 +520,7 @@ func TestCreateRouterInfo(t *testing.T) {
 	}
 	pubKeySize := keyCert.CryptoSize()
 	sigKeySize := keyCert.SigningPublicKeySize()
-	paddingSize := keys_and_cert.KEYS_AND_CERT_DATA_SIZE - pubKeySize - sigKeySize
+	paddingSize := keys_and_cert.ExpectedPaddingSize(pubKeySize, sigKeySize)
 	padding := make([]byte, paddingSize)
 	_, err = rand.Read(padding)
 	if err != nil {

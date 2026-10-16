@@ -10,7 +10,7 @@
 //
 //   - Integer: Variable-length big-endian integers
 //   - I2PString: Length-prefixed UTF-8 strings (max 255 bytes)
-//   - Date: 64-bit millisecond timestamps (rolls over in 2106)
+//   - Date: 64-bit millisecond timestamps
 //   - Hash: 32-byte SHA-256 hashes
 //   - Mapping: Key-value property maps
 //   - MappingValues: Type-safe key-value pair collections

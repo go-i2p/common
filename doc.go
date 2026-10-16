@@ -50,7 +50,8 @@
 //   - Zero-value types are checked and rejected
 //   - Errors are returned explicitly, never ignored
 //   - Stream parsing supports efficient multi-value reads
-//   - Comprehensive test coverage (>85%) ensures reliability
+//   - Comprehensive test coverage (87.7% of statements across all packages;
+//     individual packages range from ~70% to 100%) ensures reliability
 //
 // # Constructor Pattern
 //
@@ -62,8 +63,15 @@
 //	    return err
 //	}
 //
-//	// Parse from bytes
-//	obj, remainder, err := NewTypeFromBytes(data)
+//	// Parse from bytes. The arity of the *FromBytes constructors varies by type:
+//	// fixed-size types return (obj, err), for example data.NewIntegerFromBytes,
+//	// data.NewI2PStringFromBytes, session_tag.NewSessionTagFromBytes and
+//	// signature.NewSignatureFromBytes; stream types also return the unconsumed
+//	// bytes, for example destination.NewDestinationFromBytes and
+//	// lease.NewLeaseFromBytes:
+//	//
+//	obj, err := NewTypeFromBytes(data)              // fixed-size types
+//	obj, remainder, err := NewTypeFromBytes(data)   // stream types
 //	if err != nil {
 //	    return err
 //	}
@@ -133,8 +141,13 @@
 //	pubKey, privKey := /* generate Ed25519 key pair */
 //	encKey, encPrivKey := /* generate X25519 key pair */
 //
-//	// Create KeysAndCert
-//	kac, err := keys_and_cert.NewKeysAndCert(keyCert, encKey, nil, pubKey)
+//	// Create KeysAndCert. Padding is required: it must be exactly
+//	// KEYS_AND_CERT_DATA_SIZE (384) minus the public key size minus the
+//	// inline signing key size, where the inline signing key size is the
+//	// declared signing public key size capped at KEYS_AND_CERT_SPK_SIZE (128).
+//	// For Ed25519 + X25519 that is 384 - 32 - 32 = 320 bytes.
+//	padding := make([]byte, 320)
+//	kac, err := keys_and_cert.NewKeysAndCert(keyCert, encKey, padding, pubKey)
 //	if err != nil {
 //	    return err
 //	}
@@ -145,9 +158,9 @@
 //	    return err
 //	}
 //
-//	// Encode as Base32 address
+//	// Encode as Base32 address (the returned string already ends in ".b32.i2p")
 //	address, err := dest.Base32Address()
-//	fmt.Printf("I2P address: %s.b32.i2p\n", address)
+//	fmt.Printf("I2P address: %s\n", address)
 //
 // Parsing from bytes:
 //
@@ -197,18 +210,27 @@
 //   correctly, but `VerifySignature()` and related methods return an explicit
 //   "legacy unsupported signature type" error.
 // - **RSA-SHA256-2048** (signing type 4), **RSA-SHA384-3072** (type 5),
-//   **RSA-SHA512-4096** (type 6): same behavior as DSA-SHA1 — parseable but
-//   not verifiable.
+//   **RSA-SHA512-4096** (type 6): rejected outright, unlike DSA-SHA1.
+//   `ReadRouterIdentity`/`NewRouterIdentity` and `ReadDestination`/
+//   `NewDestination` fail with "signing key type N ... is not permitted"
+//   before any verification is attempted.
 // - **Ed25519ph** (signing type 8): offline/transient use only; not supported
 //   for RouterIdentity or Destination key certificates.
+// - **RedDSA** (signing type 11): permitted for Destinations and encrypted
+//   lease sets, but rejected for RouterIdentities.
 //
 // Legacy LeaseSet (v1) structures with a NULL certificate (implying DSA-SHA1)
 // are rejected with `ErrLegacyCryptoNotSupported` rather than parsed, as they
 // cannot be verified with modern algorithms.
 //
-// All other algorithms defined in the specification (Ed25519, ECDSA P256/P384/P521,
-// RedDSA, X25519, MLKEM+X25519 hybrids) are fully supported for both parsing
-// and cryptographic operations.
+// The remaining specification algorithms — Ed25519, ECDSA P256/P384/P521,
+// RedDSA and X25519 — are fully supported for both parsing and cryptographic
+// operations. The MLKEM+X25519 hybrid key types (5/6/7) are supported for
+// parsing and size accounting only: the X25519 component is usable, while the
+// post-quantum ML-KEM component has no implementation in
+// github.com/go-i2p/crypto, so no hybrid key agreement or decryption is
+// performed. Likewise, RouterInfo creation (see the router_info package) is
+// currently limited to Ed25519 (type 7).
 //
 // # Version Information
 //

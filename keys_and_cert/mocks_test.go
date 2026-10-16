@@ -136,7 +136,7 @@ func createValidKeyAndCert(t *testing.T) *KeysAndCert {
 
 	pubKeySize := keyCert.CryptoSize()
 	sigKeySize := keyCert.SigningPublicKeySize()
-	paddingSize := KEYS_AND_CERT_DATA_SIZE - pubKeySize - sigKeySize
+	paddingSize := ExpectedPaddingSize(pubKeySize, sigKeySize)
 	padding := make([]byte, paddingSize)
 	_, err = rand.Read(padding)
 	require.NoError(t, err)
@@ -175,7 +175,7 @@ func createX25519Ed25519KeysAndCert(t *testing.T) *KeysAndCert {
 
 	pubKeySize := keyCert.CryptoSize()
 	sigKeySize := keyCert.SigningPublicKeySize()
-	paddingSize := KEYS_AND_CERT_DATA_SIZE - pubKeySize - sigKeySize
+	paddingSize := ExpectedPaddingSize(pubKeySize, sigKeySize)
 	padding := make([]byte, paddingSize)
 	_, err = rand.Read(padding)
 	require.NoError(t, err)

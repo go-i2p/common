@@ -100,12 +100,8 @@ func buildKeysAndCertForTypes(t *testing.T, sigType, cryptoType int) *keys_and_c
 	_, _ = rand.Read(pubKey)
 	sigKey := make([]byte, sigKeySize)
 	_, _ = rand.Read(sigKey)
-	// For large signing keys (> SPK slot) only the first SPK_SIZE bytes are inline.
-	inlineSigKeySize := sigKeySize
-	if inlineSigKeySize > keys_and_cert.KEYS_AND_CERT_SPK_SIZE {
-		inlineSigKeySize = keys_and_cert.KEYS_AND_CERT_SPK_SIZE
-	}
-	paddingSize := keys_and_cert.KEYS_AND_CERT_DATA_SIZE - cryptoKeySize - inlineSigKeySize
+	// ExpectedPaddingSize accounts for the 128-byte inline SPK cap.
+	paddingSize := keys_and_cert.ExpectedPaddingSize(cryptoKeySize, sigKeySize)
 	var padding []byte
 	if paddingSize > 0 {
 		padding = make([]byte, paddingSize)

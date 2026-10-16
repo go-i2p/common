@@ -766,7 +766,7 @@ func (ri *RouterInfo) serializeWithoutSignature() ([]byte, error) {
 
 // ReadRouterInfo returns RouterInfo from a []byte.
 // The remaining bytes after the specified length are also returned.
-// Returns a list of errors that occurred during parsing.
+// Returns an error if parsing failed.
 func ReadRouterInfo(bytes []byte) (info RouterInfo, remainder []byte, err error) {
 	log.WithFields(logger.Fields{"pkg": "router_info", "func": "ReadRouterInfo", "input_length": len(bytes)}).Debug("Reading RouterInfo from bytes")
 

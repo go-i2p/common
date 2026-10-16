@@ -8,7 +8,7 @@ import (
 
 // ReadSessionTag returns SessionTag from a []byte.
 // The remaining bytes after the specified length are also returned.
-// Returns a list of errors that occurred during parsing.
+// Returns an error if parsing failed.
 func ReadSessionTag(bytes []byte) (info SessionTag, remainder []byte, err error) {
 	if len(bytes) < SessionTagSize {
 		log.WithFields(logger.Fields{

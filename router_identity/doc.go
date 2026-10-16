@@ -32,9 +32,14 @@
 // provides access to all KeysAndCert methods while adding
 // RouterIdentity-specific validation and key type enforcement.
 //
-// Constructors (NewRouterIdentity, NewRouterIdentityFromKeysAndCert) perform
-// defensive deep copies of the provided data, so callers may freely mutate
-// their inputs after construction without affecting the RouterIdentity.
+// NewRouterIdentityFromKeysAndCert performs a defensive deep copy of the
+// provided data, so callers may freely mutate their inputs after construction
+// without affecting the RouterIdentity.
+//
+// NewRouterIdentity does not copy: it stores the KeysAndCert's Padding slice
+// by reference, so mutating the caller's padding (or the embedded
+// KeysAndCert.Padding) afterwards also mutates the RouterIdentity. Copy the
+// padding before calling it if caller-side mutation must not be observable.
 //
 // AsDestination() also performs a deep copy, cloning the KeyCertificate pointer
 // and Padding slice backing array. The returned Destination is independent of

@@ -40,8 +40,8 @@ const CERT_MAX_PAYLOAD_SIZE = 65535
 // that fits in a single byte (0-255 range)
 const CERT_MAX_TYPE_VALUE = 255
 
-// CERT_MIN_KEY_PAYLOAD_SIZE is the minimum payload size required for KEY certificates
-// to contain the signature type field (2 bytes minimum)
+// CERT_MIN_KEY_PAYLOAD_SIZE is the minimum payload size required for KEY certificates:
+// the 2-byte signing public key type plus the 2-byte crypto public key type
 const CERT_MIN_KEY_PAYLOAD_SIZE = 4
 
 // ============ Certificate Data Extraction ============

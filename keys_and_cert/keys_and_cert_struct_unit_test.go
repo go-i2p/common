@@ -443,7 +443,7 @@ func TestNewKeysAndCertElgEd25519_RoundTrip(t *testing.T) {
 
 	pubKeySize := keyCert.CryptoSize()
 	sigKeySize := keyCert.SigningPublicKeySize()
-	paddingSize := KEYS_AND_CERT_DATA_SIZE - pubKeySize - sigKeySize
+	paddingSize := ExpectedPaddingSize(pubKeySize, sigKeySize)
 	padding := make([]byte, paddingSize)
 	_, err = rand.Read(padding)
 	require.NoError(t, err)
@@ -1157,4 +1157,74 @@ func TestNewKeysAndCert_RSA2048FromScratchRoundTrip(t *testing.T) {
 	// The reconstructed signing key must match the original
 	assert.Equal(t, sigKeyBytes, parsed.SigningPublic.Bytes(),
 		"RSA-2048 from-scratch round-trip: signing key must match original")
+}
+
+// ============================================================================
+// ExpectedPaddingSize – pinned to the I2P spec "Example Layouts" table
+// ============================================================================
+
+// TestExpectedPaddingSize_SpecExampleLayouts verifies the capped padding
+// formula against every row of the "Example Layouts" table in the I2P common
+// structures spec (all rows use an ElGamal crypto public key, 256 bytes).
+// See common.md "Key Certificates" -> "Example Layouts".
+func TestExpectedPaddingSize_SpecExampleLayouts(t *testing.T) {
+	const elg = 256 // ElGamal crypto public key size
+
+	tests := []struct {
+		name             string
+		sigKeySize       int
+		wantPadding      int
+		wantExcessInCert int
+	}{
+		{"DSA_SHA1", 128, 0, 0},
+		{"ECDSA_SHA256_P256", 64, 64, 0},
+		{"ECDSA_SHA384_P384", 96, 32, 0},
+		{"ECDSA_SHA512_P521", 132, 0, 4},
+		{"RSA_SHA256_2048", 256, 0, 128},
+		{"RSA_SHA384_3072", 384, 0, 256},
+		{"RSA_SHA512_4096", 512, 0, 384},
+		{"EdDSA_SHA512_Ed25519", 32, 96, 0},
+		{"EdDSA_SHA512_Ed25519ph", 32, 96, 0},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got := ExpectedPaddingSize(elg, tc.sigKeySize)
+			assert.Equal(t, tc.wantPadding, got,
+				"padding must match the spec Example Layouts table")
+
+			// The inline signing key never exceeds the 128-byte wire field,
+			// and padding + inline + crypto always fills the 384-byte block.
+			inline := tc.sigKeySize
+			if inline > KEYS_AND_CERT_SPK_SIZE {
+				inline = KEYS_AND_CERT_SPK_SIZE
+			}
+			assert.Equal(t, KEYS_AND_CERT_DATA_SIZE, elg+got+inline,
+				"crypto key + padding + inline signing key must fill the 384-byte block")
+			assert.Equal(t, tc.sigKeySize-inline, tc.wantExcessInCert,
+				"excess signing key data carried in the certificate")
+		})
+	}
+}
+
+// TestExpectedPaddingSize_Sub256CryptoKeys covers crypto keys smaller than the
+// 256-byte ElGamal field, where an uncapped formula would diverge. X25519 (32)
+// with a P521 signing key must reserve 224 padding bytes, not 220.
+func TestExpectedPaddingSize_Sub256CryptoKeys(t *testing.T) {
+	tests := []struct {
+		name        string
+		pubKeySize  int
+		sigKeySize  int
+		wantPadding int
+	}{
+		{"X25519_P521", 32, 132, 224},
+		{"X25519_RSA2048", 32, 256, 224},
+		{"X25519_Ed25519", 32, 32, 320},
+		{"ECIES_P256", 64, 64, 256},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			assert.Equal(t, tc.wantPadding, ExpectedPaddingSize(tc.pubKeySize, tc.sigKeySize))
+		})
+	}
 }

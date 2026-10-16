@@ -870,3 +870,74 @@ func TestUnmarshalBinary(t *testing.T) {
 		assert.True(t, ri1.Equal(ri2))
 	})
 }
+
+// TestNewRouterIdentityWithCompressiblePadding_LargeSigningKey is a regression
+// test for signing keys larger than the 128-byte inline wire field (P521, RSA).
+// The auto-generated padding must be computed with the inline portion capped at
+// keys_and_cert.KEYS_AND_CERT_SPK_SIZE, per the spec's "Example Layouts" table;
+// an uncapped subtraction produced 220 bytes instead of 224 for X25519+P521 and
+// made construction fail validation outright.
+func TestNewRouterIdentityWithCompressiblePadding_LargeSigningKey(t *testing.T) {
+	tests := []struct {
+		name        string
+		sigType     int
+		sigKeySize  int
+		cryptoType  int
+		cryptoSize  int
+		wantPadding int
+	}{
+		{
+			name:        "X25519_P521",
+			sigType:     key_certificate.KEYCERT_SIGN_P521,
+			sigKeySize:  132,
+			cryptoType:  key_certificate.KEYCERT_CRYPTO_X25519,
+			cryptoSize:  32,
+			wantPadding: 224,
+		},
+		{
+			// ElGamal crypto + P521: spec table row says 0 padding, 4 excess.
+			name:        "ElGamal_P521",
+			sigType:     key_certificate.KEYCERT_SIGN_P521,
+			sigKeySize:  132,
+			cryptoType:  key_certificate.KEYCERT_CRYPTO_ELG,
+			cryptoSize:  256,
+			wantPadding: 0,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			keyCert, err := key_certificate.NewKeyCertificateWithTypes(tc.sigType, tc.cryptoType)
+			require.NoError(t, err)
+
+			pubKey := make([]byte, tc.cryptoSize)
+			_, _ = rand.Read(pubKey)
+			sigKey := make([]byte, tc.sigKeySize)
+			_, _ = rand.Read(sigKey)
+
+			ri, err := NewRouterIdentityWithCompressiblePadding(
+				mockPublicKey(pubKey),
+				mockSigningPublicKey(sigKey),
+				&keyCert.Certificate,
+			)
+			require.NoError(t, err, "constructor must accept signing keys over 128 bytes")
+			require.NotNil(t, ri)
+			assert.True(t, ri.IsValid())
+			assert.Len(t, ri.Padding, tc.wantPadding,
+				"padding must use the capped inline signing key size")
+
+			// Must serialize and round-trip back to the same keys.
+			b, err := ri.Bytes()
+			require.NoError(t, err)
+
+			parsed, _, err := ReadRouterIdentity(b)
+			require.NoError(t, err, "round-trip of a large signing key must parse")
+			require.NotNil(t, parsed)
+			assert.Equal(t, sigKey, parsed.SigningPublic.Bytes(),
+				"round-tripped signing key must match the original")
+			require.NotNil(t, parsed.ReceivingPublic)
+			assert.Equal(t, pubKey, parsed.ReceivingPublic.Bytes(),
+				"round-tripped crypto public key must match the original")
+		})
+	}
+}

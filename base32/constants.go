@@ -6,7 +6,7 @@ import (
 )
 
 // I2PEncodeAlphabet defines the base32 character set used throughout the I2P network.
-// This is the standard RFC 3548/4648 base32 alphabet in lowercase form.
+// This is the RFC 4648 base32 alphabet (A-Z, 2-7) in lowercase form.
 // The lowercase variant is required for I2P .b32.i2p address compatibility.
 // The base32 standard inherently uses only a-z and 2-7 (26+6=32 symbols).
 const I2PEncodeAlphabet = "abcdefghijklmnopqrstuvwxyz234567"

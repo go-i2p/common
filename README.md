@@ -88,9 +88,14 @@ func main() {
         return
     }
     
-    // Calculate padding size
-    paddingSize := keys_and_cert.KEYS_AND_CERT_DATA_SIZE - 
-        (sizes.CryptoPublicKeySize + sizes.SigningPublicKeySize)
+    // Calculate padding size. ExpectedPaddingSize caps the inline signing key
+    // at KEYS_AND_CERT_SPK_SIZE (128 bytes), so signing public keys larger
+    // than that (P521, RSA) carry the excess in the Key Certificate payload
+    // instead of reducing the padding further.
+    paddingSize := keys_and_cert.ExpectedPaddingSize(
+        sizes.CryptoPublicKeySize,
+        sizes.SigningPublicKeySize,
+    )
     
     fmt.Printf("Signature size: %d bytes\n", sizes.SignatureSize)
     fmt.Printf("Signing public key size: %d bytes\n", sizes.SigningPublicKeySize)
@@ -127,7 +132,8 @@ func main() {
     _ = cert
 
     // Or build a certificate with a custom payload
-    customPayload := []byte{0x01, 0x02, 0x03, 0x04}
+    // (HASHCASH payloads must be printable ASCII)
+    customPayload := []byte("hashcash:WX-123456789012")
     builder2 := certificate.NewCertificateBuilder()
     builder2, err = builder2.WithType(certificate.CERT_HASHCASH)
     if err != nil {
@@ -196,7 +202,10 @@ import (
 
 func main() {
     // Parse I2P certificate from binary data
-    data := []byte{0x00, 0x00, 0x02, 0xff, 0xff}
+    // A KEY certificate (type 5) with a 4-byte payload: signing type 7
+    // (Ed25519) and crypto type 0 (ElGamal). The trailing 2 bytes are not
+    // part of the certificate and are returned as the remainder.
+    data := []byte{0x05, 0x00, 0x04, 0x00, 0x07, 0x00, 0x00, 0xaa, 0xbb}
     cert, remainder, err := certificate.ReadCertificate(data)
     if err != nil {
         fmt.Printf("Error: %v\n", err)
@@ -318,16 +327,20 @@ func main() {
 
 ## Logging
 
-This library uses [`github.com/go-i2p/logger`](https://github.com/go-i2p/logger) for comprehensive structured logging. Every log message includes `pkg` and `func` fields identifying the source package and function.
+This library uses [`github.com/go-i2p/logger`](https://github.com/go-i2p/logger) for comprehensive structured logging. Every log message emitted by this library includes `pkg` and `func` fields identifying the source package and function.
 
 ### Enabling Debug Logging
+
+Logging is disabled by default (output is discarded). `DEBUG_I2P` is the switch
+that enables it; `WARNFAIL_I2P` is only read once `DEBUG_I2P` is set, so it has
+no effect on its own.
 
 ```bash
 # Enable debug output
 DEBUG_I2P=debug go run your-program.go
 
-# Enable warnings-as-fatal (for strict validation)
-WARNFAIL_I2P=true go run your-program.go
+# Treat warnings and errors as fatal (for strict validation) - requires DEBUG_I2P
+DEBUG_I2P=debug WARNFAIL_I2P=true go run your-program.go
 ```
 
 ### Log Output Format
@@ -336,7 +349,7 @@ All log messages include structured fields for filtering and diagnostics:
 
 ```
 time=2025-01-01 12:00:00 level=debug msg=Reading Destination from bytes func=ReadDestination input_length=387 pkg=destination
-time=2025-01-01 12:00:00 level=error msg=data too short func=ReadDate pkg=data
+time=2025-01-01 12:00:00 level=error msg=ReadDate: data is too short func=ReadDate pkg=data
 ```
 
 ### Per-Package Logging
@@ -349,13 +362,17 @@ Each package has a dedicated `log.go` file declaring its logger instance. The fo
 
 ## Requirements
 
-- **Go Version**: 1.25.0 or later
+- **Go Version**: 1.26.8 or later (per the `go` directive in `go.mod`)
 - **I2P Specification**: 0.9.67 (June 2025)
 - **Dependencies**:
   - `github.com/go-i2p/crypto` - I2P cryptographic primitives
   - `github.com/go-i2p/logger` - Structured logging wrapper
+  - `github.com/go-i2p/red25519` - RedDSA signatures
   - `github.com/samber/oops` - Enhanced error handling
+  - `golang.org/x/crypto` - Additional cryptographic primitives
+- **Test-only dependencies**:
   - `github.com/stretchr/testify` - Testing utilities
+  - `go.step.sm/crypto` - Test key material
 
 ---
 
@@ -365,7 +382,7 @@ Run the comprehensive test suite:
 
 ```bash
 # Run all tests
-make test
+go test ./...
 
 # Run specific component tests
 go test ./certificate/...
@@ -376,7 +393,7 @@ go test ./router_info/...
 DEBUG_I2P=debug go test ./...
 
 # Run fuzz tests
-go test -fuzz=FuzzCertificate ./certificate/
+go test -fuzz=FuzzReadCertificate ./certificate/
 ```
 
 ---

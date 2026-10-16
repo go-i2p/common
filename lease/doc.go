@@ -32,10 +32,13 @@
 //	| tunnel_id (4)     | end_date (4)      |
 //	+----+----+----+----+----+----+----+----+
 //
-// Constructors (NewLease, NewLease2) accept arbitrary timestamps and gateway
-// hashes, including zero hashes and past times. Use Validate() or IsExpired()
-// for semantic checks after construction. Parsing functions (ReadLease,
-// ReadLease2) similarly perform no semantic validation, only structural parsing.
+// Constructors (NewLease, NewLease2) accept arbitrary gateway hashes,
+// including zero hashes, but validate the expiration time: a pre-epoch time is
+// rejected with ErrPreEpochTimestamp, and NewLease2 additionally rejects times
+// beyond the uint32 second range with ErrTimestampOverflow. Use Validate() or
+// IsExpired() for semantic checks after construction. Parsing functions
+// (ReadLease, ReadLease2) perform no semantic validation, only structural
+// parsing.
 //
 // Spec reference: https://geti2p.net/spec/common-structures#lease
 package lease
