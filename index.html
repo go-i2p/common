@@ -13,7 +13,7 @@
         <a href="index.html">go-i2p/common</a>
       </h2>
       <div class="repo-meta">
-        📝 429 commits
+        📝 430 commits
          • 📜 MIT License
       </div>
     </div>
@@ -46,12 +46,12 @@
       <div class="repo-stats">
         
         <div class="repo-stat">
-          <span>📝</span> <span>429 commits</span>
+          <span>📝</span> <span>430 commits</span>
         </div>
         
         
         <div class="repo-stat">
-          <span>📅</span> <span>Last updated: October 13, 2026</span>
+          <span>📅</span> <span>Last updated: October 16, 2026</span>
         </div>
         
         
@@ -160,9 +160,14 @@ func main() {
         return
     }
     
-    // Calculate padding size
-    paddingSize := keys_and_cert.KEYS_AND_CERT_DATA_SIZE - 
-        (sizes.CryptoPublicKeySize + sizes.SigningPublicKeySize)
+    // Calculate padding size. ExpectedPaddingSize caps the inline signing key
+    // at KEYS_AND_CERT_SPK_SIZE (128 bytes), so signing public keys larger
+    // than that (P521, RSA) carry the excess in the Key Certificate payload
+    // instead of reducing the padding further.
+    paddingSize := keys_and_cert.ExpectedPaddingSize(
+        sizes.CryptoPublicKeySize,
+        sizes.SigningPublicKeySize,
+    )
     
     fmt.Printf(&quot;Signature size: %d bytes\n&quot;, sizes.SignatureSize)
     fmt.Printf(&quot;Signing public key size: %d bytes\n&quot;, sizes.SigningPublicKeySize)
@@ -198,7 +203,8 @@ func main() {
     _ = cert
 
     // Or build a certificate with a custom payload
-    customPayload := []byte{0x01, 0x02, 0x03, 0x04}
+    // (HASHCASH payloads must be printable ASCII)
+    customPayload := []byte(&quot;hashcash:WX-123456789012&quot;)
     builder2 := certificate.NewCertificateBuilder()
     builder2, err = builder2.WithType(certificate.CERT_HASHCASH)
     if err != nil {
@@ -265,7 +271,10 @@ import (
 
 func main() {
     // Parse I2P certificate from binary data
-    data := []byte{0x00, 0x00, 0x02, 0xff, 0xff}
+    // A KEY certificate (type 5) with a 4-byte payload: signing type 7
+    // (Ed25519) and crypto type 0 (ElGamal). The trailing 2 bytes are not
+    // part of the certificate and are returned as the remainder.
+    data := []byte{0x05, 0x00, 0x04, 0x00, 0x07, 0x00, 0x00, 0xaa, 0xbb}
     cert, remainder, err := certificate.ReadCertificate(data)
     if err != nil {
         fmt.Printf(&quot;Error: %v\n&quot;, err)
@@ -384,15 +393,19 @@ func main() {
 
 <h2 id="logging">Logging</h2>
 
-<p>This library uses <a href="https://github.com/go-i2p/logger" target="_blank"><code>github.com/go-i2p/logger</code></a> for comprehensive structured logging. Every log message includes <code>pkg</code> and <code>func</code> fields identifying the source package and function.</p>
+<p>This library uses <a href="https://github.com/go-i2p/logger" target="_blank"><code>github.com/go-i2p/logger</code></a> for comprehensive structured logging. Every log message emitted by this library includes <code>pkg</code> and <code>func</code> fields identifying the source package and function.</p>
 
 <h3 id="enabling-debug-logging">Enabling Debug Logging</h3>
+
+<p>Logging is disabled by default (output is discarded). <code>DEBUG_I2P</code> is the switch
+that enables it; <code>WARNFAIL_I2P</code> is only read once <code>DEBUG_I2P</code> is set, so it has
+no effect on its own.</p>
 
 <pre><code class="language-bash"># Enable debug output
 DEBUG_I2P=debug go run your-program.go
 
-# Enable warnings-as-fatal (for strict validation)
-WARNFAIL_I2P=true go run your-program.go
+# Treat warnings and errors as fatal (for strict validation) - requires DEBUG_I2P
+DEBUG_I2P=debug WARNFAIL_I2P=true go run your-program.go
 </code></pre>
 
 <h3 id="log-output-format">Log Output Format</h3>
@@ -400,7 +413,7 @@ WARNFAIL_I2P=true go run your-program.go
 <p>All log messages include structured fields for filtering and diagnostics:</p>
 
 <pre><code>time=2025-01-01 12:00:00 level=debug msg=Reading Destination from bytes func=ReadDestination input_length=387 pkg=destination
-time=2025-01-01 12:00:00 level=error msg=data too short func=ReadDate pkg=data
+time=2025-01-01 12:00:00 level=error msg=ReadDate: data is too short func=ReadDate pkg=data
 </code></pre>
 
 <h3 id="per-package-logging">Per-Package Logging</h3>
@@ -414,15 +427,22 @@ time=2025-01-01 12:00:00 level=error msg=data too short func=ReadDate pkg=data
 <h2 id="requirements">Requirements</h2>
 
 <ul>
-<li><strong>Go Version</strong>: 1.25.0 or later</li>
+<li><strong>Go Version</strong>: 1.26.8 or later (per the <code>go</code> directive in <code>go.mod</code>)</li>
 <li><strong>I2P Specification</strong>: 0.9.67 (June 2025)</li>
 <li><strong>Dependencies</strong>:
 
 <ul>
 <li><code>github.com/go-i2p/crypto</code> - I2P cryptographic primitives</li>
 <li><code>github.com/go-i2p/logger</code> - Structured logging wrapper</li>
+<li><code>github.com/go-i2p/red25519</code> - RedDSA signatures</li>
 <li><code>github.com/samber/oops</code> - Enhanced error handling</li>
+<li><code>golang.org/x/crypto</code> - Additional cryptographic primitives</li>
+</ul></li>
+<li><strong>Test-only dependencies</strong>:
+
+<ul>
 <li><code>github.com/stretchr/testify</code> - Testing utilities</li>
+<li><code>go.step.sm/crypto</code> - Test key material</li>
 </ul></li>
 </ul>
 
@@ -433,7 +453,7 @@ time=2025-01-01 12:00:00 level=error msg=data too short func=ReadDate pkg=data
 <p>Run the comprehensive test suite:</p>
 
 <pre><code class="language-bash"># Run all tests
-make test
+go test ./...
 
 # Run specific component tests
 go test ./certificate/...
@@ -444,7 +464,7 @@ go test ./router_info/...
 DEBUG_I2P=debug go test ./...
 
 # Run fuzz tests
-go test -fuzz=FuzzCertificate ./certificate/
+go test -fuzz=FuzzReadCertificate ./certificate/
 </code></pre>
 
 <hr>
@@ -474,7 +494,7 @@ go test -fuzz=FuzzCertificate ./certificate/
                 eyedeekay
               </div>
               <div class="contributor-commits">
-                429 commits
+                430 commits
               </div>
             </div>
           </div>
@@ -486,7 +506,7 @@ go test -fuzz=FuzzCertificate ./certificate/
     </main>
     
     <footer class="page-footer">
-      <p>Generated on 2026-10-16 23:10:31 • <a href="https://github.com/go-i2p/common" target="_blank">View on GitHub</a></p>
+      <p>Generated on 2026-10-16 23:56:39 • <a href="https://github.com/go-i2p/common" target="_blank">View on GitHub</a></p>
     </footer>
   </div>
 </body>
