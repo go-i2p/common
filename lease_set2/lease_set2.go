@@ -130,7 +130,7 @@ func (ls2 *LeaseSet2) Signature() sig.Signature {
 }
 
 // Bytes returns the complete LeaseSet2 structure as a byte array.
-// This serializes all components in the proper order according to I2P specification 0.9.67.
+// This serializes all components in the proper order according to I2P specification 0.9.71.
 //
 // The serialization includes:
 //  1. Destination (387+ bytes)
@@ -214,17 +214,18 @@ func ReadLeaseSet2(data []byte) (ls2 LeaseSet2, remainder []byte, err error) {
 		}).Warn("LeaseSet2 has non-zero reserved flag bits (bits 15-3 should be 0)")
 	}
 
-	// Spec: "If [BLINDED] is set, bit 1 (UNPUBLISHED) should also be set."
+	// BLINDED (bit 2) without UNPUBLISHED (bit 1) is a convention enforced on
+	// outbound construction (see validateOfflineSignatureFlags), not a
+	// requirement of the common-structures specification, which defines the two
+	// bits independently. Incoming structures are signed, and rejecting them on
+	// a non-normative rule would drop otherwise-valid records from other
+	// implementations, so the parse path warns rather than fails.
 	if (ls2.flags&LEASESET2_FLAG_BLINDED) != 0 && (ls2.flags&LEASESET2_FLAG_UNPUBLISHED) == 0 {
-		err = oops.
-			Code("blinded_requires_unpublished").
-			Errorf("BLINDED flag (bit 2) requires UNPUBLISHED flag (bit 1) to also be set")
 		log.WithFields(logger.Fields{
 			"pkg":   "lease_set2",
 			"func":  "ReadLeaseSet2",
 			"flags": ls2.flags,
-		}).Error(err.Error())
-		return ls2, remainder, err
+		}).Warn("LeaseSet2 has BLINDED flag (bit 2) set without UNPUBLISHED (bit 1); permitted by spec, discouraged by convention")
 	}
 
 	log.WithFields(logger.Fields{
@@ -787,8 +788,14 @@ func validateExpiresOffset(expiresOffset uint16) error {
 }
 
 // validateOfflineSignatureFlags validates consistency between the flags field and the
-// presence of an offline signature. Also enforces the spec co-implication:
-// BLINDED (bit 2) requires UNPUBLISHED (bit 1).
+// presence of an offline signature (spec-normative: the offline signature is
+// "only present if bit 0 is set in the flags").
+//
+// It additionally enforces the BLINDED-requires-UNPUBLISHED convention on
+// outbound construction. That co-implication is NOT stated in the
+// common-structures specification (which defines bits 1 and 2 independently);
+// it is a publishing convention, so it constrains what this library generates
+// but does not reject what it parses. See ReadLeaseSet2.
 func validateOfflineSignatureFlags(flags uint16, offlineSig *offline_signature.OfflineSignature) error {
 	if (flags&LEASESET2_FLAG_OFFLINE_KEYS) != 0 && offlineSig == nil {
 		return oops.

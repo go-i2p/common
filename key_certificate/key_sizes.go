@@ -27,7 +27,7 @@ type KeySizeInfo struct {
 // SigningKeySizes maps signing key types to their size information.
 // This provides compile-time constant lookups without requiring object creation.
 //
-// Sizes are based on I2P specification 0.9.67:
+// Sizes are based on I2P specification 0.9.71:
 // https://geti2p.net/spec/common-structures#certificate
 var SigningKeySizes = map[int]KeySizeInfo{
 	KEYCERT_SIGN_DSA_SHA1: {
@@ -85,7 +85,7 @@ var SigningKeySizes = map[int]KeySizeInfo{
 // CryptoKeySizes maps crypto key types to their size information.
 // This provides compile-time constant lookups without requiring object creation.
 //
-// Sizes are based on I2P specification 0.9.67:
+// Sizes are based on I2P specification 0.9.71:
 // https://geti2p.net/spec/common-structures#certificate
 var CryptoKeySizes = map[int]KeySizeInfo{
 	KEYCERT_CRYPTO_ELG: {
@@ -127,9 +127,17 @@ var CryptoKeySizes = map[int]KeySizeInfo{
 }
 
 // MLKEM+X25519 hybrid public key total sizes (MLKEM component + 32-byte X25519 component).
-// These sizes apply to the full hybrid key material used outside the standard KeysAndCert
-// structure (e.g. in LeaseSet2 / EncryptedLeaseSet blocks).
-// Source: I2P Proposal 169 (Post-Quantum Cryptography).
+//
+// These are the sizes of the *key material* used for MLKEM key-encapsulation
+// operations during the ECIES-HYBRID handshake; they are NOT wire field lengths in
+// any common structure. The specification's Crypto Public Key Types table lists
+// MLKEM512_X25519 / MLKEM768_X25519 / MLKEM1024_X25519 (type codes 5 / 6 / 7) with a
+// "Total Public Key Length" of 32 bytes — the X25519 component — so KeysAndCert,
+// LeaseSet2 and EncryptedLeaseSet all carry 32 bytes for these types and validate
+// against CryptoKeySizes, not against the constants below.
+// (The standalone MLKEM512/768/1024 types, codes 8/9/10, are marked "for handshakes
+// only, not for Leasesets, RIs or Destinations".)
+// Source: I2P Proposal 169 (Post-Quantum Cryptography), ECIES-HYBRID.
 const (
 	// MLKEM512_X25519_HYBRID_SIZE is the full MLKEM-512+X25519 public key size (800 + 32 bytes).
 	MLKEM512_X25519_HYBRID_SIZE = 832

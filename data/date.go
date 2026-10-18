@@ -10,7 +10,7 @@ import (
 
 /*
 [I2P Date]
-Accurate for version 0.9.67
+Accurate for version 0.9.71
 
 Description
 The number of milliseconds since midnight on January 1, 1970 in the GMT timezone.

@@ -12,7 +12,7 @@ import (
 
 /*
 [I2P Certificate]
-Accurate for version 0.9.67
+Accurate for version 0.9.71
 
 Description
 A certifificate is a container for various receipts of proof of works used throughout the I2P network.

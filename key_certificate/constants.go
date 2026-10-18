@@ -3,7 +3,7 @@ package key_certificate
 
 // Key Certificate Signing Key Types define the cryptographic signature algorithms
 // supported by I2P Key Certificates for digital signature operations.
-// These constants map to specific cryptographic algorithms as defined in I2P specification 0.9.67.
+// These constants map to specific cryptographic algorithms as defined in I2P specification 0.9.71.
 // https://geti2p.net/spec/common-structures#certificate
 
 // Key Certificate Signing Key Types
@@ -98,7 +98,7 @@ const (
 
 	// Experimental and Reserved Signature Type Ranges
 	// These ranges are reserved for experimental implementations and future expansion.
-	// Reference: I2P specification 0.9.67
+	// Reference: I2P specification 0.9.71
 
 	// KEYCERT_SIGN_EXPERIMENTAL_START marks the beginning of the experimental signature type range (type 65280).
 	// This range (65280-65534) is reserved for testing and experimental signature algorithms.
@@ -159,8 +159,9 @@ const (
 	// Provides NIST security level 1 (equivalent to AES-128) with 32-byte public keys.
 	// Only supported for LeaseSet encryption as of I2P 0.9.67.
 	//
-	// NOTE: This type is defined by I2P Proposal 169 (Post-Quantum Cryptography)
-	// and is not yet in the mainline common structures spec as of 0.9.67.
+	// NOTE: Defined by I2P Proposal 169 (Post-Quantum Cryptography) and listed in the
+	// mainline common structures spec Crypto Public Key Types table since 0.9.67,
+	// with a Total Public Key Length of 32 bytes (the X25519 component).
 	KEYCERT_CRYPTO_MLKEM512_X25519 = 5
 
 	// KEYCERT_CRYPTO_MLKEM768_X25519 identifies MLKEM768+X25519 hybrid encryption (type 6).
@@ -168,8 +169,9 @@ const (
 	// Provides NIST security level 3 (equivalent to AES-192) with 32-byte public keys.
 	// Only supported for LeaseSet encryption as of I2P 0.9.67.
 	//
-	// NOTE: This type is defined by I2P Proposal 169 (Post-Quantum Cryptography)
-	// and is not yet in the mainline common structures spec as of 0.9.67.
+	// NOTE: Defined by I2P Proposal 169 (Post-Quantum Cryptography) and listed in the
+	// mainline common structures spec Crypto Public Key Types table since 0.9.67,
+	// with a Total Public Key Length of 32 bytes (the X25519 component).
 	KEYCERT_CRYPTO_MLKEM768_X25519 = 6
 
 	// KEYCERT_CRYPTO_MLKEM1024_X25519 identifies MLKEM1024+X25519 hybrid encryption (type 7).
@@ -177,8 +179,9 @@ const (
 	// Provides NIST security level 5 (equivalent to AES-256) with 32-byte public keys.
 	// Only supported for LeaseSet encryption as of I2P 0.9.67.
 	//
-	// NOTE: This type is defined by I2P Proposal 169 (Post-Quantum Cryptography)
-	// and is not yet in the mainline common structures spec as of 0.9.67.
+	// NOTE: Defined by I2P Proposal 169 (Post-Quantum Cryptography) and listed in the
+	// mainline common structures spec Crypto Public Key Types table since 0.9.67,
+	// with a Total Public Key Length of 32 bytes (the X25519 component).
 	KEYCERT_CRYPTO_MLKEM1024_X25519 = 7
 
 	// KEYCERT_CRYPTO_RESERVED_NONE is reserved for future use (type 255).
@@ -188,7 +191,7 @@ const (
 
 	// Experimental and Reserved Encryption Type Ranges
 	// These ranges are reserved for experimental implementations and future expansion.
-	// Reference: I2P specification 0.9.67
+	// Reference: I2P specification 0.9.71
 
 	// KEYCERT_CRYPTO_EXPERIMENTAL_START marks the beginning of the experimental encryption type range (type 65280).
 	// This range (65280-65534) is reserved for testing and experimental encryption algorithms.

@@ -454,7 +454,7 @@ func TestParserRejectsZeroLeasesParseAndValidate(t *testing.T) {
 
 // TestConstructorAcceptsBlindedWithUnpublished verifies that BLINDED | UNPUBLISHED
 // is accepted by the constructor. This is the complementary test to
-// TestBlindedFlagRequiresUnpublished which checks that BLINDED alone is rejected.
+// TestBlindedFlagRequiresUnpublished which checks that BLINDED alone is rejected on construction.
 func TestConstructorAcceptsBlindedWithUnpublished(t *testing.T) {
 	pub, priv, err := ed25519.GenerateKey(rand.Reader)
 	require.NoError(t, err)
@@ -477,14 +477,22 @@ func TestConstructorAcceptsBlindedWithUnpublished(t *testing.T) {
 	assert.True(t, ls2.IsUnpublished())
 }
 
-// TestParserRejectsBlindedWithoutUnpublished verifies that the parser enforces
-// the spec co-implication: BLINDED (bit 2) requires UNPUBLISHED (bit 1).
-func TestParserRejectsBlindedWithoutUnpublished(t *testing.T) {
+// TestParserAcceptsBlindedWithoutUnpublished verifies that the parser does NOT
+// reject BLINDED (bit 2) without UNPUBLISHED (bit 1).
+//
+// The common-structures specification defines those two bits independently
+// ("Bit 1: ... an unpublished leaseset. Bit 2: ... blinded and encrypted when
+// published") and states no co-implication. Because LeaseSet2 is a signed
+// structure, rejecting otherwise-valid records from other implementations on a
+// non-normative rule would be an interop failure. The convention is enforced on
+// outbound construction instead (TestBlindedFlagRequiresUnpublished).
+func TestParserAcceptsBlindedWithoutUnpublished(t *testing.T) {
 	// Build wire data with BLINDED flag set but UNPUBLISHED not set
 	data := buildMinimalLeaseSet2Data(t, key_certificate.KEYCERT_SIGN_ED25519, 1, LEASESET2_FLAG_BLINDED)
-	_, _, err := ReadLeaseSet2(data)
-	assert.Error(t, err, "Parser must reject BLINDED flag without UNPUBLISHED")
-	assert.Contains(t, err.Error(), "UNPUBLISHED")
+	ls2, _, err := ReadLeaseSet2(data)
+	assert.NoError(t, err, "Parser must accept BLINDED without UNPUBLISHED (spec does not prohibit it)")
+	assert.True(t, ls2.IsBlinded())
+	assert.False(t, ls2.IsUnpublished())
 }
 
 // TestParserAcceptsBlindedWithUnpublished verifies that the parser accepts

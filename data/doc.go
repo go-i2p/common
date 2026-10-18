@@ -1,4 +1,4 @@
-// Package data implements I2P common data structures according to specification version 0.9.67.
+// Package data implements I2P common data structures according to specification version 0.9.71.
 //
 // This package provides fundamental data types used throughout the I2P network protocol,
 // including safe constructors and validators to prevent common programming errors.
@@ -114,6 +114,6 @@
 //
 // Reference: https://geti2p.net/spec/common-structures
 //
-// This implementation follows I2P specification version 0.9.67 and provides
+// This implementation follows I2P specification version 0.9.71 and provides
 // backward-compatible safe constructors while maintaining the existing API.
 package data

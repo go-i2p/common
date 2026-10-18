@@ -363,7 +363,7 @@ Each package has a dedicated `log.go` file declaring its logger instance. The fo
 ## Requirements
 
 - **Go Version**: 1.26.8 or later (per the `go` directive in `go.mod`)
-- **I2P Specification**: 0.9.67 (June 2025)
+- **I2P Specification**: 0.9.71 (page updated October 2026)
 - **Dependencies**:
   - `github.com/go-i2p/crypto` - I2P cryptographic primitives
   - `github.com/go-i2p/logger` - Structured logging wrapper

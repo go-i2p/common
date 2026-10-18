@@ -705,8 +705,10 @@ func TestParserRejectsZeroLeases(t *testing.T) {
 	assert.Error(t, err, "ReadLeaseSet2 must reject structures with 0 leases")
 }
 
-// TestBlindedFlagRequiresUnpublished verifies that the BLINDED flag co-implication
-// with UNPUBLISHED is enforced: BLINDED alone (0x04) must be rejected.
+// TestBlindedFlagRequiresUnpublished verifies that outbound construction enforces
+// the BLINDED/UNPUBLISHED publishing convention: BLINDED alone (0x04) is rejected.
+// This is a generation-time convention, not a specification requirement, and is
+// deliberately NOT enforced on the parse path (see TestParserAcceptsBlindedWithoutUnpublished).
 func TestBlindedFlagRequiresUnpublished(t *testing.T) {
 	_, priv, err := ed25519.GenerateKey(rand.Reader)
 	require.NoError(t, err)
@@ -717,7 +719,7 @@ func TestBlindedFlagRequiresUnpublished(t *testing.T) {
 		KeyLen:  32,
 		KeyData: make([]byte, 32),
 	}
-	// BLINDED set without UNPUBLISHED — spec violation
+	// BLINDED set without UNPUBLISHED — violates the outbound publishing convention
 	_, err = NewLeaseSet2(
 		dest, uint32(time.Now().Unix()), 600, LEASESET2_FLAG_BLINDED, nil,
 		common.Mapping{}, []EncryptionKey{encKey}, []lease.Lease2{*l}, priv,

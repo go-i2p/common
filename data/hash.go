@@ -10,7 +10,7 @@ import (
 
 /*
 [I2P Hash]
-Accurate for version 0.9.67
+Accurate for version 0.9.71
 
 Description
 Represents the SHA256 of some data.

@@ -3,7 +3,7 @@
     import "github.com/go-i2p/common/offline_signature"
 
 Package offline_signature implements the I2P OfflineSignature common data
-structure according to specification version 0.9.67.
+structure according to specification version 0.9.71.
 
 OfflineSignature is an optional part of LeaseSet2Header, and is also used in
 streaming and I2CP protocols. It allows a destination to use offline signing
@@ -14,7 +14,7 @@ Specification: https://geti2p.net/spec/common-structures#offlinesignature
 Introduced: I2P version 0.9.38 (Proposal 123)
 
 Package offline_signature implements the I2P OfflineSignature common data
-structure according to specification version 0.9.67.
+structure according to specification version 0.9.71.
 
 OfflineSignature provides enhanced security for I2P destinations by enabling the
 use of short-lived transient signing keys while keeping the long-term
@@ -26,7 +26,7 @@ Key features:
     - Transient signing keys with expiration timestamps
     - Offline generation for enhanced security
     - Signature verification using destination's long-term key
-    - Complete I2P specification 0.9.67 compliance
+    - Complete I2P specification 0.9.71 compliance
 
 Specification: https://geti2p.net/spec/common-structures#offlinesignature
 Introduced: I2P version 0.9.38 (Proposal 123)
@@ -80,7 +80,7 @@ SignatureSize returns the byte length of a signature for the given signature
 type. This function maps I2P signature type identifiers to their corresponding
 signature sizes. Returns 0 for unknown or unsupported signature types.
 
-Signature sizes are defined in I2P specification 0.9.67. Reference:
+Signature sizes are defined in I2P specification 0.9.71. Reference:
 https://geti2p.net/spec/common-structures#signature
 
 #### func  SigningPublicKeySize
@@ -94,7 +94,7 @@ corresponding public key sizes. Returns 0 for unknown or unsupported signature
 types.
 
 Signature types map to signing public key sizes as defined in I2P specification
-0.9.67. Reference: https://geti2p.net/spec/common-structures#signingpublickey
+0.9.71. Reference: https://geti2p.net/spec/common-structures#signingpublickey
 
 #### type OfflineSignature
 
@@ -145,7 +145,7 @@ Returns:
 func ReadOfflineSignature(data []byte, destinationSigType uint16) (OfflineSignature, []byte, error)
 ```
 ReadOfflineSignature parses an OfflineSignature from raw byte data according to
-I2P specification 0.9.67.
+I2P specification 0.9.71.
 
 This function extracts the expiration timestamp, transient signing public key
 type and data, and the signature created by the destination's long-term signing
@@ -183,7 +183,7 @@ Example usage:
 func (o *OfflineSignature) Bytes() []byte
 ```
 Bytes serializes the OfflineSignature to its wire format according to I2P
-specification 0.9.67.
+specification 0.9.71.
 
 The serialized format is:
 

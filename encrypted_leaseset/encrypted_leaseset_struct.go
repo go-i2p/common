@@ -9,7 +9,7 @@ import (
 
 // EncryptedLeaseSet represents an encrypted I2P LeaseSet2 (Database Store Type 5).
 //
-// Wire Format (I2P spec 0.9.67 — https://geti2p.net/spec/common-structures#encryptedleaseset):
+// Wire Format (I2P spec 0.9.71 — https://geti2p.net/spec/common-structures#encryptedleaseset):
 //
 //	sig_type            (2 bytes)   — Signing key type for the blinded public key
 //	blinded_public_key  (variable)  — Blinded signing public key (length from sig_type)

@@ -3,7 +3,7 @@ package lease_set2
 
 // LeaseSet2 Structure Size Constants
 // These constants define the minimum and maximum sizes for LeaseSet2 components
-// according to I2P specification 0.9.67.
+// according to I2P specification 0.9.71.
 const (
 	// LEASESET2_MIN_SIZE is the absolute minimum size for a LeaseSet2 structure.
 	// This assumes: LeaseSet2Header (395 bytes: destination 387 + published 4 +

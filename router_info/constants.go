@@ -4,6 +4,11 @@ package router_info
 // Derivation: RouterIdentity(387) + Date(8) + size(1) + peer_size(1) + Mapping(2 min) + Signature(40 DSA-SHA1 default) = 439
 const ROUTER_INFO_MIN_SIZE = 439
 
+// PEER_HASH_SIZE is the byte length of each router Hash that may follow the
+// peer_size field. Per the I2P spec, "The peer_size Integer may be followed by
+// a list of that many router hashes", and a Hash is always 32 bytes.
+const PEER_HASH_SIZE = 32
+
 // MIN_GOOD_VERSION defines the minimum acceptable patch version for the 0.9.x series.
 // This mirrors Java I2P's RouterVersion.MIN_GOOD_VERSION. Version 0.9.58 is the
 // Ed25519-mandate release where DSA_SHA1 was deprecated. Routers below this

@@ -1,5 +1,5 @@
 // Package offline_signature implements the I2P OfflineSignature common data structure
-// according to specification version 0.9.67.
+// according to specification version 0.9.71.
 //
 // OfflineSignature provides enhanced security for I2P destinations by enabling the use
 // of short-lived transient signing keys while keeping the long-term destination signing
@@ -9,7 +9,7 @@
 //   - Transient signing keys with expiration timestamps
 //   - Offline generation for enhanced security
 //   - Signature verification using destination's long-term key
-//   - Complete I2P specification 0.9.67 compliance
+//   - Complete I2P specification 0.9.71 compliance
 //
 // # RedDSA Signing Limitation
 //
@@ -63,7 +63,7 @@ var (
 	ErrExpiredOfflineSignature = errors.New("offline signature has expired")
 )
 
-// ReadOfflineSignature parses an OfflineSignature from raw byte data according to I2P specification 0.9.67.
+// ReadOfflineSignature parses an OfflineSignature from raw byte data according to I2P specification 0.9.71.
 //
 // This function extracts the expiration timestamp, transient signing public key type and data,
 // and the signature created by the destination's long-term signing key. The destinationSigType
@@ -320,7 +320,7 @@ func (o *OfflineSignature) IsExpired() bool {
 	return time.Now().UTC().After(o.ExpiresTime())
 }
 
-// Bytes serializes the OfflineSignature to its wire format according to I2P specification 0.9.67.
+// Bytes serializes the OfflineSignature to its wire format according to I2P specification 0.9.71.
 //
 // The serialized format is:
 //   - 4 bytes: expires (big-endian uint32)

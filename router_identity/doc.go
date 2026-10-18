@@ -10,7 +10,7 @@
 // # Key Type Restrictions
 //
 // RouterIdentities have stricter key type requirements than the generic
-// KeysAndCert structure. Per the I2P specification (0.9.67):
+// KeysAndCert structure. Per the I2P specification (0.9.71):
 //
 //   - RedDSA (signing type 11) is for Destinations and encrypted leasesets
 //     only; never used for Router Identities.

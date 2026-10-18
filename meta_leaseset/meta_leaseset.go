@@ -30,7 +30,7 @@ func (mls *MetaLeaseSet) ApplyCommonFields(fields rootcommon.LeaseSetCommonField
 // ReadMetaLeaseSet parses a MetaLeaseSet structure from the provided byte slice.
 // Returns the parsed MetaLeaseSet, remaining bytes, and any error encountered.
 //
-// The parsing process follows I2P specification 0.9.67:
+// The parsing process follows I2P specification 0.9.71:
 //  1. Parse destination (387+ bytes)
 //  2. Parse published timestamp (4 bytes)
 //  3. Parse expires offset (2 bytes)

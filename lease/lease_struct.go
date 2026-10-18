@@ -15,7 +15,7 @@ var _ fmt.Stringer = Lease{}
 
 /*
 [Lease]
-Accurate for version 0.9.67
+Accurate for version 0.9.71
 
 Description
 Defines the authorization for a particular tunnel to receive messages targeting a Destination.

@@ -25,7 +25,7 @@ var (
 
 /*
 [RouterIdentity]
-Accurate for version 0.9.67
+Accurate for version 0.9.71
 
 Description
 Defines the way to uniquely identify a particular router

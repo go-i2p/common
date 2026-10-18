@@ -122,7 +122,7 @@ func compareCanonicalBytes(d, other *Destination) bool {
 }
 
 // validateDestinationKeyTypes checks that the KeysAndCert does not use
-// key types prohibited for Destinations. Per the I2P spec (0.9.67):
+// key types prohibited for Destinations. Per the I2P spec (0.9.71):
 //   - Crypto: MLKEM512_X25519 (5), MLKEM768_X25519 (6), MLKEM1024_X25519 (7)
 //     are "for Leasesets only, not for RIs or Destinations."
 //   - Signing: RSA_SHA256_2048 (4), RSA_SHA384_3072 (5), RSA_SHA512_4096 (6)

@@ -72,7 +72,7 @@ func NewLeaseFromBytes(data []byte) (lease *Lease, remainder []byte, err error) 
 	return lease, remainder, err
 }
 
-// ReadLease2 parses a Lease2 structure from raw byte data according to I2P specification 0.9.67.
+// ReadLease2 parses a Lease2 structure from raw byte data according to I2P specification 0.9.71.
 // Validates that the input data contains at least 40 bytes required for a complete Lease2,
 // then extracts the tunnel gateway hash, tunnel ID, and 4-byte expiration timestamp.
 // Returns the parsed Lease2, any remaining unparsed bytes, and an error if parsing fails.

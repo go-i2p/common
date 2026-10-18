@@ -15,7 +15,7 @@ import (
 
 /*
 [SessionKey]
-Accurate for version 0.9.67
+Accurate for version 0.9.71
 
 Description
 This structure is used for symmetric AES256 encryption and decryption.

@@ -17,7 +17,7 @@ import (
 
 /*
 [KeysAndCert]
-Accurate for version 0.9.67
+Accurate for version 0.9.71
 
 Description
 An encryption public key, a signing public key, and a certificate, used as either a RouterIdentity or a Destination.

@@ -3,7 +3,7 @@ package meta_leaseset
 
 // MetaLeaseSet Structure Size Constants
 // These constants define the minimum and maximum sizes for MetaLeaseSet components
-// according to I2P specification 0.9.67.
+// according to I2P specification 0.9.71.
 const (
 	// META_LEASESET_TYPE is the Database Store type identifier for MetaLeaseSet.
 	META_LEASESET_TYPE = 7

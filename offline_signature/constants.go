@@ -1,5 +1,5 @@
 // Package offline_signature implements the I2P OfflineSignature common data structure
-// according to specification version 0.9.67.
+// according to specification version 0.9.71.
 //
 // OfflineSignature is an optional part of LeaseSet2Header, and is also used in
 // streaming and I2CP protocols. It allows a destination to use offline signing keys

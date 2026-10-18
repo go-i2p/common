@@ -20,7 +20,7 @@ import (
 
 // KeyCertificate represents an I2P Key Certificate structure
 // https://geti2p.net/spec/common-structures#certificate
-// Accurate for version 0.9.67
+// Accurate for version 0.9.71
 //
 // +----+----+----+----+----+-//
 // |type| length  | payload

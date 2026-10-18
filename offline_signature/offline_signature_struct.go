@@ -3,7 +3,7 @@ package offline_signature
 
 /*
 [OfflineSignature]
-Accurate for version 0.9.67
+Accurate for version 0.9.71
 
 +----+----+----+----+----+----+----+----+
 |     expires       | sigtype |         |

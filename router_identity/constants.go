@@ -3,7 +3,7 @@ package router_identity
 
 import "github.com/go-i2p/common/key_certificate"
 
-// RouterIdentity-specific key type restrictions per I2P specification 0.9.67.
+// RouterIdentity-specific key type restrictions per I2P specification 0.9.71.
 // https://geti2p.net/spec/common-structures#routeridentity
 
 // Disallowed signing key types for Router Identities.
@@ -20,7 +20,7 @@ var disallowedSigningKeyTypes = map[int]string{
 }
 
 // Disallowed crypto key types for Router Identities.
-// Per spec (0.9.67):
+// Per spec (0.9.71):
 //   - MLKEM hybrid types (5-7): "for Leasesets only, not for RIs or Destinations."
 var disallowedCryptoKeyTypes = map[int]string{
 	key_certificate.KEYCERT_CRYPTO_MLKEM512_X25519:  "MLKEM512+X25519 (LeaseSet only, not for Router Identities)",

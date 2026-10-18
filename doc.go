@@ -1,7 +1,7 @@
 // Package common provides I2P protocol common data structures and utilities.
 //
 // This library implements type-safe I2P network protocol data structures according
-// to specification version 0.9.67, with comprehensive validation and error handling.
+// to specification version 0.9.71, with comprehensive validation and error handling.
 //
 // # Overview
 //
@@ -50,7 +50,7 @@
 //   - Zero-value types are checked and rejected
 //   - Errors are returned explicitly, never ignored
 //   - Stream parsing supports efficient multi-value reads
-//   - Comprehensive test coverage (87.7% of statements across all packages;
+//   - Comprehensive test coverage (87.6% of statements across all packages;
 //     individual packages range from ~70% to 100%) ensures reliability
 //
 // # Constructor Pattern
@@ -197,7 +197,7 @@
 //
 // Reference: https://geti2p.net/spec/common-structures
 //
-// This implementation follows I2P specification version 0.9.67 and is designed
+// This implementation follows I2P specification version 0.9.71 and is designed
 // for use in I2P routers, clients, and utilities.
 //
 // ## Known Specification Deviations / Supported Cryptographic Scope
@@ -206,22 +206,70 @@
 // following legacy cryptographic algorithms, which are deprecated in the I2P
 // specification as of version 0.9.58 (the Ed25519 mandate release):
 //
-// - **DSA-SHA1** (signing type 0): structures using this algorithm parse
-//   correctly, but `VerifySignature()` and related methods return an explicit
-//   "legacy unsupported signature type" error.
-// - **RSA-SHA256-2048** (signing type 4), **RSA-SHA384-3072** (type 5),
-//   **RSA-SHA512-4096** (type 6): rejected outright, unlike DSA-SHA1.
-//   `ReadRouterIdentity`/`NewRouterIdentity` and `ReadDestination`/
-//   `NewDestination` fail with "signing key type N ... is not permitted"
-//   before any verification is attempted.
-// - **Ed25519ph** (signing type 8): offline/transient use only; not supported
-//   for RouterIdentity or Destination key certificates.
-// - **RedDSA** (signing type 11): permitted for Destinations and encrypted
-//   lease sets, but rejected for RouterIdentities.
+//   - **DSA-SHA1** (signing type 0): structures using this algorithm parse
+//     correctly, but `VerifySignature()` and related methods return an explicit
+//     "legacy unsupported signature type" error.
+//   - **RSA-SHA256-2048** (signing type 4), **RSA-SHA384-3072** (type 5),
+//     **RSA-SHA512-4096** (type 6): rejected outright, unlike DSA-SHA1.
+//     `ReadRouterIdentity`/`NewRouterIdentity` and `ReadDestination`/
+//     `NewDestination` fail with "signing key type N ... is not permitted"
+//     before any verification is attempted.
+//   - **Ed25519ph** (signing type 8): offline/transient use only; not supported
+//     for RouterIdentity or Destination key certificates.
+//   - **RedDSA** (signing type 11): permitted for Destinations and encrypted
+//     lease sets, but rejected for RouterIdentities.
 //
 // Legacy LeaseSet (v1) structures with a NULL certificate (implying DSA-SHA1)
 // are rejected with `ErrLegacyCryptoNotSupported` rather than parsed, as they
 // cannot be verified with modern algorithms.
+//
+// ## Inbound Parsing vs. Outbound Publishing
+//
+// Constraints that the specification phrases as obligations on the router that
+// *produces* a structure ("Routers MUST set this field to all zeros", "set to 0
+// for compatibility with future uses") are enforced strictly when this library
+// builds or signs a structure - in the constructors and in Validate() - and are
+// only logged when parsing data received from the network. A future revision may
+// assign a meaning to a bit that is reserved today, and discarding an otherwise
+// correctly-signed record because a peer set such a bit (or left an expires
+// offset at zero) would be a self-inflicted denial of service. The affected
+// checks are:
+//
+//   - reserved flag bits in LeaseSet2 (bits 15-3) and EncryptedLeaseSet (bits 15-2)
+//   - a zero expires offset in an EncryptedLeaseSet (the spec bounds it only from
+//     above, at 18.2 hours)
+//   - a non-zero RouterAddress expiration (serialized as all zeros; see the
+//     router_address package)
+//
+// Requirements that determine how the wire format is read - for example the
+// presence of an OfflineSignature when flags bit 0 is set - remain hard errors
+// on both paths.
+//
+// ## Non-Normative Conventions
+//
+// LeaseSet2 flags bit 1 (unpublished) and bit 2 (blinded) are defined
+// independently by the specification; common-structures does not state that
+// setting one requires the other. The reference implementation treats
+// "blinded implies unpublished" as a publishing convention, so this library
+// enforces the pairing only when constructing or signing a LeaseSet2
+// (validateOfflineSignatureFlags) and does not reject inbound data that sets
+// bit 2 without bit 1.
+//
+// ## Out of Scope
+//
+//   - LeaseSet2 / LeaseSet "service records" and the option grammar described
+//     for them (I2P Proposal 167) are not parsed or validated; options are
+//     carried as opaque Mapping entries.
+//   - TunnelId is represented as a plain uint32 rather than a named type. The
+//     specification defines it as a 4-byte Integer, so this is a naming
+//     distinction, not a wire-format difference.
+//   - Mapping keys are compared by Unicode code point. The specification sorts
+//     "as in Java String.compareTo()", which compares UTF-16 code units; the two
+//     orders agree for the Basic Multilingual Plane and differ only for
+//     supplementary-plane characters, which no known I2P implementation emits.
+//   - Certificate payload length is not bounded for unrecognized certificate
+//     types, so a future type can be carried through a parse/serialize
+//     round-trip even though this library cannot interpret it.
 //
 // The remaining specification algorithms — Ed25519, ECDSA P256/P384/P521,
 // RedDSA and X25519 — are fully supported for both parsing and cryptographic
@@ -231,6 +279,17 @@
 // github.com/go-i2p/crypto, so no hybrid key agreement or decryption is
 // performed. Likewise, RouterInfo creation (see the router_info package) is
 // currently limited to Ed25519 (type 7).
+//
+// # Specification Source Gaps
+//
+// The EncryptedLeaseSet blinding and inner-plaintext encoding is specified on a
+// separate page (https://geti2p.net/spec/encrypted-leasesets), which is not
+// currently published; proposal 123 and the /spec/els redirect are likewise
+// unavailable. The handling of the 0x03 LeaseSet2 type byte at the start of the
+// decrypted inner plaintext in the encrypted_leaseset package is therefore
+// derived from the reference implementation rather than from a retrievable
+// normative source, and is verified by round-tripping against this library's own
+// encoder.
 //
 // # Version Information
 //

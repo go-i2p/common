@@ -8,6 +8,7 @@ import (
 
 	"github.com/go-i2p/common/key_certificate"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // ————————————————————————————————————————————————
@@ -58,12 +59,36 @@ func TestReadEncryptedLeaseSetZeroInnerLength(t *testing.T) {
 	assert.Contains(t, err.Error(), "inner length cannot be zero")
 }
 
+// "Bits 15-2: set to 0 for compatibility with future uses" is an obligation on the
+// publisher, so inbound data carrying those bits must still parse; strictness is
+// reserved for Validate() and the constructor.
 func TestReadEncryptedLeaseSetReservedFlags(t *testing.T) {
-	data := createSpecCompliantELS(t, 100, 0x0004) // bit 2
+	// Wire order: sig_type(2) | blinded_key(32) | published(4) | expires(2) | flags(2) | ...
+	data := createSpecCompliantELS(t, 100, 0)
+	flagsOffset := 2 + 32 + 4 + 2
+	binary.BigEndian.PutUint16(data[flagsOffset:flagsOffset+2], 0x0004) // reserved bit 2
 
-	_, _, err := ReadEncryptedLeaseSet(data)
-	assert.Error(t, err, "reserved flag bits must cause rejection")
-	assert.Contains(t, err.Error(), "reserved flag bits")
+	els, _, err := ReadEncryptedLeaseSet(data)
+	require.NoError(t, err, "reserved flag bits must not cause inbound rejection")
+	assert.Equal(t, uint16(0x0004), els.flags)
+
+	// Producing such a structure remains invalid.
+	assert.ErrorContains(t, els.Validate(), "reserved flag bits")
+}
+
+// The spec bounds expires only from above ("18.2 hours max"), so expires = 0 is
+// parseable inbound data even though no publisher would ever emit it.
+func TestReadEncryptedLeaseSetZeroExpires(t *testing.T) {
+	data := createSpecCompliantELS(t, 100, 0)
+	expiresOffset := 2 + 32 + 4
+	binary.BigEndian.PutUint16(data[expiresOffset:expiresOffset+2], 0)
+
+	els, _, err := ReadEncryptedLeaseSet(data)
+	require.NoError(t, err, "zero expires offset must not cause inbound rejection")
+	assert.Equal(t, uint16(0), els.Expires())
+
+	// Producing such a structure remains invalid.
+	assert.ErrorContains(t, els.Validate(), "expires offset cannot be zero")
 }
 
 func TestEncryptedLeaseSetUnknownSigType(t *testing.T) {

@@ -22,7 +22,7 @@ import (
 
 /*
 [RouterInfo]
-Accurate for version 0.9.67
+Accurate for version 0.9.71
 
 Description
 Defines all of the data that a router wants to public for the network to see. The
@@ -109,6 +109,7 @@ type RouterInfo struct {
 	size               *data.Integer
 	addresses          []*router_address.RouterAddress
 	peer_size          *data.Integer
+	peer_hashes        []byte // raw peer-hash bytes (peer_size * 32) carried verbatim
 	options            *data.Mapping
 	signature          *signature.Signature
 	signedPayloadCache []byte // exact bytes over which signature was computed
@@ -533,6 +534,10 @@ func (router_info *RouterInfo) ReSign(publishedTime time.Time, signingPrivateKey
 	router_info.published = publishedDate
 	router_info.size = sizeInt
 	router_info.peer_size = peerSizeInt
+	// ReSign produces a new outbound RouterInfo; peer_size is reset to zero per
+	// spec ("unused, always zero"), so any peer hash bytes from a prior parse
+	// must be dropped to keep peer_size and the hash list consistent.
+	router_info.peer_hashes = nil
 
 	signer, err := createSignerFromPrivateKey(signingPrivateKey, sigType)
 	if err != nil {
@@ -751,8 +756,14 @@ func (ri *RouterInfo) serializeWithoutSignature() ([]byte, error) {
 		bytes = append(bytes, addr.Bytes()...)
 	}
 
-	// Serialize PeerSize (always zero)
+	// Serialize PeerSize and any peer Hash data that follows it.
+	// Per spec the field is "unused, always zero", but when a peer_size > 0 is
+	// present the peer_size * 32 router Hash bytes are part of the signed
+	// payload and must be re-emitted verbatim for the signature to verify.
 	bytes = append(bytes, ri.peer_size.Bytes()...)
+	if len(ri.peer_hashes) > 0 {
+		bytes = append(bytes, ri.peer_hashes...)
+	}
 
 	// Serialize Options
 	optionsData, err := ri.options.DataSafe()
@@ -784,7 +795,7 @@ func ReadRouterInfo(bytes []byte) (info RouterInfo, remainder []byte, err error)
 		return info, remainder, err
 	}
 
-	info.peer_size, info.options, remainder, err = parsePeerSizeAndOptions(remainder)
+	info.peer_size, info.peer_hashes, info.options, remainder, err = parsePeerSizeAndOptions(remainder)
 	if err != nil {
 		return info, remainder, err
 	}
@@ -904,44 +915,57 @@ func parseRouterAddresses(size *data.Integer, remainder []byte) ([]*router_addre
 	return addresses, remainder, nil
 }
 
-// parsePeerSizeAndOptions reads the peer size and options mapping from bytes.
-func parsePeerSizeAndOptions(remainder []byte) (*data.Integer, *data.Mapping, []byte, error) {
-	peer_size, remainder, err := parsePeerSizeFromBytes(remainder)
+// parsePeerSizeAndOptions reads the peer size, any peer hash data, and the
+// options mapping from bytes. The peer hashes are returned so that a parsed
+// RouterInfo can be re-serialized byte-for-byte (the structure is signed, so
+// dropping bytes here would break signature verification on re-publish).
+func parsePeerSizeAndOptions(remainder []byte) (*data.Integer, []byte, *data.Mapping, []byte, error) {
+	peer_size, peer_hashes, remainder, err := parsePeerSizeFromBytes(remainder)
 	if err != nil {
-		return nil, nil, remainder, err
+		return nil, nil, nil, remainder, err
 	}
 
 	options, remainder, err := parseOptionsMapping(remainder)
 	if err != nil {
-		return peer_size, options, remainder, err
+		return peer_size, peer_hashes, options, remainder, err
 	}
 
-	return peer_size, options, remainder, nil
+	return peer_size, peer_hashes, options, remainder, nil
 }
 
-// parsePeerSizeFromBytes extracts the peer size integer from the byte data.
-// Per the I2P spec, peer_size is "unused, always zero". However, for forward
-// compatibility, if peer_size > 0 we skip peer_size * 32 bytes of peer hash data
-// rather than letting it corrupt the subsequent options mapping parse.
-func parsePeerSizeFromBytes(remainder []byte) (*data.Integer, []byte, error) {
+// parsePeerSizeFromBytes extracts the peer size integer and the peer_size * 32
+// bytes of router hashes that may follow it.
+//
+// Per the I2P spec, peer_size is "unused, always zero", but the wire format
+// permits "a list of that many router hashes". Those bytes are retained rather
+// than discarded: RouterInfo is a signed structure, and a parse→serialize
+// round-trip must reproduce the original bytes or the signature will not
+// verify.
+func parsePeerSizeFromBytes(remainder []byte) (*data.Integer, []byte, []byte, error) {
 	peer_size, remainder, err := data.NewInteger(remainder, 1)
 	if err != nil {
 		log.WithFields(logger.Fields{"pkg": "router_info", "func": "parsePeerSizeFromBytes"}).WithError(err).Error("Failed to read PeerSize")
-		return nil, remainder, err
+		return nil, nil, remainder, err
 	}
-	if peer_size.Int() != 0 {
-		log.WithFields(logger.Fields{
-			"pkg":       "router_info",
-			"func":      "parsePeerSizeFromBytes",
-			"peer_size": peer_size.Int(),
-		}).Warn("Spec violation: peer_size should always be zero, skipping peer hash data")
-		skipBytes := peer_size.Int() * 32
-		if len(remainder) < skipBytes {
-			return peer_size, remainder, oops.Errorf("not enough data to skip %d peer hashes (%d bytes needed, %d available)", peer_size.Int(), skipBytes, len(remainder))
-		}
-		remainder = remainder[skipBytes:]
+	if peer_size.Int() == 0 {
+		return peer_size, nil, remainder, nil
 	}
-	return peer_size, remainder, nil
+
+	hashBytes := peer_size.Int() * PEER_HASH_SIZE
+	if len(remainder) < hashBytes {
+		return peer_size, nil, remainder, oops.Errorf("not enough data to read %d peer hashes (%d bytes needed, %d available)", peer_size.Int(), hashBytes, len(remainder))
+	}
+	peer_hashes := make([]byte, hashBytes)
+	copy(peer_hashes, remainder[:hashBytes])
+	remainder = remainder[hashBytes:]
+
+	log.WithFields(logger.Fields{
+		"pkg":       "router_info",
+		"func":      "parsePeerSizeFromBytes",
+		"peer_size": peer_size.Int(),
+	}).Warn("Spec deviation: peer_size is non-zero (spec: unused, always zero); retaining peer hash data for byte-exact re-serialization")
+
+	return peer_size, peer_hashes, remainder, nil
 }
 
 // parseOptionsMapping extracts the options mapping and handles error categorization.

@@ -25,9 +25,11 @@ var (
 // Validates that the transport type is not empty and that required options are provided.
 //
 // The expiration parameter is accepted for API compatibility but is always ignored;
-// per the I2P spec (0.9.12+), the expiration field MUST be all zeros. Callers should
-// pass time.Time{} (zero value). A non-zero value will produce a log warning but is
-// otherwise silently discarded.
+// the spec says "Expiration is currently unused, always null (all zeroes) ... Routers
+// MUST set this field to all zeros", and although release 0.9.12 again recognizes a
+// non-zero expiration, the spec states it must not be used until most of the network
+// recognizes it. Callers should therefore pass time.Time{} (zero value); a non-zero
+// value produces a log warning and is otherwise silently discarded.
 //
 // Returns a pointer to RouterAddress.
 func NewRouterAddress(cost uint8, expiration time.Time, transportType string, options map[string]string) (*RouterAddress, error) {
@@ -41,6 +43,14 @@ func NewRouterAddress(cost uint8, expiration time.Time, transportType string, op
 	transportCost, err := createTransportCost(cost)
 	if err != nil {
 		return nil, err
+	}
+
+	if !expiration.IsZero() {
+		log.WithFields(logger.Fields{
+			"pkg":        "router_address",
+			"func":       "NewRouterAddress",
+			"expiration": expiration,
+		}).Warn("RouterAddress expiration must be all zeros per spec; value ignored and serialized as zeros")
 	}
 
 	expirationDate, err := createExpirationDate(expiration)

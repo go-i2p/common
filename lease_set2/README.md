@@ -49,7 +49,7 @@ const (
 )
 ```
 LeaseSet2 Structure Size Constants These constants define the minimum and
-maximum sizes for LeaseSet2 components according to I2P specification 0.9.67.
+maximum sizes for LeaseSet2 components according to I2P specification 0.9.71.
 
 ```go
 const (

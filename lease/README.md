@@ -3,7 +3,7 @@
     import "github.com/go-i2p/common/lease"
 
 Package lease implements the I2P Lease common data structure according to
-specification version 0.9.67.
+specification version 0.9.71.
 
 ADDED: A Lease defines the authorization for a particular tunnel to receive
 messages targeting a Destination. Each lease contains the SHA256 hash of the
@@ -32,7 +32,7 @@ ADDED: Common usage patterns:
     expirationDate := lease.Date()
 
 Package lease implements the I2P Lease2 common data structure according to
-specification version 0.9.67.
+specification version 0.9.71.
 
 Lease2 is a compact version of Lease introduced in I2P specification 0.9.38 for
 use in LeaseSet2 structures. The primary difference is the use of 4-byte second
@@ -45,7 +45,7 @@ Key features of Lease2:
     - SHA256 tunnel gateway identification for secure routing
     - 32-bit tunnel ID for precise tunnel selection within gateway routers
     - Second-precision expiration timestamps (sufficient until year 2106)
-    - Complete I2P specification 0.9.67 compliance for network interoperability
+    - Complete I2P specification 0.9.71 compliance for network interoperability
     - Used exclusively in LeaseSet2, EncryptedLeaseSet, and MetaLeaseSet structures
 
 Common usage patterns:
@@ -90,7 +90,7 @@ const (
 )
 ```
 Sizes in bytes of various components of a Lease according to I2P specification
-version 0.9.67
+version 0.9.71
 
 #### type Lease
 
@@ -222,7 +222,7 @@ Example: lease2Ptr, remainder, err := NewLease2FromBytes(networkData)
 func ReadLease2(data []byte) (lease2 Lease2, remainder []byte, err error)
 ```
 ReadLease2 parses a Lease2 structure from raw byte data according to I2P
-specification 0.9.67. Validates that the input data contains at least 40 bytes
+specification 0.9.71. Validates that the input data contains at least 40 bytes
 required for a complete Lease2, then extracts the tunnel gateway hash, tunnel
 ID, and 4-byte expiration timestamp. Returns the parsed Lease2, any remaining
 unparsed bytes, and an error if parsing fails.

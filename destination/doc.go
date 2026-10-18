@@ -1,4 +1,4 @@
-// Package destination implements the I2P Destination common data structure according to specification version 0.9.67.
+// Package destination implements the I2P Destination common data structure according to specification version 0.9.71.
 //
 // A Destination represents a unique cryptographic identity in the I2P network, consisting of
 // public encryption and signing keys along with a certificate. Destinations are used to identify
@@ -109,6 +109,6 @@
 //
 // Reference: https://geti2p.net/spec/common-structures#destination
 //
-// This implementation follows I2P specification version 0.9.67 and provides
+// This implementation follows I2P specification version 0.9.71 and provides
 // comprehensive validation and error handling for all destination operations.
 package destination

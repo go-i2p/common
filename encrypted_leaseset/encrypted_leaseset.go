@@ -30,7 +30,15 @@ func ReadEncryptedLeaseSet(data []byte) (els EncryptedLeaseSet, remainder []byte
 		return els, remainder, err
 	}
 
-	if err = els.Validate(); err != nil {
+	// Inbound structures are validated leniently: only the structural/framing
+	// invariants required to interpret the wire format are enforced as errors.
+	// The spec's "set to 0 for compatibility with future uses" (reserved flag
+	// bits) and the non-zero expires offset are obligations on the *publisher*;
+	// rejecting a correctly-signed record from another implementation for a
+	// future-use bit would be an interoperability failure. Strict self-checks
+	// live in Validate(), and outbound construction is checked in the
+	// constructor (validateConstructorFlags).
+	if err = els.validateParsed(); err != nil {
 		return els, remainder, err
 	}
 
@@ -154,11 +162,20 @@ func parseHeaderFields(els *EncryptedLeaseSet, data []byte) ([]byte, error) {
 	els.flags = binary.BigEndian.Uint16(data[:ENCRYPTED_LEASESET_FLAGS_SIZE])
 	data = data[ENCRYPTED_LEASESET_FLAGS_SIZE:]
 
-	// Spec: "Bits 15‑2: set to 0 for compatibility with future uses."
+	// Spec: "Bits 15-2: set to 0 for compatibility with future uses."
+	//
+	// This is an obligation on the publisher, not on the reader: the bits are
+	// reserved so that a *future* specification may assign them a meaning. A
+	// reader that hard-rejects them today can never interpret that future
+	// meaning, and rejecting an otherwise correctly-signed record from another
+	// implementation would be a self-inflicted denial of service. Warn on ingest
+	// and enforce strictly on data we produce (Validate and the constructor).
 	if els.flags&ENCRYPTED_LEASESET_RESERVED_FLAGS_MASK != 0 {
-		return nil, oops.Code("reserved_flags_set").
-			With("flags", els.flags).
-			Errorf("reserved flag bits 15‑2 must be zero, got 0x%04x", els.flags)
+		log.WithFields(logger.Fields{
+			"pkg":   "encrypted_leaseset",
+			"func":  "parseHeaderFields",
+			"flags": els.flags,
+		}).Warn("EncryptedLeaseSet has non-zero reserved flag bits (bits 15-2 should be 0)")
 	}
 
 	log.WithFields(logger.Fields{
@@ -398,6 +415,51 @@ func validateSigTypeAndKey(els *EncryptedLeaseSet) error {
 	if len(els.blindedPublicKey) != sizes.SigningPublicKeySize {
 		return oops.Errorf("blinded public key size %d != expected %d for sig_type %d",
 			len(els.blindedPublicKey), sizes.SigningPublicKeySize, els.sigType)
+	}
+	return nil
+}
+
+// validateParsed enforces only the structural invariants required to interpret
+// a parsed EncryptedLeaseSet, and warns (without rejecting) about fields whose
+// constraints the spec places on the publisher rather than on the reader:
+//
+//   - flags: "Bits 15-2: set to 0 for compatibility with future uses"
+//   - expires: "2 byte offset from published timestamp in seconds, 18.2 hours max"
+//
+// Use Validate() for the strict self-check of a structure this library produced.
+func (els *EncryptedLeaseSet) validateParsed() error {
+	if err := validateSigTypeAndKey(els); err != nil {
+		return err
+	}
+	if err := validateOfflineSignaturePresence(els); err != nil {
+		return err
+	}
+	if err := validateEncryptedInnerDataIntegrity(els); err != nil {
+		return err
+	}
+	// expires == 0 is spec-legal inbound data (the spec gives only an upper bound,
+	// "18.2 hours max" — no lower bound), but it is never produced by a publisher,
+	// so surface it without rejecting. Reserved flag bits are warned about where
+	// they are parsed (parseHeaderFields).
+	if els.expires == 0 {
+		log.WithFields(logger.Fields{
+			"pkg": "encrypted_leaseset", "func": "EncryptedLeaseSet.validateParsed",
+		}).Warn("EncryptedLeaseSet has zero expires offset; permitted on the wire, discouraged for published lease sets")
+	}
+	return els.signature.Validate()
+}
+
+// validateOfflineSignaturePresence checks that the offline signature matches
+// flags bit 0, which the spec makes a structural requirement: "offline_signature:
+// OfflineSignature, varies, optional, only present if bit 0 is set in the flags".
+// The rest of the record cannot be located without knowing whether those bytes are
+// present, so unlike the reserved flag bits this is enforced on inbound data too.
+func validateOfflineSignaturePresence(els *EncryptedLeaseSet) error {
+	if els.HasOfflineKeys() && els.offlineSignature == nil {
+		return oops.Errorf("offline keys flag set but no offline signature present")
+	}
+	if !els.HasOfflineKeys() && els.offlineSignature != nil {
+		return oops.Errorf("offline signature present but offline keys flag not set")
 	}
 	return nil
 }

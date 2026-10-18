@@ -1,5 +1,5 @@
 // Package lease_set2 implements the I2P LeaseSet2 common data structure
-// as specified in I2P specification 0.9.67.
+// as specified in I2P specification 0.9.71.
 //
 // LeaseSet2 (DatabaseStore type 3, introduced in spec 0.9.38) is the modern
 // replacement for the legacy LeaseSet, providing enhanced features including

@@ -1,4 +1,4 @@
-// Package certificate implements the I2P Certificate common data structure according to specification version 0.9.67.
+// Package certificate implements the I2P Certificate common data structure according to specification version 0.9.71.
 //
 // Certificates are used throughout I2P to provide cryptographic metadata about keys,
 // signatures, and other security parameters. They support multiple certificate types
@@ -115,6 +115,6 @@
 //
 // Reference: https://geti2p.net/spec/common-structures#certificate
 //
-// This implementation follows I2P specification version 0.9.67 and provides
+// This implementation follows I2P specification version 0.9.71 and provides
 // comprehensive validation and error handling for all certificate operations.
 package certificate

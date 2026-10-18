@@ -335,29 +335,41 @@ func TestReadRouterInfoMalformedInput(t *testing.T) {
 func TestParsePeerSizeFromBytes(t *testing.T) {
 	t.Run("zero peer_size", func(t *testing.T) {
 		input := []byte{0x00, 0x00, 0x00}
-		ps, _, err := parsePeerSizeFromBytes(input)
+		ps, hashes, _, err := parsePeerSizeFromBytes(input)
 		require.NoError(t, err)
 		assert.Equal(t, 0, ps.Int())
+		assert.Empty(t, hashes)
 	})
-	t.Run("non-zero peer_size skips hashes", func(t *testing.T) {
-		// peer_size=3 means skip 3*32=96 bytes of peer hashes
+	t.Run("non-zero peer_size retains hashes", func(t *testing.T) {
+		// peer_size=3 means 3*32=96 bytes of peer hashes follow the field.
+		// RouterInfo is signed, so those bytes must be retained (not skipped)
+		// to allow byte-exact re-serialization.
 		input := make([]byte, 1+96+2) // 1 byte peer_size + 96 hash bytes + 2 extra
 		input[0] = 0x03               // peer_size = 3
+		input[1] = 0xAA               // marker byte inside the first peer hash
 		input[97] = 0xBB              // marker byte in remainder
-		ps, remainder, err := parsePeerSizeFromBytes(input)
+		ps, hashes, remainder, err := parsePeerSizeFromBytes(input)
 		require.NoError(t, err)
 		assert.Equal(t, 3, ps.Int())
+		assert.Len(t, hashes, 96)
+		assert.Equal(t, byte(0xAA), hashes[0])
 		assert.Equal(t, 2, len(remainder))
 		assert.Equal(t, byte(0xBB), remainder[0])
 	})
-	t.Run("peer_size 5 skips 160 bytes", func(t *testing.T) {
-		// peer_size=5 means skip 5*32=160 bytes of peer hashes
+	t.Run("peer_size 5 retains 160 bytes", func(t *testing.T) {
 		input := make([]byte, 1+160+2)
 		input[0] = 0x05 // peer_size = 5
-		ps, remainder, err := parsePeerSizeFromBytes(input)
+		ps, hashes, remainder, err := parsePeerSizeFromBytes(input)
 		require.NoError(t, err)
 		assert.Equal(t, 5, ps.Int())
+		assert.Len(t, hashes, 160)
 		assert.Equal(t, 2, len(remainder))
+	})
+	t.Run("truncated peer hash data errors", func(t *testing.T) {
+		input := make([]byte, 1+50) // peer_size=3 needs 96 bytes, only 50 present
+		input[0] = 0x03
+		_, _, _, err := parsePeerSizeFromBytes(input)
+		assert.Error(t, err)
 	})
 }
 
@@ -502,27 +514,78 @@ func TestReadRouterInfoMinLengthCheck(t *testing.T) {
 }
 
 //
-// parsePeerSizeFromBytes with peer hash skipping
+// parsePeerSizeFromBytes with peer hash retention
 //
 
 func TestParsePeerSizeSkipsPeerHashes(t *testing.T) {
-	t.Run("peer_size=2 skips 64 bytes of peer hashes", func(t *testing.T) {
+	t.Run("peer_size=2 consumes 64 bytes of peer hashes", func(t *testing.T) {
 		// Build input: peer_size=2, followed by 64 bytes of hash data, then a marker byte
 		input := make([]byte, 1+64+1) // 1 byte peer_size + 64 bytes hashes + 1 byte marker
 		input[0] = 0x02               // peer_size = 2
 		input[65] = 0xAA              // marker byte after the hashes
-		ps, remainder, err := parsePeerSizeFromBytes(input)
+		ps, hashes, remainder, err := parsePeerSizeFromBytes(input)
 		require.NoError(t, err)
 		assert.Equal(t, 2, ps.Int())
+		assert.Len(t, hashes, 64, "peer hash bytes must be retained for re-serialization")
 		require.Len(t, remainder, 1)
-		assert.Equal(t, byte(0xAA), remainder[0], "should skip past peer hashes to marker")
+		assert.Equal(t, byte(0xAA), remainder[0], "should advance past peer hashes to marker")
 	})
 	t.Run("peer_size=1 with insufficient data returns error", func(t *testing.T) {
 		input := []byte{0x01, 0x00, 0x00} // peer_size=1 but only 2 bytes left (need 32)
-		_, _, err := parsePeerSizeFromBytes(input)
+		_, _, _, err := parsePeerSizeFromBytes(input)
 		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "not enough data to skip")
+		assert.Contains(t, err.Error(), "not enough data to read")
 	})
+}
+
+// TestRouterInfoPeerHashesRoundTrip verifies that a RouterInfo with a non-zero
+// peer_size re-serializes byte-for-byte. RouterInfo is a signed structure, so
+// dropping the peer_size*32 router hash bytes during parse would make the
+// re-serialized bytes (and any re-verification) diverge from the original wire
+// data.
+func TestRouterInfoPeerHashesRoundTrip(t *testing.T) {
+	ri, err := generateTestRouterInfo(t, time.Now())
+	require.NoError(t, err)
+
+	body, err := ri.serializeWithoutSignature()
+	require.NoError(t, err)
+
+	// The generated RouterInfo ends with: ... peer_size(1) + options mapping.
+	// Locate the peer_size byte by re-serializing without options and comparing.
+	optionsData, err := ri.options.DataSafe()
+	require.NoError(t, err)
+	psIdx := len(body) - len(optionsData) - 1
+	require.Equal(t, 0, int(body[psIdx]), "generated RouterInfo should have peer_size 0")
+
+	wire := make([]byte, 0, len(body)+64+len(ri.signature.Bytes()))
+	wire = append(wire, body[:psIdx]...)
+	wire = append(wire, 0x02) // peer_size = 2
+	peerHashes := make([]byte, 64)
+	for i := range peerHashes {
+		peerHashes[i] = byte(i + 1)
+	}
+	wire = append(wire, peerHashes...)
+	wire = append(wire, body[psIdx+1:]...)
+	wire = append(wire, ri.signature.Bytes()...)
+
+	parsed, remainder, err := ReadRouterInfo(wire)
+	require.NoError(t, err)
+	assert.Empty(t, remainder)
+	assert.Equal(t, 2, parsed.PeerSize())
+	require.Len(t, parsed.peer_hashes, 64)
+	for i := range peerHashes {
+		assert.Equal(t, peerHashes[i], parsed.peer_hashes[i])
+	}
+
+	reserialized, err := parsed.serializeWithoutSignature()
+	require.NoError(t, err)
+	assert.Equal(t, wire[:len(wire)-len(ri.signature.Bytes())], reserialized,
+		"parse->serialize must reproduce peer hash bytes exactly")
+
+	// The full structure, signature included, must round-trip unchanged.
+	full, err := parsed.Bytes()
+	require.NoError(t, err)
+	assert.Equal(t, wire, full)
 }
 
 //

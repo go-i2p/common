@@ -40,9 +40,21 @@ const MAPPING_SIZE_FIELD_LENGTH = 2
 const MAX_MAPPING_DATA_SIZE = 65535
 
 // MAX_MAPPING_PAIRS is the maximum number of key-value pairs allowed in a single mapping.
-// This prevents infinite loops when parsing malformed mappings.
+// The I2P spec imposes no pair-count limit; it bounds a Mapping by total size only:
+// "Total length limit is 65535 bytes, plus the 2 byte size field, or 65537 total."
+// The smallest legal pair is 4 bytes (1-byte zero key length + '=' + 1-byte zero
+// value length + ';'), so the largest mapping the spec permits holds
+// 65535/4 = 16383 pairs. Deriving the cap from that bound means it can never
+// reject a specification-legal mapping, while still bounding the parse loop
+// against pathological input.
 // Cross-Ref: mapping_values.go
-const MAX_MAPPING_PAIRS = 1000
+const MAX_MAPPING_PAIRS = MAX_MAPPING_DATA_SIZE / MIN_MAPPING_PAIR_SIZE // 16383
+
+// MIN_MAPPING_PAIR_SIZE is the smallest number of bytes a key-value pair can
+// occupy on the wire: 1 (key length byte, value 0) + 1 ('=') +
+// 1 (value length byte, value 0) + 1 (';') = 4 bytes.
+// Cross-Ref: mapping_values.go
+const MIN_MAPPING_PAIR_SIZE = 4
 
 // BITS_PER_BYTE is the number of bits in a byte, used for bit shift calculations
 // Cross-Ref: integer.go

@@ -7,7 +7,7 @@ import (
 
 /*
 [RouterAddress]
-Accurate for version 0.9.67
+Accurate for version 0.9.71
 
 Description
 This structure defines the means to contact a router through a transport protocol.

@@ -4,7 +4,7 @@ package key_certificate
 /*
 I2P Key Certificate (CERT_KEY, type 5) payload format
 https://geti2p.net/spec/common-structures#certificate
-Accurate for version 0.9.67
+Accurate for version 0.9.71
 
 The KEY certificate payload encodes the signing and crypto key types:
 

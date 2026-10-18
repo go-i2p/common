@@ -152,7 +152,7 @@ const (
 
 	// Experimental and Reserved Signature Type Ranges
 	// These ranges are reserved for experimental implementations and future expansion.
-	// Reference: I2P specification 0.9.67
+	// Reference: I2P specification 0.9.71
 
 	// SIGNATURE_TYPE_EXPERIMENTAL_START marks the beginning of the experimental signature type range (type 65280).
 	// This range (65280-65534) is reserved for testing and experimental signature algorithms.

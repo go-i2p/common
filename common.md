@@ -1,8 +1,8 @@
 # Common Structures Specification
 
 > **Category:** Design  
-> **Last Updated:** 2025-06  
-> **Accurate For:** 0.9.67
+> **Last Updated:** 2026-10  
+> **Accurate For:** 0.9.71
 
 ---
 
@@ -80,6 +80,15 @@ X25519 keys are supported in RouterIdentities as of release 0.9.48.
 | P384    |       96       | TBD    | Reserved, see proposal 145                                                                                                |
 | P521    |      132       | TBD    | Reserved, see proposal 145                                                                                                |
 | X25519  |       32       | 0.9.38 | Little-endian. See ECIES and ECIES-ROUTERS                                                                                |
+| MLKEM512\_X25519 | 32 | 0.9.67 | See ECIES-HYBRID, for Leasesets only, not for RIs or Destinations |
+| MLKEM768\_X25519 | 32 | 0.9.67 | See ECIES-HYBRID, for Leasesets only, not for RIs or Destinations |
+| MLKEM1024\_X25519 | 32 | 0.9.67 | See ECIES-HYBRID, for Leasesets only, not for RIs or Destinations |
+| MLKEM512 | 800 | 0.9.67 | See ECIES-HYBRID, for handshakes only, not for Leasesets, RIs or Destinations |
+| MLKEM768 | 1184 | 0.9.67 | See ECIES-HYBRID, for handshakes only, not for Leasesets, RIs or Destinations |
+| MLKEM1024 | 1568 | 0.9.67 | See ECIES-HYBRID, for handshakes only, not for Leasesets, RIs or Destinations |
+| MLKEM512\_CT | 768 | 0.9.67 | See ECIES-HYBRID, for handshakes only, not for Leasesets, RIs or Destinations |
+| MLKEM768\_CT | 1088 | 0.9.67 | See ECIES-HYBRID, for handshakes only, not for Leasesets, RIs or Destinations |
+| MLKEM1024\_CT | 1568 | 0.9.67 | See ECIES-HYBRID, for handshakes only, not for Leasesets, RIs or Destinations |
 
 ---
 
@@ -107,6 +116,12 @@ Keys are big-endian unless otherwise noted.
 | P384    |       48       | TBD    | Reserved, see proposal 145                                                                                                |
 | P521    |       66       | TBD    | Reserved, see proposal 145                                                                                                |
 | X25519  |       32       | 0.9.38 | Little-endian. See ECIES and ECIES-ROUTERS                                                                                |
+| MLKEM512\_X25519 | 32 | 0.9.67 | See ECIES-HYBRID, for Leasesets only, not for RIs or Destinations |
+| MLKEM768\_X25519 | 32 | 0.9.67 | See ECIES-HYBRID, for Leasesets only, not for RIs or Destinations |
+| MLKEM1024\_X25519 | 32 | 0.9.67 | See ECIES-HYBRID, for Leasesets only, not for RIs or Destinations |
+| MLKEM512 | 1632 | 0.9.67 | See ECIES-HYBRID, for handshakes only, not for Leasesets, RIs or Destinations |
+| MLKEM768 | 2400 | 0.9.67 | See ECIES-HYBRID, for handshakes only, not for Leasesets, RIs or Destinations |
+| MLKEM1024 | 3168 | 0.9.67 | See ECIES-HYBRID, for handshakes only, not for Leasesets, RIs or Destinations |
 
 ---
 
@@ -376,20 +391,33 @@ The key certificate payload contains:
 | reserved (GOST)          |      9      |           64           |        | Reserved, see proposal 134                                                            |
 | reserved (GOST)          |     10      |          128           |        | Reserved, see proposal 134                                                            |
 | RedDSA\_SHA512\_Ed25519  |     11      |           32           | 0.9.39 | For Destinations and encrypted leasesets only; never used for Router Identities        |
+| reserved (MLDSA)         |     12      |                        |        | Reserved, see Prop169                                                                 |
+| reserved (MLDSA)         |     13      |                        |        | Reserved, see Prop169                                                                 |
+| reserved (MLDSA)         |     14      |                        |        | Reserved, see Prop169                                                                 |
+| reserved (MLDSA)         |     15      |                        |        | Reserved, see Prop169                                                                 |
+| reserved (MLDSA)         |     16      |                        |        | Reserved, see Prop169                                                                 |
+| reserved (MLDSA)         |     17      |                        |        | Reserved, see Prop169                                                                 |
+| reserved (MLDSA)         |     18      |                        |        | Reserved, see Prop169                                                                 |
+| reserved (MLDSA)         |     19      |                        |        | Reserved, see Prop169                                                                 |
+| reserved (MLDSA)         |     20      |                        |        | Reserved, see Prop169                                                                 |
 | reserved                 | 65280–65534 |                        |        | Reserved for experimental use                                                         |
 | reserved                 |    65535    |                        |        | Reserved for future expansion                                                         |
 
 ##### Crypto Public Key Types
 
-| Type     | Type Code   | Total Public Key Length | Usage                                                                                  |
-|----------|:-----------:|:----------------------:|----------------------------------------------------------------------------------------|
-| ElGamal  |      0      |          256           | Deprecated for Router Identities as of 0.9.58; use for Destinations, as the public key field is unused there |
-| P256     |      1      |           64           | Reserved, see proposal 145                                                             |
-| P384     |      2      |           96           | Reserved, see proposal 145                                                             |
-| P521     |      3      |          132           | Reserved, see proposal 145                                                             |
-| X25519   |      4      |           32           | See ECIES and proposal 156                                                             |
-| reserved | 65280–65534 |                        | Reserved for experimental use                                                          |
-| reserved |    65535    |                        | Reserved for future expansion                                                          |
+| Type              | Type Code   | Total Public Key Length | Since  | Usage                                                                                  |
+|-------------------|:-----------:|:----------------------:|--------|----------------------------------------------------------------------------------------|
+| ElGamal           |      0      |          256           |        | Deprecated for Router Identities as of 0.9.58; use for Destinations, as the public key field is unused there |
+| P256              |      1      |           64           |        | Reserved, see proposal 145                                                             |
+| P384              |      2      |           96           |        | Reserved, see proposal 145                                                             |
+| P521              |      3      |          132           |        | Reserved, see proposal 145                                                             |
+| X25519            |      4      |           32           | 0.9.38 | See ECIES and proposal 156                                                             |
+| MLKEM512\_X25519  |      5      |           32           | 0.9.67 | See ECIES-HYBRID, for Leasesets only, not for RIs or Destinations                       |
+| MLKEM768\_X25519  |      6      |           32           | 0.9.67 | See ECIES-HYBRID, for Leasesets only, not for RIs or Destinations                       |
+| MLKEM1024\_X25519 |      7      |           32           | 0.9.67 | See ECIES-HYBRID, for Leasesets only, not for RIs or Destinations                       |
+| reserved (NONE)   |    255      |                        |        | Reserved, see Prop169                                                                  |
+| reserved          | 65280–65534 |                        |        | Reserved for experimental use                                                          |
+| reserved          |    65535    |                        |        | Reserved for future expansion                                                          |
 
 ##### Key Layout
 
@@ -500,7 +528,10 @@ val_string :: String
   the signature will be invariant. Duplicate keys are not allowed.
 
 - The sort method is defined as in Java `String.compareTo()`, using the Unicode
-  value of the characters.
+  value of the characters, however that may not be honored by all implementations.
+  In use cases where sorting by key is required, non-ASCII keys are strongly discouraged.
+  Due to implementation differences in the lexical sorting of UTF-8 keys, signatures may fail
+  and other hard-to-reproduce issues may arise.
 
 - While it is application-dependent, keys and values are generally
   case-sensitive.
@@ -692,6 +723,8 @@ the public key and padding fields.
 
 #### Description
 
+**DEPRECATED.** Use [LeaseSet2](#leaseset2) and [Lease2](#lease2).
+
 Defines the authorization for a particular tunnel to receive messages targeting
 a [Destination](#destination).
 
@@ -734,6 +767,8 @@ end_date :: Date
 ### LeaseSet
 
 #### Description
+
+**DEPRECATED.** Use [LeaseSet2](#leaseset2) and [Lease2](#lease2).
 
 Contains all of the currently authorized [Leases](#lease) for a particular [Destination](#destination),
 the [PublicKey](#publickey) to which garlic messages can be encrypted, and then the
@@ -1004,14 +1039,9 @@ flags :: 2 bytes
   Bit order: 15 14 ... 3 2 1 0
   Bit 0: If 0, no offline keys; if 1, offline keys
   Bit 1: If 0, a standard published leaseset.
-         If 1, an unpublished leaseset. Should not be flooded, published, or
-         sent in response to a query. If this leaseset expires, do not query the
-         netdb for a new one, unless bit 2 is set.
+         If 1, an unpublished leaseset.
   Bit 2: If 0, a standard published leaseset.
          If 1, this unencrypted leaseset will be blinded and encrypted when published.
-         If this leaseset expires, query the blinded location in the netdb for a new one.
-         If this bit is set to 1, set bit 1 to 1 also.
-         As of release 0.9.42.
   Bits 15-3: set to 0 for compatibility with future uses
 
 offline_signature :: OfflineSignature
@@ -1020,6 +1050,18 @@ offline_signature :: OfflineSignature
 ```
 
 #### Notes
+
+- Flags (2 bytes):
+  - Bit 0: If set, offline keys are present (see [OfflineSignature](#offlinesignature))
+  - Bit 1: If set, this is an unpublished leaseset
+  - Bit 2: If set, this is a blinded leaseset
+  - Bits 15-3: Reserved, set to 0
+
+  Earlier revisions of this specification (through 0.9.67) additionally stated
+  "If this bit is set to 1, set bit 1 to 1 also" for bit 2. That sentence was
+  removed in 0.9.71, so the pairing of blinded with unpublished is a publishing
+  convention of the reference implementation rather than a structural requirement;
+  readers must not reject a record that sets bit 2 without bit 1.
 
 - Total size: 395 bytes minimum
 
@@ -1242,6 +1284,8 @@ In LS2 for `bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.b32.i2p`, pointing to i
 
 #### Description
 
+**PRELIMINARY.** Not fully supported.
+
 Defines the authorization for a particular tunnel to receive messages targeting
 a [Destination](#destination).
 Same as [Lease2](#lease2) but with flags and cost instead of a tunnel id.
@@ -1299,8 +1343,10 @@ end_date :: 4 byte date
 
 #### Description
 
+**PRELIMINARY.** Not fully supported.
+
 Contained in a I2NP DatabaseStore message of type 7.
-Defined as of 0.9.38; scheduled to be working as of 0.9.40;
+Defined as of 0.9.38;
 see proposal 123 for more information.
 
 Contains all of the currently authorized [MetaLease](#metalease) for a particular [Destination](#destination),

@@ -17,7 +17,7 @@ import (
 
 /*
 [LeaseSet2]
-Accurate for version 0.9.67
+Accurate for version 0.9.71
 
 Description:
 Contained in a I2NP DatabaseStore message of type 3. Supported as of 0.9.38.
