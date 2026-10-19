@@ -37,9 +37,7 @@ func TestBlindingRoundTrip(t *testing.T) {
 			blinded, err := CreateBlindedDestination(original, secret, tt.date)
 			require.NoError(t, err, "Blinding should succeed")
 
-			dateStr := tt.date.UTC().Format("2006-01-02")
-			alpha, err := kdf.DeriveBlindingFactor(secret, dateStr)
-			require.NoError(t, err, "Alpha derivation should succeed")
+			alpha := deriveTestAlpha(t, original, secret, tt.date)
 
 			valid := VerifyBlindedSignature(blinded, original, alpha)
 			assert.True(t, valid, "Round-trip verification should succeed")
@@ -103,23 +101,15 @@ func BenchmarkCreateBlindedDestination(b *testing.B) {
 }
 
 func BenchmarkVerifyBlindedSignature(b *testing.B) {
-	destBytes := make([]byte, 391)
-	_, _ = rand.Read(destBytes[:384])
-	destBytes[384] = 0x05
-	destBytes[385] = 0x00
-	destBytes[386] = 0x04
-	destBytes[387] = 0x00
-	destBytes[388] = 0x07
-	destBytes[389] = 0x00
-	destBytes[390] = 0x00
-	dest, _, _ := destination.ReadDestination(destBytes)
+	dest := createTestEd25519Destination(b)
 
 	secret := make([]byte, 32)
 	_, _ = rand.Read(secret)
 	date := time.Date(2025, 11, 24, 0, 0, 0, 0, time.UTC)
 
-	blinded, _ := CreateBlindedDestination(dest, secret, date)
-	alpha, _ := kdf.DeriveBlindingFactor(secret, "2025-11-24")
+	blinded, err := CreateBlindedDestination(dest, secret, date)
+	require.NoError(b, err)
+	alpha := deriveTestAlpha(b, dest, secret, date)
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {

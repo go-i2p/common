@@ -14,6 +14,7 @@ import (
 	"github.com/go-i2p/common/lease"
 	"github.com/go-i2p/common/lease_set2"
 	"github.com/go-i2p/common/offline_signature"
+	"github.com/go-i2p/crypto/kdf"
 	"github.com/stretchr/testify/require"
 	"go.step.sm/crypto/x25519"
 )
@@ -23,7 +24,7 @@ import (
 // ————————————————————————————————————————————————
 
 // createTestEd25519Destination creates a destination with Ed25519 signature type for testing.
-func createTestEd25519Destination(t *testing.T) destination.Destination {
+func createTestEd25519Destination(t testing.TB) destination.Destination {
 	t.Helper()
 
 	publicKey, _, err := ed25519.GenerateKey(rand.Reader)
@@ -47,6 +48,27 @@ func createTestEd25519Destination(t *testing.T) destination.Destination {
 	dest, _, err := destination.ReadDestination(destBytes)
 	require.NoError(t, err, "Failed to read destination")
 	return dest
+}
+
+// deriveTestAlpha computes the spec-conformant blinding factor for dest at the
+// given date, mirroring deriveBlindedPublicKey. Tests use it to confirm that
+// VerifyBlindedSignature accepts the alpha a conforming client would derive.
+//
+// Per https://geti2p.net/spec/encryptedleaseset §"Blinding Calculations", alpha
+// is bound to the destination's signing public key and signature type.
+func deriveTestAlpha(t testing.TB, dest destination.Destination, secret []byte, date time.Time) [32]byte {
+	t.Helper()
+
+	spk, err := dest.SigningPublicKey()
+	require.NoError(t, err, "failed to get signing public key")
+	require.Equal(t, 32, spk.Len(), "blinding requires a 32-byte signing key")
+
+	var pub [32]byte
+	copy(pub[:], spk.Bytes())
+
+	alpha, err := kdf.DeriveBlindingFactorI2P(pub[:], string(secret), uint16(dest.KeyCertificate.SigningPublicKeyType()), date)
+	require.NoError(t, err, "DeriveBlindingFactorI2P should succeed")
+	return alpha
 }
 
 // createTestDestinationBytes creates a 391-byte destination (ElGamal + Ed25519).
