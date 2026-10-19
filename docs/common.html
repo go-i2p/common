@@ -13,7 +13,7 @@
         <a href="../index.html">go-i2p/common</a>
       </h2>
       <div class="repo-meta">
-        📝 430 commits
+        📝 434 commits
          • 📜 MIT License
       </div>
     </div>
@@ -49,8 +49,8 @@
 
 <blockquote>
 <p><strong>Category:</strong> Design<br>
-<strong>Last Updated:</strong> 2025-06<br>
-<strong>Accurate For:</strong> 0.9.67</p>
+<strong>Last Updated:</strong> 2026-10<br>
+<strong>Accurate For:</strong> 0.9.71</p>
 </blockquote>
 
 <hr>
@@ -167,6 +167,69 @@ X25519 keys are supported in RouterIdentities as of release 0.9.48.</p>
 <td>0.9.38</td>
 <td>Little-endian. See ECIES and ECIES-ROUTERS</td>
 </tr>
+
+<tr>
+<td>MLKEM512_X25519</td>
+<td align="center">32</td>
+<td>0.9.67</td>
+<td>See ECIES-HYBRID, for Leasesets only, not for RIs or Destinations</td>
+</tr>
+
+<tr>
+<td>MLKEM768_X25519</td>
+<td align="center">32</td>
+<td>0.9.67</td>
+<td>See ECIES-HYBRID, for Leasesets only, not for RIs or Destinations</td>
+</tr>
+
+<tr>
+<td>MLKEM1024_X25519</td>
+<td align="center">32</td>
+<td>0.9.67</td>
+<td>See ECIES-HYBRID, for Leasesets only, not for RIs or Destinations</td>
+</tr>
+
+<tr>
+<td>MLKEM512</td>
+<td align="center">800</td>
+<td>0.9.67</td>
+<td>See ECIES-HYBRID, for handshakes only, not for Leasesets, RIs or Destinations</td>
+</tr>
+
+<tr>
+<td>MLKEM768</td>
+<td align="center">1184</td>
+<td>0.9.67</td>
+<td>See ECIES-HYBRID, for handshakes only, not for Leasesets, RIs or Destinations</td>
+</tr>
+
+<tr>
+<td>MLKEM1024</td>
+<td align="center">1568</td>
+<td>0.9.67</td>
+<td>See ECIES-HYBRID, for handshakes only, not for Leasesets, RIs or Destinations</td>
+</tr>
+
+<tr>
+<td>MLKEM512_CT</td>
+<td align="center">768</td>
+<td>0.9.67</td>
+<td>See ECIES-HYBRID, for handshakes only, not for Leasesets, RIs or Destinations</td>
+</tr>
+
+<tr>
+<td>MLKEM768_CT</td>
+<td align="center">1088</td>
+<td>0.9.67</td>
+<td>See ECIES-HYBRID, for handshakes only, not for Leasesets, RIs or Destinations</td>
+</tr>
+
+<tr>
+<td>MLKEM1024_CT</td>
+<td align="center">1568</td>
+<td>0.9.67</td>
+<td>See ECIES-HYBRID, for handshakes only, not for Leasesets, RIs or Destinations</td>
+</tr>
 </tbody>
 </table>
 
@@ -233,6 +296,48 @@ Keys are big-endian unless otherwise noted.</p>
 <td align="center">32</td>
 <td>0.9.38</td>
 <td>Little-endian. See ECIES and ECIES-ROUTERS</td>
+</tr>
+
+<tr>
+<td>MLKEM512_X25519</td>
+<td align="center">32</td>
+<td>0.9.67</td>
+<td>See ECIES-HYBRID, for Leasesets only, not for RIs or Destinations</td>
+</tr>
+
+<tr>
+<td>MLKEM768_X25519</td>
+<td align="center">32</td>
+<td>0.9.67</td>
+<td>See ECIES-HYBRID, for Leasesets only, not for RIs or Destinations</td>
+</tr>
+
+<tr>
+<td>MLKEM1024_X25519</td>
+<td align="center">32</td>
+<td>0.9.67</td>
+<td>See ECIES-HYBRID, for Leasesets only, not for RIs or Destinations</td>
+</tr>
+
+<tr>
+<td>MLKEM512</td>
+<td align="center">1632</td>
+<td>0.9.67</td>
+<td>See ECIES-HYBRID, for handshakes only, not for Leasesets, RIs or Destinations</td>
+</tr>
+
+<tr>
+<td>MLKEM768</td>
+<td align="center">2400</td>
+<td>0.9.67</td>
+<td>See ECIES-HYBRID, for handshakes only, not for Leasesets, RIs or Destinations</td>
+</tr>
+
+<tr>
+<td>MLKEM1024</td>
+<td align="center">3168</td>
+<td>0.9.67</td>
+<td>See ECIES-HYBRID, for handshakes only, not for Leasesets, RIs or Destinations</td>
 </tr>
 </tbody>
 </table>
@@ -898,6 +1003,78 @@ the Signing Public Key Type is first.</p>
 </tr>
 
 <tr>
+<td>reserved (MLDSA)</td>
+<td align="center">12</td>
+<td align="center"></td>
+<td></td>
+<td>Reserved, see Prop169</td>
+</tr>
+
+<tr>
+<td>reserved (MLDSA)</td>
+<td align="center">13</td>
+<td align="center"></td>
+<td></td>
+<td>Reserved, see Prop169</td>
+</tr>
+
+<tr>
+<td>reserved (MLDSA)</td>
+<td align="center">14</td>
+<td align="center"></td>
+<td></td>
+<td>Reserved, see Prop169</td>
+</tr>
+
+<tr>
+<td>reserved (MLDSA)</td>
+<td align="center">15</td>
+<td align="center"></td>
+<td></td>
+<td>Reserved, see Prop169</td>
+</tr>
+
+<tr>
+<td>reserved (MLDSA)</td>
+<td align="center">16</td>
+<td align="center"></td>
+<td></td>
+<td>Reserved, see Prop169</td>
+</tr>
+
+<tr>
+<td>reserved (MLDSA)</td>
+<td align="center">17</td>
+<td align="center"></td>
+<td></td>
+<td>Reserved, see Prop169</td>
+</tr>
+
+<tr>
+<td>reserved (MLDSA)</td>
+<td align="center">18</td>
+<td align="center"></td>
+<td></td>
+<td>Reserved, see Prop169</td>
+</tr>
+
+<tr>
+<td>reserved (MLDSA)</td>
+<td align="center">19</td>
+<td align="center"></td>
+<td></td>
+<td>Reserved, see Prop169</td>
+</tr>
+
+<tr>
+<td>reserved (MLDSA)</td>
+<td align="center">20</td>
+<td align="center"></td>
+<td></td>
+<td>Reserved, see Prop169</td>
+</tr>
+
+<tr>
 <td>reserved</td>
 <td align="center">65280–65534</td>
 <td align="center"></td>
@@ -923,6 +1100,7 @@ the Signing Public Key Type is first.</p>
 <th>Type</th>
 <th align="center">Type Code</th>
 <th align="center">Total Public Key Length</th>
+<th>Since</th>
 <th>Usage</th>
 </tr>
 </thead>
@@ -932,6 +1110,7 @@ the Signing Public Key Type is first.</p>
 <td>ElGamal</td>
 <td align="center">0</td>
 <td align="center">256</td>
+<td></td>
 <td>Deprecated for Router Identities as of 0.9.58; use for Destinations, as the public key field is unused there</td>
 </tr>
 
@@ -939,6 +1118,7 @@ the Signing Public Key Type is first.</p>
 <td>P256</td>
 <td align="center">1</td>
 <td align="center">64</td>
+<td></td>
 <td>Reserved, see proposal 145</td>
 </tr>
 
@@ -946,6 +1126,7 @@ the Signing Public Key Type is first.</p>
 <td>P384</td>
 <td align="center">2</td>
 <td align="center">96</td>
+<td></td>
 <td>Reserved, see proposal 145</td>
 </tr>
 
@@ -953,6 +1134,7 @@ the Signing Public Key Type is first.</p>
 <td>P521</td>
 <td align="center">3</td>
 <td align="center">132</td>
+<td></td>
 <td>Reserved, see proposal 145</td>
 </tr>
 
@@ -960,13 +1142,47 @@ the Signing Public Key Type is first.</p>
 <td>X25519</td>
 <td align="center">4</td>
 <td align="center">32</td>
+<td>0.9.38</td>
 <td>See ECIES and proposal 156</td>
+</tr>
+
+<tr>
+<td>MLKEM512_X25519</td>
+<td align="center">5</td>
+<td align="center">32</td>
+<td>0.9.67</td>
+<td>See ECIES-HYBRID, for Leasesets only, not for RIs or Destinations</td>
+</tr>
+
+<tr>
+<td>MLKEM768_X25519</td>
+<td align="center">6</td>
+<td align="center">32</td>
+<td>0.9.67</td>
+<td>See ECIES-HYBRID, for Leasesets only, not for RIs or Destinations</td>
+</tr>
+
+<tr>
+<td>MLKEM1024_X25519</td>
+<td align="center">7</td>
+<td align="center">32</td>
+<td>0.9.67</td>
+<td>See ECIES-HYBRID, for Leasesets only, not for RIs or Destinations</td>
+</tr>
+
+<tr>
+<td>reserved (NONE)</td>
+<td align="center">255</td>
+<td align="center"></td>
+<td></td>
+<td>Reserved, see Prop169</td>
 </tr>
 
 <tr>
 <td>reserved</td>
 <td align="center">65280–65534</td>
 <td align="center"></td>
+<td></td>
 <td>Reserved for experimental use</td>
 </tr>
 
@@ -974,6 +1190,7 @@ the Signing Public Key Type is first.</p>
 <td>reserved</td>
 <td align="center">65535</td>
 <td align="center"></td>
+<td></td>
 <td>Reserved for future expansion</td>
 </tr>
 </tbody>
@@ -1148,7 +1365,10 @@ are not allowed.</p></li>
 the signature will be invariant. Duplicate keys are not allowed.</p></li>
 
 <li><p>The sort method is defined as in Java <code>String.compareTo()</code>, using the Unicode
-value of the characters.</p></li>
+value of the characters, however that may not be honored by all implementations.
+In use cases where sorting by key is required, non-ASCII keys are strongly discouraged.
+Due to implementation differences in the lexical sorting of UTF-8 keys, signatures may fail
+and other hard-to-reproduce issues may arise.</p></li>
 
 <li><p>While it is application-dependent, keys and values are generally
 case-sensitive.</p></li>
@@ -1348,6 +1568,8 @@ aligned at the end. The padding (if any) is in the middle.</p></li>
 
 <h4 id="description-17">Description</h4>
 
+<p><strong>DEPRECATED.</strong> Use <a href="#leaseset2">LeaseSet2</a> and <a href="#lease2">Lease2</a>.</p>
+
 <p>Defines the authorization for a particular tunnel to receive messages targeting
 a <a href="#destination">Destination</a>.</p>
 
@@ -1391,6 +1613,8 @@ end_date :: Date
 <h3 id="leaseset">LeaseSet</h3>
 
 <h4 id="description-18">Description</h4>
+
+<p><strong>DEPRECATED.</strong> Use <a href="#leaseset2">LeaseSet2</a> and <a href="#lease2">Lease2</a>.</p>
 
 <p>Contains all of the currently authorized <a href="#lease">Leases</a> for a particular <a href="#destination">Destination</a>,
 the <a href="#publickey">PublicKey</a> to which garlic messages can be encrypted, and then the
@@ -1663,14 +1887,9 @@ flags :: 2 bytes
   Bit order: 15 14 ... 3 2 1 0
   Bit 0: If 0, no offline keys; if 1, offline keys
   Bit 1: If 0, a standard published leaseset.
-         If 1, an unpublished leaseset. Should not be flooded, published, or
-         sent in response to a query. If this leaseset expires, do not query the
-         netdb for a new one, unless bit 2 is set.
+         If 1, an unpublished leaseset.
   Bit 2: If 0, a standard published leaseset.
          If 1, this unencrypted leaseset will be blinded and encrypted when published.
-         If this leaseset expires, query the blinded location in the netdb for a new one.
-         If this bit is set to 1, set bit 1 to 1 also.
-         As of release 0.9.42.
   Bits 15-3: set to 0 for compatibility with future uses
 
 offline_signature :: OfflineSignature
@@ -1679,6 +1898,23 @@ offline_signature :: OfflineSignature
 </code></pre>
 
 <h4 id="notes-12">Notes</h4>
+
+<ul>
+<li>Flags (2 bytes):
+
+<ul>
+<li>Bit 0: If set, offline keys are present (see <a href="#offlinesignature">OfflineSignature</a>)</li>
+<li>Bit 1: If set, this is an unpublished leaseset</li>
+<li>Bit 2: If set, this is a blinded leaseset</li>
+<li>Bits 15-3: Reserved, set to 0</li>
+</ul></li>
+</ul>
+
+<p>Earlier revisions of this specification (through 0.9.67) additionally stated
+  &ldquo;If this bit is set to 1, set bit 1 to 1 also&rdquo; for bit 2. That sentence was
+  removed in 0.9.71, so the pairing of blinded with unpublished is a publishing
+  convention of the reference implementation rather than a structural requirement;
+  readers must not reject a record that sets bit 2 without bit 1.</p>
 
 <ul>
 <li><p>Total size: 395 bytes minimum</p></li>
@@ -1903,6 +2139,8 @@ may parse the structure even if not all encryption types are known or supported.
 
 <h4 id="description-23">Description</h4>
 
+<p><strong>PRELIMINARY.</strong> Not fully supported.</p>
+
 <p>Defines the authorization for a particular tunnel to receive messages targeting
 a <a href="#destination">Destination</a>.
 Same as <a href="#lease2">Lease2</a> but with flags and cost instead of a tunnel id.
@@ -1961,8 +2199,10 @@ end_date :: 4 byte date
 
 <h4 id="description-24">Description</h4>
 
+<p><strong>PRELIMINARY.</strong> Not fully supported.</p>
+
 <p>Contained in a I2NP DatabaseStore message of type 7.
-Defined as of 0.9.38; scheduled to be working as of 0.9.40;
+Defined as of 0.9.38;
 see proposal 123 for more information.</p>
 
 <p>Contains all of the currently authorized <a href="#metalease">MetaLease</a> for a particular <a href="#destination">Destination</a>,
@@ -2146,7 +2386,7 @@ offline_signature :: OfflineSignature
 len :: Integer
        length -&gt; 2 bytes
        length of encrypted_data to follow
-       value: 1 &lt;= num &lt;= max TBD
+       value: 1 &lt;= len &lt;= max TBD
 
 encrypted_data :: Data encrypted
                   length -&gt; len bytes
@@ -2389,7 +2629,7 @@ Specification.</p>
     </main>
     
     <footer class="page-footer">
-      <p>Generated on 2026-10-19 00:39:03 • <a href="https://github.com/go-i2p/common" target="_blank">View on GitHub</a></p>
+      <p>Generated on 2026-10-19 04:19:01 • <a href="https://github.com/go-i2p/common" target="_blank">View on GitHub</a></p>
     </footer>
   </div>
 </body>
