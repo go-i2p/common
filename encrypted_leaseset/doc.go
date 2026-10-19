@@ -43,7 +43,12 @@
 //
 //	innerCiphertext   = innerSalt(32) || Layer2Ciphertext
 //
-//	Layer 2 plaintext = serialized LeaseSet2
+//	Layer 2 plaintext = type(1) || serialized inner lease set
+//
+// The Layer 2 type byte is defined by the specification as "Either 3 (LS2) or
+// 7 (Meta LS2)"; EncryptInnerLeaseSet2 emits 3 and EncryptInnerMetaLeaseSet
+// emits 7, and DecryptInnerLeaseSet dispatches on it. The byte is also the
+// DatabaseStore prefix covered by the inner structure's own signature.
 //
 // The flag byte's bit 0 selects per-client authorization; when set, bits 3-1
 // select the scheme (DH or PSK) and the auth block follows. When clear (auth
@@ -113,18 +118,38 @@
 //
 // # Security Considerations
 //
-// The blinded signing key is derived from the destination's signing key using a
-// date-dependent blinding factor, providing unlinkability across publications
-// while remaining verifiable by clients who know the destination. The
-// subcredential binds encryption to knowledge of the original destination's
-// signing public key.
+// The blinded signing key is derived from the destination's signing key using the
+// specification's GENERATE_ALPHA() construction, in which the blinding factor is
+// bound to the destination signing public key and signature type as well as the
+// UTC date and optional secret. This provides unlinkability across publications
+// while remaining verifiable by clients who know the destination, and matches the
+// key material a spec-conforming peer derives. The blinded key is published with
+// signature type 11 (Red25519) as the specification requires. The subcredential
+// binds encryption to knowledge of the original destination's signing public key.
+//
+// Blinding and signing arithmetic are provided by github.com/go-i2p/crypto
+// (kdf.DeriveBlindingFactorI2P, ed25519.BlindPublicKey); this package implements
+// no cryptographic primitives.
 //
 // # Known Limitations
 //
-// Red25519 signing: the spec mandates Red25519 (randomized nonces) for the outer
-// signature. This implementation uses standard deterministic Ed25519, which
-// produces verifiable signatures but allows correlation of re-publications of the
-// same data. A full Red25519 implementation is planned.
+// Red25519 signing: the spec mandates randomized nonces for the blinded outer
+// signature - "T = 80 random bytes; r = H*(T || publickey || message)" - so that
+// "every Red25519 signature is different, even when signing the same data with
+// the same key" (https://geti2p.net/spec/encryptedleaseset §"Sign/Verify
+// Calculations"). This package signs with standard deterministic Ed25519, because
+// the blinding/signing primitives live in github.com/go-i2p/crypto and its
+// red25519.Red25519Signer is itself deterministic (see
+// TestRed25519DeterministicSignatures upstream). The result verifies correctly
+// under the shared Ed25519 verification equation, but re-publications of the same
+// lease set are byte-correlatable, which is exactly the property randomized
+// RedDSA exists to prevent.
+//
+// This is a cryptographic-primitive gap and must be fixed upstream in
+// github.com/go-i2p/crypto (a randomized-signing Red25519 signer for blinded
+// keys); this package deliberately implements no cryptography itself. Once
+// upstream exposes randomized signing, NewEncryptedLeaseSet should route
+// sigType 11 through it instead of crypto/ed25519.Sign.
 //
 // # Specification
 //

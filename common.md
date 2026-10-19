@@ -1530,7 +1530,7 @@ offline_signature :: OfflineSignature
 len :: Integer
        length -> 2 bytes
        length of encrypted_data to follow
-       value: 1 <= num <= max TBD
+       value: 1 <= len <= max TBD
 
 encrypted_data :: Data encrypted
                   length -> len bytes

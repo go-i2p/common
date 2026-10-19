@@ -160,10 +160,33 @@ wireBytes, err := els.Bytes()
 
 ### Blinding
 
-The blinded signing key is derived from the destination's Ed25519 signing key using a date-dependent blinding factor. This ensures:
+The blinded signing key is derived using the blinding factor `alpha` defined by
+the [Encrypted LeaseSet specification](https://geti2p.net/spec/encryptedleaseset)
+§"Blinding Calculations":
+
+```
+keydata = A || stA || stA'
+seed    = HKDF(SHA256("I2PGenerateAlpha" || keydata), yyyyMMdd || secret, "i2pblinding1", 64)
+alpha   = seed mod L
+A'      = A + [alpha]B
+```
+
+`alpha` is bound to the destination's signing public key `A` and its signature
+type, and is recomputed each day (UTC). This ensures:
 
 - **Unlinkability**: Different publications cannot be correlated to the same service
 - **Verifiability**: Clients who know the destination can derive the expected blinded key
+- **Interoperability**: The same destination/secret/date yields the same blinded
+  key as the Java reference implementation, because the derivation follows the
+  published specification rather than a library-local convention
+
+The blinding arithmetic itself lives in `github.com/go-i2p/crypto`
+(`kdf.DeriveBlindingFactorI2P`, `ed25519.BlindPublicKey`); this package performs
+no cryptographic primitives of its own.
+
+The blinded key is always published with signature type **11 (Red25519)**, per
+the spec's "This will always be type 11, identifying a Red25519 blinded key",
+regardless of whether the original destination used Ed25519 (7) or RedDSA (11).
 
 ### Subcredentials
 
@@ -179,7 +202,15 @@ The inner LeaseSet2 is protected by two-layer ChaCha20 stream cipher:
 
 ### Known Limitations
 
-- **Red25519 signing**: The spec mandates Red25519 (randomized nonces) for the outer signature. This implementation uses standard deterministic Ed25519, which produces verifiable signatures but allows correlation of re-publications of the same data. A full Red25519 implementation is planned.
+- **Red25519 signing**: The spec mandates randomized nonces for the blinded outer
+  signature (`T = 80 random bytes; r = H*(T || publickey || message)`), so that
+  every signature over the same data differs. This package signs with standard
+  deterministic Ed25519 because the signing primitives live in
+  `github.com/go-i2p/crypto`, whose `red25519.Red25519Signer` is itself
+  deterministic. Signatures verify correctly under the shared Ed25519
+  verification equation, but re-publications of the same lease set are
+  byte-correlatable. Fixing this requires a randomized-signing Red25519 signer
+  upstream in `go-i2p/crypto`; it is intentionally not implemented here.
 
 ## Per-Client Authorization
 
