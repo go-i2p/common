@@ -3,7 +3,7 @@ package common
 
 // I2P_SPEC_VERSION defines the I2P specification version that this library implements.
 // This constant should be updated whenever the implementation is updated to match a newer specification.
-// Reference: https://geti2p.net/spec/
+// Reference: https://geti2p.net/en/docs/specs/
 //
 // The common-structures specification page was revised from 0.9.67 to 0.9.71
 // (Updated: 2026-10). The 0.9.71 revision documents the post-quantum ML-KEM

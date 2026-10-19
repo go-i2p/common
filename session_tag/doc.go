@@ -47,5 +47,5 @@
 // Specification references:
 //   - https://geti2p.net/spec/common-structures#session-tag
 //   - https://geti2p.net/spec/ecies
-//   - https://geti2p.net/spec/i2np#databaselookup
+//   - https://geti2p.net/en/docs/specs/i2np/
 package session_tag

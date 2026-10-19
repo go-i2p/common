@@ -965,7 +965,7 @@ func logX25519Ed25519Success(keysAndCert *KeysAndCert, remainder []byte) {
 // it to fill the requested size, providing exactly one SHA-256 block's worth of
 // entropy while remaining highly compressible via DEFLATE and similar algorithms.
 //
-// Reference: https://geti2p.net/spec/proposals/161-reduce-key-cert-padding
+// Reference: https://geti2p.net/en/proposals/161-ri-dest-padding/
 func GenerateCompressiblePadding(size int) ([]byte, error) {
 	if size <= 0 {
 		return nil, nil

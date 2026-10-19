@@ -578,7 +578,7 @@ func TestGenerateCompressiblePaddingUniqueness(t *testing.T) {
 // requested size, making the output highly compressible via DEFLATE while retaining
 // at least 256 bits of entropy.
 //
-// Reference: https://geti2p.net/spec/proposals/161-reduce-key-cert-padding
+// Reference: https://geti2p.net/en/proposals/161-ri-dest-padding/
 func TestGenerateCompressiblePaddingProposal161Conformance(t *testing.T) {
 	// Use 320 bytes: the typical X25519+Ed25519 padding size (384-32-32).
 	const paddingSize = 320
