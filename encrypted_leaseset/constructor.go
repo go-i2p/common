@@ -192,6 +192,26 @@ func validateConstructorFlags(expiresOffset, flags uint16, offlineSig *offline_s
 		return oops.Code("unexpected_offline_sig").
 			Errorf("offline signature provided but OFFLINE_KEYS flag not set")
 	}
+	return validateTransientSigType(offlineSig)
+}
+
+// validateTransientSigType enforces the offline-key restriction for encrypted
+// lease sets. Per https://geti2p.net/spec/encryptedleaseset §"Blinding - Goals":
+//
+//	"If the signing public key is offline, the transient signing public key must
+//	 also be Ed25519"
+//
+// so a blinded/encrypted lease set may not carry a RedDSA (or any other)
+// transient key. nil offlineSig means no offline keys are in use and is valid.
+func validateTransientSigType(offlineSig *offline_signature.OfflineSignature) error {
+	if offlineSig == nil {
+		return nil
+	}
+	if got := offlineSig.TransientSigType(); got != key_certificate.KEYCERT_SIGN_ED25519 {
+		return oops.Code("invalid_transient_sig_type").
+			With("transient_sig_type", got).
+			Errorf("encrypted lease set offline transient signing key must be Ed25519 (7), got %d", got)
+	}
 	return nil
 }
 

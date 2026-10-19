@@ -233,3 +233,52 @@ func corruptChar(b32 string, pos int) string {
 	}
 	return string(chars)
 }
+
+// TestExtendedAddress_RejectsNonZeroUnusedBits covers the I2P extended-address
+// rule "Any unused bits at the end of the b32 must be 0." Go's base32 decoder
+// silently ignores those bits, so without an explicit check several distinct
+// hostnames decode to the same address (an address-malleability hazard).
+func TestExtendedAddress_RejectsNonZeroUnusedBits(t *testing.T) {
+	// 1 flag + 1 + 1 sigtype bytes + a 36-byte key = 39 bytes, which encodes to
+	// 63 base32 chars and leaves 3 unused bits in the final symbol.
+	key := make([]byte, 36)
+	for i := range key {
+		key[i] = byte(i * 7)
+	}
+	addr := &ExtendedAddress{
+		PubKeySigType:  7,
+		BlindedSigType: 11,
+		PublicKey:      key,
+	}
+
+	hostname, err := EncodeExtendedAddress(addr)
+	require.NoError(t, err)
+
+	b32Part := hostname[:len(hostname)-len(B32Suffix)]
+	decoded, err := DecodeStringNoPadding(b32Part)
+	require.NoError(t, err)
+
+	// The canonical encoding must round-trip.
+	got, err := DecodeExtendedAddress(hostname)
+	require.NoError(t, err)
+	assert.Equal(t, key, got.PublicKey)
+
+	// Find an alternate final symbol that decodes to the identical bytes.
+	var alias string
+	for _, c := range I2PEncodeAlphabet {
+		candidate := b32Part[:len(b32Part)-1] + string(c)
+		if candidate == b32Part {
+			continue
+		}
+		d2, err := DecodeStringNoPadding(candidate)
+		if err == nil && len(d2) == len(decoded) && string(d2) == string(decoded) {
+			alias = candidate
+			break
+		}
+	}
+	require.NotEmpty(t, alias, "expected a non-canonical alias for this length")
+
+	_, err = DecodeExtendedAddress(alias + B32Suffix)
+	assert.ErrorIs(t, err, ErrNonCanonicalEncoding,
+		"non-zero unused trailing bits must be rejected")
+}

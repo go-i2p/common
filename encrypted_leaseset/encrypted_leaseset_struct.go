@@ -1,11 +1,51 @@
 package encrypted_leaseset
 
 import (
+	"github.com/go-i2p/common/destination"
 	"github.com/go-i2p/common/lease_set2"
+	"github.com/go-i2p/common/meta_leaseset"
 	"github.com/go-i2p/common/offline_signature"
 	sig "github.com/go-i2p/common/signature"
 	"github.com/samber/oops"
 )
+
+// InnerLeaseSet is the decrypted payload of an EncryptedLeaseSet.
+//
+// The I2P encrypted-leaseset specification defines the inner (Layer 2) plaintext
+// as a one-byte type followed by the structure it identifies:
+//
+//	"Type : 1 byte — Either 3 (LS2) or 7 (Meta LS2)"
+//
+// Exactly one of LeaseSet2 or MetaLeaseSet is non-nil, selected by Type.
+//
+// Spec: https://geti2p.net/spec/encryptedleaseset §"Layer 2 (inner)".
+type InnerLeaseSet struct {
+	// Type is the Layer 2 type byte: 3 for LeaseSet2, 7 for MetaLeaseSet.
+	Type byte
+
+	// LeaseSet2 is populated when Type is 3.
+	LeaseSet2 *lease_set2.LeaseSet2
+
+	// MetaLeaseSet is populated when Type is 7.
+	MetaLeaseSet *meta_leaseset.MetaLeaseSet
+}
+
+// Destination returns the inner structure's destination, whichever type it is.
+// Both LeaseSet2 and MetaLeaseSet begin with a LeaseSet2Header carrying the
+// Destination, so the offline-signature authorization chain applies identically
+// to either.
+func (inner *InnerLeaseSet) Destination() destination.Destination {
+	if inner == nil {
+		return destination.Destination{}
+	}
+	if inner.MetaLeaseSet != nil {
+		return inner.MetaLeaseSet.Destination()
+	}
+	if inner.LeaseSet2 != nil {
+		return inner.LeaseSet2.Destination()
+	}
+	return destination.Destination{}
+}
 
 // EncryptedLeaseSet represents an encrypted I2P LeaseSet2 (Database Store Type 5).
 //
@@ -57,17 +97,16 @@ type EncryptedLeaseSet struct {
 // (F368 security fix). Per I2P spec, the verifier MUST validate the offline signature
 // before accepting the LeaseSet to prevent forged publication.
 // Returns an error if verification fails or the destination cannot be extracted.
-func (els *EncryptedLeaseSet) verifyOfflineSignatureChain(innerLS2 *lease_set2.LeaseSet2) error {
+func (els *EncryptedLeaseSet) verifyOfflineSignatureChain(dest destination.Destination) error {
 	if els.offlineSignature == nil {
 		// This should have been checked by the caller, but verify for safety.
 		return oops.Errorf("F368: offline signature verification called but signature is nil")
 	}
 
 	// Extract the destination's long-term signing public key.
-	// This is the key the LeaseSet2 was created for.
-	dest := innerLS2.Destination()
+	// This is the key the inner lease set was created for.
 	if !(&dest).IsValid() {
-		return oops.Errorf("F368: invalid destination from decrypted LeaseSet2")
+		return oops.Errorf("F368: invalid destination from decrypted inner lease set")
 	}
 
 	destSigningKey, err := (&dest).SigningPublicKey()

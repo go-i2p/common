@@ -235,11 +235,15 @@
 // offset at zero) would be a self-inflicted denial of service. The affected
 // checks are:
 //
-//   - reserved flag bits in LeaseSet2 (bits 15-3) and EncryptedLeaseSet (bits 15-2)
+//   - reserved flag bits in LeaseSet2 and MetaLeaseSet (bits 15-3, from the
+//     shared LeaseSet2Header) and EncryptedLeaseSet (bits 15-2)
+//   - reserved bits 23-4 in a MetaLease entry's 3-byte flags field
 //   - a zero expires offset in an EncryptedLeaseSet (the spec bounds it only from
 //     above, at 18.2 hours)
 //   - a non-zero RouterAddress expiration (serialized as all zeros; see the
 //     router_address package)
+//   - the encrypted-leaseset rule that an offline transient signing key must be
+//     Ed25519 (enforced in the constructors and Validate())
 //
 // Requirements that determine how the wire format is read - for example the
 // presence of an OfflineSignature when flags bit 0 is set - remain hard errors
@@ -280,16 +284,36 @@
 // performed. Likewise, RouterInfo creation (see the router_info package) is
 // currently limited to Ed25519 (type 7).
 //
-// # Specification Source Gaps
+// # Normative Sources for Encrypted LeaseSets
 //
-// The EncryptedLeaseSet blinding and inner-plaintext encoding is specified on a
-// separate page (https://geti2p.net/spec/encrypted-leasesets), which is not
-// currently published; proposal 123 and the /spec/els redirect are likewise
-// unavailable. The handling of the 0x03 LeaseSet2 type byte at the start of the
-// decrypted inner plaintext in the encrypted_leaseset package is therefore
-// derived from the reference implementation rather than from a retrievable
-// normative source, and is verified by round-tripping against this library's own
-// encoder.
+// EncryptedLeaseSet blinding, the two-layer inner encryption, per-client
+// authorization, and the inner plaintext layout are specified on a separate
+// normative page:
+//
+//	https://geti2p.net/spec/encryptedleaseset
+//
+// (also reachable as https://i2p.net/en/docs/specs/encryptedleaseset/). Proposal
+// 123 is published at https://geti2p.net/spec/proposals/123-new-netdb-entries.
+// The encrypted_leaseset package implements that page directly, including:
+//
+//   - GENERATE_ALPHA(): alpha = HKDF(SHA256("I2PGenerateAlpha" || A || stA ||
+//     stA'), yyyyMMdd || secret, "i2pblinding1", 64) mod L, i.e. alpha is bound
+//     to the destination signing public key. The derivation lives in
+//     github.com/go-i2p/crypto (kdf.DeriveBlindingFactorI2P); this package does
+//     not implement cryptographic primitives.
+//   - Layer 2's leading type byte, which the page defines as "Either 3 (LS2) or
+//     7 (Meta LS2)". Both are parsed and produced.
+//   - The blinded public key signature type, which the page states "will always
+//     be type 11, identifying a Red25519 blinded key". Blinding therefore emits a
+//     RedDSA (11) key certificate. Type 7 is still accepted when parsing inbound
+//     data for tolerance of older implementations.
+//
+// The hyphenated URL https://geti2p.net/spec/encrypted-leasesets and the
+// /spec/els redirect do not resolve; use the URLs above.
+//
+// Remaining genuinely-unpublished item: the page does not define a maximum value
+// for the inner "len" field or for LeaseSet2's numk ("max TBD" in
+// common-structures), so this library applies documented internal caps.
 //
 // # Version Information
 //

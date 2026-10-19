@@ -126,11 +126,25 @@ func DecodeExtendedAddress(hostname string) (*ExtendedAddress, error) {
 		log.WithFields(logger.Fields{"pkg": "base32", "func": "DecodeExtendedAddress"}).Error("Base32 decode failed", "error", err)
 		return nil, oops.Wrapf(err, "base32 decode")
 	}
+	// Spec: "Any unused bits at the end of the b32 must be 0." Go's base32
+	// decoder silently discards those bits, so re-encode and compare to reject
+	// non-canonical (malleable) encodings of the same address.
+	if !isCanonicalNoPadding(b32Part, data) {
+		log.WithFields(logger.Fields{"pkg": "base32", "func": "DecodeExtendedAddress"}).Warn("Address has non-zero unused trailing bits")
+		return nil, ErrNonCanonicalEncoding
+	}
 	if len(data) < minExtendedDataLen {
 		log.WithFields(logger.Fields{"pkg": "base32", "func": "DecodeExtendedAddress"}).Error("Decoded data too short", "data_len", len(data))
 		return nil, ErrAddressTooShort
 	}
 	return unmarshalExtendedData(data)
+}
+
+// isCanonicalNoPadding reports whether s is the exact unpadded base32 encoding
+// of data. Go's decoder ignores the unused high bits of a partial final symbol,
+// which would otherwise let several distinct strings decode to the same address.
+func isCanonicalNoPadding(s string, data []byte) bool {
+	return EncodeToStringNoPadding(data) == s
 }
 
 // IsExtendedAddress returns true if the hostname appears to be an extended

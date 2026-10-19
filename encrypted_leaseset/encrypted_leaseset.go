@@ -479,7 +479,11 @@ func validateEncryptedLeaseSetFields(els *EncryptedLeaseSet) error {
 	if !els.HasOfflineKeys() && els.offlineSignature != nil {
 		return oops.Errorf("offline signature present but offline keys flag not set")
 	}
-	return nil
+	// Spec (encryptedleaseset §"Blinding - Goals"): "If the signing public key is
+	// offline, the transient signing public key must also be Ed25519". Enforced
+	// here (outbound/Validate) rather than on the inbound parse path, consistent
+	// with the package's inbound-lenient policy for publishing obligations.
+	return validateTransientSigType(els.offlineSignature)
 }
 
 // validateEncryptedInnerDataIntegrity validates that the encrypted inner data is present,

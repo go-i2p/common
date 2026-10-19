@@ -67,6 +67,13 @@ func ReadMetaLeaseSet(data []byte) (mls MetaLeaseSet, remainder []byte, err erro
 		"flags":     mls.flags,
 	}).Debug("Parsed MetaLeaseSet header")
 
+	// Spec (LeaseSet2Header): "Bits 15-3: set to 0 for compatibility with future
+	// uses." Warn-only on the inbound path, matching LeaseSet2: a future revision
+	// may assign meaning to a bit that is reserved today, and discarding an
+	// otherwise correctly-signed record over a reserved bit would be a
+	// self-inflicted denial of service. Validate() enforces it for outbound use.
+	warnIfReservedFlagsSet(mls.flags)
+
 	// Parse entries
 	data, err = parseEntries(&mls, data)
 	if err != nil {

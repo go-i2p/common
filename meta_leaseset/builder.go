@@ -118,6 +118,9 @@ func validateNewMetaLeaseSetInputs(
 	if err := validateNewDestinationSize(dest); err != nil {
 		return err
 	}
+	if err := validateReservedFlags(flags); err != nil {
+		return err
+	}
 	if err := validateNewOfflineSignatureFlags(flags, offlineSig); err != nil {
 		return err
 	}

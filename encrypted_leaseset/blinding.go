@@ -208,12 +208,15 @@ func assembleBlindedDestination(dest destination.Destination, blindedPubKey [32]
 // Example:
 //
 //	// Verify blinded destination was created correctly
-//	alpha, _ := kdf.DeriveBlindingFactor(secret, "2025-11-24")
+//	alpha, _ := kdf.DeriveBlindingFactorI2P(
+//	    origPubKey, secretString,
+//	    kdf.SigTypeEdDSASha512Ed25519, date,
+//	)
 //	if !VerifyBlindedSignature(blindedDest, originalDest, alpha) {
 //	    return errors.New("blinded destination verification failed")
 //	}
 //
-// Spec: I2P Proposal 123 - Encrypted LeaseSet
+// Spec: https://geti2p.net/spec/encryptedleaseset §"Blinding Calculations"
 func VerifyBlindedSignature(blinded, original destination.Destination, alpha [32]byte) bool {
 	origPubKey, err := extractEd25519SigningKey(original)
 	if err != nil {

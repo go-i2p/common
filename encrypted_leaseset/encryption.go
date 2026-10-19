@@ -8,6 +8,7 @@ import (
 	"github.com/go-i2p/crypto/rand"
 
 	"github.com/go-i2p/common/lease_set2"
+	"github.com/go-i2p/common/meta_leaseset"
 	"github.com/go-i2p/logger"
 	"github.com/samber/oops"
 	"golang.org/x/crypto/chacha20"
@@ -169,6 +170,38 @@ func (els *EncryptedLeaseSet) DecryptInnerDataWithCredential(subcredential [32]b
 		}
 	}
 
+	inner, err := els.DecryptInnerLeaseSetWithCredential(subcredential, cred)
+	if err != nil {
+		return nil, err
+	}
+	if inner.LeaseSet2 == nil {
+		return nil, oops.Errorf("decrypted inner lease set is a MetaLeaseSet (type %d), not a LeaseSet2 (type %d)",
+			inner.Type, lease_set2.LEASESET2_DBSTORE_TYPE)
+	}
+	return inner.LeaseSet2, nil
+}
+
+// DecryptInnerLeaseSet decrypts the inner data and returns whichever inner
+// structure the spec's Layer 2 type byte identifies: LeaseSet2 (3) or
+// MetaLeaseSet (7).
+//
+// Spec: https://geti2p.net/spec/encryptedleaseset §"Layer 2 (inner)".
+func (els *EncryptedLeaseSet) DecryptInnerLeaseSet(subcredential [32]byte) (*InnerLeaseSet, error) {
+	return els.DecryptInnerLeaseSetWithCredential(subcredential, nil)
+}
+
+// DecryptInnerLeaseSetWithCredential is DecryptInnerLeaseSet with per-client
+// authorization support. Exactly one of the returned InnerLeaseSet's fields is
+// populated, according to the Layer 2 type byte.
+func (els *EncryptedLeaseSet) DecryptInnerLeaseSetWithCredential(subcredential [32]byte, cred *ClientCredential) (*InnerLeaseSet, error) {
+	// Fail fast on a malformed credential (wrong-sized DH key or PSK) rather
+	// than surfacing the problem deep in the decryption path.
+	if cred != nil {
+		if err := validateClientCredential(cred); err != nil {
+			return nil, err
+		}
+	}
+
 	plaintext, err := decryptTwoLayers(
 		els.encryptedInnerData, subcredential, els.published, cred,
 	)
@@ -176,7 +209,7 @@ func (els *EncryptedLeaseSet) DecryptInnerDataWithCredential(subcredential [32]b
 		return nil, err
 	}
 
-	innerLS2, err := parseDecryptedLeaseSet2(plaintext)
+	inner, err := parseDecryptedInnerLeaseSet(plaintext)
 	if err != nil {
 		return nil, err
 	}
@@ -187,12 +220,12 @@ func (els *EncryptedLeaseSet) DecryptInnerDataWithCredential(subcredential [32]b
 	// can publish a forged encrypted destination by substituting an arbitrary
 	// offline signature.
 	if els.offlineSignature != nil {
-		if err := els.verifyOfflineSignatureChain(innerLS2); err != nil {
+		if err := els.verifyOfflineSignatureChain(inner.Destination()); err != nil {
 			return nil, err
 		}
 	}
 
-	return innerLS2, nil
+	return inner, nil
 }
 
 // decryptTwoLayers performs the two-layer ChaCha20 decryption.
@@ -303,11 +336,50 @@ func EncryptInnerLeaseSet2WithAuth(ls2 *lease_set2.LeaseSet2, subcredential [32]
 		return nil, oops.Errorf("LeaseSet2 serialization failed: %w", err)
 	}
 
-	// Per the I2P DatabaseStore wire format, LeaseSet2 payloads are signed and
-	// transported with a leading DatabaseStore type byte (0x03) before the
-	// serialized LeaseSet2 content. The encrypted payload must preserve that
-	// structure so the decrypted inner bytes remain a valid LeaseSet2 record.
+	// Spec §"Layer 2 (inner)": the inner plaintext is a 1-byte type ("Either 3
+	// (LS2) or 7 (Meta LS2)") followed by the structure's data, including its
+	// header and signature. The type byte is also the DatabaseStore prefix the
+	// inner structure's own signature covers.
 	plaintext = append([]byte{lease_set2.LEASESET2_DBSTORE_TYPE}, plaintext...)
+
+	return encryptTwoLayers(plaintext, subcredential, published, cfg)
+}
+
+// EncryptInnerMetaLeaseSet encrypts a MetaLeaseSet as the inner payload of an
+// EncryptedLeaseSet, using the two-layer ChaCha20 scheme.
+//
+// Spec §"Layer 2 (inner)" defines the inner type byte as "Either 3 (LS2) or 7
+// (Meta LS2)". This produces the type-7 variant, the counterpart of
+// EncryptInnerLeaseSet2 (type 3), and is decrypted by
+// EncryptedLeaseSet.DecryptInnerLeaseSet.
+//
+// Spec: https://geti2p.net/spec/encryptedleaseset §"Layer 2 (inner)".
+func EncryptInnerMetaLeaseSet(mls *meta_leaseset.MetaLeaseSet, subcredential [32]byte, published uint32) ([]byte, error) {
+	return EncryptInnerMetaLeaseSetWithAuth(mls, subcredential, published, nil)
+}
+
+// EncryptInnerMetaLeaseSetWithAuth is EncryptInnerMetaLeaseSet with optional
+// per-client authorization (see EncryptInnerLeaseSet2WithAuth).
+func EncryptInnerMetaLeaseSetWithAuth(mls *meta_leaseset.MetaLeaseSet, subcredential [32]byte, published uint32, cfg *ClientAuthConfig) ([]byte, error) {
+	if mls == nil {
+		return nil, oops.Errorf("MetaLeaseSet is nil")
+	}
+	log.WithFields(logger.Fields{
+		"pkg":         "encrypted_leaseset",
+		"func":        "EncryptInnerMetaLeaseSetWithAuth",
+		"num_entries": len(mls.Entries()),
+		"published":   published,
+		"per_client":  cfg != nil,
+	}).Debug("Encrypting MetaLeaseSet (two-layer ChaCha20)")
+
+	plaintext, err := mls.Bytes()
+	if err != nil {
+		return nil, oops.Errorf("MetaLeaseSet serialization failed: %w", err)
+	}
+
+	// Layer 2 inner plaintext: 1-byte type (7 = Meta LS2) || the structure,
+	// including its header and signature.
+	plaintext = append([]byte{meta_leaseset.META_LEASESET_TYPE}, plaintext...)
 
 	return encryptTwoLayers(plaintext, subcredential, published, cfg)
 }
@@ -395,27 +467,72 @@ func assembleLayer1Plaintext(flagByte byte, authBlock, innerSalt, layer2CT []byt
 }
 
 // parseDecryptedLeaseSet2 parses decrypted plaintext as a LeaseSet2.
+// It returns an error if the inner structure is a MetaLeaseSet (type 7).
 func parseDecryptedLeaseSet2(plaintext []byte) (*lease_set2.LeaseSet2, error) {
-	if len(plaintext) > 0 && plaintext[0] == lease_set2.LEASESET2_DBSTORE_TYPE {
-		plaintext = plaintext[1:]
-	}
-
-	innerLS2, _, err := lease_set2.ReadLeaseSet2(plaintext)
+	inner, err := parseDecryptedInnerLeaseSet(plaintext)
 	if err != nil {
-		log.WithFields(logger.Fields{"pkg": "encrypted_leaseset", "func": "parseDecryptedLeaseSet2"}).WithError(err).Error("Failed to parse decrypted data as LeaseSet2")
-		return nil, oops.Errorf("invalid LeaseSet2 in decrypted data: %w", err)
+		return nil, err
+	}
+	if inner.LeaseSet2 == nil {
+		return nil, oops.Errorf("decrypted inner lease set is a MetaLeaseSet (type %d), not a LeaseSet2 (type %d)",
+			inner.Type, lease_set2.LEASESET2_DBSTORE_TYPE)
+	}
+	return inner.LeaseSet2, nil
+}
+
+// parseDecryptedInnerLeaseSet parses the decrypted Layer 2 plaintext according to
+// its leading type byte.
+//
+// Per https://geti2p.net/spec/encryptedleaseset §"Layer 2 (inner)", the inner
+// plaintext is "Type : 1 byte — Either 3 (LS2) or 7 (Meta LS2)" followed by the
+// LeaseSet2/MetaLeaseSet data including its header and signature. Exactly one of
+// the two result fields is populated. The type byte is also the DatabaseStore
+// prefix covered by the inner structure's own signature.
+func parseDecryptedInnerLeaseSet(plaintext []byte) (*InnerLeaseSet, error) {
+	if len(plaintext) < 1 {
+		return nil, oops.Errorf("decrypted inner plaintext is empty")
 	}
 
-	logFields := logger.Fields{
-		"pkg":        "encrypted_leaseset",
-		"func":       "parseDecryptedLeaseSet2",
-		"num_leases": len(innerLS2.Leases()),
-	}
-	if addr, err := innerLS2.Destination().Base32Address(); err == nil {
-		logFields["destination"] = addr[:16] + "..."
-	}
-	log.WithFields(logFields).
-		Info("Successfully decrypted and parsed EncryptedLeaseSet")
+	typeByte := plaintext[0]
+	body := plaintext[1:]
 
-	return &innerLS2, nil
+	switch typeByte {
+	case lease_set2.LEASESET2_DBSTORE_TYPE:
+		innerLS2, _, err := lease_set2.ReadLeaseSet2(body)
+		if err != nil {
+			log.WithFields(logger.Fields{"pkg": "encrypted_leaseset", "func": "parseDecryptedInnerLeaseSet"}).WithError(err).Error("Failed to parse decrypted data as LeaseSet2")
+			return nil, oops.Errorf("invalid LeaseSet2 in decrypted data: %w", err)
+		}
+		logFields := logger.Fields{
+			"pkg":        "encrypted_leaseset",
+			"func":       "parseDecryptedInnerLeaseSet",
+			"inner_type": typeByte,
+			"num_leases": len(innerLS2.Leases()),
+		}
+		if addr, err := innerLS2.Destination().Base32Address(); err == nil {
+			logFields["destination"] = addr[:16] + "..."
+		}
+		log.WithFields(logFields).Info("Successfully decrypted and parsed EncryptedLeaseSet (LeaseSet2)")
+		return &InnerLeaseSet{Type: typeByte, LeaseSet2: &innerLS2}, nil
+
+	case meta_leaseset.META_LEASESET_TYPE:
+		innerMLS, _, err := meta_leaseset.ReadMetaLeaseSet(body)
+		if err != nil {
+			log.WithFields(logger.Fields{"pkg": "encrypted_leaseset", "func": "parseDecryptedInnerLeaseSet"}).WithError(err).Error("Failed to parse decrypted data as MetaLeaseSet")
+			return nil, oops.Errorf("invalid MetaLeaseSet in decrypted data: %w", err)
+		}
+		log.WithFields(logger.Fields{
+			"pkg":         "encrypted_leaseset",
+			"func":        "parseDecryptedInnerLeaseSet",
+			"inner_type":  typeByte,
+			"num_entries": len(innerMLS.Entries()),
+		}).Info("Successfully decrypted and parsed EncryptedLeaseSet (MetaLeaseSet)")
+		return &InnerLeaseSet{Type: typeByte, MetaLeaseSet: &innerMLS}, nil
+
+	default:
+		return nil, oops.
+			Code("unknown_inner_type").
+			With("type_byte", typeByte).
+			Errorf("unknown encrypted leaseset inner type byte %d: spec defines 3 (LeaseSet2) and 7 (MetaLeaseSet) only", typeByte)
+	}
 }

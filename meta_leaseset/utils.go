@@ -13,6 +13,42 @@ func MakeEntryFlags(entryType uint8) [3]byte {
 	return [3]byte{0, 0, entryType & 0x0F}
 }
 
+// NewMetaLeaseSetEntry builds a single MetaLease entry.
+//
+// Per spec a MetaLease is exactly 40 bytes:
+//
+//	hash(32) + flags(3) + cost(1) + end_date(4)
+//
+// with the entry type carried in flags bits 3-0 (0 = unknown, 1 = LeaseSet,
+// 3 = LeaseSet2, 5 = MetaLeaseSet) and flags bits 23-4 reserved as zero, which
+// MakeEntryFlags enforces. endDate is seconds since the epoch.
+//
+// Returns an error if hash is not 32 bytes or the entry type is outside the
+// 4-bit field the specification allocates for it.
+//
+// https://geti2p.net/spec/common-structures#metalease
+func NewMetaLeaseSetEntry(hash []byte, entryType, cost uint8, endDate uint32) (MetaLeaseSetEntry, error) {
+	if len(hash) != META_LEASESET_ENTRY_HASH_SIZE {
+		return MetaLeaseSetEntry{}, oops.
+			Code("invalid_entry_hash_size").
+			With("size", len(hash)).
+			Errorf("MetaLease hash must be %d bytes, got %d", META_LEASESET_ENTRY_HASH_SIZE, len(hash))
+	}
+	if entryType > 0x0F {
+		return MetaLeaseSetEntry{}, oops.
+			Code("invalid_entry_type").
+			With("entry_type", entryType).
+			Errorf("MetaLease entry type %d does not fit the 4-bit flags field (0-15)", entryType)
+	}
+
+	var entry MetaLeaseSetEntry
+	copy(entry.hash[:], hash)
+	entry.flags = MakeEntryFlags(entryType)
+	entry.cost = cost
+	entry.endDate = endDate
+	return entry, nil
+}
+
 // parseRevocations parses the revocation section: numr (1 byte) + numr * 32-byte hashes.
 // Per the I2P MetaLeaseSet spec, this section appears between entries and signature.
 // Returns remaining data after parsing or error if insufficient data.

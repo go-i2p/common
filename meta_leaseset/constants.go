@@ -91,6 +91,11 @@ const (
 	// Per the I2P LeaseSet2Header spec, bit 2 signals that the destination is blinded.
 	// Consumers MUST check this flag before making routing or netdb storage decisions.
 	META_LEASESET_FLAG_BLINDED = 1 << 2 // 0x0004
+
+	// META_LEASESET_RESERVED_FLAGS_MASK covers the header flag bits reserved by
+	// the specification: "Bits 15-3: set to 0 for compatibility with future
+	// uses" (LeaseSet2Header, which MetaLeaseSet uses).
+	META_LEASESET_RESERVED_FLAGS_MASK uint16 = 0xFFF8
 )
 
 // MetaLeaseSet Expiration Constants

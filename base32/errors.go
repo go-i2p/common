@@ -37,4 +37,11 @@ var (
 	// an extended address distinguishable from a standard 52-char address.
 	// Extended addresses require >32 bytes of encoded data (>52 base32 chars).
 	ErrKeyTooShort = errors.New("public key too short for a valid extended address")
+
+	// ErrNonCanonicalEncoding is returned when a base32 string carries non-zero
+	// bits in the final symbol's unused positions. The I2P extended-address
+	// specification requires them to be zero: "Any unused bits at the end of the
+	// b32 must be 0." Go's encoding/base32 decoder silently ignores those bits,
+	// so the decoder re-encodes and compares to reject them.
+	ErrNonCanonicalEncoding = errors.New("base32 input has non-zero unused trailing bits")
 )

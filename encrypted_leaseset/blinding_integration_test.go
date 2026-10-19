@@ -7,7 +7,6 @@ import (
 	"github.com/go-i2p/crypto/rand"
 
 	"github.com/go-i2p/common/destination"
-	"github.com/go-i2p/crypto/kdf"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

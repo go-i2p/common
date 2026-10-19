@@ -89,8 +89,6 @@ func TestCreateBlindedDestinationSecretLengths(t *testing.T) {
 	date := time.Date(2026, 3, 4, 0, 0, 0, 0, time.UTC)
 
 	secrets := [][]byte{
-		nil,
-		{},
 		[]byte("hunter2"),
 		make([]byte, 16),
 		make([]byte, 24),
@@ -110,6 +108,20 @@ func TestCreateBlindedDestinationSecretLengths(t *testing.T) {
 		}
 		seen[key] = i
 	}
+
+	// nil and a zero-length secret are the same thing per spec ("secret is
+	// optional, else zero-length"), and both must be accepted.
+	noSecret, err := CreateBlindedDestination(dest, nil, date)
+	require.NoError(t, err, "nil secret must be accepted (public link)")
+	emptySecret, err := CreateBlindedDestination(dest, []byte{}, date)
+	require.NoError(t, err, "zero-length secret must be accepted")
+
+	ns, err := noSecret.SigningPublicKey()
+	require.NoError(t, err)
+	es, err := emptySecret.SigningPublicKey()
+	require.NoError(t, err)
+	assert.Equal(t, ns.Bytes(), es.Bytes(),
+		"nil and zero-length secrets must be equivalent")
 }
 
 // TestBlindingAlphaBoundToDestination verifies the security property the spec's

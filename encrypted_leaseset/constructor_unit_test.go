@@ -9,6 +9,8 @@ import (
 
 	"github.com/go-i2p/common/destination"
 	"github.com/go-i2p/common/key_certificate"
+	"github.com/go-i2p/common/offline_signature"
+	sig "github.com/go-i2p/common/signature"
 	goi2ped25519 "github.com/go-i2p/crypto/ed25519"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -274,4 +276,45 @@ func TestNewEncryptedLeaseSetRejectsInvalidSigType(t *testing.T) {
 	)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "invalid blinded sig_type")
+}
+
+// TestNewEncryptedLeaseSetRejectsNonEd25519TransientKey covers the encrypted
+// leaseset blinding rule: "If the signing public key is offline, the transient
+// signing public key must also be Ed25519."
+//
+// Spec: https://geti2p.net/spec/encryptedleaseset §"Blinding - Goals".
+func TestNewEncryptedLeaseSetRejectsNonEd25519TransientKey(t *testing.T) {
+	_, priv, err := ed25519.GenerateKey(rand.Reader)
+	require.NoError(t, err)
+
+	encData := make([]byte, ENCRYPTED_LEASESET_MIN_ENCRYPTED_SIZE)
+	_, _ = rand.Read(encData)
+
+	// A RedDSA (11) transient key: same 32-byte length as Ed25519, so only the
+	// type rule distinguishes it.
+	transient := make([]byte, key_certificate.KEYCERT_SIGN_REDDSA_ED25519_SIZE)
+	_, _ = rand.Read(transient)
+	sig := make([]byte, sig.RedDSA_SHA512_Ed25519_SIZE)
+
+	offlineSig, err := offline_signature.NewOfflineSignature(
+		uint32(time.Now().Add(time.Hour).Unix()),
+		uint16(key_certificate.KEYCERT_SIGN_REDDSA_ED25519),
+		transient, sig, uint16(key_certificate.KEYCERT_SIGN_ED25519),
+	)
+	require.NoError(t, err)
+
+	_, err = NewEncryptedLeaseSet(
+		uint16(key_certificate.KEYCERT_SIGN_REDDSA_ED25519),
+		transient,
+		uint32(time.Now().Unix()),
+		600,
+		ENCRYPTED_LEASESET_FLAG_OFFLINE_KEYS,
+		&offlineSig,
+		encData,
+		priv,
+	)
+	assert.Error(t, err, "transient key must be Ed25519 for an encrypted leaseset")
+	if err != nil {
+		assert.Contains(t, err.Error(), "Ed25519")
+	}
 }
