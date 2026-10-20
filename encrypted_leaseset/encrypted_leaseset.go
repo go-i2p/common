@@ -334,6 +334,14 @@ func (els *EncryptedLeaseSet) Signature() sig.Signature {
 // bytesWithoutSignature serializes all fields except the trailing signature.
 // Used by both Bytes() and the signing path to avoid duplicate serialization logic.
 func (els *EncryptedLeaseSet) bytesWithoutSignature() ([]byte, error) {
+	// Defensive guard: the 2-byte "len" field cannot represent a payload larger
+	// than its own width, and appending the full payload while writing a
+	// truncated length would produce bytes no peer can parse.
+	if len(els.encryptedInnerData) > ENCRYPTED_LEASESET_MAX_INNER_LENGTH ||
+		els.innerLength != uint16(len(els.encryptedInnerData)) {
+		return nil, oops.Errorf("invalid encrypted inner data length: field=%d, data=%d (max %d)",
+			els.innerLength, len(els.encryptedInnerData), ENCRYPTED_LEASESET_MAX_INNER_LENGTH)
+	}
 	result := make([]byte, 0, 64+len(els.blindedPublicKey)+len(els.encryptedInnerData))
 
 	// sig_type (2 bytes)
@@ -495,6 +503,10 @@ func validateEncryptedInnerDataIntegrity(els *EncryptedLeaseSet) error {
 	if len(els.encryptedInnerData) < ENCRYPTED_LEASESET_MIN_ENCRYPTED_SIZE {
 		return oops.Errorf("encrypted inner data too small: %d < minimum %d",
 			len(els.encryptedInnerData), ENCRYPTED_LEASESET_MIN_ENCRYPTED_SIZE)
+	}
+	if len(els.encryptedInnerData) > ENCRYPTED_LEASESET_MAX_INNER_LENGTH {
+		return oops.Errorf("encrypted inner data too large: %d exceeds the 2-byte len field maximum %d",
+			len(els.encryptedInnerData), ENCRYPTED_LEASESET_MAX_INNER_LENGTH)
 	}
 	if els.innerLength != uint16(len(els.encryptedInnerData)) {
 		return oops.Errorf("inner length mismatch: field=%d, data=%d",

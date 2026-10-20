@@ -3,6 +3,7 @@ package router_address
 
 import (
 	"errors"
+	"strings"
 
 	"github.com/go-i2p/logger"
 	"github.com/samber/oops"
@@ -150,25 +151,47 @@ func parseTransportType(ra *RouterAddress, routerData []byte) ([]byte, error) {
 
 // parseTransportOptions parses the transport options mapping from data.
 // Returns remaining data after parsing and any error encountered.
-// Errors from the mapping parser are logged as warnings when options is non-nil
-// (trailing-data warnings are normal in RouterAddress context); the mapping error
-// is only propagated as a hard failure when the mapping itself could not be parsed
-// (nil result).
+//
+// The trailing-data warning ("data exists beyond length of mapping") is
+// expected when a mapping is embedded in a larger structure and is filtered
+// out. All other mapping errors are structural format violations prohibited
+// by the specification — duplicate keys, missing '=' or ';' delimiters, a
+// declared size that exceeds the available data, unconsumed bytes — and are
+// propagated as hard parse errors so that malformed RouterAddress data is
+// never accepted as valid. This mirrors the categorization the router_info
+// package applies to its own options mapping.
 func parseTransportOptions(ra *RouterAddress, routerData []byte) ([]byte, error) {
 	transportOptions, remainder, errs := data.NewMapping(routerData)
 	ra.TransportOptions = transportOptions
 	if len(errs) > 0 {
+		var critical []error
 		for _, mappingErr := range errs {
+			if isTrailingDataWarning(mappingErr) {
+				log.WithFields(logger.Fields{
+					"pkg":    "router_address",
+					"func":   "parseTransportOptions",
+					"reason": "trailing data beyond mapping length (expected in embedded context)",
+					"error":  mappingErr,
+				}).Debug("non-fatal warning parsing RouterAddress options")
+				continue
+			}
+			critical = append(critical, mappingErr)
+		}
+		if len(critical) > 0 {
 			log.WithFields(logger.Fields{
 				"pkg":    "router_address",
 				"func":   "parseTransportOptions",
-				"reason": "error parsing options",
-				"error":  mappingErr,
-			}).Debug("non-fatal warning parsing RouterAddress options")
-		}
-		if transportOptions == nil {
-			return remainder, oops.Errorf("error parsing RouterAddress options: %v", errs[0])
+				"reason": "mapping format violation",
+				"error":  critical[0],
+			}).Error("rejecting RouterAddress with malformed transport options")
+			return remainder, oops.Errorf("error parsing RouterAddress options: %v", critical[0])
 		}
 	}
 	return remainder, nil
+}
+
+// isTrailingDataWarning reports whether err is the benign "data exists beyond
+// length of mapping" warning rather than a structural mapping violation.
+func isTrailingDataWarning(err error) bool {
+	return err != nil && strings.Contains(err.Error(), "data exists beyond length of mapping")
 }

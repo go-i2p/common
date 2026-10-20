@@ -195,6 +195,11 @@ func (ls2 *LeaseSet2) Validate() error {
 	if err := validateReservedFlagsAndLeases(ls2.flags, ls2.leases); err != nil {
 		return err
 	}
+	// Spec: the structure ends with a Signature over the preceding bytes; a
+	// missing or empty signature would serialize a record peers cannot verify.
+	if err := ls2.signature.Validate(); err != nil {
+		return oops.Wrapf(err, "LeaseSet2 has an invalid signature")
+	}
 	// Spec: "LS2 options MUST be sorted by key, so the signature is invariant."
 	// This check validates that the LeaseSet2 complies with spec-mandated ordering.
 	return validateOptionsSorted(ls2.options)
@@ -229,13 +234,24 @@ func validateOfflineSignatureConsistency(hasOfflineKeys bool, offlineSig *offlin
 	return nil
 }
 
+// validateReservedFlags rejects non-zero values in the LeaseSet2Header flag
+// bits reserved by the specification ("Bits 15-3: set to 0 for compatibility
+// with future uses"). Used by both the outbound constructor and Validate();
+// the inbound parse path logs instead of rejecting.
+func validateReservedFlags(flags uint16) error {
+	reservedMask := uint16(0xFFF8)
+	if flags&reservedMask != 0 {
+		return oops.Errorf("LeaseSet2 has non-zero reserved flag bits: 0x%04x", flags&reservedMask)
+	}
+	return nil
+}
+
 // validateReservedFlagsAndLeases validates that reserved flag bits are zero and the
 // lease count is within the allowed range. Per spec: "All LeaseSet2 variants require
 // at least one Lease." Both the parser and Validate() enforce this minimum.
 func validateReservedFlagsAndLeases(flags uint16, leases []lease.Lease2) error {
-	reservedMask := uint16(0xFFF8)
-	if flags&reservedMask != 0 {
-		return oops.Errorf("LeaseSet2 has non-zero reserved flag bits: 0x%04x", flags&reservedMask)
+	if err := validateReservedFlags(flags); err != nil {
+		return err
 	}
 	if len(leases) < 1 {
 		return oops.Errorf("LeaseSet2 must have at least 1 lease per I2P specification")

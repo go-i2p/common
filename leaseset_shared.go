@@ -129,7 +129,22 @@ func SerializeLeaseSetHeader(
 	// Add flags (2 bytes)
 	buf = AppendBigEndianUint16(buf, flags)
 
-	// Add offline signature if present
+	// Add offline signature. Per the spec the field is "present if flags bit 0
+	// set", so presence is determined by the flag, not by whether a signature
+	// pointer happens to be non-nil. A disagreement between the two would shift
+	// every subsequent byte and produce a structure no peer can parse, so it is
+	// rejected here rather than written. This is a layout-determining rule and
+	// is enforced on both the outbound and inbound paths.
+	hasOfflineKeys := (flags & LeaseSetFlagOfflineKeys) != 0
+	if hasOfflineKeys != (offlineSig != nil) {
+		return nil, oops.
+			Code("offline_signature_flag_mismatch").
+			With("flags", flags).
+			With("has_offline_keys", hasOfflineKeys).
+			With("offline_signature_present", offlineSig != nil).
+			Errorf("flags bit 0 (%v) disagrees with OfflineSignature presence (%v): the field is present only when bit 0 is set",
+				hasOfflineKeys, offlineSig != nil)
+	}
 	if offlineSig != nil {
 		buf = append(buf, offlineSig.Bytes()...)
 	}
@@ -162,6 +177,7 @@ func VerifyLeaseSetSignature(
 	typeByte byte,
 	fullBytes []byte,
 	sigBytes []byte,
+	sigType int,
 	signingPubKey types.SigningPublicKey,
 	typeName string,
 ) error {
@@ -177,7 +193,7 @@ func VerifyLeaseSetSignature(
 	dataToVerify = append(dataToVerify, typeByte)
 	dataToVerify = append(dataToVerify, contentBytes...)
 
-	return VerifySignatureData(dataToVerify, sigBytes, signingPubKey, typeName)
+	return VerifySignatureData(dataToVerify, sigBytes, sigType, signingPubKey, typeName)
 }
 
 // ResolveSigningPublicKey determines which signing public key to use for
@@ -240,15 +256,44 @@ func ParseOfflineSignatureField(
 	return &offlineSig, rem, nil
 }
 
+// CheckLegacySignatureType returns an error for signature types this library
+// intentionally does not support for signing or verification: DSA-SHA1 (0) and
+// the RSA variants (4/5/6), all deprecated since I2P 0.9.58. Structures that
+// carry these types still parse; only the cryptographic operations are
+// refused. Returns nil for supported types.
+func CheckLegacySignatureType(sigType int) error {
+	switch sigType {
+	case sig.SIGNATURE_TYPE_DSA_SHA1:
+		return oops.Errorf("legacy unsupported signature type: DSA_SHA1 (type %d) is deprecated since 0.9.58", sigType)
+	case sig.SIGNATURE_TYPE_RSA_SHA256_2048,
+		sig.SIGNATURE_TYPE_RSA_SHA384_3072,
+		sig.SIGNATURE_TYPE_RSA_SHA512_4096:
+		return oops.Errorf("legacy unsupported signature type: RSA (type %d) is deprecated since 0.9.58", sigType)
+	default:
+		return nil
+	}
+}
+
 // VerifySignatureData verifies a cryptographic signature against already-prepared
 // data using the provided signing public key. This is the common "create verifier
 // → verify → log" tail shared across all lease set Verify() methods.
+//
+// sigType is the declared signature type; legacy types this library does not
+// support for signing/verification (DSA-SHA1 and the RSA variants, deprecated
+// since 0.9.58) are rejected here with an explicit "legacy unsupported
+// signature type" error rather than dispatched to a verifier, per the declared
+// scope in the package documentation.
 func VerifySignatureData(
 	dataToVerify []byte,
 	sigBytes []byte,
+	sigType int,
 	signingPubKey types.SigningPublicKey,
 	typeName string,
 ) error {
+	if err := CheckLegacySignatureType(sigType); err != nil {
+		return err
+	}
+
 	verifier, err := signingPubKey.NewVerifier()
 	if err != nil {
 		return oops.Errorf("failed to create verifier: %w", err)

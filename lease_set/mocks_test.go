@@ -89,25 +89,14 @@ func generateTestRouterInfo(t *testing.T) (*router_info.RouterInfo, types.Receiv
 	}
 
 	// Generate encryption key pair (ElGamal)
-	var elgamal_privkey elgamal.PrivateKey
-	err = elgamal.ElgamalGenerate(&elgamal_privkey.PrivateKey, rand.Reader)
+	pub, _, err := elgamal.GenerateKeyPair()
 	if err != nil {
-		t.Fatalf("Failed to generate ElGamal private key: %v\n", err)
+		t.Fatalf("Failed to generate ElGamal key pair: %v\n", err)
 	}
-
-	var elg_privkey elgamal.ElgPrivateKey
-	xBytes := elgamal_privkey.X.Bytes()
-	if len(xBytes) > 256 {
-		t.Fatalf("ElGamal private key X too large")
+	elg_pubkey, ok := pub.(elgamal.ElgPublicKey)
+	if !ok {
+		t.Fatalf("Unexpected ElGamal public key type %T", pub)
 	}
-	copy(elg_privkey[256-len(xBytes):], xBytes)
-
-	var elg_pubkey elgamal.ElgPublicKey
-	yBytes := elgamal_privkey.Y.Bytes()
-	if len(yBytes) > 256 {
-		t.Fatalf("ElGamal public key Y too large")
-	}
-	copy(elg_pubkey[256-len(yBytes):], yBytes)
 
 	var _ types.ReceivingPublicKey = elg_pubkey
 
@@ -237,18 +226,14 @@ func generateTestDestination(t *testing.T) (*destination.Destination, types.Rece
 	}
 
 	// Generate client encryption key pair (ElGamal)
-	var elgamal_privkey elgamal.PrivateKey
-	err = elgamal.ElgamalGenerate(&elgamal_privkey.PrivateKey, rand.Reader)
+	clientPub, _, err := elgamal.GenerateKeyPair()
 	if err != nil {
-		t.Fatalf("Failed to generate ElGamal private key: %v\n", err)
+		t.Fatalf("Failed to generate ElGamal key pair: %v\n", err)
 	}
-
-	var elg_pubkey elgamal.ElgPublicKey
-	yBytes := elgamal_privkey.Y.Bytes()
-	if len(yBytes) > 256 {
-		t.Fatalf("ElGamal public key Y too large")
+	elg_pubkey, ok := clientPub.(elgamal.ElgPublicKey)
+	if !ok {
+		t.Fatalf("Unexpected ElGamal public key type %T", clientPub)
 	}
-	copy(elg_pubkey[256-len(yBytes):], yBytes)
 
 	// Create KeyCertificate specifying key types
 	var payload bytes.Buffer

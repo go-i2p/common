@@ -112,14 +112,10 @@ func createValidKeyAndCert(t *testing.T) *KeysAndCert {
 	ed25519_pubkey, err := ed25519_privkey.Public()
 	require.NoError(t, err, "Failed to derive Ed25519 public key")
 
-	var elgamal_privkey elgamal.PrivateKey
-	err = elgamal.ElgamalGenerate(&elgamal_privkey.PrivateKey, rand.Reader)
-	require.NoError(t, err, "Failed to generate ElGamal private key")
-
-	var elg_pubkey elgamal.ElgPublicKey
-	yBytes := elgamal_privkey.Y.Bytes()
-	require.LessOrEqual(t, len(yBytes), 256, "ElGamal public key Y too large")
-	copy(elg_pubkey[256-len(yBytes):], yBytes)
+	pub, _, err := elgamal.GenerateKeyPair()
+	require.NoError(t, err, "Failed to generate ElGamal key pair")
+	elg_pubkey, ok := pub.(elgamal.ElgPublicKey)
+	require.True(t, ok, "Unexpected ElGamal public key type %T", pub)
 
 	var payload bytes.Buffer
 	cryptoPublicKeyType, err := data.NewIntegerFromInt(0, 2) // ElGamal
@@ -309,8 +305,9 @@ func buildP521WireData(t *testing.T) (wireData, fullSigningKey []byte) {
 	certBytes = append(certBytes, certPayload...)
 
 	wireData = append(block, certBytes...)
-	// Per I2P spec, full signing key = excess || inline (cert payload bytes first)
-	fullSigningKey = append(excessBytes, inlineBytes...)
+	// Per I2P spec, the inline field holds the first portion of the signing
+	// key: full signing key = inline || excess.
+	fullSigningKey = append(inlineBytes, excessBytes...)
 	return wireData, fullSigningKey
 }
 
@@ -346,8 +343,8 @@ func buildRSAWireData(t *testing.T, sigType, excessSize int) (wireData, fullSign
 	certBytes = append(certBytes, certPayload...)
 
 	wireData = append(block, certBytes...)
-	// Per I2P spec, full signing key = excess || inline
-	fullSigningKey = append(excessBytes, inlineBytes...)
+	// Per I2P spec, inline field holds the first portion: full key = inline || excess.
+	fullSigningKey = append(inlineBytes, excessBytes...)
 	return wireData, fullSigningKey
 }
 

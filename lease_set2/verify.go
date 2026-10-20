@@ -48,7 +48,7 @@ func (ls2 *LeaseSet2) Verify() error {
 
 	return rootcommon.VerifyLeaseSetSignature(
 		LEASESET2_DBSTORE_TYPE, fullBytes, ls2.signature.Bytes(),
-		signingPubKey, "LeaseSet2",
+		ls2.signature.Type(), signingPubKey, "LeaseSet2",
 	)
 }
 

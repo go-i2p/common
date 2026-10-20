@@ -20,6 +20,18 @@ func (ri *RouterInfo) VerifySignature() (bool, error) {
 		return false, err
 	}
 
+	// A record parsed off the wire is verified over the exact bytes that
+	// preceded its signature as received. Mapping serialization canonicalizes
+	// key order, so re-serializing an inbound record whose options mapping
+	// arrived unsorted would hash different bytes than the peer signed and
+	// produce a false verification failure.
+	//
+	// Locally-signed records have no received payload and are verified over a
+	// fresh serialization, so in-memory tampering with a field is detected.
+	if ri.receivedSignedPayload != nil {
+		return verifyRouterInfoSignature(ri, ri.receivedSignedPayload)
+	}
+
 	dataBytes, err := ri.serializeWithoutSignature()
 	if err != nil {
 		return false, oops.Errorf("failed to serialize data for verification: %w", err)

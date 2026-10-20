@@ -484,17 +484,14 @@ func TestCreateRouterInfo(t *testing.T) {
 		t.Fatalf("Failed to derive Ed25519 public key: %v\n", err)
 	}
 
-	var elgamal_privkey elgamal.PrivateKey
-	err = elgamal.ElgamalGenerate(&elgamal_privkey.PrivateKey, rand.Reader)
+	pub, _, err := elgamal.GenerateKeyPair()
 	if err != nil {
-		t.Fatalf("Failed to generate ElGamal private key: %v\n", err)
+		t.Fatalf("Failed to generate ElGamal key pair: %v\n", err)
 	}
-	var elg_pubkey elgamal.ElgPublicKey
-	yBytes := elgamal_privkey.Y.Bytes()
-	if len(yBytes) > 256 {
-		t.Fatalf("ElGamal public key Y too large")
+	elg_pubkey, ok := pub.(elgamal.ElgPublicKey)
+	if !ok {
+		t.Fatalf("Unexpected ElGamal public key type %T", pub)
 	}
-	copy(elg_pubkey[256-len(yBytes):], yBytes)
 	var _ types.ReceivingPublicKey = elg_pubkey
 
 	var payload bytes.Buffer

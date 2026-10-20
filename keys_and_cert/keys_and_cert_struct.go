@@ -300,17 +300,18 @@ func validatePaddingSize(padding []byte, pubKeySize, sigKeySize int) error {
 
 // injectExcessSigningKeyBytes rebuilds the KeyCertificate payload when the
 // signing key exceeds KEYS_AND_CERT_SPK_SIZE (128 bytes). Per the I2P spec,
-// the excess bytes (sigKey[:excess]) must be stored in the certificate payload
-// immediately after the 4-byte key-type fields. This ensures that Bytes()
-// serializes the full signing key correctly for from-scratch construction.
+// the 384-byte block holds the "first portion" of the Signing Public Key, so
+// the excess bytes (the TAIL, sigKey[128:]) are stored in the certificate
+// payload immediately after the 4-byte key-type fields. This ensures that
+// Bytes() serializes the full signing key correctly for from-scratch
+// construction.
 func injectExcessSigningKeyBytes(kac *KeysAndCert) error {
 	sigKeySize := kac.KeyCertificate.SigningPublicKeySize()
 	if sigKeySize <= KEYS_AND_CERT_SPK_SIZE {
 		return nil
 	}
-	excess := sigKeySize - KEYS_AND_CERT_SPK_SIZE
 	sigBytes := kac.SigningPublic.Bytes()
-	return rebuildKeyCertPayload(kac, sigBytes[:excess])
+	return rebuildKeyCertPayload(kac, sigBytes[KEYS_AND_CERT_SPK_SIZE:])
 }
 
 // rebuildKeyCertPayload reconstructs the KeyCertificate with the given excess
@@ -391,7 +392,9 @@ func buildKeysAndCertBlock(kac *KeysAndCert) []byte {
 	// For keys ≤ 128 bytes: right-justified (key at end of field, padding before).
 	// For keys > 128 bytes (P521, RSA*): the inline portion occupies all 128 bytes;
 	// the excess bytes are already stored in the KeyCertificate payload.
-	// Per I2P spec, fullKey = excess || inline, so inline bytes are at the END.
+	// Per the I2P spec ("Complete or first portion of Signing Public Key"), the
+	// inline field holds the FIRST bytes of the key and the certificate holds the
+	// remainder, so fullKey = inline || excess.
 	if kac.SigningPublic != nil {
 		sigBytes := kac.SigningPublic.Bytes()
 		inlineSize := len(sigBytes)
@@ -399,10 +402,7 @@ func buildKeysAndCertBlock(kac *KeysAndCert) []byte {
 			inlineSize = KEYS_AND_CERT_SPK_SIZE
 		}
 		sigStartOffset := KEYS_AND_CERT_DATA_SIZE - inlineSize
-		// For oversized keys, inline bytes are the last 128 bytes of the full key
-		// (since fullKey = excess || inline). For normal keys, this is equivalent
-		// to sigBytes[:inlineSize].
-		copy(block[sigStartOffset:KEYS_AND_CERT_DATA_SIZE], sigBytes[len(sigBytes)-inlineSize:])
+		copy(block[sigStartOffset:KEYS_AND_CERT_DATA_SIZE], sigBytes[:inlineSize])
 	}
 
 	return block
@@ -543,13 +543,14 @@ func constructSigningKeyFromCert(keyCert *key_certificate.KeyCertificate, data [
 // constructLargeSigningKey reconstructs a signing key whose total size exceeds
 // KEYS_AND_CERT_SPK_SIZE (128 bytes). Per the I2P spec, signing keys are
 // end-aligned in the SPK field:
+//   - The 128-byte inline SPK field (data[256:384]) contains the FIRST 128
+//     bytes of the signing key ("Complete or first portion of Signing Public
+//     Key").
 //   - The excess (sigKeySize − 128) bytes are stored in the Key Certificate
 //     payload immediately after the 4-byte key-type fields. These are the
-//     FIRST bytes of the signing key.
-//   - The 128-byte inline SPK field (data[256:384]) contains the LAST 128
-//     bytes of the signing key.
+//     remaining (tail) bytes of the signing key.
 //
-// The reconstructed key is: excess || inline.
+// The reconstructed key is: inline || excess.
 func constructLargeSigningKey(keyCert *key_certificate.KeyCertificate, data []byte, sigKeySize int) (types.SigningPublicKey, error) {
 	const certPayloadKeyTypeOffset = 4 // 2-byte SpkType + 2-byte CpkType
 	excess := sigKeySize - KEYS_AND_CERT_SPK_SIZE
@@ -566,11 +567,12 @@ func constructLargeSigningKey(keyCert *key_certificate.KeyCertificate, data []by
 	}
 
 	fullKey := make([]byte, sigKeySize)
-	// Per I2P spec end-alignment: excess bytes first, then inline SPK bytes.
-	copy(fullKey[:excess],
-		certData[certPayloadKeyTypeOffset:certPayloadKeyTypeOffset+excess])
-	copy(fullKey[excess:],
+	// Per I2P spec the inline field holds the first portion; the certificate
+	// carries the remainder.
+	copy(fullKey[:KEYS_AND_CERT_SPK_SIZE],
 		data[KEYS_AND_CERT_DATA_SIZE-KEYS_AND_CERT_SPK_SIZE:KEYS_AND_CERT_DATA_SIZE])
+	copy(fullKey[KEYS_AND_CERT_SPK_SIZE:],
+		certData[certPayloadKeyTypeOffset:certPayloadKeyTypeOffset+excess])
 
 	sigKey, err := keyCert.ConstructSigningPublicKey(fullKey)
 	if err != nil {

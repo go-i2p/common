@@ -112,6 +112,14 @@ type RouterInfo struct {
 	peer_hashes        []byte // raw peer-hash bytes (peer_size * 32) carried verbatim
 	options            *data.Mapping
 	signature          *signature.Signature
+	// Received signed payload: the exact bytes that preceded the signature on
+	// the wire, captured at parse time. Verification prefers these over
+	// re-serialization because Mapping serialization canonicalizes (re-sorts)
+	// keys; re-serializing an inbound record whose options mapping arrived
+	// unsorted would hash different bytes than the peer signed and produce a
+	// false verification failure.
+	receivedSignedPayload []byte
+
 	signedPayloadCache []byte // exact bytes over which signature was computed
 }
 
@@ -538,6 +546,10 @@ func (router_info *RouterInfo) ReSign(publishedTime time.Time, signingPrivateKey
 	// spec ("unused, always zero"), so any peer hash bytes from a prior parse
 	// must be dropped to keep peer_size and the hash list consistent.
 	router_info.peer_hashes = nil
+	// The bytes captured at parse time no longer describe this record: drop
+	// them so verification of the freshly signed data uses a real
+	// serialization (and in-memory tampering stays detectable).
+	router_info.receivedSignedPayload = nil
 
 	signer, err := createSignerFromPrivateKey(signingPrivateKey, sigType)
 	if err != nil {
@@ -751,9 +763,16 @@ func (ri *RouterInfo) serializeWithoutSignature() ([]byte, error) {
 	// Serialize Size
 	bytes = append(bytes, ri.size.Bytes()...)
 
-	// Serialize Addresses
+	// Serialize Addresses.
+	// Use Serialize (not Bytes) so that an address that fails to serialize is
+	// reported instead of contributing zero bytes while still being counted by
+	// size — which would silently truncate the payload and mis-sign it.
 	for _, addr := range ri.addresses {
-		bytes = append(bytes, addr.Bytes()...)
+		addrBytes, addrErr := addr.Serialize()
+		if addrErr != nil {
+			return nil, oops.Wrapf(addrErr, "failed to serialize router address")
+		}
+		bytes = append(bytes, addrBytes...)
 	}
 
 	// Serialize PeerSize and any peer Hash data that follows it.
@@ -799,6 +818,16 @@ func ReadRouterInfo(bytes []byte) (info RouterInfo, remainder []byte, err error)
 	if err != nil {
 		return info, remainder, err
 	}
+
+	// Capture the exact bytes that preceded the signature as they arrived on
+	// the wire. Verification of a parsed record must use the received encoding:
+	// Mapping serialization canonicalizes (re-sorts) keys, so re-serializing an
+	// inbound record whose options mapping arrived unsorted would hash different
+	// bytes than the peer signed and produce a false verification failure.
+	// Locally-signed records keep this nil and are verified against
+	// re-serialization, so in-memory tampering remains detectable.
+	info.receivedSignedPayload = make([]byte, len(bytes)-len(remainder))
+	copy(info.receivedSignedPayload, bytes[:len(bytes)-len(remainder)])
 
 	info.signature, remainder, err = parseRouterInfoSignature(info.router_identity, remainder)
 	if err != nil {

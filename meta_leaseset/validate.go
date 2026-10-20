@@ -44,6 +44,13 @@ func (mls *MetaLeaseSet) Validate() error {
 			With("actual", len(mls.entries)).
 			Errorf("MetaLeaseSet entry count %d does not match %d entries", mls.numEntries, len(mls.entries))
 	}
+	if int(mls.numRevocations) != len(mls.revocations) {
+		return oops.
+			Code("revocation_count_mismatch").
+			With("declared", mls.numRevocations).
+			With("actual", len(mls.revocations)).
+			Errorf("MetaLeaseSet revocation count %d does not match %d revocations", mls.numRevocations, len(mls.revocations))
+	}
 	if err := validateEntriesReservedFlagBits(mls.entries); err != nil {
 		return err
 	}

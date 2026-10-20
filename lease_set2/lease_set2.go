@@ -752,6 +752,12 @@ func validateLeaseSet2Inputs(
 	if err := validateExpiresOffset(expiresOffset); err != nil {
 		return err
 	}
+	// Spec: "Bits 15-3: set to 0 for compatibility with future uses". This is a
+	// producer-side obligation, so it is enforced on the outbound path (here as
+	// well as in Validate()); the parse path only logs.
+	if err := validateReservedFlags(flags); err != nil {
+		return err
+	}
 	if err := validateOfflineSignatureFlags(flags, offlineSig); err != nil {
 		return err
 	}

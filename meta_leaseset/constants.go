@@ -61,6 +61,12 @@ const (
 
 	// META_LEASESET_REVOCATION_HASH_SIZE is the size of each revocation hash (32 bytes).
 	META_LEASESET_REVOCATION_HASH_SIZE = 32
+
+	// META_LEASESET_MAX_REVOCATIONS is the maximum number of revocation hashes
+	// representable by the 1-byte numr field (spec: "numr :: Integer, length ->
+	// 1 byte"). Larger counts cannot be serialized without wrapping the count
+	// byte, so they are rejected rather than silently corrupted.
+	META_LEASESET_MAX_REVOCATIONS = 255
 )
 
 // MetaLeaseSet Entry Count Limits

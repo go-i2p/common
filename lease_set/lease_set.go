@@ -536,7 +536,7 @@ func (lease_set LeaseSet) Verify() error {
 		return oops.Errorf("failed to get signing public key from Destination: %w", err)
 	}
 
-	return rootcommon.VerifySignatureData(dataToVerify, sigBytes, signingPubKey, "LeaseSet")
+	return rootcommon.VerifySignatureData(dataToVerify, sigBytes, signature.Type(), signingPubKey, "LeaseSet")
 }
 
 // Hash returns the SHA-256 hash of the Destination bytes.

@@ -43,6 +43,6 @@ func (mls *MetaLeaseSet) Verify() error {
 
 	return rootcommon.VerifyLeaseSetSignature(
 		META_LEASESET_DBSTORE_TYPE, fullBytes, mls.signature.Bytes(),
-		signingPubKey, "MetaLeaseSet",
+		mls.signature.Type(), signingPubKey, "MetaLeaseSet",
 	)
 }

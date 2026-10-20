@@ -215,8 +215,12 @@ func validateTransientSigType(offlineSig *offline_signature.OfflineSignature) er
 	return nil
 }
 
-// validateEncryptedPayload validates that the encrypted inner data is present and
-// meets the minimum size requirement.
+// validateEncryptedPayload validates that the encrypted inner data is present,
+// meets the minimum size requirement, and fits the 2-byte "len" field. The
+// spec bounds "len" only from below ("1 <= len <= max TBD"), so the upper
+// bound here is the field width itself: anything larger cannot be represented
+// without wrapping the length byte pair while still serializing the full
+// payload, which would produce an unparseable structure.
 func validateEncryptedPayload(encryptedInnerData []byte) error {
 	if len(encryptedInnerData) == 0 {
 		return oops.Code("empty_encrypted_data").
@@ -228,6 +232,13 @@ func validateEncryptedPayload(encryptedInnerData []byte) error {
 			With("minimum", ENCRYPTED_LEASESET_MIN_ENCRYPTED_SIZE).
 			Errorf("encrypted inner data size %d < minimum %d",
 				len(encryptedInnerData), ENCRYPTED_LEASESET_MIN_ENCRYPTED_SIZE)
+	}
+	if len(encryptedInnerData) > ENCRYPTED_LEASESET_MAX_INNER_LENGTH {
+		return oops.Code("encrypted_data_too_large").
+			With("size", len(encryptedInnerData)).
+			With("maximum", ENCRYPTED_LEASESET_MAX_INNER_LENGTH).
+			Errorf("encrypted inner data size %d exceeds the 2-byte len field maximum %d",
+				len(encryptedInnerData), ENCRYPTED_LEASESET_MAX_INNER_LENGTH)
 	}
 	return nil
 }

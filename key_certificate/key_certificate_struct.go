@@ -489,7 +489,7 @@ func constructECDSAP384Key(data []byte) (types.SigningPublicKey, error) {
 // P521 keys (132 bytes) exceed KEYCERT_SPK_SIZE (128 bytes), so the key certificate
 // payload contains 4 bytes of excess signing key data that must be concatenated
 // with the 128-byte inline SPK field from KeysAndCert.
-// Accepts either full-field data (132+ bytes with excess prepended) or raw key data (132 bytes).
+// Accepts either full-field data (132+ bytes: inline first, excess appended) or raw key data (132 bytes).
 func constructECDSAP521Key(data []byte) (types.SigningPublicKey, error) {
 	if len(data) < KEYCERT_SIGN_P521_SIZE {
 		return nil, oops.Errorf("insufficient data for P521 key: expected at least %d bytes, got %d",
@@ -619,12 +619,14 @@ func constructRedDSAKey(data []byte) (types.SigningPublicKey, error) {
 //     DSA, P256, P384 – data is the full 128-byte SPK field from the KeysAndCert structure.
 //   - For types whose signing key exceeds KEYCERT_SPK_SIZE – P521 (132 bytes), RSA-2048 (256 bytes),
 //     RSA-3072 (384 bytes), RSA-4096 (512 bytes) – the caller MUST pre-concatenate the
-//     excess bytes from the key certificate payload (stored immediately after the 4-byte
-//     type fields) FOLLOWED BY the 128-byte inline SPK field from KeysAndCert.
-//     Per the I2P spec, signing keys are end-aligned in the SPK field: the inline
-//     128 bytes contain the LAST 128 bytes of the key, while the excess bytes in
-//     the certificate payload contain the FIRST (keySize − 128) bytes.
-//     Correct order: excess || inline.  Failure to include the excess bytes or
+//     128-byte inline SPK field from KeysAndCert FOLLOWED BY the excess bytes
+//     from the key certificate payload (stored immediately after the 4-byte
+//     type fields).
+//     Per the I2P spec, the 384-byte block holds the "first portion" of the
+//     Signing Public Key: the inline 128 bytes contain the FIRST 128 bytes of
+//     the key, while the excess bytes in the certificate payload contain the
+//     remaining (keySize − 128) bytes.
+//     Correct order: inline || excess.  Failure to include the excess bytes or
 //     using the wrong order will result in a truncated / incorrect key.
 func (keyCertificate KeyCertificate) ConstructSigningPublicKey(data []byte) (signing_public_key types.SigningPublicKey, err error) {
 	log.WithFields(logger.Fields{

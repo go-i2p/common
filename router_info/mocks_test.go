@@ -92,17 +92,14 @@ func generateEd25519KeyPair(t *testing.T) (ed25519.Ed25519PrivateKey, types.Sign
 
 // generateElGamalKeyPair creates ElGamal encryption keys and converts them to I2P format.
 func generateElGamalKeyPair(t *testing.T) elgamal.ElgPublicKey {
-	var elgamal_privkey elgamal.PrivateKey
-	err := elgamal.ElgamalGenerate(&elgamal_privkey.PrivateKey, rand.Reader)
+	pub, _, err := elgamal.GenerateKeyPair()
 	if err != nil {
-		t.Fatalf("Failed to generate ElGamal private key: %v\n", err)
+		t.Fatalf("Failed to generate ElGamal key pair: %v\n", err)
 	}
-	var elg_pubkey elgamal.ElgPublicKey
-	yBytes := elgamal_privkey.Y.Bytes()
-	if len(yBytes) > 256 {
-		t.Fatalf("ElGamal public key Y too large")
+	elg_pubkey, ok := pub.(elgamal.ElgPublicKey)
+	if !ok {
+		t.Fatalf("Unexpected ElGamal public key type %T", pub)
 	}
-	copy(elg_pubkey[256-len(yBytes):], yBytes)
 	var _ types.ReceivingPublicKey = elg_pubkey
 	return elg_pubkey
 }
@@ -176,17 +173,14 @@ func generateTestRouterInfoForFuzz() (*RouterInfo, error) {
 		return nil, err
 	}
 
-	var elgamal_privkey elgamal.PrivateKey
-	err = elgamal.ElgamalGenerate(&elgamal_privkey.PrivateKey, rand.Reader)
+	pub, _, err := elgamal.GenerateKeyPair()
 	if err != nil {
 		return nil, err
 	}
-	var elg_pubkey elgamal.ElgPublicKey
-	yBytes := elgamal_privkey.Y.Bytes()
-	if len(yBytes) > 256 {
-		return nil, fmt.Errorf("ElGamal public key Y too large")
+	elg_pubkey, ok := pub.(elgamal.ElgPublicKey)
+	if !ok {
+		return nil, fmt.Errorf("unexpected ElGamal public key type %T", pub)
 	}
-	copy(elg_pubkey[256-len(yBytes):], yBytes)
 
 	var payload bytes.Buffer
 	sigType, err := data.NewIntegerFromInt(7, 2)

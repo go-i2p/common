@@ -32,7 +32,7 @@ func NewMetaLeaseSet(
 ) (MetaLeaseSet, error) {
 	log.WithFields(logger.Fields{"pkg": "meta_leaseset", "func": "NewMetaLeaseSet"}).Debug("Creating new MetaLeaseSet")
 
-	if err := validateAllMetaLeaseSetInputs(dest, flags, offlineSig, options, entries); err != nil {
+	if err := validateAllMetaLeaseSetInputs(dest, flags, offlineSig, options, entries, revocations); err != nil {
 		return MetaLeaseSet{}, err
 	}
 
@@ -61,11 +61,30 @@ func validateAllMetaLeaseSetInputs(
 	offlineSig *offline_signature.OfflineSignature,
 	options common.Mapping,
 	entries []MetaLeaseSetEntry,
+	revocations [][32]byte,
 ) error {
 	if err := validateNewMetaLeaseSetInputs(dest, flags, offlineSig, entries); err != nil {
 		return err
 	}
+	if err := validateRevocationCount(len(revocations)); err != nil {
+		return err
+	}
 	return validateOptionsSorted(options)
+}
+
+// validateRevocationCount rejects revocation lists that cannot be represented
+// in the 1-byte numr field. Without this check, len(revocations) > 255 would
+// wrap the count byte (256 -> 0) while all hashes were still serialized,
+// producing a structurally corrupt, self-consistent-looking record.
+func validateRevocationCount(n int) error {
+	if n > META_LEASESET_MAX_REVOCATIONS {
+		return oops.
+			Code("revocation_count_overflow").
+			With("count", n).
+			With("maximum", META_LEASESET_MAX_REVOCATIONS).
+			Errorf("revocation count %d exceeds the 1-byte numr field maximum %d", n, META_LEASESET_MAX_REVOCATIONS)
+	}
+	return nil
 }
 
 // signMetaLeaseSetData determines the signature type and signs the serialized data.

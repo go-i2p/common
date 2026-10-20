@@ -57,6 +57,12 @@ const (
 	// Per the I2P spec, encrypted data uses a two-layer ChaCha20 scheme with 32-byte salts.
 	ENCRYPTED_LEASESET_MIN_ENCRYPTED_SIZE int = 66
 
+	// ENCRYPTED_LEASESET_MAX_INNER_LENGTH is the maximum value representable by
+	// the 2-byte "len" field ("len :: Integer, 2 bytes"). The spec leaves the
+	// semantic maximum TBD, so the library bounds the payload at the field
+	// width to prevent silent length truncation on serialization.
+	ENCRYPTED_LEASESET_MAX_INNER_LENGTH int = 65535
+
 	// ENCRYPTED_LEASESET_OUTER_SALT_SIZE is the size of the outer salt in the encrypted data (32 bytes).
 	ENCRYPTED_LEASESET_OUTER_SALT_SIZE int = 32
 

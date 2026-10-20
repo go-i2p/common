@@ -28,7 +28,7 @@ func (els *EncryptedLeaseSet) Verify() error {
 		return oops.Errorf("failed to get signing public key: %w", err)
 	}
 
-	return rootcommon.VerifySignatureData(dataToVerify, els.signature.Bytes(), signingPubKey, "EncryptedLeaseSet")
+	return rootcommon.VerifySignatureData(dataToVerify, els.signature.Bytes(), els.signature.Type(), signingPubKey, "EncryptedLeaseSet")
 }
 
 // signingPublicKeyForVerification returns the appropriate signing public key
