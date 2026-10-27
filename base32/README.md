@@ -8,12 +8,12 @@ Package base32 implements utilities for encoding and decoding text using I2P's
 alphabet.
 
 This package provides I2P-specific base32 encoding/decoding functionality using
-RFC 3548 with lowercase characters as specified by the I2P protocol. The
+RFC 4648 with lowercase characters as specified by the I2P protocol. The
 implementation supports encoding binary data to human-readable strings for I2P
 destinations, router identifiers, and other network components that require
 base32 representation.
 
-Key features: - I2P-compatible base32 alphabet using RFC 3548 lowercase (a-z, 2-7) -
+Key features: - I2P-compatible base32 alphabet using RFC 4648 lowercase (a-z, 2-7) -
 Consistent lowercase encoding for .b32.i2p domain compatibility - Error handling
 for invalid input data during decoding operations - High-performance
 encoding/decoding suitable for network operations
@@ -36,11 +36,12 @@ Package base32 implements utilities for encoding and decoding text using I2P's
 const I2PEncodeAlphabet = "abcdefghijklmnopqrstuvwxyz234567"
 ```
 I2PEncodeAlphabet defines the base32 character set used throughout the I2P
-network. This alphabet follows RFC 3548 specifications but uses lowercase
-letters for consistency with I2P addressing conventions and .b32.i2p domain
-format requirements. The characters 0, 1, 8, and 9 are not part of the base32
-standard alphabet (RFC 3548 uses only a-z and 2-7), which inherently avoids
-ambiguity with similar-looking characters.
+network. This alphabet follows RFC 4648 base32 but lowercases the letters for
+consistency with I2P addressing conventions and .b32.i2p domain format
+requirements. The characters 0, 1, 8, and 9 are not part of the base32
+standard alphabet (RFC 4648's base32 alphabet is A-Z and 2-7, i.e. only a-z
+and 2-7 once lowercased), which inherently avoids ambiguity with
+similar-looking characters.
 
 ```go
 var I2PEncoding *b32.Encoding = b32.NewEncoding(I2PEncodeAlphabet)
@@ -69,7 +70,7 @@ func EncodeToString(data []byte) string
 ```
 EncodeToString encodes binary data to a base32 string using I2P's encoding
 alphabet. It converts arbitrary byte data into a human-readable base32 string
-representation using the I2P-specific lowercase alphabet defined in RFC 3548.
+representation using the I2P-specific lowercase alphabet defined in RFC 4648.
 Example: EncodeToString([]byte{72, 101, 108, 108, 111}) returns "jbswy3dp"
 
 

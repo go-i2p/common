@@ -403,11 +403,15 @@ func TestByteSliceSigningKeyWorks(t *testing.T) {
 // validateExpiresOffset tests
 //
 
-func TestValidateExpiresOffsetNeverFails(t *testing.T) {
+// LeaseSet2Header Notes: "Maximum actual expires time is about 660 (11 minutes)
+// for LeaseSet2 and 65535 (the full 18.2 hours) for MetaLeaseSet." The outbound
+// path enforces the 660 bound; oversized values are rejected.
+func TestValidateExpiresOffset(t *testing.T) {
 	assert.NoError(t, validateExpiresOffset(0))
 	assert.NoError(t, validateExpiresOffset(1))
-	assert.NoError(t, validateExpiresOffset(660))
-	assert.NoError(t, validateExpiresOffset(65535))
+	assert.NoError(t, validateExpiresOffset(LEASESET2_TYPICAL_MAX_EXPIRES))
+	assert.Error(t, validateExpiresOffset(LEASESET2_TYPICAL_MAX_EXPIRES+1))
+	assert.Error(t, validateExpiresOffset(65535))
 }
 
 func TestExpiresOffsetConstant(t *testing.T) {

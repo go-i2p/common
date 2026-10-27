@@ -200,17 +200,24 @@ The inner LeaseSet2 is protected by two-layer ChaCha20 stream cipher:
 - **Layer 2**: Keyed by `HKDF(innerSalt, subcredential || published, "ELS2_L2K")`
 - Random salts ensure distinct ciphertexts for each publication
 
-### Known Limitations
+### Signing
 
-- **Red25519 signing**: The spec mandates randomized nonces for the blinded outer
-  signature (`T = 80 random bytes; r = H*(T || publickey || message)`), so that
-  every signature over the same data differs. This package signs with standard
-  deterministic Ed25519 because the signing primitives live in
-  `github.com/go-i2p/crypto`, whose `red25519.Red25519Signer` is itself
-  deterministic. Signatures verify correctly under the shared Ed25519
-  verification equation, but re-publications of the same lease set are
-  byte-correlatable. Fixing this requires a randomized-signing Red25519 signer
-  upstream in `go-i2p/crypto`; it is intentionally not implemented here.
+- **Red25519 signing (type 11)**: The spec mandates randomized nonces for the
+  blinded outer signature (`T = 80 random bytes; r = H*(T || publickey || message)`),
+  so that every signature over the same data differs. A type 11 outer signature is
+  produced by `github.com/go-i2p/crypto/red25519`, whose `Red25519Signer` draws the
+  80-byte random `T` per message, so re-publications of the same lease set are not
+  byte-correlatable. Verification uses that package's Red25519 `VERIFY` rule (the
+  domain-separated `HStar` challenge with the cofactor equation) — deliberately not
+  plain Ed25519 verification, even though both keys are Ed25519 curve points.
+- **Ed25519 signing (type 7)**: still accepted for the unblinded case the spec
+  describes ("The unblinded leaseset is signed by the unblinded Ed25519 or
+  Red25519 signing private key ... as usual").
+
+To publish a blinded lease set, pass the blinded Red25519 scalar `a'` (from
+`kdf.DeriveBlindingFactorI2P` plus `red25519.BlindPrivateKey`) as the signing key
+with `sigType` 11; an `ed25519.PrivateKey` is converted with the spec's
+`CONVERT_ED25519_PRIVATE`.
 
 ## Per-Client Authorization
 

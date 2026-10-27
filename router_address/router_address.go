@@ -122,12 +122,26 @@ func validateRouterAddressFields(ra *RouterAddress) error {
 	if ra.ExpirationDate == nil {
 		return ErrMissingExpirationDate
 	}
+	// Spec: "Routers MUST set this field to all zeros." Validate() is the strict
+	// outbound self-check (the parse path only warns, per the "Inbound Parsing
+	// vs. Outbound Publishing" policy), so a non-zero expiration is rejected
+	// here: publishing it would fail signature verification on every other
+	// router, which assumes zeros.
+	if !isAllZeros(ra.ExpirationDate[:]) {
+		return oops.Errorf("%w: publishing a RouterAddress with a non-zero expiration fails RouterInfo signature verification on the network", ErrNonZeroExpiration)
+	}
 	if len(ra.TransportType) == 0 {
 		return ErrMissingTransportType
 	}
-	// Check that the I2PString content is non-empty, not just the raw slice.
-	// An I2PString like {0x00} has a raw length of 1 but declares zero content bytes,
-	// which would pass the above check but fail round-trip parsing.
+	// Reject an empty transport_style. The spec types this field as
+	// "transport_style :: String, 1-256 bytes", while the String Contents note
+	// says "Length may be 0"; the two are ambiguous about whether a zero-length
+	// transport_style is permitted. This library takes the field's own "1-256
+	// bytes" as the governing bound and treats an empty style as invalid, since
+	// a RouterAddress with no transport name is not meaningful. A transport_style
+	// given as {0x00} has a raw length of 1 but declares zero content bytes, which
+	// would pass the raw-length check above but fail round-trip parsing, so the
+	// decoded content length is checked here.
 	if content, err := ra.TransportType.Data(); err != nil || len(content) == 0 {
 		return ErrEmptyTransportStyle
 	}

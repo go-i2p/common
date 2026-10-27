@@ -127,29 +127,30 @@
 // signature type 11 (Red25519) as the specification requires. The subcredential
 // binds encryption to knowledge of the original destination's signing public key.
 //
-// Blinding and signing arithmetic are provided by github.com/go-i2p/crypto
-// (kdf.DeriveBlindingFactorI2P, ed25519.BlindPublicKey); this package implements
-// no cryptographic primitives.
-//
-// # Known Limitations
-//
+// # Signing
+
 // Red25519 signing: the spec mandates randomized nonces for the blinded outer
 // signature - "T = 80 random bytes; r = H*(T || publickey || message)" - so that
 // "every Red25519 signature is different, even when signing the same data with
 // the same key" (https://geti2p.net/spec/encryptedleaseset §"Sign/Verify
-// Calculations"). This package signs with standard deterministic Ed25519, because
-// the blinding/signing primitives live in github.com/go-i2p/crypto and its
-// red25519.Red25519Signer is itself deterministic (see
-// TestRed25519DeterministicSignatures upstream). The result verifies correctly
-// under the shared Ed25519 verification equation, but re-publications of the same
-// lease set are byte-correlatable, which is exactly the property randomized
-// RedDSA exists to prevent.
+// Calculations"). A sigType 11 outer signature is produced by
+// github.com/go-i2p/crypto/red25519, whose Red25519Signer draws the 80-byte
+// random T per message (see its TestRed25519SignaturesAreRandomized), so
+// re-publications of the same lease set are not byte-correlatable. Verification
+// uses the same package's cofactor/HStar VERIFY rule, not plain Ed25519's.
 //
-// This is a cryptographic-primitive gap and must be fixed upstream in
-// github.com/go-i2p/crypto (a randomized-signing Red25519 signer for blinded
-// keys); this package deliberately implements no cryptography itself. Once
-// upstream exposes randomized signing, NewEncryptedLeaseSet should route
-// sigType 11 through it instead of crypto/ed25519.Sign.
+// A sigType 7 (Ed25519) outer signature is still accepted for the unblinded
+// case the page describes ("The unblinded leaseset is signed by the unblinded
+// Ed25519 or Red25519 signing private key ... as usual").
+//
+// To publish a blinded lease set, pass the blinded Red25519 scalar a' (from
+// kdf.DeriveBlindingFactorI2P plus red25519.BlindPrivateKey in
+// github.com/go-i2p/crypto) as the signing key with sigType 11; an Ed25519
+// private key is converted with the spec's CONVERT_ED25519_PRIVATE.
+//
+// Blinding and signing arithmetic are provided by github.com/go-i2p/crypto
+// (kdf.DeriveBlindingFactorI2P, red25519.BlindPrivateKey/BlindPublicKey,
+// red25519.Red25519Signer); this package implements no cryptographic primitives.
 //
 // # Specification
 //

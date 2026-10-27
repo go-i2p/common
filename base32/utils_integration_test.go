@@ -67,7 +67,7 @@ func TestInteroperabilityVector_RealDestinationHash(t *testing.T) {
 	// Test vector: SHA-256 of a known byte sequence representing a
 	// realistic I2P destination hash. This tests against the Java I2P
 	// reference implementation's base32 encoding behavior.
-	// The Java I2P implementation uses the same RFC 3548 lowercase alphabet
+	// The Java I2P implementation uses the same RFC 4648 lowercase alphabet
 	// and produces unpadded 52-character .b32.i2p addresses.
 
 	// SHA-256("i2p-project.net") as a representative destination hash

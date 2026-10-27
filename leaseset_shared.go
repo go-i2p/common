@@ -1,4 +1,3 @@
-// Package common provides I2P protocol common data structures and utilities.
 package common
 
 import (
@@ -11,10 +10,11 @@ import (
 	"github.com/go-i2p/common/key_certificate"
 	"github.com/go-i2p/common/offline_signature"
 	sig "github.com/go-i2p/common/signature"
+	goi2ped25519 "github.com/go-i2p/crypto/ed25519"
 	"github.com/go-i2p/crypto/ed25519ph"
+	"github.com/go-i2p/crypto/red25519"
 	"github.com/go-i2p/crypto/types"
 	"github.com/go-i2p/logger"
-	"github.com/go-i2p/red25519"
 	"github.com/samber/oops"
 )
 
@@ -360,22 +360,119 @@ func CreateLeaseSetSignature(
 // SignLeaseSetData performs the actual cryptographic signing operation,
 // dispatching to Ed25519, RedDSA, or Ed25519ph based on the sigType.
 // This consolidates the identical signLeaseSet2Data and signMetaLeaseSetData.
+//
+// Signing is delegated entirely to github.com/go-i2p/crypto; this package only
+// selects the scheme and adapts the key encoding. For RedDSA (type 11) the
+// signer is the spec's randomized scheme (red25519.md §SIGN: "T = 80 random
+// bytes"), so signing the same data twice yields different signatures.
 func SignLeaseSetData(signingKey interface{}, data []byte, sigType uint16) ([]byte, error) {
-	privKey, err := ExtractEd25519PrivateKey(signingKey)
-	if err != nil {
-		return nil, err
-	}
-
 	switch sigType {
 	case uint16(sig.SIGNATURE_TYPE_EDDSA_SHA512_ED25519):
-		return ed25519.Sign(privKey, data), nil
+		privKey, err := ExtractEd25519PrivateKey(signingKey)
+		if err != nil {
+			return nil, err
+		}
+		signer, err := goi2ped25519.NewEd25519PrivateKey(privKey)
+		if err != nil {
+			return nil, oops.Wrapf(err, "failed to construct Ed25519 signing key")
+		}
+		edSigner, err := signer.NewSigner()
+		if err != nil {
+			return nil, oops.Wrapf(err, "failed to create Ed25519 signer")
+		}
+		return edSigner.Sign(data)
+
 	case uint16(sig.SIGNATURE_TYPE_REDDSA_SHA512_ED25519):
-		return red25519.Sign(red25519.PrivateKey(privKey), data), nil
+		return signRedDSA(signingKey, data)
+
 	case uint16(sig.SIGNATURE_TYPE_EDDSA_SHA512_ED25519PH):
+		privKey, err := ExtractEd25519PrivateKey(signingKey)
+		if err != nil {
+			return nil, err
+		}
 		return signEd25519ph(privKey, data)
+
 	default:
 		return nil, oops.Errorf("signing not implemented for signature type %d (modern crypto only: Ed25519, Ed25519ph, RedDSA)", sigType)
 	}
+}
+
+// signRedDSA produces a spec Red25519 signature (red25519.md §SIGN) using the
+// randomized signer in github.com/go-i2p/crypto/red25519.
+//
+// Accepted key forms, in the encoding the spec defines for a Red25519 signing
+// private key (a 32-byte little-endian scalar mod L):
+//   - red25519.Red25519PrivateKey — used as-is. This is the form a publisher of
+//     a blinded EncryptedLeaseSet must pass: the blinded scalar a' from
+//     encryptedleaseset.md §Blinding Calculations ("blinded signing private key
+//     = a' = BLIND_PRIVKEY(a, alpha) = (a + alpha) mod L").
+//   - []byte of length 32 — the same scalar as raw bytes.
+//   - ed25519.PrivateKey / [64]byte / []byte of length 64 or 32 — converted with
+//     CONVERT_ED25519_PRIVATE, the spec's documented conversion for signing a
+//     type 11 structure with an existing Ed25519 destination key.
+func signRedDSA(signingKey interface{}, data []byte) ([]byte, error) {
+	var sk red25519.Red25519PrivateKey
+
+	switch key := signingKey.(type) {
+	case red25519.Red25519PrivateKey:
+		sk = key
+	case *red25519.Red25519PrivateKey:
+		if key == nil {
+			return nil, oops.Errorf("signing key is nil")
+		}
+		sk = *key
+	case []byte:
+		switch len(key) {
+		case red25519.PrivateKeySize:
+			// 32-byte little-endian Red25519 scalar (blinded or generated).
+			sk = key
+		case ed25519.PrivateKeySize:
+			// Go's 64-byte expanded Ed25519 key -> CONVERT_ED25519_PRIVATE.
+			converted, err := red25519.ConvertEd25519PrivateKey(key)
+			if err != nil {
+				return nil, oops.Wrapf(err, "CONVERT_ED25519_PRIVATE failed")
+			}
+			sk = converted
+		default:
+			return nil, oops.Errorf(
+				"unsupported RedDSA signing key length: got %d, expected %d (scalar) or %d (Ed25519 expanded)",
+				len(key), red25519.PrivateKeySize, ed25519.PrivateKeySize,
+			)
+		}
+	case [32]byte:
+		sk = key[:]
+	case [64]byte:
+		converted, err := red25519.ConvertEd25519PrivateKey(key[:])
+		if err != nil {
+			return nil, oops.Wrapf(err, "CONVERT_ED25519_PRIVATE failed")
+		}
+		sk = converted
+	case ed25519.PrivateKey:
+		converted, err := red25519.ConvertEd25519PrivateKey(key)
+		if err != nil {
+			return nil, oops.Wrapf(err, "CONVERT_ED25519_PRIVATE failed")
+		}
+		sk = converted
+	case nil:
+		return nil, oops.Errorf("signing key is nil")
+	default:
+		return nil, oops.Errorf(
+			"unsupported RedDSA signing key type: %T (expected red25519.Red25519PrivateKey or an Ed25519 private key)",
+			signingKey,
+		)
+	}
+
+	// Re-validate through the constructor so a raw scalar from any branch above
+	// gets the same checks (non-zero, well-formed scalar) the type enforces.
+	validated, err := red25519.NewRed25519PrivateKey(sk)
+	if err != nil {
+		return nil, oops.Wrapf(err, "invalid RedDSA signing key")
+	}
+	signer, err := validated.NewSigner()
+	if err != nil {
+		return nil, oops.Wrapf(err, "failed to create RedDSA signer")
+	}
+	return signer.Sign(data)
 }
 
 // signEd25519ph performs Ed25519ph (pre-hashed) signing using the
@@ -498,6 +595,12 @@ func ParseLeaseSetHeaderFields(inputData []byte) (published uint32, expires, fla
 // expected "data exists beyond length" warning that occurs when a mapping
 // is embedded in a larger structure. This consolidates the identical
 // parseOptionsMapping functions from lease_set2 and meta_leaseset packages.
+//
+// All other mapping errors are fatal on the inbound path, including the
+// key-sort check: the spec requires I2NP-carried mappings to be sorted so the
+// signature is invariant, and this library re-serializes options in canonical
+// order, so an unsorted inbound record could never verify. Duplicate keys are
+// likewise rejected ("Duplicate keys are not allowed").
 func ParseEmbeddedMapping(inputData []byte, structName string) (data.Mapping, []byte, error) {
 	mapping, rem, errs := data.ReadMapping(inputData)
 	if len(errs) > 0 {

@@ -200,6 +200,39 @@
 // This implementation follows I2P specification version 0.9.71 and is designed
 // for use in I2P routers, clients, and utilities.
 //
+// ## Cryptographic Delegation
+//
+// This package implements I2P data structures and their wire format only. It
+// contains no cryptographic algorithms: signing, verification, key agreement,
+// encryption, and hashing are all delegated to github.com/go-i2p/crypto. The
+// structures here decide *which* algorithm, key type, and length a field carries
+// and how those bytes are framed, then call into go-i2p/crypto to perform the
+// operation. In particular:
+//
+//   - Ed25519 (type 7) and Ed25519ph (type 8) sign/verify via
+//     github.com/go-i2p/crypto/ed25519 and .../ed25519ph.
+//   - RedDSA (type 11) signs and verifies via github.com/go-i2p/crypto/red25519,
+//     which implements the randomized Red25519 scheme in
+//     https://geti2p.net/spec/red25519 (SIGN draws "T = 80 random bytes"; VERIFY
+//     uses the domain-separated HStar challenge and the cofactor equation). This
+//     is deliberately NOT the same rule as Ed25519, even though both keys are
+//     Ed25519 curve points; a RedDSA signature must not be verified with
+//     ed25519.Verify or vice versa.
+//   - ECDSA P256/P384/P521 (types 1-3) verify via
+//     github.com/go-i2p/crypto/ecdsa (CreateECVerifier).
+//   - Hashing for structure IDs and credential derivation uses
+//     github.com/go-i2p/crypto/types (SHA-256); the EncryptedLeaseSet KDF and
+//     stream cipher use .../kdf and .../chacha20.
+//
+// What remains from the Go standard library is not I2P cryptography:
+// crypto/subtle.ConstantTimeCompare is used only for timing-safe byte equality
+// in Equal()/IsZero() helpers on key, signature and tag types; crypto/ed25519,
+// crypto/elliptic and crypto.Hash supply the key sizes and the curve/hash
+// identifiers that select which go-i2p/crypto operation to run. The single
+// exception is data.HashReader, which streams an io.Reader through
+// crypto/sha256 because go-i2p/crypto exposes only the one-shot types.SHA256
+// (see that function's note and the upstream report).
+//
 // ## Known Specification Deviations / Supported Cryptographic Scope
 //
 // This library intentionally does not support signing or verification with the
@@ -244,6 +277,14 @@
 //     router_address package)
 //   - the encrypted-leaseset rule that an offline transient signing key must be
 //     Ed25519 (enforced in the constructors and Validate())
+//   - a LeaseSet2 expires offset above the typical maximum noted for LeaseSet2
+//     (about 660 seconds; the field itself allows the full 18.2 hours, and
+//     MetaLeaseSet is bounded only by that)
+//   - a MetaLeaseSet entry count above this library's outbound cap of 16 (the
+//     spec's maximum is TBD; see "Bounds the Specification Leaves Unpublished")
+//   - a zero (undefined) expires timestamp in an OfflineSignature, which the
+//     Date section permits as "undefined or null" - ValidateStructure() enforces
+//     the outbound rule on a parsed value
 //
 // Requirements that determine how the wire format is read - for example the
 // presence of an OfflineSignature when flags bit 0 is set - remain hard errors
@@ -311,9 +352,47 @@
 // The hyphenated URL https://geti2p.net/spec/encrypted-leasesets and the
 // /spec/els redirect do not resolve; use the URLs above.
 //
-// Remaining genuinely-unpublished item: the page does not define a maximum value
-// for the inner "len" field or for LeaseSet2's numk ("max TBD" in
-// common-structures), so this library applies documented internal caps.
+// # Bounds the Specification Leaves Unpublished
+//
+// common-structures.md writes "max TBD" for four count/length fields. This
+// library applies a documented cap to each. Two of the four caps are simply the
+// largest value the field's own byte width can express, so they bind on both the
+// inbound and the outbound path and are not policy choices:
+//
+//   - MetaLeaseSet numr (revocation hash count, "0 <= numr <= max TBD"):
+//     META_LEASESET_MAX_REVOCATIONS = 255, the 1-byte maximum. Inbound parsing
+//     accepts any count the remaining bytes can supply; a count larger than the
+//     data can fill is a framing error.
+//   - EncryptedLeaseSet len ("1 <= len <= max TBD"):
+//     ENCRYPTED_LEASESET_MAX_INNER_LENGTH = 65535, the 2-byte maximum.
+//
+// The other two are library conventions, and the two paths differ:
+//
+//   - LeaseSet2 numk (encryption key count, "1 <= numk <= max TBD"):
+//     LEASESET2_MAX_ENCRYPTION_KEYS = 16, enforced on BOTH paths. Unlike the
+//     entry count above, the parse path rejects an out-of-range count instead of
+//     warning, because numk is the only bound on how many keytype/keylen pairs
+//     the parser then reads: accepting an implausibly large count would let a
+//     short record drive a long (and expensive) read loop. The spec fixes no
+//     maximum here, so 16 is this library's choice on both paths.
+//   - MetaLeaseSet num (entry count, "1 <= num <= max TBD"): the outbound cap is
+//     META_LEASESET_MAX_ENTRIES = 16 with a minimum of 1, but the parse path
+//     accepts the full 1-255 range the byte can hold and only warns above 16, so
+//     a correctly-signed record with more entries is not discarded.
+//
+// The LeaseSet2/MetaLeaseSet "num" lease counts are NOT TBD - the spec fixes
+// them at 16 ("0 <= num <= 16"), with the LeaseSet Notes adding that every
+// LeaseSet2 variant requires at least one Lease.
+//
+// One further ambiguity is a conflict between two spec statements rather than an
+// unpublished value: the String type says "Length may be 0", while the
+// RouterAddress Notes type transport_style as "String, 1-256 bytes". This library
+// takes the structure-specific bound as controlling and rejects a zero-length
+// transport_style on both the parse and the outbound path (ErrEmptyTransportStyle),
+// on the reasoning that a RouterAddress naming no transport is not meaningful.
+// The consequence - stated here so the choice is visible - is that a hypothetical
+// wire record carrying an empty transport_style is rejected rather than
+// round-tripped.
 //
 // # Version Information
 //

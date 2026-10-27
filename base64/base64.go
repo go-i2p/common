@@ -11,7 +11,8 @@
 //
 // Usage patterns:
 //   - Encoding binary data for I2P network transmission
-//   - Generating .b64.i2p destination addresses
+//   - Base 64 encoding of NTCP2/SSU2 keys and I2CP secrets ("Base 64 encoded
+//     using the standard I2P Base 64 alphabet")
 //   - Converting cryptographic keys to string representation
 //   - Serializing router information and network database entries
 //

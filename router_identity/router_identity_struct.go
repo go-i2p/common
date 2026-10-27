@@ -2,7 +2,6 @@
 package router_identity
 
 import (
-	"crypto/sha256"
 	"crypto/subtle"
 	"encoding"
 	"encoding/hex"
@@ -186,7 +185,7 @@ func (ri *RouterIdentity) Hash() ([32]byte, error) {
 	if err != nil {
 		return [32]byte{}, err
 	}
-	return sha256.Sum256(b), nil
+	return types.SHA256(b), nil
 }
 
 // Bytes returns the wire-format serialization of the RouterIdentity.
@@ -256,7 +255,7 @@ func (ri *RouterIdentity) String() string {
 	if err != nil {
 		return "<invalid RouterIdentity>"
 	}
-	hash := sha256.Sum256(b)
+	hash := types.SHA256(b)
 	return fmt.Sprintf("RouterIdentity{%s}", hex.EncodeToString(hash[:16]))
 }
 

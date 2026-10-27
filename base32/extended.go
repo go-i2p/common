@@ -36,9 +36,18 @@ const (
 	// base32 address: 52 chars encoding a 32-byte SHA-256 hash.
 	StandardB32Chars = 52
 
-	// minExtendedDataLen is the minimum decoded byte length for an extended
-	// address: 1 flag + 1 pubkey sigtype + 1 blinded sigtype + 1 key byte.
-	minExtendedDataLen = 4
+	// ExtendedB32Chars is the character count of the shortest valid extended
+	// address. Per the encrypted-leaseset spec: "Addresses for encrypted
+	// leasesets are identified by the 56 encoded characters (35 decoded bytes),
+	// compared to 52 characters (32 bytes) for traditional base 32 addresses."
+	ExtendedB32Chars = 56
+
+	// minExtendedDataLen is the minimum decoded byte length of an extended
+	// address: 32-byte public key + 3 bytes of flag/sigtype header = 35 bytes,
+	// as stated by the same sentence above. Anything shorter encodes to 53-55
+	// characters, which is neither a standard (52) nor an extended (56+)
+	// address and cannot be resolved by a conformant naming service.
+	minExtendedDataLen = ExtendedB32Chars * 5 / 8 // 35
 
 	// headerLen1Byte is the header size with 1-byte signature types.
 	headerLen1Byte = 3 // flag + pubkeySigType + blindedSigType
@@ -94,9 +103,11 @@ func EncodeExtendedAddress(addr *ExtendedAddress) (string, error) {
 	}
 
 	data := marshalExtendedData(addr)
-	// Extended addresses must encode to >52 base32 chars (>32 bytes of data)
-	// to be distinguishable from standard base32 addresses per the I2P spec.
-	if len(data) <= 32 {
+	// Per the encrypted-leaseset spec an extended address is "56 encoded
+	// characters (35 decoded bytes)". Reject anything shorter: 33-34 bytes
+	// would encode to 53-55 characters, which is neither a standard (52-char)
+	// nor an extended (56-char) address, and would be unresolvable.
+	if len(data) < minExtendedDataLen {
 		log.WithFields(logger.Fields{"pkg": "base32", "func": "EncodeExtendedAddress"}).Error("Public key too short for extended address", "data_len", len(data))
 		return "", ErrKeyTooShort
 	}
@@ -126,9 +137,9 @@ func DecodeExtendedAddress(hostname string) (*ExtendedAddress, error) {
 		log.WithFields(logger.Fields{"pkg": "base32", "func": "DecodeExtendedAddress"}).Error("Base32 decode failed", "error", err)
 		return nil, oops.Wrapf(err, "base32 decode")
 	}
-	// Spec: "Any unused bits at the end of the b32 must be 0." Go's base32
-	// decoder silently discards those bits, so re-encode and compare to reject
-	// non-canonical (malleable) encodings of the same address.
+	// Spec (b32encrypted.md): "Any unused bits at the end of the b32 must be 0."
+	// Go's base32 decoder silently discards those bits, so re-encode and compare
+	// to reject non-canonical (malleable) encodings of the same address.
 	if !isCanonicalNoPadding(b32Part, data) {
 		log.WithFields(logger.Fields{"pkg": "base32", "func": "DecodeExtendedAddress"}).Warn("Address has non-zero unused trailing bits")
 		return nil, ErrNonCanonicalEncoding

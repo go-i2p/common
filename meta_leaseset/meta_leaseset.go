@@ -113,8 +113,23 @@ func parseEntries(mls *MetaLeaseSet, data []byte) ([]byte, error) {
 	numEntries := uint8(data[0])
 	data = data[META_LEASESET_NUM_ENTRIES_SIZE:]
 
-	if err := validateEntryCount(int(numEntries)); err != nil {
-		return nil, err
+	// Spec: "num :: Integer, length -> 1 byte, value: 1 <= num <= max TBD". The
+	// semantic maximum is unpublished, so the parse path accepts the full range
+	// the 1-byte field can express (subject to the bytes actually available) and
+	// only warns above the library's outbound cap. Rejecting an otherwise
+	// correctly-signed inbound record at 17 entries would be a self-inflicted
+	// denial of service; see the "Inbound Parsing vs. Outbound Publishing" note
+	// in the root package documentation. A zero count is still a spec violation.
+	if numEntries < META_LEASESET_MIN_ENTRIES {
+		return nil, invalidEntryCountError(int(numEntries))
+	}
+	if numEntries > META_LEASESET_MAX_ENTRIES {
+		log.WithFields(logger.Fields{
+			"pkg":          "meta_leaseset",
+			"func":         "parseEntries",
+			"num_entries":  numEntries,
+			"outbound_max": META_LEASESET_MAX_ENTRIES,
+		}).Warn("MetaLeaseSet entry count exceeds this library's outbound cap (spec maximum is TBD); accepted inbound")
 	}
 
 	mls.numEntries = numEntries
@@ -137,16 +152,26 @@ func parseEntries(mls *MetaLeaseSet, data []byte) ([]byte, error) {
 	return data, nil
 }
 
-// validateEntryCount validates that the entry count is within allowed limits (1-16).
-// Returns error if entry count is out of range.
+// invalidEntryCountError builds the error for an entry count below the
+// spec-mandated minimum ("1 <= num"), which is fatal on both the parse and the
+// outbound paths.
+func invalidEntryCountError(numEntries int) error {
+	return oops.
+		Code("invalid_entry_count").
+		With("num_entries", numEntries).
+		With("min_allowed", META_LEASESET_MIN_ENTRIES).
+		With("max_allowed", META_LEASESET_MAX_ENTRIES).
+		Errorf("invalid entry count: %d (must be %d-%d)", numEntries, META_LEASESET_MIN_ENTRIES, META_LEASESET_MAX_ENTRIES)
+}
+
+// validateEntryCount validates that the entry count is within this library's
+// outbound limits (1-16). The spec leaves the maximum TBD ("1 <= num <= max
+// TBD"), so the cap is a library convention enforced when constructing or
+// validating a record this library publishes; the parse path accepts any count
+// the 1-byte field can express. See parseEntries.
 func validateEntryCount(numEntries int) error {
 	if numEntries < META_LEASESET_MIN_ENTRIES || numEntries > META_LEASESET_MAX_ENTRIES {
-		err := oops.
-			Code("invalid_entry_count").
-			With("num_entries", numEntries).
-			With("min_allowed", META_LEASESET_MIN_ENTRIES).
-			With("max_allowed", META_LEASESET_MAX_ENTRIES).
-			Errorf("invalid entry count: %d (must be %d-%d)", numEntries, META_LEASESET_MIN_ENTRIES, META_LEASESET_MAX_ENTRIES)
+		err := invalidEntryCountError(numEntries)
 		log.WithFields(logger.Fields{
 			"pkg":         "meta_leaseset",
 			"func":        "validateEntryCount",
@@ -171,6 +196,13 @@ func parseSingleEntry(mls *MetaLeaseSet, entryIndex int, data []byte) ([]byte, e
 	if err := validateEntryType(entry.Type(), entryIndex); err != nil {
 		return nil, err
 	}
+
+	// Spec: "Bits 23-4: set to 0 for compatibility with future uses." Producer-
+	// side obligation, so it is logged rather than rejected on the inbound path
+	// (Validate() enforces it for outbound use), matching the header reserved-
+	// bit handling above. The raw bytes are preserved, so a record that carries
+	// non-zero reserved bits still round-trips unchanged.
+	warnIfEntryReservedFlagBits(&entry, entryIndex)
 
 	mls.entries[entryIndex] = entry
 	logParsedEntry(entryIndex, &entry)
@@ -469,6 +501,11 @@ func (mls *MetaLeaseSet) Bytes() ([]byte, error) {
 	}
 
 	result = serializeRevocations(result, mls)
+	// The spec requires a trailing Signature over the preceding bytes; an empty
+	// signature would serialize a record peers cannot verify.
+	if mls.signature.Len() == 0 {
+		return nil, oops.Errorf("MetaLeaseSet has no signature to serialize")
+	}
 	result = append(result, mls.signature.Bytes()...)
 
 	log.WithFields(logger.Fields{
@@ -496,7 +533,10 @@ func serializeHeader(mls *MetaLeaseSet) ([]byte, error) {
 	result = rootcommon.AppendBigEndianUint16(result, mls.expires)
 	result = rootcommon.AppendBigEndianUint16(result, mls.flags)
 
-	if mls.offlineSignature != nil {
+	// The wire format keys off the OFFLINE_KEYS flag, not the pointer: a
+	// non-nil signature with the flag clear (or vice versa) must not change
+	// the byte layout, or the parser cannot round-trip it.
+	if (mls.flags&META_LEASESET_FLAG_OFFLINE_KEYS) != 0 && mls.offlineSignature != nil {
 		result = append(result, mls.offlineSignature.Bytes()...)
 	}
 	return result, nil
@@ -505,14 +545,15 @@ func serializeHeader(mls *MetaLeaseSet) ([]byte, error) {
 // serializeOptions appends the options mapping to the result in canonical
 // key order for signature invariance per the I2P spec.
 func serializeOptions(result []byte, mls *MetaLeaseSet) ([]byte, error) {
-	if len(mls.options.Values()) > 0 {
-		sortedOpts, sortErr := common.ValuesToMapping(mls.options.Values())
-		if sortErr != nil {
-			return nil, oops.Errorf("failed to sort options mapping: %w", sortErr)
-		}
-		return append(result, sortedOpts.Data()...), nil
+	// DataSafe() canonicalizes key order (matching the signing path in
+	// SerializeLeaseSetHeader) and, unlike the deprecated Data(), propagates
+	// serialization errors instead of silently returning nil — which would drop
+	// the entire options section from an otherwise-signed structure.
+	optData, err := mls.options.DataSafe()
+	if err != nil {
+		return nil, oops.Wrapf(err, "failed to serialize options mapping")
 	}
-	return append(result, 0x00, 0x00), nil
+	return append(result, optData...), nil
 }
 
 // serializeEntries appends the entry count and each serialized entry to the result.

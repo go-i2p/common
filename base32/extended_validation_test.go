@@ -30,8 +30,10 @@ func TestEncodeExtendedAddress_EmptyPublicKey(t *testing.T) {
 }
 
 func TestEncodeExtendedAddress_KeyTooShort(t *testing.T) {
-	// A 1-byte key with 1-byte sigtypes = 4 bytes total ≤ 32,
-	// which would produce ≤52 base32 chars (indistinguishable from standard).
+	// Spec: an extended address is "56 encoded characters (35 decoded bytes)".
+	// With 1-byte sigtypes (3-byte header) the key must therefore be at least
+	// 32 bytes; shorter keys produce 53-55 character addresses that are neither
+	// standard (52) nor extended (56+) and are unresolvable.
 	addr := &ExtendedAddress{
 		PubKeySigType:  7,
 		BlindedSigType: 11,
@@ -40,13 +42,18 @@ func TestEncodeExtendedAddress_KeyTooShort(t *testing.T) {
 	_, err := EncodeExtendedAddress(addr)
 	assert.ErrorIs(t, err, ErrKeyTooShort)
 
-	// 29-byte key with 3-byte header = 32 bytes total, still ≤32
+	// 29-byte key with 3-byte header = 32 bytes total, still < 35
 	addr.PublicKey = make([]byte, 29)
 	_, err = EncodeExtendedAddress(addr)
 	assert.ErrorIs(t, err, ErrKeyTooShort)
 
-	// 30-byte key with 3-byte header = 33 bytes total, >32 → OK
-	addr.PublicKey = make([]byte, 30)
+	// 31-byte key with 3-byte header = 34 bytes total, still < 35
+	addr.PublicKey = make([]byte, 31)
+	_, err = EncodeExtendedAddress(addr)
+	assert.ErrorIs(t, err, ErrKeyTooShort)
+
+	// 32-byte key with 3-byte header = 35 bytes total → valid (56 chars)
+	addr.PublicKey = make([]byte, 32)
 	_, err = EncodeExtendedAddress(addr)
 	assert.NoError(t, err)
 }

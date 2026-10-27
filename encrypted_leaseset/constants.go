@@ -130,6 +130,10 @@ const (
 	// ENCRYPTED_LEASESET_AUTH_CLIENT_COUNT_SIZE is the size of the client-count field (2 bytes, big endian).
 	ENCRYPTED_LEASESET_AUTH_CLIENT_COUNT_SIZE int = 2
 
+	// ENCRYPTED_LEASESET_HKDF_OKM_SIZE is the HKDF output length for the layer
+	// keys: 32-byte key + 12-byte IV.
+	ENCRYPTED_LEASESET_HKDF_OKM_SIZE int = 44
+
 	// ENCRYPTED_LEASESET_AUTH_OKM_SIZE is the HKDF output length for per-client key
 	// derivation: clientKey(32) + clientIV(12) + clientID(8) = 52 bytes.
 	ENCRYPTED_LEASESET_AUTH_OKM_SIZE int = 52

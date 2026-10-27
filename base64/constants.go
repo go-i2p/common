@@ -10,8 +10,11 @@ import (
 // - "/" is replaced with "~" to avoid filesystem path conflicts
 // - "+" is replaced with "-" to ensure URL-safe encoding without percent-encoding
 // The alphabet maintains the standard ordering: A-Z (0-25), a-z (26-51), 0-9 (52-61), - (62), ~ (63).
-// This encoding is essential for I2P destination addresses, router identifiers, and network data structures.
-// Example usage: Used in .b64.i2p addresses and binary data serialization across I2P protocols.
+// This encoding is essential for I2P destination representations, router identifiers, and network data structures.
+// Example usage: Base 64 of a full Destination ("Base 64 destinations" in the
+// spec's padding note), NTCP2/SSU2 keys, and I2CP secrets. Note that the spec
+// defines only the ".b32.i2p" hostname format (base32 of the destination hash);
+// there is no ".b64.i2p" format.
 const I2PEncodeAlphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-~"
 
 // MAX_ENCODE_SIZE defines the maximum number of bytes that can be base64 encoded in a single operation.

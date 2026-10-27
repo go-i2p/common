@@ -1,18 +1,17 @@
 package encrypted_leaseset
 
 import (
-	"crypto/sha256"
 	"encoding/binary"
-	"io"
 
+	goichacha20 "github.com/go-i2p/crypto/chacha20"
+	"github.com/go-i2p/crypto/kdf"
 	"github.com/go-i2p/crypto/rand"
+	"github.com/go-i2p/crypto/types"
 
 	"github.com/go-i2p/common/lease_set2"
 	"github.com/go-i2p/common/meta_leaseset"
 	"github.com/go-i2p/logger"
 	"github.com/samber/oops"
-	"golang.org/x/crypto/chacha20"
-	"golang.org/x/crypto/hkdf"
 )
 
 // DeriveSubcredential computes the I2P subcredential for EncryptedLeaseSet
@@ -42,27 +41,28 @@ func DeriveSubcredential(destSigningPubKey []byte, sigTypeA uint16, blindedPubKe
 
 // deriveCredential computes: SHA-256("credential" || A || stA || stA')
 // where stA and stA' are the 2-byte big-endian signature type codes.
+//
+// Per encryptedleaseset.md §"Derivation of subcredentials":
+// "credential = H("credential", keydata)" where keydata is the destination's
+// signing public key followed by the two signature type codes.
 func deriveCredential(destSigningPubKey []byte, sigTypeA, sigTypeBlinded uint16) [32]byte {
-	h := sha256.New()
-	h.Write([]byte("credential"))
-	h.Write(destSigningPubKey)
-	_ = binary.Write(h, binary.BigEndian, sigTypeA)
-	_ = binary.Write(h, binary.BigEndian, sigTypeBlinded)
-	var result [32]byte
-	copy(result[:], h.Sum(nil))
-	return result
+	keydata := make([]byte, 0, len(destSigningPubKey)+4)
+	keydata = append(keydata, destSigningPubKey...)
+	var stypes [4]byte
+	binary.BigEndian.PutUint16(stypes[0:2], sigTypeA)
+	binary.BigEndian.PutUint16(stypes[2:4], sigTypeBlinded)
+	keydata = append(keydata, stypes[:]...)
+	return types.SHA256(append([]byte("credential"), keydata...))
 }
 
 // deriveSubcredFromCredential computes:
 // SHA-256("subcredential" || credential || blindedPubKey).
 func deriveSubcredFromCredential(credential [32]byte, blindedPubKey []byte) [32]byte {
-	h := sha256.New()
-	h.Write([]byte("subcredential"))
-	h.Write(credential[:])
-	h.Write(blindedPubKey)
-	var result [32]byte
-	copy(result[:], h.Sum(nil))
-	return result
+	buf := make([]byte, 0, len("subcredential")+32+len(blindedPubKey))
+	buf = append(buf, "subcredential"...)
+	buf = append(buf, credential[:]...)
+	buf = append(buf, blindedPubKey...)
+	return types.SHA256(buf)
 }
 
 // buildLayerIKM constructs the HKDF input keying material for Layer 1:
@@ -98,12 +98,9 @@ func buildLayer2IKM(authCookie []byte, subcredential [32]byte, published uint32)
 //	key = key_material[0:32]
 //	iv  = key_material[32:44]
 func deriveLayerKey(salt, ikm []byte, info string) ([32]byte, [12]byte, error) {
-	hkdfReader := hkdf.New(sha256.New, ikm, salt, []byte(info))
-	keyMaterial := make([]byte, 44)
-	if _, err := io.ReadFull(hkdfReader, keyMaterial); err != nil {
-		return [32]byte{}, [12]byte{}, oops.Errorf(
-			"HKDF key derivation failed: %w", err,
-		)
+	keyMaterial, err := kdf.StandardHKDF(salt, ikm, []byte(info), ENCRYPTED_LEASESET_HKDF_OKM_SIZE)
+	if err != nil {
+		return [32]byte{}, [12]byte{}, oops.Errorf("HKDF key derivation failed: %w", err)
 	}
 	var key [32]byte
 	var iv [12]byte
@@ -114,14 +111,13 @@ func deriveLayerKey(salt, ikm []byte, info string) ([32]byte, [12]byte, error) {
 
 // chacha20Crypt applies ChaCha20 stream cipher. Since ChaCha20 is its
 // own inverse, this function handles both encryption and decryption.
+// Delegates to go-i2p/crypto/chacha20, whose StreamInitialCounter is 1 as the
+// I2P STREAM definition requires.
 func chacha20Crypt(key [32]byte, iv [12]byte, data []byte) ([]byte, error) {
-	cipher, err := chacha20.NewUnauthenticatedCipher(key[:], iv[:])
+	out, err := goichacha20.StreamEncrypt(key[:], iv[:], data)
 	if err != nil {
 		return nil, oops.Errorf("ChaCha20 cipher init failed: %w", err)
 	}
-	cipher.SetCounter(1) // F365: spec requires counter=1 (not 0)
-	out := make([]byte, len(data))
-	cipher.XORKeyStream(out, data)
 	return out, nil
 }
 

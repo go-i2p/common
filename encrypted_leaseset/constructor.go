@@ -3,6 +3,7 @@ package encrypted_leaseset
 import (
 	"crypto/ed25519"
 
+	rootcommon "github.com/go-i2p/common"
 	"github.com/go-i2p/common/destination"
 	"github.com/go-i2p/common/key_certificate"
 	"github.com/go-i2p/common/offline_signature"
@@ -22,10 +23,17 @@ import (
 //   - flags: flag bits (bit 0=offline, bit 1=unpublished, bits 15‑2 must be 0)
 //   - offlineSig: optional offline signature (required if flags bit 0 set)
 //   - encryptedInnerData: encrypted LeaseSet2 payload
-//   - signingKey: Ed25519 private key ([64]byte, *Ed25519PrivateKey, or 64-byte []byte)
+//   - signingKey: the signing private key. For sigType 11 (RedDSA - the form the
+//     spec mandates for a blinded key) pass the blinded 32-byte Red25519 scalar
+//     a' (red25519.Red25519PrivateKey or a 32-byte []byte), or an Ed25519 private
+//     key, which is converted with the spec's CONVERT_ED25519_PRIVATE. For sigType
+//     7 (Ed25519, the unblinded case) pass the 64-byte expanded key ([64]byte,
+//     ed25519.PrivateKey, *Ed25519PrivateKey, or 64-byte []byte).
 //
-// The signature is computed over: 0x05 || serialized_content (without the signature itself),
-// using standard Ed25519 (no pre-hashing).
+// The signature is computed over: 0x05 || serialized_content (without the
+// signature itself), with no pre-hashing. Signing is delegated to
+// github.com/go-i2p/crypto: the randomized Red25519 signer for type 11, the
+// Ed25519 signer for type 7.
 func NewEncryptedLeaseSet(
 	sigType uint16,
 	blindedPublicKey []byte,
@@ -243,46 +251,86 @@ func validateEncryptedPayload(encryptedInnerData []byte) error {
 	return nil
 }
 
-// createSignature signs data using Ed25519, producing a signature compatible
-// with the go-i2p/crypto library's Ed25519Verifier.Verify method.
+// createSignature signs the EncryptedLeaseSet data with the key type the spec
+// requires for the outer signature.
 //
-// NOTE: The I2P spec mandates Red25519 (RedDSA) for EncryptedLeaseSet outer
-// signatures. Red25519 uses randomized nonces for unlinkability. This
-// implementation uses standard deterministic Ed25519 signing, which produces
-// valid signatures (verification is identical at the curve level), but
-// deterministic signatures allow correlation of re-publications. A full
-// Red25519 randomized nonce implementation is a known limitation.
+// Per encryptedleaseset.md §Signing, "For signing of the encrypted leaseset, we
+// use Red25519 based on RedDSA to sign and verify with blinded keys", and the
+// blinded signing key "will always be type 11". So a type 11 signature MUST use
+// the randomized Red25519 scheme from github.com/go-i2p/crypto/red25519: SIGN
+// begins "T = 80 random bytes", which is what gives blinded leasesets their
+// unlinkability. A deterministic Ed25519 signature over the same key would let
+// an observer correlate re-publications, defeating the blinding.
 //
-// IMPORTANT: Do NOT pre-hash here. The Ed25519Verifier.Verify() method in the
-// crypto library already applies SHA-512 internally before calling VerifyHash.
+// Type 7 (Ed25519) is still accepted for the unblinded-leaseset case described
+// in the same section ("The unblinded leaseset is signed by the unblinded
+// Ed25519 or Red25519 signing private key ... as usual").
 //
-// Supports ed25519.PrivateKey, [64]byte, *Ed25519PrivateKey, and 64-byte []byte.
+// Accepted signingKey forms:
+//   - red25519.Red25519PrivateKey (or 32-byte []byte) — the blinded scalar a',
+//     used directly for type 11.
+//   - ed25519.PrivateKey / [64]byte / 64-byte []byte — converted with the spec's
+//     CONVERT_ED25519_PRIVATE for type 11, or used directly for type 7.
+//   - *ed25519.Ed25519PrivateKey (go-i2p/crypto) — used directly for type 7.
+//
+// Do NOT pre-hash: both Ed25519 and Red25519 are PureEdDSA schemes and sign the
+// message directly.
 func createSignature(signingKey interface{}, data []byte, sigType uint16) (sig.Signature, error) {
+	switch sigType {
+	case uint16(sig.SIGNATURE_TYPE_REDDSA_SHA512_ED25519):
+		signatureBytes, err := rootcommon.SignLeaseSetData(signingKey, data, sigType)
+		if err != nil {
+			return sig.Signature{}, err
+		}
+		return sig.NewSignatureFromBytes(signatureBytes, int(sigType))
+
+	case uint16(sig.SIGNATURE_TYPE_EDDSA_SHA512_ED25519):
+		return createEd25519Signature(signingKey, data, sigType)
+
+	default:
+		return sig.Signature{}, oops.Code("unsupported_signature_type").
+			With("sig_type", sigType).
+			Errorf("encrypted leaseset signing supports only Ed25519 (7) and RedDSA (11), got %d", sigType)
+	}
+}
+
+// createEd25519Signature signs with Ed25519 for the unblinded (type 7) case.
+// The signing is delegated to github.com/go-i2p/crypto/ed25519's signer; this
+// package implements no cryptography itself. All accepted key forms are the
+// 64-byte expanded Ed25519 private key in one of its in-repo shapes.
+func createEd25519Signature(signingKey interface{}, data []byte, sigType uint16) (sig.Signature, error) {
+	var raw []byte
 	switch key := signingKey.(type) {
 	case ed25519.PrivateKey:
-		signatureBytes := ed25519.Sign(key, data)
-		return sig.NewSignatureFromBytes(signatureBytes, int(sigType))
-
+		raw = key
 	case [64]byte:
-		signatureBytes := ed25519.Sign(key[:], data)
-		return sig.NewSignatureFromBytes(signatureBytes, int(sigType))
-
+		raw = key[:]
 	case *goi2ped25519.Ed25519PrivateKey:
-		signatureBytes := ed25519.Sign(key.Bytes(), data)
-		return sig.NewSignatureFromBytes(signatureBytes, int(sigType))
-
+		raw = key.Bytes()
 	case []byte:
-		if len(key) == ed25519.PrivateKeySize {
-			signatureBytes := ed25519.Sign(key, data)
-			return sig.NewSignatureFromBytes(signatureBytes, int(sigType))
+		if len(key) != ed25519.PrivateKeySize {
+			return sig.Signature{}, oops.Code("invalid_key_length").
+				With("length", len(key)).
+				Errorf("byte slice signing key must be %d bytes for Ed25519, got %d",
+					ed25519.PrivateKeySize, len(key))
 		}
-		return sig.Signature{}, oops.Code("invalid_key_length").
-			With("length", len(key)).
-			Errorf("byte slice signing key must be %d bytes for Ed25519, got %d",
-				ed25519.PrivateKeySize, len(key))
-
+		raw = key
 	default:
 		return sig.Signature{}, oops.Code("unsupported_key_type").
 			Errorf("unsupported signing key type: %T", signingKey)
 	}
+
+	priv, err := goi2ped25519.NewEd25519PrivateKey(raw)
+	if err != nil {
+		return sig.Signature{}, oops.Wrapf(err, "failed to construct Ed25519 signing key")
+	}
+	signer, err := priv.NewSigner()
+	if err != nil {
+		return sig.Signature{}, oops.Wrapf(err, "failed to create Ed25519 signer")
+	}
+	signatureBytes, err := signer.Sign(data)
+	if err != nil {
+		return sig.Signature{}, oops.Wrapf(err, "Ed25519 signing failed")
+	}
+	return sig.NewSignatureFromBytes(signatureBytes, int(sigType))
 }

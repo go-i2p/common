@@ -125,9 +125,14 @@ func TestMappingValuesAdd(t *testing.T) {
 	})
 
 	t.Run("empty_key", func(t *testing.T) {
+		// Spec: String "Length may be 0"; Mapping Notes "Length byte may be 0".
 		mv := NewMappingValues(0)
-		_, err := mv.Add("", "value")
-		assert.Error(t, err, "should reject empty key")
+		mv, err := mv.Add("", "value")
+		require.NoError(t, err, "empty keys are permitted by the spec")
+		require.Len(t, mv, 1)
+		key, keyErr := mv[0][0].Data()
+		require.NoError(t, keyErr)
+		assert.Equal(t, "", key)
 	})
 
 	t.Run("empty_value", func(t *testing.T) {
@@ -187,11 +192,26 @@ func TestMappingValuesAddEmptyValue(t *testing.T) {
 		assert.Equal(t, "", val, "Value should be empty string")
 	})
 
-	t.Run("empty key is still rejected", func(t *testing.T) {
+	t.Run("empty key round-trips", func(t *testing.T) {
+		// The parse path accepts a zero-length key, so the constructor must too
+		// or a wire-parsed mapping could not be rebuilt.
 		mv := NewMappingValues(0)
-		_, err := mv.Add("", "value")
-		require.Error(t, err, "Empty keys should still be rejected")
-		assert.Contains(t, err.Error(), "empty key")
+		mv, err := mv.Add("", "value")
+		require.NoError(t, err, "Empty keys are permitted per I2P spec (String length may be 0)")
+
+		mapping, buildErr := ValuesToMapping(mv)
+		require.NoError(t, buildErr)
+		data, dataErr := mapping.DataSafe()
+		require.NoError(t, dataErr)
+
+		parsed, _, parseErrs := ReadMapping(data)
+		for _, e := range parseErrs {
+			assert.NotContains(t, e.Error(), "duplicate", "round-trip of an empty key must not be a format violation")
+		}
+		require.Len(t, parsed.Values(), 1)
+		key, keyErr := parsed.Values()[0][0].Data()
+		require.NoError(t, keyErr)
+		assert.Equal(t, "", key)
 	})
 
 	t.Run("empty value round-trip through mapping", func(t *testing.T) {

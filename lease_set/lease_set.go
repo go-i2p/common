@@ -3,7 +3,6 @@ package lease_set
 
 import (
 	"bytes"
-	"crypto/sha256"
 	"time"
 
 	rootcommon "github.com/go-i2p/common"
@@ -547,7 +546,7 @@ func (lease_set LeaseSet) Hash() ([32]byte, error) {
 	if err != nil {
 		return [32]byte{}, oops.Errorf("failed to serialize destination for Hash: %w", err)
 	}
-	return sha256.Sum256(destBytes), nil
+	return types.SHA256(destBytes), nil
 }
 
 // findExpiration iterates leases and returns the Date that satisfies the

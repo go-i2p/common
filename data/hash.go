@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/go-i2p/crypto/types"
 	"github.com/samber/oops"
 )
 
@@ -91,14 +92,20 @@ func ReadHash(data []byte) (Hash, []byte, error) {
 }
 
 // HashData returns the SHA256 sum of a []byte input as Hash.
+// Delegates to github.com/go-i2p/crypto/types so the hash primitive itself
+// lives in the crypto layer, per the repository's structural-only scope.
 func HashData(data []byte) (h Hash) {
-	// log.Println("Hashing Data:", data)
-	h = sha256.Sum256(data)
+	h = types.SHA256(data)
 	return h
 }
 
 // HashReader returns the SHA256 sum from all data read from an io.Reader.
 // return error if one occurs while reading from reader
+//
+// NOTE: go-i2p/crypto exposes only the one-shot types.SHA256; a streaming
+// helper is not available upstream, so this function is the one place in the
+// data package that still drives crypto/sha256 directly. See the upstream
+// report.
 func HashReader(r io.Reader) (h Hash, err error) {
 	sha := sha256.New()
 	_, err = io.Copy(sha, r)

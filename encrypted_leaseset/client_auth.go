@@ -1,16 +1,14 @@
 package encrypted_leaseset
 
 import (
-	"crypto/sha256"
 	"crypto/subtle"
 	"encoding/binary"
-	"io"
 
 	"github.com/go-i2p/crypto/curve25519"
+	"github.com/go-i2p/crypto/kdf"
 	"github.com/go-i2p/crypto/rand"
 
 	"github.com/samber/oops"
-	"golang.org/x/crypto/hkdf"
 )
 
 // ClientAuthConfig specifies per-client authorization when encrypting an
@@ -204,9 +202,8 @@ type clientAuthKeys struct {
 //	clientKey_i = okm[0:32]; clientIV_i = okm[32:44]; clientID_i = okm[44:52]
 func deriveClientAuthKeys(salt, authInput []byte, info string) (clientAuthKeys, error) {
 	var out clientAuthKeys
-	reader := hkdf.New(sha256.New, authInput, salt, []byte(info))
-	okm := make([]byte, ENCRYPTED_LEASESET_AUTH_OKM_SIZE)
-	if _, err := io.ReadFull(reader, okm); err != nil {
+	okm, err := kdf.StandardHKDF(salt, authInput, []byte(info), ENCRYPTED_LEASESET_AUTH_OKM_SIZE)
+	if err != nil {
 		return out, oops.Errorf("per-client HKDF derivation failed: %w", err)
 	}
 	copy(out.key[:], okm[0:32])

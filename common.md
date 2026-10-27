@@ -1,5 +1,11 @@
 # Common Structures Specification
 
+> **Note:** This is a vendored convenience copy of the normative specification
+> page at https://geti2p.net/spec/common-structures (source:
+> github.com/i2p/i2p.website, `content/en/docs/specs/common-structures.md`).
+> It is provided only as a local index. When this copy disagrees with the
+> i2p.website source, the i2p.website source is authoritative.
+>
 > **Category:** Design  
 > **Last Updated:** 2026-10  
 > **Accurate For:** 0.9.71

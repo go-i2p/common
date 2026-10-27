@@ -12,6 +12,7 @@ import (
 
 	"github.com/go-i2p/common/key_certificate"
 	"github.com/go-i2p/common/signature"
+	cryptoRed25519 "github.com/go-i2p/crypto/red25519"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -125,20 +126,25 @@ func TestVerifySignatureEd25519(t *testing.T) {
 }
 
 func TestVerifySignatureRedDSA(t *testing.T) {
-	pubKey, privKey, err := ed25519.GenerateKey(nil)
+	_, privKey, err := ed25519.GenerateKey(nil)
 	require.NoError(t, err)
 
 	expires := uint32(time.Now().UTC().Add(24 * time.Hour).Unix())
 	transientKey := make([]byte, key_certificate.KEYCERT_SIGN_ED25519_SIZE)
 
-	// CreateOfflineSignature rejects RedDSA (type 11): standard Ed25519 signing is
-	// not spec-compliant for RedDSA (missing randomised nonces). Build signed data
-	// manually so we can confirm that VerifySignature still works on the correct path.
 	signedData := make([]byte, EXPIRES_SIZE+SIGTYPE_SIZE+len(transientKey))
 	binary.BigEndian.PutUint32(signedData[0:4], expires)
 	binary.BigEndian.PutUint16(signedData[4:6], key_certificate.KEYCERT_SIGN_REDDSA_ED25519)
 	copy(signedData[6:], transientKey)
-	sigBytes := ed25519.Sign(privKey, signedData)
+
+	// Sign with the spec's randomized Red25519 scheme (red25519.md §SIGN), not
+	// plain Ed25519. The key is converted with CONVERT_ED25519_PRIVATE.
+	sk, err := cryptoRed25519.ConvertEd25519PrivateKey(privKey)
+	require.NoError(t, err)
+	signer, err := sk.NewSigner()
+	require.NoError(t, err)
+	sigBytes, err := signer.Sign(signedData)
+	require.NoError(t, err)
 
 	offlineSig, err := NewOfflineSignature(
 		expires,
@@ -149,9 +155,42 @@ func TestVerifySignatureRedDSA(t *testing.T) {
 	)
 	require.NoError(t, err)
 
+	// The Red25519 public key (CONVERT_ED25519_PUBLIC is the identity) verifies it.
+	pubKey, err := cryptoRed25519.ConvertEd25519PublicKey(privKey.Public().(ed25519.PublicKey))
+	require.NoError(t, err)
 	valid, vErr := offlineSig.VerifySignature(pubKey)
 	assert.NoError(t, vErr)
-	assert.True(t, valid, "RedDSA signature should verify: same curve as Ed25519")
+	assert.True(t, valid, "RedDSA signature should verify with the Red25519 VERIFY rule")
+}
+
+// TestVerifySignatureRedDSARejectsEd25519Sig proves RedDSA verification is NOT
+// the same as Ed25519 verification: a deterministic Ed25519 signature over the
+// same message and key must fail the Red25519 (HStar + cofactor) check.
+func TestVerifySignatureRedDSARejectsEd25519Sig(t *testing.T) {
+	pubKey, privKey, err := ed25519.GenerateKey(nil)
+	require.NoError(t, err)
+
+	expires := uint32(time.Now().UTC().Add(24 * time.Hour).Unix())
+	transientKey := make([]byte, key_certificate.KEYCERT_SIGN_ED25519_SIZE)
+
+	signedData := make([]byte, EXPIRES_SIZE+SIGTYPE_SIZE+len(transientKey))
+	binary.BigEndian.PutUint32(signedData[0:4], expires)
+	binary.BigEndian.PutUint16(signedData[4:6], key_certificate.KEYCERT_SIGN_REDDSA_ED25519)
+	copy(signedData[6:], transientKey)
+	edSig := ed25519.Sign(privKey, signedData)
+
+	offlineSig, err := NewOfflineSignature(
+		expires,
+		key_certificate.KEYCERT_SIGN_REDDSA_ED25519,
+		transientKey,
+		edSig,
+		signature.SIGNATURE_TYPE_REDDSA_SHA512_ED25519,
+	)
+	require.NoError(t, err)
+
+	valid, vErr := offlineSig.VerifySignature(pubKey)
+	assert.NoError(t, vErr)
+	assert.False(t, valid, "an Ed25519 signature must not pass Red25519 VERIFY")
 }
 
 func TestVerifySignatureUnsupportedType(t *testing.T) {
@@ -558,50 +597,43 @@ func TestVerifySignatureTamperedFields(t *testing.T) {
 // RedDSA signing returns an explicit error (RedDSA is not yet implemented)
 // =========================================================================
 
-func TestRedDSASigningReturnsError(t *testing.T) {
+func TestRedDSACreateAndVerify(t *testing.T) {
 	_, privKey, err := ed25519.GenerateKey(nil)
 	require.NoError(t, err)
 
 	expires := uint32(time.Now().UTC().Add(24 * time.Hour).Unix())
 	transientKey := make([]byte, key_certificate.KEYCERT_SIGN_ED25519_SIZE)
 
-	// CreateOfflineSignature must now REJECT RedDSA signing.  Standard Ed25519
-	// signatures are not spec-compliant for RedDSA (no randomised per-message nonces).
-	t.Run("reddsa_create_returns_error", func(t *testing.T) {
-		_, cerr := CreateOfflineSignature(
-			expires,
-			key_certificate.KEYCERT_SIGN_REDDSA_ED25519,
-			transientKey,
-			privKey,
-			signature.SIGNATURE_TYPE_REDDSA_SHA512_ED25519,
-		)
-		require.Error(t, cerr, "CreateOfflineSignature should reject RedDSA type")
-		assert.Contains(t, cerr.Error(), "not implemented",
-			"error should mention 'not implemented' so callers use a dedicated RedDSA library")
-	})
+	// CreateOfflineSignature now supports RedDSA (type 11) by converting the
+	// Ed25519 key with CONVERT_ED25519_PRIVATE and signing with the spec's
+	// randomized Red25519 scheme.
+	offlineSig, cerr := CreateOfflineSignature(
+		expires,
+		key_certificate.KEYCERT_SIGN_REDDSA_ED25519,
+		transientKey,
+		privKey,
+		signature.SIGNATURE_TYPE_REDDSA_SHA512_ED25519,
+	)
+	require.NoError(t, cerr, "CreateOfflineSignature should support RedDSA type 11")
 
-	t.Run("reddsa_verify_still_works_with_ed25519_sig", func(t *testing.T) {
-		// VerifySignature for RedDSA type 11 is valid: the curve is identical to
-		// Ed25519. Build a signed-data blob manually and sign with ed25519:
-		pubKey, priv2, keyErr := ed25519.GenerateKey(nil)
-		require.NoError(t, keyErr)
-		signedData := make([]byte, EXPIRES_SIZE+SIGTYPE_SIZE+len(transientKey))
-		binary.BigEndian.PutUint32(signedData[0:4], expires)
-		binary.BigEndian.PutUint16(signedData[4:6], key_certificate.KEYCERT_SIGN_REDDSA_ED25519)
-		copy(signedData[6:], transientKey)
-		sigBytes := ed25519.Sign(priv2, signedData)
-		offlineSig, newErr := NewOfflineSignature(
-			expires,
-			key_certificate.KEYCERT_SIGN_REDDSA_ED25519,
-			transientKey,
-			sigBytes,
-			signature.SIGNATURE_TYPE_REDDSA_SHA512_ED25519,
-		)
-		require.NoError(t, newErr)
-		valid, vErr := offlineSig.VerifySignature(pubKey)
-		assert.NoError(t, vErr)
-		assert.True(t, valid, "RedDSA verification uses Ed25519 curve: should succeed")
-	})
+	// Verify with the Red25519 public key (identity conversion of the point).
+	pubKey, err := cryptoRed25519.ConvertEd25519PublicKey(privKey.Public().(ed25519.PublicKey))
+	require.NoError(t, err)
+	valid, vErr := offlineSig.VerifySignature(pubKey)
+	assert.NoError(t, vErr)
+	assert.True(t, valid, "RedDSA signature created here should verify")
+
+	// Randomized nonces: two signatures over the same data differ.
+	other, cerr2 := CreateOfflineSignature(
+		expires,
+		key_certificate.KEYCERT_SIGN_REDDSA_ED25519,
+		transientKey,
+		privKey,
+		signature.SIGNATURE_TYPE_REDDSA_SHA512_ED25519,
+	)
+	require.NoError(t, cerr2)
+	assert.NotEqual(t, offlineSig.signature, other.signature,
+		"RedDSA signatures must be randomized (red25519.md: every signature differs)")
 }
 
 // =========================================================================

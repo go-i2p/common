@@ -365,11 +365,10 @@ Each package has a dedicated `log.go` file declaring its logger instance. The fo
 - **Go Version**: 1.26.8 or later (per the `go` directive in `go.mod`)
 - **I2P Specification**: 0.9.71 (page updated October 2026)
 - **Dependencies**:
-  - `github.com/go-i2p/crypto` - I2P cryptographic primitives
+  - `github.com/go-i2p/crypto` - I2P cryptographic primitives, including Ed25519,
+    Ed25519ph, ECDSA, RedDSA (`crypto/red25519`), ChaCha20, HKDF and hashing
   - `github.com/go-i2p/logger` - Structured logging wrapper
-  - `github.com/go-i2p/red25519` - RedDSA signatures
   - `github.com/samber/oops` - Enhanced error handling
-  - `golang.org/x/crypto` - Additional cryptographic primitives
 - **Test-only dependencies**:
   - `github.com/stretchr/testify` - Testing utilities
   - `go.step.sm/crypto` - Test key material

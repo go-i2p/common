@@ -452,7 +452,9 @@ func TestKeyCertificateFromCertificate_WithExcessPayload(t *testing.T) {
 
 // TestExcessPayloadRejected verifies that a Key Certificate whose payload is
 // longer than the exact expected size is rejected.
-// Per I2P spec: "implementers are cautioned to prohibit excess data in Certificates".
+// Per I2P spec (Certificate Notes): "Implementers are cautioned to prohibit
+// excess data in Certificates. The appropriate length for each certificate type
+// should be enforced."
 // Trigger: Ed25519/X25519 expects exactly 4-byte payload; a 5-byte payload must fail.
 func TestExcessPayloadRejected(t *testing.T) {
 	// Craft a valid Ed25519/X25519 key cert with one extra garbage byte in the payload.

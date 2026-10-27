@@ -21,7 +21,7 @@ semantics while using the I2P-specific character set.
 Usage patterns:
 
     - Encoding binary data for I2P network transmission
-    - Generating .b64.i2p destination addresses
+    - Base 64 of full Destinations, NTCP2/SSU2 keys, and I2CP secrets
     - Converting cryptographic keys to string representation
     - Serializing router information and network database entries
 
@@ -46,8 +46,8 @@ conflicts - "+" is replaced with "-" to ensure URL-safe encoding without
 percent-encoding The alphabet maintains the standard ordering: A-Z (0-25), a-z
 (26-51), 0-9 (52-61), - (62), ~ (63). This encoding is essential for I2P
 destination addresses, router identifiers, and network data structures. Example
-usage: Used in .b64.i2p addresses and binary data serialization across I2P
-protocols.
+usage: Base 64 of full Destinations, NTCP2/SSU2 keys, and I2CP secrets (the spec
+defines only the ".b32.i2p" hostname format, not ".b64.i2p").
 
 ```go
 var I2PEncoding *b64.Encoding = b64.NewEncoding(I2PEncodeAlphabet)

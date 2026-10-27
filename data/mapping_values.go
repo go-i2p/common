@@ -64,12 +64,11 @@ func (mv MappingValues) Add(key, value string) (MappingValues, error) {
 		"value": value,
 	}).Debug("Adding key-value pair to MappingValues")
 
-	// Reject empty keys (keys must be non-empty for lookup)
-	if key == "" {
-		log.WithFields(logger.Fields{"pkg": "data", "func": "MappingValues.Add"}).Error("Empty key not allowed in MappingValues")
-		return mv, oops.Errorf("empty key not allowed")
-	}
-	// Empty values are allowed per I2P spec: "Length may be 0"
+	// Empty keys and empty values are both permitted by the spec: the String
+	// section states "Length may be 0", and the Mapping Notes repeat that the
+	// "Length byte may be 0". The parse path accepts a zero-length key, so the
+	// constructor must too, otherwise a mapping parsed from the wire could not
+	// be rebuilt or extended.
 
 	// Validate and convert key
 	keyStr, err := NewI2PString(key)

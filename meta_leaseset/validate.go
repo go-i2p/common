@@ -54,6 +54,11 @@ func (mls *MetaLeaseSet) Validate() error {
 	if err := validateEntriesReservedFlagBits(mls.entries); err != nil {
 		return err
 	}
+	// Spec: the structure ends with a Signature over the preceding bytes; a
+	// missing or empty signature would serialize a record peers cannot verify.
+	if err := mls.signature.Validate(); err != nil {
+		return oops.Wrapf(err, "MetaLeaseSet has an invalid signature")
+	}
 	// Spec: the options mapping must be sorted by key so the signature is invariant.
 	return validateOptionsSorted(mls.options)
 }
@@ -108,6 +113,22 @@ func validateEntriesReservedFlagBits(entries []MetaLeaseSetEntry) error {
 		}
 	}
 	return nil
+}
+
+// warnIfEntryReservedFlagBits logs non-zero MetaLease entry flag bits 23-4 on
+// inbound data without rejecting it. The spec phrases those bits as a producer
+// obligation ("set to 0 for compatibility with future uses"), and the raw bytes
+// are preserved for round-trip, so an inbound entry that sets them is kept.
+func warnIfEntryReservedFlagBits(entry *MetaLeaseSetEntry, entryIndex int) {
+	if entry.flags[0] == 0 && entry.flags[1] == 0 && entry.flags[2]&0xF0 == 0 {
+		return
+	}
+	log.WithFields(logger.Fields{
+		"pkg":         "meta_leaseset",
+		"func":        "parseSingleEntry",
+		"entry_index": entryIndex,
+		"flags":       entry.flags[:],
+	}).Warn("MetaLease entry has non-zero reserved flag bits (bits 23-4 should be 0)")
 }
 
 // warnIfReservedFlagsSet logs the presence of reserved header bits on inbound

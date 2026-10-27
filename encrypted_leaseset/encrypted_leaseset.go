@@ -359,8 +359,10 @@ func (els *EncryptedLeaseSet) bytesWithoutSignature() ([]byte, error) {
 	// flags (2 bytes)
 	result = rootcommon.AppendBigEndianUint16(result, els.flags)
 
-	// offline signature (if present)
-	if els.offlineSignature != nil {
+	// offline signature, present only when the OFFLINE_KEYS flag is set; the
+	// wire format keys off the flag rather than the pointer so the parser can
+	// round-trip whatever the flags advertise.
+	if (els.flags&ENCRYPTED_LEASESET_FLAG_OFFLINE_KEYS) != 0 && els.offlineSignature != nil {
 		result = append(result, els.offlineSignature.Bytes()...)
 	}
 

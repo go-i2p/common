@@ -41,10 +41,10 @@ func TestI2PAlphabetCorrectness(t *testing.T) {
 		}
 	})
 
-	t.Run("matches RFC 3548 lowercase", func(t *testing.T) {
+	t.Run("matches RFC 4648 lowercase", func(t *testing.T) {
 		expected := "abcdefghijklmnopqrstuvwxyz234567"
 		assert.Equal(t, expected, I2PEncodeAlphabet,
-			"alphabet must match RFC 3548 lowercase base32")
+			"alphabet must match RFC 4648 lowercase base32")
 	})
 }
 

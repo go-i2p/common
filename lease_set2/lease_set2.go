@@ -157,6 +157,14 @@ func (ls2 *LeaseSet2) Bytes() ([]byte, error) {
 		return nil, err
 	}
 
+	// The spec requires a trailing Signature over the preceding bytes. An empty
+	// signature (a zero-value Signature) would serialize a record that peers
+	// cannot verify and that misaligns with the signed payload, so it is
+	// rejected here rather than emitted.
+	if ls2.signature.Len() == 0 {
+		return nil, oops.Errorf("LeaseSet2 has no signature to serialize")
+	}
+
 	// Add signature
 	result := content
 	result = append(result, ls2.signature.Bytes()...)
@@ -185,7 +193,9 @@ func (ls2 *LeaseSet2) Bytes() ([]byte, error) {
 //  5. If flags bit 0 set, parse offline signature (variable length)
 //  6. Parse options mapping (variable length, 2+ bytes)
 //  7. Parse encryption keys (1+ keys, variable length)
-//  8. Parse Lease2 structures (0+ leases, 40 bytes each)
+//  8. Parse Lease2 structures (1+ leases, 40 bytes each; the Contents table
+//     allows 0 <= num <= 16, but the LeaseSet Notes require at least one Lease
+//     for all LeaseSet2 variants, so num == 0 is rejected)
 //  9. Parse signature (variable length based on signature type)
 //
 // Returns error if:
@@ -214,6 +224,17 @@ func ReadLeaseSet2(data []byte) (ls2 LeaseSet2, remainder []byte, err error) {
 		}).Warn("LeaseSet2 has non-zero reserved flag bits (bits 15-3 should be 0)")
 	}
 
+	// Producer-side bound ("Maximum actual expires time is about 660 (11
+	// minutes) for LeaseSet2"): logged, not rejected, on the inbound path.
+	if ls2.expires > LEASESET2_TYPICAL_MAX_EXPIRES {
+		log.WithFields(logger.Fields{
+			"pkg":            "lease_set2",
+			"func":           "ReadLeaseSet2",
+			"expires_offset": ls2.expires,
+			"maximum":        LEASESET2_TYPICAL_MAX_EXPIRES,
+		}).Warn("LeaseSet2 expires offset exceeds the typical LeaseSet2 maximum (about 660 seconds)")
+	}
+
 	// BLINDED (bit 2) without UNPUBLISHED (bit 1) is a convention enforced on
 	// outbound construction (see validateOfflineSignatureFlags), not a
 	// requirement of the common-structures specification, which defines the two
@@ -236,8 +257,11 @@ func ReadLeaseSet2(data []byte) (ls2 LeaseSet2, remainder []byte, err error) {
 		"flags":     ls2.flags,
 	}).Debug("Parsed LeaseSet2 header")
 
-	// Spec: "LS2 options MUST be sorted by key, so the signature is invariant."
-	// Lenient parse: warn if unsorted, but don't reject. Strict validation happens in Validate().
+	// Spec: "The options mapping, if the size is greater than one, must be
+	// sorted by key, so the signature is invariant." ParseEmbeddedMapping above
+	// already rejects an unsorted mapping as a hard parse error (this library
+	// re-serializes options in canonical order, so an unsorted record could
+	// never verify). The call below is therefore defense-in-depth logging only.
 	warnIfOptionsUnsorted(ls2.options)
 
 	remainder, err = parseKeysLeasesAndSignature(&ls2, data)
@@ -635,7 +659,9 @@ func parseSignatureAndFinalize(ls2 *LeaseSet2, data []byte) ([]byte, error) {
 //   - offlineSig: Optional offline signature (nil if not using offline keys)
 //   - options: Service discovery options mapping (can be nil for no options)
 //   - encryptionKeys: List of encryption keys (1-16 keys required)
-//   - leases: List of Lease2 structures (0-16 leases allowed)
+//   - leases: List of Lease2 structures (1-16 required; the spec's Contents table
+//     says 0 <= num <= 16, but the LeaseSet Notes require at least one Lease for
+//     every LeaseSet2 variant)
 //   - signingKey: Private key for signing the LeaseSet2
 //
 // Returns:
@@ -784,12 +810,22 @@ func validateDestinationSize(dest destination.Destination) error {
 }
 
 // validateExpiresOffset validates that the expiration offset is within allowed range.
-// Note: The expires field is uint16, so it is naturally bounded to 0-65535 (the full
-// range of LEASESET2_MAX_EXPIRES_OFFSET). No runtime check is needed, but we retain
-// this function as a validation step placeholder and for documentation clarity.
+// Note: LeaseSet2Header Notes state "Maximum actual expires time is about 660
+// (11 minutes) for LeaseSet2 and 65535 (the full 18.2 hours) for
+// MetaLeaseSet." That is a producer-side obligation phrased with "about", so
+// this library enforces LEASESET2_TYPICAL_MAX_EXPIRES on the outbound path
+// (constructors and Validate) and only logs when parsing inbound data, per the
+// "Inbound Parsing vs. Outbound Publishing" policy. The field width itself
+// still bounds the value to 0-65535.
 func validateExpiresOffset(expiresOffset uint16) error {
-	// uint16 is naturally bounded to 0-65535, which equals LEASESET2_MAX_EXPIRES_OFFSET.
-	// No runtime check needed.
+	if expiresOffset > LEASESET2_TYPICAL_MAX_EXPIRES {
+		return oops.
+			Code("expires_offset_out_of_range").
+			With("expires_offset", expiresOffset).
+			With("maximum", LEASESET2_TYPICAL_MAX_EXPIRES).
+			Errorf("expires offset %d exceeds the LeaseSet2 maximum of about %d seconds (11 minutes)",
+				expiresOffset, LEASESET2_TYPICAL_MAX_EXPIRES)
+	}
 	return nil
 }
 
@@ -813,7 +849,10 @@ func validateOfflineSignatureFlags(flags uint16, offlineSig *offline_signature.O
 			Code("unexpected_offline_signature").
 			Errorf("offline signature provided but OFFLINE_KEYS flag not set")
 	}
-	// Spec: "If [BLINDED] is set, bit 1 (UNPUBLISHED) should also be set."
+	// Publishing convention only (see the doc comment above): common-structures
+	// defines bit 1 (unpublished) and bit 2 (blinded) independently and does NOT
+	// state that one requires the other. Enforced on outbound construction,
+	// logged on inbound parsing.
 	if (flags&LEASESET2_FLAG_BLINDED) != 0 && (flags&LEASESET2_FLAG_UNPUBLISHED) == 0 {
 		return oops.
 			Code("blinded_requires_unpublished").

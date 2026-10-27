@@ -129,7 +129,12 @@ func isAllZeros(b []byte) bool {
 
 // parseTransportType parses the transport type field from data.
 // Returns remaining data after parsing and any error encountered.
-// Rejects zero-length transport style strings as invalid per spec.
+//
+// Rejects zero-length transport style strings: this structure's spec types the
+// field as "String, 1-256 bytes", which requires at least one content byte, and
+// that structure-specific statement is taken as controlling over the generic
+// String section's "Length may be 0". The consequence is that a wire record
+// carrying an empty transport style is rejected rather than round-tripped.
 func parseTransportType(ra *RouterAddress, routerData []byte) ([]byte, error) {
 	transportType, remainder, err := data.ReadI2PString(routerData)
 	if err != nil {

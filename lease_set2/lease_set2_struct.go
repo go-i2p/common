@@ -116,6 +116,9 @@ signature :: Signature
 Notes:
 - The signature is over the data above, PREPENDED with the single byte containing
   the DatabaseStore type (3).
+- Although the Contents table allows 0 <= num <= 16, the spec's LeaseSet Notes
+  state "All LeaseSet2 variants require at least one Lease.", so num must be >= 1
+  (enforced in validateLeaseCount and the constructors).
 - Encryption keys are in order of server preference, most-preferred first.
 - For published leasesets, clients should honor server preference when selecting
   encryption method.
@@ -143,7 +146,7 @@ type LeaseSet2 struct {
 	offlineSignature *offline_signature.OfflineSignature // Optional offline signature (present if flags bit 0 set)
 	options          common.Mapping                      // Options mapping for service records (2+ bytes, sorted by key)
 	encryptionKeys   []EncryptionKey                     // Encryption keys (1-16 keys)
-	leases           []lease.Lease2                      // Lease2 structures (0-16 leases, 40 bytes each with 4-byte timestamp)
+	leases           []lease.Lease2                      // Lease2 structures (1-16 leases, 40 bytes each with 4-byte timestamp)
 	signature        sig.Signature                       // Signature by destination or transient key
 }
 
@@ -193,6 +196,10 @@ func (ls2 *LeaseSet2) Validate() error {
 		return err
 	}
 	if err := validateReservedFlagsAndLeases(ls2.flags, ls2.leases); err != nil {
+		return err
+	}
+	// Spec: "Maximum actual expires time is about 660 (11 minutes) for LeaseSet2".
+	if err := validateExpiresOffset(ls2.expires); err != nil {
 		return err
 	}
 	// Spec: the structure ends with a Signature over the preceding bytes; a

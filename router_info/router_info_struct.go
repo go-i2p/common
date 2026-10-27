@@ -104,14 +104,14 @@ signature :: Signature
 //
 // https://geti2p.net/spec/common-structures#routerinfo
 type RouterInfo struct {
-	router_identity    *router_identity.RouterIdentity
-	published          *data.Date
-	size               *data.Integer
-	addresses          []*router_address.RouterAddress
-	peer_size          *data.Integer
-	peer_hashes        []byte // raw peer-hash bytes (peer_size * 32) carried verbatim
-	options            *data.Mapping
-	signature          *signature.Signature
+	router_identity *router_identity.RouterIdentity
+	published       *data.Date
+	size            *data.Integer
+	addresses       []*router_address.RouterAddress
+	peer_size       *data.Integer
+	peer_hashes     []byte // raw peer-hash bytes (peer_size * 32) carried verbatim
+	options         *data.Mapping
+	signature       *signature.Signature
 	// Received signed payload: the exact bytes that preceded the signature on
 	// the wire, captured at parse time. Verification prefers these over
 	// re-serialization because Mapping serialization canonicalizes (re-sorts)

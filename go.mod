@@ -5,11 +5,9 @@ go 1.26.8
 require (
 	github.com/go-i2p/crypto v0.1.70002-0.20261019043955-76159fdc57da
 	github.com/go-i2p/logger v0.1.70001
-	github.com/go-i2p/red25519 v0.0.0-20260908204607-9444de34c638
 	github.com/samber/oops v1.23.1
 	github.com/stretchr/testify v1.12.1
 	go.step.sm/crypto v0.90.0
-	golang.org/x/crypto v0.57.0
 )
 
 require (
@@ -22,11 +20,12 @@ require (
 	go.opentelemetry.io/otel v1.46.0 // indirect
 	go.opentelemetry.io/otel/trace v1.46.0 // indirect
 	go.yaml.in/yaml/v3 v3.0.5 // indirect
+	golang.org/x/crypto v0.57.0 // indirect
 	golang.org/x/sys v0.48.0 // indirect
 	golang.org/x/text v0.42.0 // indirect
 )
 
-// replace github.com/go-i2p/crypto => ../crypto
+replace github.com/go-i2p/crypto => ../crypto
 
 // replace github.com/go-i2p/logger => ../logger
 

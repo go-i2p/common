@@ -1,12 +1,13 @@
 // Package base32 implements utilities for encoding and decoding text using I2P's alphabet.
 //
 // This package provides I2P-specific base32 encoding/decoding functionality using
-// RFC 3548 with lowercase characters as specified by the I2P protocol. The implementation
+// the standard base32 alphabet (RFC 4648, which obsoleted RFC 3548) with lowercase
+// characters as specified by the I2P protocol. The implementation
 // supports encoding binary data to human-readable strings for I2P destinations, router
 // identifiers, and other network components that require base32 representation.
 //
 // Key features:
-// - I2P-compatible base32 alphabet using RFC 3548 lowercase (a-z, 2-7)
+// - I2P-compatible base32 alphabet using lowercase (a-z, 2-7) per RFC 4648
 // - Consistent lowercase encoding for .b32.i2p domain compatibility
 // - Error handling for invalid input data during decoding operations
 // - High-performance encoding/decoding suitable for network operations

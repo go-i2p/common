@@ -5,7 +5,7 @@ import "github.com/go-i2p/logger"
 
 // EncodeToString encodes binary data to a base32 string using I2P's encoding alphabet.
 // It converts arbitrary byte data into a human-readable base32 string representation
-// using the I2P-specific lowercase alphabet defined in RFC 3548.
+// using the I2P-specific lowercase alphabet (RFC 4648 base32, lowercased).
 //
 // Note: EncodeToString(nil) and EncodeToString([]byte{}) both return "" without error.
 // These two cases are indistinguishable in the output. Use EncodeToStringSafe for

@@ -8,6 +8,7 @@ import (
 	"github.com/go-i2p/common/data"
 	"github.com/go-i2p/common/key_certificate"
 	sig "github.com/go-i2p/common/signature"
+	cryptoRed25519 "github.com/go-i2p/crypto/red25519"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -235,6 +236,80 @@ func TestSignLeaseSetData_RedDSA(t *testing.T) {
 	sigBytes, err := SignLeaseSetData(priv, data, sigType)
 	assert.NoError(t, err)
 	assert.Len(t, sigBytes, 64) // RedDSA produces 64-byte signatures
+
+	// The signature must verify under the spec's Red25519 VERIFY rule (HStar
+	// challenge + cofactor equation), not merely be 64 bytes long.
+	pub, err := cryptoRed25519.ConvertEd25519PublicKey(priv.Public().(ed25519.PublicKey))
+	require.NoError(t, err)
+	verifier, err := pub.NewVerifier()
+	require.NoError(t, err)
+	assert.NoError(t, verifier.Verify(data, sigBytes),
+		"RedDSA signature must verify with the Red25519 verifier")
+
+	// And it must NOT verify as plain Ed25519: the two schemes use different
+	// challenge computations, so a type 11 record can never be verified with
+	// ed25519.Verify (this is the interoperability property of the fix).
+	assert.False(t, ed25519.Verify(priv.Public().(ed25519.PublicKey), data, sigBytes),
+		"RedDSA signature must not pass Ed25519 verification")
+}
+
+// TestSignLeaseSetData_RedDSAIsRandomized asserts red25519.md: "Because of the
+// random data, every Red25519 signature is different, even when signing the same
+// data with the same key." Deterministic signing would let an observer correlate
+// re-publications of a blinded lease set.
+func TestSignLeaseSetData_RedDSAIsRandomized(t *testing.T) {
+	_, priv, err := ed25519.GenerateKey(nil)
+	require.NoError(t, err)
+
+	data := []byte("same data, same key")
+	sigType := uint16(sig.SIGNATURE_TYPE_REDDSA_SHA512_ED25519)
+
+	s1, err := SignLeaseSetData(priv, data, sigType)
+	require.NoError(t, err)
+	s2, err := SignLeaseSetData(priv, data, sigType)
+	require.NoError(t, err)
+
+	assert.NotEqual(t, s1, s2, "RedDSA signatures must be randomized")
+
+	// Both must still verify.
+	pub, err := cryptoRed25519.ConvertEd25519PublicKey(priv.Public().(ed25519.PublicKey))
+	require.NoError(t, err)
+	verifier, err := pub.NewVerifier()
+	require.NoError(t, err)
+	assert.NoError(t, verifier.Verify(data, s1))
+	assert.NoError(t, verifier.Verify(data, s2))
+}
+
+// TestSignLeaseSetData_RedDSAAcceptsScalarKey covers the blinded-key form: a
+// publisher of a blinded EncryptedLeaseSet holds the 32-byte Red25519 scalar a',
+// not an Ed25519 key, and must be able to sign with it directly.
+func TestSignLeaseSetData_RedDSAAcceptsScalarKey(t *testing.T) {
+	sk, err := cryptoRed25519.NewRed25519PrivateKey(
+		// a deterministic non-zero scalar for the test
+		[]byte{
+			0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+			0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+			0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+			0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x10,
+		},
+	)
+	require.NoError(t, err)
+
+	data := []byte("blinded leaseset bytes")
+	sigBytes, err := SignLeaseSetData(sk, data, uint16(sig.SIGNATURE_TYPE_REDDSA_SHA512_ED25519))
+	require.NoError(t, err)
+	require.Len(t, sigBytes, 64)
+
+	pub, err := sk.Public()
+	require.NoError(t, err)
+	verifier, err := pub.NewVerifier()
+	require.NoError(t, err)
+	assert.NoError(t, verifier.Verify(data, sigBytes))
+
+	// The same scalar as raw bytes must behave identically.
+	sigBytes2, err := SignLeaseSetData(sk.Bytes(), data, uint16(sig.SIGNATURE_TYPE_REDDSA_SHA512_ED25519))
+	require.NoError(t, err)
+	assert.NoError(t, verifier.Verify(data, sigBytes2))
 }
 
 func TestSignLeaseSetData_Ed25519ph(t *testing.T) {

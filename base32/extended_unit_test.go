@@ -126,9 +126,9 @@ func TestEncodeDecodeRoundTrip_PerClientAuthOnly(t *testing.T) {
 }
 
 func TestEncodeDecodeRoundTrip_MinimalViableKey(t *testing.T) {
-	// Minimum viable key: for 1-byte sigtypes (3-byte header), the key must
-	// be at least 30 bytes so total data > 32 bytes → >52 base32 chars.
-	key := make([]byte, 30)
+	// Minimum viable key: for 1-byte sigtypes (3-byte header), the spec's
+	// 35-decoded-byte minimum requires a 32-byte key (3 + 32 = 35 → 56 chars).
+	key := make([]byte, 32)
 	for i := range key {
 		key[i] = byte(i + 0x10)
 	}

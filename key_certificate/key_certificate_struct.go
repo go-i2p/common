@@ -8,6 +8,7 @@ import (
 	"github.com/go-i2p/crypto/ed25519"
 	"github.com/go-i2p/crypto/ed25519ph"
 	elgamal "github.com/go-i2p/crypto/elg"
+	"github.com/go-i2p/crypto/red25519"
 	i2prsa "github.com/go-i2p/crypto/rsa"
 	"github.com/go-i2p/crypto/types"
 	"github.com/samber/oops"
@@ -169,7 +170,10 @@ func validatePayloadLengthAgainstKeyTypes(certData []byte, spkType, cpkType data
 		return oops.Errorf("key certificate payload too short: need %d bytes for types (sig=%d, crypto=%d), got %d",
 			expectedLen, sigType, crypType, len(certData))
 	}
-	// Per I2P spec: "implementers are cautioned to prohibit excess data in Certificates"
+	// Key Certificate Notes: "Implementers are cautioned to prohibit excess data
+	// in Key Certificates." The payload holds exactly the excess key bytes for
+	// this certificate's signing/crypto types, so more than expectedLen is
+	// rejected rather than carried forward.
 	if len(certData) > expectedLen {
 		return oops.Errorf("key certificate payload too long: expected %d bytes for types (sig=%d, crypto=%d), got %d",
 			expectedLen, sigType, crypType, len(certData))
@@ -604,11 +608,38 @@ func constructEd25519PHKey(data []byte) (types.SigningPublicKey, error) {
 }
 
 // constructRedDSAKey constructs a RedDSA (randomized EdDSA) signing public key.
-// Per the I2P spec (0.9.39+), RedDSA-Ed25519 uses the same 32-byte Ed25519 curve
-// point format for public keys. This wrapper delegates to constructEd25519Key and
-// exists to decouple from any future divergence in the RedDSA key format.
+// Per red25519.md, Red25519 public keys use the same 32-byte Ed25519 curve point
+// encoding (ENCODE_POINT / CONVERT_ED25519_PUBLIC is the identity), but the
+// verification RULE differs: VERIFY uses the domain-separated HStar challenge and
+// the cofactor (multiply-by-8) equation, not plain Ed25519's. Returning a
+// red25519.Red25519PublicKey (rather than delegating to constructEd25519Key) is
+// what makes SigningPublicKey.NewVerifier() produce the spec's verifier for type
+// 11 records; an Ed25519 verifier would accept/reject the wrong byte strings.
+//
+// Like constructEd25519Key, this only length-checks the 32-byte field; whether the
+// bytes decode to a valid Edwards point is enforced at verification time (the
+// spec's VERIFY does "R/vk = DECODE_POINT; if invalid: return false"). This keeps
+// parsing permissive and round-trippable, matching the repo's parse-vs-verify
+// convention, while still rejecting a malformed key when it is actually used.
 func constructRedDSAKey(data []byte) (types.SigningPublicKey, error) {
-	return constructEd25519Key(data)
+	if len(data) < KEYCERT_SIGN_REDDSA_ED25519_SIZE {
+		return nil, oops.Errorf("insufficient data for RedDSA key: expected at least %d bytes, got %d",
+			KEYCERT_SIGN_REDDSA_ED25519_SIZE, len(data))
+	}
+
+	var keyBytes []byte
+	if len(data) >= KEYCERT_SPK_SIZE {
+		// Padded format: extract key from the end of the 128-byte field
+		keyBytes = data[KEYCERT_SPK_SIZE-KEYCERT_SIGN_REDDSA_ED25519_SIZE : KEYCERT_SPK_SIZE]
+	} else {
+		// Raw key data (exactly 32 bytes)
+		keyBytes = data[:KEYCERT_SIGN_REDDSA_ED25519_SIZE]
+	}
+
+	// Construct the typed key without point validation (deferred to verify).
+	reddsa_key := red25519.Red25519PublicKey(append([]byte(nil), keyBytes...))
+	log.WithFields(logger.Fields{"pkg": "key_certificate", "func": "constructRedDSAKey"}).Debug("Constructed Red25519PublicKey")
+	return reddsa_key, nil
 }
 
 // ConstructSigningPublicKey returns a SigningPublicKey constructed using any excess data that may be stored in the KeyCertificate.

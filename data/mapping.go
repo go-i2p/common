@@ -405,8 +405,14 @@ func processNormalMappingData(mapping Mapping, remainder []byte, size *Integer, 
 
 	// Only report unconsumed bytes when the key-value parser completed cleanly.
 	// If mappingValueErrs is non-empty, remaining bytes are a consequence of the
-	// parse failure, not spec-prohibited excess data.
-	// Per spec: "Implementers are cautioned to prohibit excess data."
+	// parse failure, not a size mismatch.
+	//
+	// Spec basis (Mapping Contents/Notes): "A 2-byte size Integer followed by a
+	// series of String=String; pairs" where "size: Integer, 2 bytes, total number
+	// of bytes that follow". Bytes left inside the declared window after all
+	// pairs parse cleanly therefore contradict the declared size. (The separate
+	// "Implementers are cautioned to prohibit excess data" note applies to
+	// Certificate/Key Certificate payloads, not to Mapping.)
 	if len(mappingValueErrs) == 0 && len(innerRemainder) > 0 {
 		log.WithFields(logger.Fields{
 			"pkg":            "data",
