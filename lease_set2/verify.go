@@ -53,24 +53,20 @@ func (ls2 *LeaseSet2) Verify() error {
 }
 
 // verifyOfflineSignatureChain checks that the offline signature's transient key
-// was legitimately authorized by the Destination's long-term signing key.
-// This prevents an attacker from substituting an arbitrary transient key.
+// was legitimately authorized by the Destination's long-term signing key and
+// that the transient key has not expired. This prevents an attacker from
+// substituting an arbitrary transient key.
 func (ls2 *LeaseSet2) verifyOfflineSignatureChain() error {
 	if ls2.offlineSignature == nil {
-		return oops.Errorf("OFFLINE_KEYS flag set but offline signature is nil")
+		return oops.Errorf("LeaseSet2: OFFLINE_KEYS flag set but offline signature is nil")
 	}
 
 	destSigningKey, err := ls2.destination.SigningPublicKey()
 	if err != nil {
-		return oops.Errorf("failed to get destination signing public key: %w", err)
+		return oops.Errorf("LeaseSet2: failed to get destination signing public key: %w", err)
 	}
 
-	valid, err := ls2.offlineSignature.VerifySignature(destSigningKey.Bytes())
-	if err != nil {
-		return oops.Errorf("offline signature chain verification error: %w", err)
-	}
-	if !valid {
-		return oops.Errorf("offline signature chain invalid: transient key was not signed by destination key")
-	}
-	return nil
+	return rootcommon.VerifyOfflineSignatureChain(
+		ls2.offlineSignature, destSigningKey.Bytes(), "LeaseSet2",
+	)
 }

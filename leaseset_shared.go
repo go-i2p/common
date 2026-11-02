@@ -4,6 +4,7 @@ import (
 	"crypto/ed25519"
 	"encoding/binary"
 	"strings"
+	"time"
 
 	"github.com/go-i2p/common/data"
 	"github.com/go-i2p/common/destination"
@@ -196,12 +197,71 @@ func VerifyLeaseSetSignature(
 	return VerifySignatureData(dataToVerify, sigBytes, sigType, signingPubKey, typeName)
 }
 
+// VerifyOfflineSignatureChain checks that an offline signature's transient
+// signing key was legitimately authorized by the authorizing public key, and
+// that the transient key has not expired.
+//
+// Per the I2P spec (common-structures §OfflineSignature), the offline
+// signature field is "Signature of expires timestamp, transient sig type, and
+// public key, by the destination public key". A verifier MUST check that
+// signature before trusting the transient key it carries; otherwise any
+// attacker can substitute an arbitrary transient key, sign the enclosing
+// structure with it, and have the structure verify as if it came from the
+// victim identity.
+//
+// The authorizing key is the Destination's long-term signing key for
+// LeaseSet2 and MetaLeaseSet, and the blinded signing public key for an
+// EncryptedLeaseSet (encryptedleaseset spec: "Over expires timestamp, transient
+// sig type, and transient public key. Verified with the blinded public key.").
+// Pass the key bytes for whichever identity the offline signature claims.
+//
+// The offline signature's own destinationSigType selects the verification
+// algorithm, so the caller does not have to supply it.
+//
+// Returns an error if the offline signature is nil, structurally invalid,
+// cryptographically invalid, unverifiable (e.g. an unsupported destination
+// signature type), or expired.
+func VerifyOfflineSignatureChain(
+	offlineSig *offline_signature.OfflineSignature,
+	authorizingPublicKey []byte,
+	structName string,
+) error {
+	if offlineSig == nil {
+		return oops.Errorf("%s: offline keys flag set but offline signature is nil", structName)
+	}
+	if len(authorizingPublicKey) == 0 {
+		return oops.Errorf("%s: no authorizing public key to verify offline signature against", structName)
+	}
+
+	valid, err := offlineSig.VerifySignature(authorizingPublicKey)
+	if err != nil {
+		return oops.Wrapf(err, "%s: offline signature verification error", structName)
+	}
+	if !valid {
+		return oops.Errorf("%s: offline signature invalid: transient key was not signed by the authorizing key", structName)
+	}
+
+	// The authorization is time-bounded. An expired transient key must not be
+	// accepted even when its signature is cryptographically valid, or a leaked
+	// offline signature bundle could be replayed forever.
+	if offlineSig.IsExpired() {
+		return oops.Errorf("%s: offline signature expired at %s",
+			structName, offlineSig.ExpiresTime().Format(time.RFC3339))
+	}
+	return nil
+}
+
 // ResolveSigningPublicKey determines which signing public key to use for
 // lease set verification, consolidating the identical signingPublicKeyForVerification
 // logic from lease_set2 and meta_leaseset packages.
 // If offline keys are present, the transient signing public key from the
 // OfflineSignature is constructed and returned. Otherwise, the Destination's
 // signing public key is returned.
+//
+// SECURITY: this returns the transient key without checking that the offline
+// signature authorizing it is valid. Callers that take the hasOfflineKeys
+// branch MUST call VerifyOfflineSignatureChain first, otherwise an attacker
+// can supply an arbitrary transient key and forge the enclosing structure.
 func ResolveSigningPublicKey(
 	hasOfflineKeys bool,
 	offlineSig *offline_signature.OfflineSignature,
