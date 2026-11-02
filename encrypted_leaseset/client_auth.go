@@ -102,6 +102,22 @@ func parseAuthFlag(flag byte) (byte, error) {
 	}
 }
 
+// ValidateClientAuthConfig reports whether cfg is a usable per-client
+// authorization configuration: a known auth type with at least one
+// correctly-sized key for that scheme. A nil cfg is valid and means "no
+// per-client authorization" (auth type 0), matching how the encryption path
+// treats it.
+//
+// Exported so a publisher can reject a bad client list when it is supplied,
+// rather than failing later at LeaseSet regeneration time.
+// EncryptInnerLeaseSet2WithAuth applies the same rules internally.
+func ValidateClientAuthConfig(cfg *ClientAuthConfig) error {
+	if cfg == nil {
+		return nil
+	}
+	return validateClientAuthConfig(cfg)
+}
+
 // validateClientAuthConfig validates a server-side ClientAuthConfig.
 func validateClientAuthConfig(cfg *ClientAuthConfig) error {
 	switch cfg.AuthType {
