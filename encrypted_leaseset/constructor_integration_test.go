@@ -3,8 +3,6 @@ package encrypted_leaseset
 import (
 	"testing"
 
-	"github.com/go-i2p/crypto/rand"
-
 	"github.com/go-i2p/common/key_certificate"
 	goi2ped25519 "github.com/go-i2p/crypto/ed25519"
 	cryptoRed25519 "github.com/go-i2p/crypto/red25519"
@@ -20,11 +18,11 @@ import (
 func TestNewEncryptedLeaseSetRoundTrip(t *testing.T) {
 	ls2, encryptedData, subcredential, published := createTestEncryptionContext(t)
 
-	_, signingPriv, err := goi2ped25519.GenerateEd25519KeyPair()
+	// The public key the record carries and the key that signs it are a pair.
+	blindedPub, signingPriv, err := goi2ped25519.GenerateEd25519KeyPair()
 	require.NoError(t, err)
 
-	blindedKey := make([]byte, 32)
-	_, _ = rand.Read(blindedKey)
+	blindedKey := blindedPub.Bytes()
 
 	original, err := NewEncryptedLeaseSet(
 		key_certificate.KEYCERT_SIGN_ED25519,
@@ -63,11 +61,10 @@ func TestNewEncryptedLeaseSetRoundTrip(t *testing.T) {
 func TestEncryptedLeaseSetValidateViaConstructor(t *testing.T) {
 	_, encryptedData, _, published := createTestEncryptionContext(t)
 
-	_, signingPriv, err := goi2ped25519.GenerateEd25519KeyPair()
+	blindedPub, signingPriv, err := goi2ped25519.GenerateEd25519KeyPair()
 	require.NoError(t, err)
 
-	blindedKey := make([]byte, 32)
-	_, _ = rand.Read(blindedKey)
+	blindedKey := blindedPub.Bytes()
 
 	els, err := NewEncryptedLeaseSet(
 		key_certificate.KEYCERT_SIGN_ED25519,

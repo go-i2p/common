@@ -124,9 +124,22 @@ fmt.Printf("Number of leases: %d\n", len(leases))
 
 ### Constructing and Encrypting
 
+Derive the blinded destination and its matching blinded signing scalar in one
+call, so the key pair cannot come from different `alpha` values:
+
 ```go
-// Derive subcredential
-subcredential := encrypted_leaseset.DeriveSubcredential(destSigningPubKey, blindedPubKey)
+// A' (blinded destination) and a' (blinded scalar) from a single alpha.
+blindedDest, blindedPriv, err := encrypted_leaseset.CreateBlindedDestinationWithPrivateKey(
+    dest, signingPrivKey, secret, time.Now(),
+)
+if err != nil {
+    log.Fatal("Blinding failed:", err)
+}
+
+// Derive subcredential from the destination signing key A and the blinded key A'.
+subcredential := encrypted_leaseset.DeriveSubcredential(
+    destSigningPubKey, sigTypeA, blindedSigningPubKey, sigTypeBlinded,
+)
 
 // Encrypt the inner LeaseSet2
 published := uint32(time.Now().Unix())
@@ -137,16 +150,15 @@ if err != nil {
     log.Fatal("Encryption failed:", err)
 }
 
-// Build the EncryptedLeaseSet
-els, err := encrypted_leaseset.NewEncryptedLeaseSet(
-    key_certificate.KEYCERT_SIGN_ED25519,
-    blindedPubKey,
+// Build the EncryptedLeaseSet, signed with a' and carrying A'.
+els, err := encrypted_leaseset.NewEncryptedLeaseSetFromDestination(
+    blindedDest,
     published,
     600,     // expires offset (seconds)
     0,       // flags
     nil,     // offline signature (nil if not used)
     encryptedData,
-    signingPrivKey,
+    blindedPriv,
 )
 if err != nil {
     log.Fatal("Construction failed:", err)
@@ -155,6 +167,12 @@ if err != nil {
 // Serialize for network transmission
 wireBytes, err := els.Bytes()
 ```
+
+Do not sign an EncryptedLeaseSet with the destination's long-term signing key.
+The constructor rejects that: the signature would not verify against the blinded
+key the structure publishes, and a record that *does* verify under the long-term
+key is linkable to the destination by anyone reading the netdb, which defeats the
+purpose of encrypted LeaseSets.
 
 ## Security Considerations
 
@@ -169,7 +187,13 @@ keydata = A || stA || stA'
 seed    = HKDF(SHA256("I2PGenerateAlpha" || keydata), yyyyMMdd || secret, "i2pblinding1", 64)
 alpha   = seed mod L
 A'      = A + [alpha]B
+a'      = (CONVERT_ED25519_PRIVATE(a) + alpha) mod L
 ```
+
+The outer signature is made with `a'` and verified with `A'`, both at signature
+type 11 (RedDSA). `CreateBlindedDestinationWithPrivateKey` returns that pair from
+a single `alpha`; deriving the two halves separately risks a mismatched pair,
+which produces a structure no conforming floodfill will store.
 
 `alpha` is bound to the destination's signing public key `A` and its signature
 type, and is recomputed each day (UTC). This ensures:
@@ -311,6 +335,9 @@ func EncryptInnerLeaseSet2WithAuth(ls2 *lease_set2.LeaseSet2, subcredential [32]
 // Blinding
 func CreateBlindedDestination(dest destination.Destination, secret []byte,
     date time.Time) (destination.Destination, error)
+func CreateBlindedDestinationWithPrivateKey(dest destination.Destination,
+    signingPrivateKey []byte, secret []byte, date time.Time)
+    (destination.Destination, red25519.Red25519PrivateKey, error)
 
 // Serialization
 func (els *EncryptedLeaseSet) Bytes() ([]byte, error)

@@ -143,10 +143,25 @@
 // case the page describes ("The unblinded leaseset is signed by the unblinded
 // Ed25519 or Red25519 signing private key ... as usual").
 //
-// To publish a blinded lease set, pass the blinded Red25519 scalar a' (from
-// kdf.DeriveBlindingFactorI2P plus red25519.BlindPrivateKey in
-// github.com/go-i2p/crypto) as the signing key with sigType 11; an Ed25519
-// private key is converted with the spec's CONVERT_ED25519_PRIVATE.
+// To publish a blinded lease set, pass the blinded Red25519 scalar a' as the
+// signing key with sigType 11, together with the blinded public key A' it
+// corresponds to. [CreateBlindedDestinationWithPrivateKey] returns that pair
+// from one alpha, so the destination and the signing key cannot disagree:
+//
+//	blindedDest, blindedPriv, err := CreateBlindedDestinationWithPrivateKey(
+//		dest, signingPrivateKey, secret, time.Now())
+//	els, err := NewEncryptedLeaseSetFromDestination(
+//		blindedDest, published, expiresOffset, 0, nil, encryptedInnerData, blindedPriv)
+//
+// [NewEncryptedLeaseSet] rejects a signing key that does not correspond to the
+// public key the structure publishes. That check is what keeps a publisher from
+// emitting a record signed with the destination's long-term key: such a record
+// fails verification against its own blinded key at a conforming floodfill, and
+// its signature links it back to the destination for anyone reading the netdb.
+//
+// Deriving the pair by hand (kdf.DeriveBlindingFactorI2P plus
+// red25519.BlindPublicKey/BlindPrivateKey) is possible but must use the same
+// alpha for both halves.
 //
 // Blinding and signing arithmetic are provided by github.com/go-i2p/crypto
 // (kdf.DeriveBlindingFactorI2P, red25519.BlindPrivateKey/BlindPublicKey,

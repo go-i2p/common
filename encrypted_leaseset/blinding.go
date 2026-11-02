@@ -8,6 +8,7 @@ import (
 	"github.com/go-i2p/common/keys_and_cert"
 	"github.com/go-i2p/crypto/ed25519"
 	"github.com/go-i2p/crypto/kdf"
+	cryptoRed25519 "github.com/go-i2p/crypto/red25519"
 	"github.com/samber/oops"
 )
 
@@ -26,6 +27,62 @@ var (
 	// ErrBlindingFailed indicates the blinding operation failed
 	ErrBlindingFailed = oops.Errorf("blinding operation failed")
 )
+
+// CreateBlindedDestinationWithPrivateKey creates a blinded destination AND the
+// blinded signing private key a' that corresponds to it.
+//
+// This is what a publisher of an EncryptedLeaseSet needs: the spec signs the
+// outer structure with the blinded private key, so the blinded destination and
+// the blinded scalar must come from the same alpha. Deriving them separately
+// invites exactly that divergence; here both are produced in one call.
+//
+// Returns the blinded destination (whose SigningPublicKey is A', declared type 11)
+// and the 32-byte Red25519 scalar a' = (CONVERT_ED25519_PRIVATE(a) + alpha) mod L,
+// ready to pass to [NewEncryptedLeaseSet] as the signing key.
+//
+// signingPrivateKey may be a 32-byte Ed25519 seed or Go's 64-byte expanded key.
+//
+// SECURITY: a' is derived from the destination's long-term signing key. It is
+// not the long-term key, and publishing a structure signed with the long-term
+// key instead deanonymizes the destination.
+func CreateBlindedDestinationWithPrivateKey(
+	dest destination.Destination,
+	signingPrivateKey []byte,
+	secret []byte,
+	date time.Time,
+) (destination.Destination, cryptoRed25519.Red25519PrivateKey, error) {
+	alpha, err := deriveBlindingAlpha(dest, secret, date)
+	if err != nil {
+		return destination.Destination{}, nil, err
+	}
+
+	pubKey, err := extractOriginalSigningKey(dest)
+	if err != nil {
+		return destination.Destination{}, nil, err
+	}
+
+	blindedPubKey, err := ed25519.BlindPublicKey(pubKey, alpha)
+	if err != nil {
+		return destination.Destination{}, nil, oops.Wrapf(ErrBlindingFailed, "failed to blind public key: %w", err)
+	}
+
+	blindedDest, err := assembleBlindedDestination(dest, blindedPubKey)
+	if err != nil {
+		return destination.Destination{}, nil, err
+	}
+
+	a, err := cryptoRed25519.ConvertEd25519PrivateKey(signingPrivateKey)
+	if err != nil {
+		return destination.Destination{}, nil, oops.Wrapf(ErrBlindingFailed, "CONVERT_ED25519_PRIVATE failed: %w", err)
+	}
+
+	aPrime, err := cryptoRed25519.BlindPrivateKey(a, cryptoRed25519.BlindingFactor(alpha))
+	if err != nil {
+		return destination.Destination{}, nil, oops.Wrapf(ErrBlindingFailed, "RANDOMIZE_PRIVATE failed: %w", err)
+	}
+
+	return blindedDest, aPrime, nil
+}
 
 // CreateBlindedDestination creates a blinded destination from an original destination,
 // secret, and date. This is the core operation for EncryptedLeaseSet privacy.
@@ -96,8 +153,8 @@ func validateBlindingSigType(dest destination.Destination) error {
 	return nil
 }
 
-// deriveBlindedPublicKey derives the spec-conformant blinding factor (alpha),
-// extracts the original signing key, and computes the blinded public key.
+// deriveBlindingAlpha computes the spec-conformant blinding factor (alpha) for a
+// destination on a given date.
 //
 // Per https://geti2p.net/spec/encryptedleaseset §"Blinding Calculations":
 //
@@ -106,9 +163,17 @@ func validateBlindingSigType(dest destination.Destination) error {
 //	alpha   = seed mod L
 //
 // kdf.DeriveBlindingFactorI2P implements exactly this construction, binding
-// alpha to the destination signing public key A and both signature types. The
-// blinded public key is then A' = A + [alpha]B (BLIND_PUBKEY).
-func deriveBlindedPublicKey(dest destination.Destination, secret []byte, date time.Time) ([32]byte, error) {
+// alpha to the destination signing public key A and both signature types. It is
+// the single source of alpha for this package: the blinded public key
+// (A' = A + [alpha]B) and the blinded private key (a' = (a + alpha) mod L) MUST
+// be produced from the same alpha, or the pair will not verify against each
+// other and every published EncryptedLeaseSet is rejected by a spec-following
+// floodfill. Both derivations go through here so they cannot diverge.
+func deriveBlindingAlpha(dest destination.Destination, secret []byte, date time.Time) ([32]byte, error) {
+	if err := validateBlindingSigType(dest); err != nil {
+		return [32]byte{}, err
+	}
+
 	pubKey, err := extractOriginalSigningKey(dest)
 	if err != nil {
 		return [32]byte{}, err
@@ -118,6 +183,23 @@ func deriveBlindedPublicKey(dest destination.Destination, secret []byte, date ti
 	alpha, err := kdf.DeriveBlindingFactorI2P(pubKey[:], string(secret), sigType, date)
 	if err != nil {
 		return [32]byte{}, oops.Wrapf(ErrBlindingFailed, "failed to derive blinding factor: %w", err)
+	}
+
+	return alpha, nil
+}
+
+// deriveBlindedPublicKey derives the spec-conformant blinding factor (alpha),
+// extracts the original signing key, and computes the blinded public key
+// A' = A + [alpha]B (BLIND_PUBKEY).
+func deriveBlindedPublicKey(dest destination.Destination, secret []byte, date time.Time) ([32]byte, error) {
+	alpha, err := deriveBlindingAlpha(dest, secret, date)
+	if err != nil {
+		return [32]byte{}, err
+	}
+
+	pubKey, err := extractOriginalSigningKey(dest)
+	if err != nil {
+		return [32]byte{}, err
 	}
 
 	blindedPubKey, err := ed25519.BlindPublicKey(pubKey, alpha)

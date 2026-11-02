@@ -50,6 +50,33 @@ func createTestEd25519Destination(t testing.TB) destination.Destination {
 	return dest
 }
 
+// createTestEd25519KeyedDestination builds a destination whose inline Ed25519
+// signing public key is pub, so that a structure published under it can be
+// signed with priv. NewEncryptedLeaseSet requires the signing key to correspond
+// to the public key the structure carries, so tests that build a record around a
+// specific key pair need the destination to match, not to be random bytes.
+func createTestEd25519KeyedDestination(t testing.TB, pub []byte) destination.Destination {
+	t.Helper()
+	require.Len(t, pub, 32, "Ed25519 public key must be 32 bytes")
+
+	destBytes := make([]byte, 391)
+	_, _ = rand.Read(destBytes[:384])
+	// Signing key field is right-justified in the 384-byte block.
+	copy(destBytes[352:384], pub)
+
+	destBytes[384] = 0x05 // Certificate type = KEY
+	destBytes[385] = 0x00
+	destBytes[386] = 0x04 // Certificate length = 4
+	destBytes[387] = 0x00
+	destBytes[388] = 0x07 // Signing key type = Ed25519 (7)
+	destBytes[389] = 0x00
+	destBytes[390] = 0x00 // Crypto key type = ElGamal (0)
+
+	dest, _, err := destination.ReadDestination(destBytes)
+	require.NoError(t, err, "Failed to read destination")
+	return dest
+}
+
 // deriveTestAlpha computes the spec-conformant blinding factor for dest at the
 // given date, mirroring deriveBlindedPublicKey. Tests use it to confirm that
 // VerifyBlindedSignature accepts the alpha a conforming client would derive.

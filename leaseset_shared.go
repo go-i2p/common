@@ -471,6 +471,38 @@ func SignLeaseSetData(signingKey interface{}, data []byte, sigType uint16) ([]by
 //     CONVERT_ED25519_PRIVATE, the spec's documented conversion for signing a
 //     type 11 structure with an existing Ed25519 destination key.
 func signRedDSA(signingKey interface{}, data []byte) ([]byte, error) {
+	sk, err := RedDSAScalarFromKey(signingKey)
+	if err != nil {
+		return nil, err
+	}
+
+	signer, err := sk.NewSigner()
+	if err != nil {
+		return nil, oops.Wrapf(err, "failed to create RedDSA signer")
+	}
+	return signer.Sign(data)
+}
+
+// RedDSAScalarFromKey normalizes any accepted Red25519 signing key form to the
+// 32-byte little-endian scalar mod L that the Red25519 signer consumes.
+//
+// Accepted forms:
+//   - red25519.Red25519PrivateKey / *red25519.Red25519PrivateKey — used as-is.
+//     This is the form a publisher of a blinded EncryptedLeaseSet passes: the
+//     blinded scalar a' from encryptedleaseset.md §Blinding Calculations.
+//   - []byte of length 32 — the same scalar as raw bytes.
+//   - [32]byte — the same scalar as a fixed-size array.
+//   - ed25519.PrivateKey / [64]byte / []byte of length 64 — converted with the
+//     spec's CONVERT_ED25519_PRIVATE.
+//
+// The result is validated through NewRed25519PrivateKey so a raw scalar from any
+// branch gets the same checks (non-zero, well-formed scalar) the type enforces.
+//
+// This is the single source of truth for "which key forms sign at type 11". The
+// EncryptedLeaseSet constructor's signing-key/blinded-public-key consistency
+// check derives the public key through here, so the key it validates is exactly
+// the key the signer will use; the two lists cannot drift apart.
+func RedDSAScalarFromKey(signingKey interface{}) (red25519.Red25519PrivateKey, error) {
 	var sk red25519.Red25519PrivateKey
 
 	switch key := signingKey.(type) {
@@ -528,11 +560,7 @@ func signRedDSA(signingKey interface{}, data []byte) ([]byte, error) {
 	if err != nil {
 		return nil, oops.Wrapf(err, "invalid RedDSA signing key")
 	}
-	signer, err := validated.NewSigner()
-	if err != nil {
-		return nil, oops.Wrapf(err, "failed to create RedDSA signer")
-	}
-	return signer.Sign(data)
+	return validated, nil
 }
 
 // signEd25519ph performs Ed25519ph (pre-hashed) signing using the

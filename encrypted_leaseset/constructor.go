@@ -1,6 +1,7 @@
 package encrypted_leaseset
 
 import (
+	"bytes"
 	"crypto/ed25519"
 
 	rootcommon "github.com/go-i2p/common"
@@ -70,7 +71,17 @@ func NewEncryptedLeaseSet(
 }
 
 // signEncryptedLeaseSet serializes and signs the EncryptedLeaseSet data.
+//
+// Before signing it enforces that the supplied private key is the private key
+// belonging to blindedPublicKey. See [validateSigningKeyMatchesPublicKey] for
+// why that check is load-bearing.
 func signEncryptedLeaseSet(els *EncryptedLeaseSet, sigType uint16, offlineSig *offline_signature.OfflineSignature, signingKey interface{}) error {
+	// The key the structure is signed with must correspond to the public key the
+	// structure publishes, or the record is either unverifiable or linkable.
+	if err := validateSigningKeyMatchesPublicKey(sigType, offlineSig, els.blindedPublicKey, signingKey); err != nil {
+		return err
+	}
+
 	dataToSign, err := els.dataForSigning()
 	if err != nil {
 		return err
@@ -85,6 +96,89 @@ func signEncryptedLeaseSet(els *EncryptedLeaseSet, sigType uint16, offlineSig *o
 	}
 	els.signature = signature
 	return nil
+}
+
+// validateSigningKeyMatchesPublicKey rejects a signing key that does not
+// correspond to the public key the EncryptedLeaseSet publishes.
+//
+// The public key checked is the one [EncryptedLeaseSet.Verify] will verify
+// against: the transient key when an offline signature authorizes one,
+// otherwise the blinded public key.
+//
+// This is the check that makes the blinded-key requirement enforceable rather
+// than advisory. Signing an EncryptedLeaseSet with the unblinded destination key
+// produces a structure that (a) fails verification against its own blinded key
+// at any spec-following floodfill, and (b) is a linkability oracle for anyone
+// who can read the netdb, since the outer signature verifies under the
+// destination's long-term key. Both defeat the purpose of encrypted LeaseSets.
+// Because the mismatch is invisible in the wire format, a publisher could build
+// such a structure indefinitely without anything noticing; the constructor is
+// the last place that has both keys to compare.
+//
+// Deriving the public key from the private key uses the same normalization the
+// signer uses ([rootcommon.RedDSAScalarFromKey] for type 11,
+// [ed25519PrivateKeyFromKey] for type 7), so a key that would sign cannot be
+// rejected here for a reason the signer would not agree with.
+func validateSigningKeyMatchesPublicKey(sigType uint16, offlineSig *offline_signature.OfflineSignature, publicKey []byte, signingKey interface{}) error {
+	// The key that verifies and the scheme that signs are both the transient
+	// pair when an offline signature is present, exactly as signEncryptedLeaseSet
+	// and signingPublicKeyForVerification each choose them. Deriving under the
+	// outer sig type while signing under the transient type would compare a
+	// public key from one scheme against a private key normalized by the other.
+	effectiveSigType := sigType
+	publishedKey := publicKey
+	if offlineSig != nil {
+		effectiveSigType = offlineSig.TransientSigType()
+		publishedKey = offlineSig.TransientPublicKey()
+	}
+
+	expected, err := publicSigningKeyForSigningKey(effectiveSigType, signingKey)
+	if err != nil {
+		return err
+	}
+
+	if len(publishedKey) != len(expected) || !bytes.Equal(publishedKey, expected) {
+		return oops.Code("signing_key_mismatch").
+			With("sig_type", effectiveSigType).
+			Errorf("signing key does not correspond to the %d-byte public key this EncryptedLeaseSet publishes (%d bytes): "+
+				"a blinded leaseset must be signed with the blinded private key a' from CreateBlindedDestinationWithPrivateKey, "+
+				"not the destination's long-term signing key",
+				len(expected), len(publishedKey))
+	}
+	return nil
+}
+
+// publicSigningKeyForSigningKey derives the 32-byte public key that corresponds
+// to signingKey under the scheme sigType selects.
+func publicSigningKeyForSigningKey(sigType uint16, signingKey interface{}) ([]byte, error) {
+	switch sigType {
+	case uint16(sig.SIGNATURE_TYPE_REDDSA_SHA512_ED25519):
+		scalar, err := rootcommon.RedDSAScalarFromKey(signingKey)
+		if err != nil {
+			return nil, err
+		}
+		pub, err := scalar.Public()
+		if err != nil {
+			return nil, oops.Wrapf(err, "failed to derive Red25519 public key from signing key")
+		}
+		return pub.Bytes(), nil
+
+	case uint16(sig.SIGNATURE_TYPE_EDDSA_SHA512_ED25519):
+		priv, err := ed25519PrivateKeyFromKey(signingKey)
+		if err != nil {
+			return nil, err
+		}
+		pub, err := priv.Public()
+		if err != nil {
+			return nil, oops.Wrapf(err, "failed to derive Ed25519 public key from signing key")
+		}
+		return pub.Bytes(), nil
+
+	default:
+		return nil, oops.Code("unsupported_signature_type").
+			With("sig_type", sigType).
+			Errorf("cannot derive public key for unsupported signature type %d", sigType)
+	}
 }
 
 // logEncryptedLeaseSetCreation logs the successful creation of an EncryptedLeaseSet.
@@ -294,11 +388,16 @@ func createSignature(signingKey interface{}, data []byte, sigType uint16) (sig.S
 	}
 }
 
-// createEd25519Signature signs with Ed25519 for the unblinded (type 7) case.
-// The signing is delegated to github.com/go-i2p/crypto/ed25519's signer; this
-// package implements no cryptography itself. All accepted key forms are the
-// 64-byte expanded Ed25519 private key in one of its in-repo shapes.
-func createEd25519Signature(signingKey interface{}, data []byte, sigType uint16) (sig.Signature, error) {
+// ed25519PrivateKeyFromKey normalizes the accepted Ed25519 (type 7) signing key
+// forms to go-i2p/crypto's Ed25519PrivateKey. It is the single source of truth
+// for "which key forms sign at type 7", shared by the signer and by
+// [validateSigningKeyMatchesPublicKey] so the key that is validated is exactly
+// the key that is used to sign.
+//
+// Accepted forms are the 64-byte expanded Ed25519 private key in each of its
+// in-repo shapes: ed25519.PrivateKey, [64]byte, 64-byte []byte, or
+// *goi2ped25519.Ed25519PrivateKey.
+func ed25519PrivateKeyFromKey(signingKey interface{}) (goi2ped25519.Ed25519PrivateKey, error) {
 	var raw []byte
 	switch key := signingKey.(type) {
 	case ed25519.PrivateKey:
@@ -306,23 +405,40 @@ func createEd25519Signature(signingKey interface{}, data []byte, sigType uint16)
 	case [64]byte:
 		raw = key[:]
 	case *goi2ped25519.Ed25519PrivateKey:
+		if key == nil {
+			return nil, oops.Code("signing_key_nil").Errorf("signing key is nil")
+		}
 		raw = key.Bytes()
 	case []byte:
 		if len(key) != ed25519.PrivateKeySize {
-			return sig.Signature{}, oops.Code("invalid_key_length").
+			return nil, oops.Code("invalid_key_length").
 				With("length", len(key)).
 				Errorf("byte slice signing key must be %d bytes for Ed25519, got %d",
 					ed25519.PrivateKeySize, len(key))
 		}
 		raw = key
+	case nil:
+		return nil, oops.Code("signing_key_nil").Errorf("signing key is nil")
 	default:
-		return sig.Signature{}, oops.Code("unsupported_key_type").
+		return nil, oops.Code("unsupported_key_type").
 			Errorf("unsupported signing key type: %T", signingKey)
 	}
 
 	priv, err := goi2ped25519.NewEd25519PrivateKey(raw)
 	if err != nil {
-		return sig.Signature{}, oops.Wrapf(err, "failed to construct Ed25519 signing key")
+		return nil, oops.Wrapf(err, "failed to construct Ed25519 signing key")
+	}
+	return priv, nil
+}
+
+// createEd25519Signature signs with Ed25519 for the unblinded (type 7) case.
+// The signing is delegated to github.com/go-i2p/crypto/ed25519's signer; this
+// package implements no cryptography itself. All accepted key forms are the
+// 64-byte expanded Ed25519 private key in one of its in-repo shapes.
+func createEd25519Signature(signingKey interface{}, data []byte, sigType uint16) (sig.Signature, error) {
+	priv, err := ed25519PrivateKeyFromKey(signingKey)
+	if err != nil {
+		return sig.Signature{}, err
 	}
 	signer, err := priv.NewSigner()
 	if err != nil {

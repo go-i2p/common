@@ -7,7 +7,6 @@ import (
 
 	"github.com/go-i2p/crypto/rand"
 
-	"github.com/go-i2p/common/destination"
 	"github.com/go-i2p/common/key_certificate"
 	"github.com/go-i2p/common/offline_signature"
 	sig "github.com/go-i2p/common/signature"
@@ -24,11 +23,12 @@ import (
 func TestNewEncryptedLeaseSet(t *testing.T) {
 	_, encryptedData, _, published := createTestEncryptionContext(t)
 
-	_, signingPriv, err := goi2ped25519.GenerateEd25519KeyPair()
+	// The blinded public key and the signing private key are one key pair:
+	// NewEncryptedLeaseSet refuses to build a record whose signature key does
+	// not correspond to the public key it publishes.
+	blindedPub, signingPriv, err := goi2ped25519.GenerateEd25519KeyPair()
 	require.NoError(t, err)
-
-	blindedKey := make([]byte, 32)
-	_, _ = rand.Read(blindedKey)
+	blindedKey := blindedPub.Bytes()
 	expires := uint16(600)
 
 	els, err := NewEncryptedLeaseSet(
@@ -56,12 +56,11 @@ func TestNewEncryptedLeaseSet(t *testing.T) {
 func TestNewEncryptedLeaseSetFromDestination(t *testing.T) {
 	_, encryptedData, _, published := createTestEncryptionContext(t)
 
-	_, signingPriv, err := goi2ped25519.GenerateEd25519KeyPair()
+	signingPub, signingPriv, err := goi2ped25519.GenerateEd25519KeyPair()
 	require.NoError(t, err)
 
-	destBytes := createTestDestinationBytes(t)
-	dest, _, err := destination.ReadDestination(destBytes)
-	require.NoError(t, err)
+	// The destination's inline signing public key must be the one priv signs for.
+	dest := createTestEd25519KeyedDestination(t, signingPub.Bytes())
 
 	els, err := NewEncryptedLeaseSetFromDestination(
 		dest,
@@ -80,12 +79,10 @@ func TestNewEncryptedLeaseSetFromDestination(t *testing.T) {
 func TestNewEncryptedLeaseSetWithByteSliceKey(t *testing.T) {
 	_, encryptedData, _, published := createTestEncryptionContext(t)
 
-	_, signingPriv, err := goi2ped25519.GenerateEd25519KeyPair()
+	blindedPub, signingPriv, err := goi2ped25519.GenerateEd25519KeyPair()
 	require.NoError(t, err)
+	blindedKey := blindedPub.Bytes()
 	signingPrivBytes := signingPriv.Bytes()
-
-	blindedKey := make([]byte, 32)
-	_, _ = rand.Read(blindedKey)
 
 	els, err := NewEncryptedLeaseSet(
 		key_certificate.KEYCERT_SIGN_ED25519,
