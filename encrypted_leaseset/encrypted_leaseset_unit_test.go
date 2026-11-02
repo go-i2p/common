@@ -74,9 +74,15 @@ func TestEncryptedLeaseSetExpiration(t *testing.T) {
 		expires   uint16
 		expired   bool
 	}{
+		// IsExpired() compares against the wall clock, so every case needs a
+		// margin larger than the scheduling delay between building this table and
+		// the check below. "Just now" used to use expires: 1, which made it fail
+		// whenever the table was built in the last few milliseconds of a second:
+		// published is truncated to the whole second, so the expiration lands
+		// within that window and the check then sees the record as expired.
 		{"Far future", uint32(time.Now().Unix() + 3600), 600, false},
 		{"Past", uint32(time.Now().Unix() - 10), 5, true},
-		{"Just now", uint32(time.Now().Unix()), 1, false},
+		{"Just now", uint32(time.Now().Unix()), 30, false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
