@@ -31,7 +31,8 @@ func TestCreateBlindedDestinationWithPrivateKeyPairing(t *testing.T) {
 	dest = createTestEd25519KeyedDestination(t, signingPub.Bytes())
 
 	blindedDest, blindedPriv, err := CreateBlindedDestinationWithPrivateKey(
-		dest, signingPriv.Bytes(), secret, date)
+		dest, signingPriv.Bytes(), secret, date,
+	)
 	require.NoError(t, err)
 
 	blindedSPK, err := blindedDest.SigningPublicKey()
@@ -55,7 +56,8 @@ func TestCreateBlindedDestinationWithPrivateKeyPairing(t *testing.T) {
 	// Same secret + date must reproduce the same blinded key pair (rotation is
 	// by date, not random).
 	again, againPriv, err := CreateBlindedDestinationWithPrivateKey(
-		dest, signingPriv.Bytes(), secret, date)
+		dest, signingPriv.Bytes(), secret, date,
+	)
 	require.NoError(t, err)
 	againSPK, err := again.SigningPublicKey()
 	require.NoError(t, err)
@@ -64,7 +66,8 @@ func TestCreateBlindedDestinationWithPrivateKeyPairing(t *testing.T) {
 
 	// A different date must rotate to a different key pair.
 	nextDay, nextPriv, err := CreateBlindedDestinationWithPrivateKey(
-		dest, signingPriv.Bytes(), secret, date.AddDate(0, 0, 1))
+		dest, signingPriv.Bytes(), secret, date.AddDate(0, 0, 1),
+	)
 	require.NoError(t, err)
 	nextSPK, err := nextDay.SigningPublicKey()
 	require.NoError(t, err)
@@ -87,7 +90,8 @@ func TestNewEncryptedLeaseSetRejectsUnblindedSigningKey(t *testing.T) {
 	// A genuinely blinded key pair (A', a') for that destination.
 	date := time.Unix(int64(published), 0).UTC()
 	blindedDest, blindedPriv, err := CreateBlindedDestinationWithPrivateKey(
-		dest, destPriv.Bytes(), []byte("reject-secret"), date)
+		dest, destPriv.Bytes(), []byte("reject-secret"), date,
+	)
 	require.NoError(t, err)
 	blindedSPK, err := blindedDest.SigningPublicKey()
 	require.NoError(t, err)
@@ -199,11 +203,13 @@ func TestNewEncryptedLeaseSetFromDestinationBlindedPair(t *testing.T) {
 	dest := createTestEd25519KeyedDestination(t, destPub.Bytes())
 
 	blindedDest, blindedPriv, err := CreateBlindedDestinationWithPrivateKey(
-		dest, destPriv.Bytes(), []byte("doc-path-secret"), time.Unix(int64(published), 0).UTC())
+		dest, destPriv.Bytes(), []byte("doc-path-secret"), time.Unix(int64(published), 0).UTC(),
+	)
 	require.NoError(t, err)
 
 	els, err := NewEncryptedLeaseSetFromDestination(
-		blindedDest, published, 600, 0, nil, encryptedData, blindedPriv)
+		blindedDest, published, 600, 0, nil, encryptedData, blindedPriv,
+	)
 	require.NoError(t, err)
 	require.NoError(t, els.Verify(), "record from the documented path must verify")
 
