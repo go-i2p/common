@@ -42,5 +42,3 @@ retract (
 	v0.1.5999
 	v0.1.599
 )
-
-replace github.com/go-i2p/crypto => ../crypto
