@@ -3,7 +3,7 @@ module github.com/go-i2p/common
 go 1.26.8
 
 require (
-	github.com/go-i2p/crypto v0.9.9
+	github.com/go-i2p/crypto v0.1.70002-0.20261027053312-d22b54cc63a6
 	github.com/go-i2p/logger v0.1.70001
 	github.com/samber/oops v1.23.1
 	github.com/stretchr/testify v1.12.1
@@ -42,3 +42,5 @@ retract (
 	v0.1.5999
 	v0.1.599
 )
+
+replace github.com/go-i2p/crypto => ../crypto
