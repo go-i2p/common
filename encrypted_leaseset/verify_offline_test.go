@@ -197,6 +197,70 @@ func TestVerifyRejectsExpiredOfflineSignature(t *testing.T) {
 	assert.Contains(t, err.Error(), "expired")
 }
 
+// TestDecryptInnerAcceptsOfflineSigAuthorizedByBlindedKey is the CM-001
+// regression: a spec-valid blinded ELS whose offline signature is authorized by
+// the blinded public key A' (NOT the inner unblinded destination key A) must
+// both Verify() and decrypt successfully.
+//
+// Before the fix, the decrypt path re-checked the offline signature against the
+// decrypted inner destination's signing key (the unblinded A), which never
+// matches the blinded A' that actually authorized the transient key. Every
+// spec-valid blinded ELS therefore failed decryption and the destination never
+// resolved, even though Verify() passed. i2pd (LeaseSet.cpp) and the Java
+// implementation both verify with the blinded A'.
+func TestDecryptInnerAcceptsOfflineSigAuthorizedByBlindedKey(t *testing.T) {
+	// Blinded identity A' that authorizes the transient key.
+	blindedPub, blindedPriv, err := ed25519.GenerateKey(rand.Reader)
+	require.NoError(t, err)
+
+	// Transient key that signs the published ELS.
+	transientPub, transientPriv, err := ed25519.GenerateKey(rand.Reader)
+	require.NoError(t, err)
+
+	// Offline signature: transient key authorized by the BLINDED key A'.
+	offSig, err := offline_signature.CreateOfflineSignature(
+		uint32(time.Now().Add(24*time.Hour).Unix()),
+		key_certificate.KEYCERT_SIGN_ED25519,
+		transientPub,
+		blindedPriv,
+		key_certificate.KEYCERT_SIGN_ED25519,
+	)
+	require.NoError(t, err)
+
+	// Inner LeaseSet2 carries the real (unblinded) destination key A, which is
+	// unrelated to A' or the transient key — exactly the blinded-destination case.
+	ls2 := createTestLeaseSet2ForEncryption(t)
+	var subcredential [32]byte
+	_, err = rand.Read(subcredential[:])
+	require.NoError(t, err)
+	published := uint32(time.Now().Unix())
+
+	encrypted, err := EncryptInnerLeaseSet2(ls2, subcredential, published)
+	require.NoError(t, err)
+
+	els, err := NewEncryptedLeaseSet(
+		uint16(key_certificate.KEYCERT_SIGN_ED25519),
+		blindedPub,
+		published,
+		600,
+		ENCRYPTED_LEASESET_FLAG_OFFLINE_KEYS,
+		&offSig,
+		encrypted,
+		transientPriv,
+	)
+	require.NoError(t, err)
+
+	// Verify() already accepted this structure (offline chain against blinded key).
+	require.NoError(t, els.Verify(), "spec-valid blinded ELS must verify")
+
+	// CM-001: the decrypt path must also accept it, checking the offline
+	// signature against the blinded key rather than the inner destination key.
+	decrypted, err := els.DecryptInnerData(subcredential)
+	require.NoError(t, err, "decrypt must accept offline sig authorized by blinded key A'")
+	require.NotNil(t, decrypted)
+	assert.Equal(t, ls2.Published(), decrypted.Published())
+}
+
 // TestVerifyRoundTripRejectsForgedOfflineSignatureOnParsedBytes runs the
 // forgery through the wire path a floodfill uses: serialize, re-parse, verify.
 func TestVerifyRoundTripRejectsForgedOfflineSignatureOnParsedBytes(t *testing.T) {

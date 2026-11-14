@@ -210,13 +210,19 @@ func (els *EncryptedLeaseSet) DecryptInnerLeaseSetWithCredential(subcredential [
 		return nil, err
 	}
 
-	// F368 FIX: Verify offline signature if present (CRITICAL / SECURITY).
-	// The spec requires validating the offline signature against the destination's
-	// signing key to prevent forged publication. Without this check, any attacker
-	// can publish a forged encrypted destination by substituting an arbitrary
-	// offline signature.
+	// CM-001 FIX: When offline keys are present, the offline signature must be
+	// re-verified on the decrypt path against the BLINDED public key carried in
+	// the cleartext ELS header (els.blindedPublicKey), exactly as Verify() does.
+	//
+	// The encrypted leaseset spec states the offline signature is "Over expires
+	// timestamp, transient sig type, and transient public key. Verified with the
+	// blinded public key." The transient key is authorized by the blinded key A',
+	// never by the inner (unblinded) destination key A. Verifying against the
+	// decrypted inner destination — as this path previously did — rejects every
+	// spec-valid blinded ELS, so the destination never resolves (matches i2pd
+	// LeaseSet.cpp and the Java implementation, both of which use the blinded A').
 	if els.offlineSignature != nil {
-		if err := els.verifyOfflineSignatureChain(inner.Destination()); err != nil {
+		if err := els.verifyOfflineSignatureChainAgainstBlindedKey(); err != nil {
 			return nil, err
 		}
 	}

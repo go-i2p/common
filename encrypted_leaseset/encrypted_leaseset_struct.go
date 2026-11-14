@@ -6,7 +6,6 @@ import (
 	"github.com/go-i2p/common/meta_leaseset"
 	"github.com/go-i2p/common/offline_signature"
 	sig "github.com/go-i2p/common/signature"
-	"github.com/samber/oops"
 )
 
 // InnerLeaseSet is the decrypted payload of an EncryptedLeaseSet.
@@ -90,40 +89,4 @@ type EncryptedLeaseSet struct {
 
 	// signature — over all preceding data prepended with DBSTORE type byte (0x05).
 	signature sig.Signature
-}
-
-// verifyOfflineSignatureChain verifies that the offline signature's transient key
-// was legitimately authorized by the decrypted LeaseSet2's destination signing key
-// (F368 security fix). Per I2P spec, the verifier MUST validate the offline signature
-// before accepting the LeaseSet to prevent forged publication.
-// Returns an error if verification fails or the destination cannot be extracted.
-func (els *EncryptedLeaseSet) verifyOfflineSignatureChain(dest destination.Destination) error {
-	if els.offlineSignature == nil {
-		// This should have been checked by the caller, but verify for safety.
-		return oops.Errorf("F368: offline signature verification called but signature is nil")
-	}
-
-	// Extract the destination's long-term signing public key.
-	// This is the key the inner lease set was created for.
-	if !(&dest).IsValid() {
-		return oops.Errorf("F368: invalid destination from decrypted inner lease set")
-	}
-
-	destSigningKey, err := (&dest).SigningPublicKey()
-	if err != nil {
-		return oops.Wrapf(err, "F368: failed to extract destination signing public key")
-	}
-
-	// Verify that the offline signature's transient key was signed by the
-	// destination's long-term signing key. This authorization chain prevents
-	// an attacker from substituting an arbitrary transient key.
-	valid, err := els.offlineSignature.VerifySignature(destSigningKey.Bytes())
-	if err != nil {
-		return oops.Wrapf(err, "F368: offline signature verification error")
-	}
-	if !valid {
-		return oops.Errorf("F368: offline signature invalid: transient key not signed by destination key")
-	}
-
-	return nil
 }
