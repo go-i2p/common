@@ -20,8 +20,8 @@
 //
 // An EncryptedLeaseSet consists of the following cleartext outer fields:
 //
-//	sig_type            (2 bytes)   — Red25519 (11) or Ed25519 (7)
-//	blinded_public_key  (variable)  — 32 bytes for Ed25519/Red25519
+//	sig_type            (2 bytes)   — Red25519 (11) (always type 11 per spec)
+//	blinded_public_key  (variable)  — 32 bytes
 //	published           (4 bytes)   — seconds since Unix epoch
 //	expires             (2 bytes)   — offset from published (seconds)
 //	flags               (2 bytes)   — bit 0: offline sig; bit 1: unpublished; bits 2-15 reserved
@@ -139,9 +139,13 @@
 // re-publications of the same lease set are not byte-correlatable. Verification
 // uses the same package's cofactor/HStar VERIFY rule, not plain Ed25519's.
 //
-// A sigType 7 (Ed25519) outer signature is still accepted for the unblinded
-// case the page describes ("The unblinded leaseset is signed by the unblinded
-// Ed25519 or Red25519 signing private key ... as usual").
+// The blinded public key field is always type 11 ("This will always be type 11,
+// identifying a Red25519 blinded key"). The outer signature is made with the
+// blinded Red25519 scalar a'. When an offline signature is present, the outer
+// signature is instead made with the transient signing key, which the spec
+// mandates be Ed25519 ("If the signing public key is offline, the transient
+// signing public key must also be Ed25519"); that is the only place type 7
+// appears in an EncryptedLeaseSet, and it is never the blinded field's type.
 //
 // To publish a blinded lease set, pass the blinded Red25519 scalar a' as the
 // signing key with sigType 11, together with the blinded public key A' it

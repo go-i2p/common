@@ -70,7 +70,7 @@ func TestVerifyRejectsForgedOfflineSignature(t *testing.T) {
 	offSig := newForgedEncOfflineSignature(t, transientPub, uint32(time.Now().Add(24*time.Hour).Unix()))
 
 	els, err := NewEncryptedLeaseSet(
-		uint16(key_certificate.KEYCERT_SIGN_ED25519),
+		uint16(key_certificate.KEYCERT_SIGN_REDDSA_ED25519),
 		blindedPub,
 		uint32(time.Now().Unix()),
 		600,
@@ -111,7 +111,7 @@ func TestVerifyRejectsOfflineSignatureSignedByWrongKey(t *testing.T) {
 	require.NoError(t, err)
 
 	els, err := NewEncryptedLeaseSet(
-		uint16(key_certificate.KEYCERT_SIGN_ED25519),
+		uint16(key_certificate.KEYCERT_SIGN_REDDSA_ED25519),
 		blindedPub,
 		uint32(time.Now().Unix()),
 		600,
@@ -147,7 +147,7 @@ func TestVerifyAcceptsValidOfflineSignatureByBlindedKey(t *testing.T) {
 	require.NoError(t, err)
 
 	els, err := NewEncryptedLeaseSet(
-		uint16(key_certificate.KEYCERT_SIGN_ED25519),
+		uint16(key_certificate.KEYCERT_SIGN_REDDSA_ED25519),
 		blindedPub,
 		uint32(time.Now().Unix()),
 		600,
@@ -181,7 +181,7 @@ func TestVerifyRejectsExpiredOfflineSignature(t *testing.T) {
 	require.NoError(t, err)
 
 	els, err := NewEncryptedLeaseSet(
-		uint16(key_certificate.KEYCERT_SIGN_ED25519),
+		uint16(key_certificate.KEYCERT_SIGN_REDDSA_ED25519),
 		blindedPub,
 		uint32(time.Now().Unix()),
 		600,
@@ -239,7 +239,7 @@ func TestDecryptInnerAcceptsOfflineSigAuthorizedByBlindedKey(t *testing.T) {
 	require.NoError(t, err)
 
 	els, err := NewEncryptedLeaseSet(
-		uint16(key_certificate.KEYCERT_SIGN_ED25519),
+		uint16(key_certificate.KEYCERT_SIGN_REDDSA_ED25519),
 		blindedPub,
 		published,
 		600,
@@ -273,7 +273,7 @@ func TestVerifyRoundTripRejectsForgedOfflineSignatureOnParsedBytes(t *testing.T)
 	offSig := newForgedEncOfflineSignature(t, transientPub, uint32(time.Now().Add(24*time.Hour).Unix()))
 
 	els, err := NewEncryptedLeaseSet(
-		uint16(key_certificate.KEYCERT_SIGN_ED25519),
+		uint16(key_certificate.KEYCERT_SIGN_REDDSA_ED25519),
 		blindedPub,
 		uint32(time.Now().Unix()),
 		600,

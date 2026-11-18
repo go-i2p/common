@@ -17,7 +17,9 @@ import (
 // NewEncryptedLeaseSet creates a spec-compliant EncryptedLeaseSet from raw fields.
 //
 // Parameters:
-//   - sigType: signing key type for the blinded public key (e.g., 7=Ed25519, 11=RedDSA)
+//   - sigType: signing key type for the blinded public key. Per spec this is
+//     always 11 (Red25519); the blinded public key field "will always be type
+//     11". Type 7 (Ed25519) is not valid for the blinded field.
 //   - blindedPublicKey: the blinded signing public key bytes
 //   - published: timestamp in seconds since Unix epoch
 //   - expiresOffset: expiration offset in seconds from published (1‑65535)
@@ -27,14 +29,15 @@ import (
 //   - signingKey: the signing private key. For sigType 11 (RedDSA - the form the
 //     spec mandates for a blinded key) pass the blinded 32-byte Red25519 scalar
 //     a' (red25519.Red25519PrivateKey or a 32-byte []byte), or an Ed25519 private
-//     key, which is converted with the spec's CONVERT_ED25519_PRIVATE. For sigType
-//     7 (Ed25519, the unblinded case) pass the 64-byte expanded key ([64]byte,
-//     ed25519.PrivateKey, *Ed25519PrivateKey, or 64-byte []byte).
+//     key, which is converted with the spec's CONVERT_ED25519_PRIVATE. When an
+//     offline signature is present, pass the 64-byte expanded Ed25519 transient
+//     key ([64]byte, ed25519.PrivateKey, *Ed25519PrivateKey, or 64-byte []byte),
+//     which signs the outer signature under the transient sig type.
 //
 // The signature is computed over: 0x05 || serialized_content (without the
 // signature itself), with no pre-hashing. Signing is delegated to
 // github.com/go-i2p/crypto: the randomized Red25519 signer for type 11, the
-// Ed25519 signer for type 7.
+// Ed25519 signer for the offline transient (type 7) case.
 func NewEncryptedLeaseSet(
 	sigType uint16,
 	blindedPublicKey []byte,
@@ -256,13 +259,14 @@ func validateInputs(
 	return validateEncryptedPayload(encryptedInnerData)
 }
 
-// validateSigTypeAndKeySize validates the signing key type is Red25519 (11) or
-// Ed25519 (7) per spec, and the blinded public key has the correct size.
+// validateSigTypeAndKeySize validates the blinded sig type is Red25519 (11) per
+// spec ("This will always be type 11, identifying a Red25519 blinded key"), and
+// the blinded public key has the correct size.
 func validateSigTypeAndKeySize(sigType uint16, blindedPublicKey []byte) error {
 	if !isAllowedBlindedSigType(sigType) {
 		return oops.Code("invalid_sig_type").
 			With("sig_type", sigType).
-			Errorf("invalid blinded sig_type %d: spec requires Red25519 (11) or Ed25519 (7)", sigType)
+			Errorf("invalid blinded sig_type %d: spec requires Red25519 (11) (encryptedleaseset.md §Blinded Public Key Sig Type)", sigType)
 	}
 	sizes := key_certificate.SigningKeySizes[int(sigType)]
 	if len(blindedPublicKey) != sizes.SigningPublicKeySize {
@@ -356,9 +360,11 @@ func validateEncryptedPayload(encryptedInnerData []byte) error {
 // unlinkability. A deterministic Ed25519 signature over the same key would let
 // an observer correlate re-publications, defeating the blinding.
 //
-// Type 7 (Ed25519) is still accepted for the unblinded-leaseset case described
-// in the same section ("The unblinded leaseset is signed by the unblinded
-// Ed25519 or Red25519 signing private key ... as usual").
+// Type 7 (Ed25519) is reached only when an offline signature is present: the
+// outer signature is then made with the transient signing key, which the spec
+// mandates be Ed25519 (§"Blinding - Goals": "If the signing public key is
+// offline, the transient signing public key must also be Ed25519"). It is NOT a
+// valid type for the blinded public key field itself, which is always type 11.
 //
 // Accepted signingKey forms:
 //   - red25519.Red25519PrivateKey (or 32-byte []byte) — the blinded scalar a',
@@ -431,10 +437,12 @@ func ed25519PrivateKeyFromKey(signingKey interface{}) (goi2ped25519.Ed25519Priva
 	return priv, nil
 }
 
-// createEd25519Signature signs with Ed25519 for the unblinded (type 7) case.
-// The signing is delegated to github.com/go-i2p/crypto/ed25519's signer; this
-// package implements no cryptography itself. All accepted key forms are the
-// 64-byte expanded Ed25519 private key in one of its in-repo shapes.
+// createEd25519Signature signs with Ed25519 (type 7), used when an offline
+// signature is present and the outer signature is made with the Ed25519
+// transient signing key. The signing is delegated to
+// github.com/go-i2p/crypto/ed25519's signer; this package implements no
+// cryptography itself. All accepted key forms are the 64-byte expanded Ed25519
+// private key in one of its in-repo shapes.
 func createEd25519Signature(signingKey interface{}, data []byte, sigType uint16) (sig.Signature, error) {
 	priv, err := ed25519PrivateKeyFromKey(signingKey)
 	if err != nil {

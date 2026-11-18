@@ -1,7 +1,6 @@
 package encrypted_leaseset
 
 import (
-	"crypto/ed25519"
 	"encoding/binary"
 	"testing"
 	"time"
@@ -26,7 +25,7 @@ func TestReadEncryptedLeaseSet(t *testing.T) {
 	require.NoError(t, err, "parse valid spec-compliant ELS")
 	assert.Empty(t, remainder)
 
-	assert.Equal(t, uint16(key_certificate.KEYCERT_SIGN_ED25519), els.SigType())
+	assert.Equal(t, uint16(key_certificate.KEYCERT_SIGN_REDDSA_ED25519), els.SigType())
 	assert.Len(t, els.BlindedPublicKey(), 32)
 	assert.Greater(t, els.Published(), uint32(0))
 	assert.Equal(t, uint16(600), els.Expires())
@@ -103,7 +102,7 @@ func TestEncryptedLeaseSetAccessors(t *testing.T) {
 	testSig, _, _ := sig.ReadSignature(make([]byte, 64), sig.SIGNATURE_TYPE_EDDSA_SHA512_ED25519)
 
 	els := EncryptedLeaseSet{
-		sigType:            key_certificate.KEYCERT_SIGN_ED25519,
+		sigType:            key_certificate.KEYCERT_SIGN_REDDSA_ED25519,
 		blindedPublicKey:   blindedKey,
 		published:          testPublished,
 		expires:            testExpires,
@@ -113,7 +112,7 @@ func TestEncryptedLeaseSetAccessors(t *testing.T) {
 		signature:          testSig,
 	}
 
-	assert.Equal(t, uint16(key_certificate.KEYCERT_SIGN_ED25519), els.SigType())
+	assert.Equal(t, uint16(key_certificate.KEYCERT_SIGN_REDDSA_ED25519), els.SigType())
 	assert.Equal(t, blindedKey, els.BlindedPublicKey())
 	assert.Equal(t, testPublished, els.Published())
 	assert.Equal(t, testExpires, els.Expires())
@@ -204,20 +203,20 @@ func TestEncryptedLeaseSetLargeInnerData(t *testing.T) {
 // TestWireFormatFieldOrder verifies the wire format matches the spec field order:
 // sig_type(2) | blinded_key(32) | published(4) | expires(2) | flags(2) | len(2) | enc_data | sig(64)
 func TestWireFormatFieldOrder(t *testing.T) {
-	pub, priv, _ := ed25519.GenerateKey(nil)
+	blindedKey, signingPriv := newTestBlindedKeyPair(t)
 	encData := make([]byte, 80)
 	_, _ = rand.Read(encData)
 	published := uint32(time.Now().Unix())
 
 	els, err := NewEncryptedLeaseSet(
-		uint16(key_certificate.KEYCERT_SIGN_ED25519),
-		pub,
+		uint16(key_certificate.KEYCERT_SIGN_REDDSA_ED25519),
+		blindedKey,
 		published,
 		600,
 		0,
 		nil,
 		encData,
-		priv,
+		signingPriv,
 	)
 	require.NoError(t, err)
 
@@ -228,11 +227,11 @@ func TestWireFormatFieldOrder(t *testing.T) {
 	offset := 0
 	sigType := binary.BigEndian.Uint16(serialized[offset : offset+2])
 	offset += 2
-	assert.Equal(t, uint16(7), sigType)
+	assert.Equal(t, uint16(11), sigType)
 
-	blindedKey := serialized[offset : offset+32]
+	blindedKeyField := serialized[offset : offset+32]
 	offset += 32
-	assert.Equal(t, []byte(pub), blindedKey)
+	assert.Equal(t, blindedKey, blindedKeyField)
 
 	parsedPublished := binary.BigEndian.Uint32(serialized[offset : offset+4])
 	offset += 4

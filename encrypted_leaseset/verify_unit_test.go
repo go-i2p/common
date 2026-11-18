@@ -16,8 +16,7 @@ import (
 // ————————————————————————————————————————————————
 
 func TestVerifyEncryptedLeaseSet(t *testing.T) {
-	pub, priv, err := ed25519.GenerateKey(nil)
-	require.NoError(t, err)
+	pub, priv := newTestBlindedKeyPair(t)
 
 	encData := make([]byte, 80)
 	for i := range encData {
@@ -25,7 +24,7 @@ func TestVerifyEncryptedLeaseSet(t *testing.T) {
 	}
 
 	els, err := NewEncryptedLeaseSet(
-		uint16(key_certificate.KEYCERT_SIGN_ED25519),
+		uint16(key_certificate.KEYCERT_SIGN_REDDSA_ED25519),
 		pub,
 		uint32(time.Now().Unix()),
 		600,
@@ -83,7 +82,7 @@ func TestOfflineSignatureParsingPath(t *testing.T) {
 	}
 
 	els, err := NewEncryptedLeaseSet(
-		uint16(key_certificate.KEYCERT_SIGN_ED25519),
+		uint16(key_certificate.KEYCERT_SIGN_REDDSA_ED25519),
 		destPub,
 		uint32(time.Now().Unix()),
 		600,
@@ -131,7 +130,7 @@ func TestSigningPublicKeyForVerificationOffline(t *testing.T) {
 
 	encData := make([]byte, 80)
 	els, err := NewEncryptedLeaseSet(
-		uint16(key_certificate.KEYCERT_SIGN_ED25519),
+		uint16(key_certificate.KEYCERT_SIGN_REDDSA_ED25519),
 		destPub,
 		uint32(time.Now().Unix()),
 		600,
@@ -151,74 +150,93 @@ func TestSigningPublicKeyForVerificationOffline(t *testing.T) {
 	})
 
 	t.Run("returns blinded key when no offline keys", func(t *testing.T) {
+		// With no offline signature the blinded key is the verifying key, so it
+		// must be a genuine Red25519 (type 11) pair.
+		blindedKey, blindedPriv := newTestBlindedKeyPair(t)
 		noOfflineELS, err := NewEncryptedLeaseSet(
-			uint16(key_certificate.KEYCERT_SIGN_ED25519),
-			destPub,
+			uint16(key_certificate.KEYCERT_SIGN_REDDSA_ED25519),
+			blindedKey,
 			uint32(time.Now().Unix()),
 			600,
 			0,
 			nil,
 			encData,
-			destPriv,
+			blindedPriv,
 		)
 		require.NoError(t, err)
 
 		spk, err := noOfflineELS.signingPublicKeyForVerification()
 		require.NoError(t, err)
 
-		assert.Equal(t, []byte(destPub), spk.Bytes(),
+		assert.Equal(t, blindedKey, spk.Bytes(),
 			"signingPublicKeyForVerification should return the blinded key")
 	})
 }
 
 // TestEd25519SigningMatchesCryptoLibrary verifies that createSignature produces
 // signatures compatible with the go-i2p/crypto Ed25519Verifier.Verify() method.
+// The Ed25519 outer signature is reached through the offline transient key: the
+// blinded field itself is always type 11 (Red25519), so an Ed25519 outer
+// signature only occurs when an offline signature authorizes an Ed25519
+// transient key.
 func TestEd25519SigningMatchesCryptoLibrary(t *testing.T) {
-	pub, priv, err := ed25519.GenerateKey(nil)
+	destPub, destPriv, err := ed25519.GenerateKey(nil)
 	require.NoError(t, err)
+	transientPub, transientPriv, err := ed25519.GenerateKey(nil)
+	require.NoError(t, err)
+
+	offlineSig := buildOfflineSignature(t, destPriv, transientPub)
 
 	encData := make([]byte, 80)
 	els, err := NewEncryptedLeaseSet(
-		uint16(key_certificate.KEYCERT_SIGN_ED25519),
-		pub,
+		uint16(key_certificate.KEYCERT_SIGN_REDDSA_ED25519),
+		destPub,
 		uint32(time.Now().Unix()),
 		600,
-		0,
-		nil,
+		ENCRYPTED_LEASESET_FLAG_OFFLINE_KEYS,
+		&offlineSig,
 		encData,
-		priv,
+		transientPriv,
 	)
 	require.NoError(t, err)
 
 	dataToVerify, err := els.dataForSigning()
 	require.NoError(t, err)
 
-	assert.True(t, ed25519.Verify(pub, dataToVerify, els.Signature().Bytes()),
-		"signature must be valid under standard Ed25519 (createSignature signs raw data)")
+	assert.True(t, ed25519.Verify(transientPub, dataToVerify, els.Signature().Bytes()),
+		"signature must be valid under standard Ed25519 (transient key signs raw data)")
 
 	err = els.Verify()
 	assert.NoError(t, err, "Verify() round-trip must succeed")
 }
 
-// TestSigningDeterministic verifies that Ed25519 is deterministic — same input
-// yields the same signature. (RedDSA would be non-deterministic; documented limitation.)
+// TestSigningDeterministic verifies that the Ed25519 transient signing path is
+// deterministic — same input yields the same signature. (Red25519, used for the
+// blinded field itself, is non-deterministic; see
+// TestNewEncryptedLeaseSetRedDSASignatureIsRandomized.)
 func TestSigningDeterministic(t *testing.T) {
-	pub, priv, _ := ed25519.GenerateKey(nil)
+	destPub, destPriv, err := ed25519.GenerateKey(nil)
+	require.NoError(t, err)
+	transientPub, transientPriv, err := ed25519.GenerateKey(nil)
+	require.NoError(t, err)
+
+	offlineSig := buildOfflineSignature(t, destPriv, transientPub)
+
 	encData := make([]byte, 80)
 	published := uint32(time.Now().Unix())
 
 	els1, err := NewEncryptedLeaseSet(
-		uint16(key_certificate.KEYCERT_SIGN_ED25519),
-		pub, published, 600, 0, nil, encData, priv,
+		uint16(key_certificate.KEYCERT_SIGN_REDDSA_ED25519),
+		destPub, published, 600, ENCRYPTED_LEASESET_FLAG_OFFLINE_KEYS, &offlineSig, encData, transientPriv,
 	)
 	require.NoError(t, err)
 
 	els2, err := NewEncryptedLeaseSet(
-		uint16(key_certificate.KEYCERT_SIGN_ED25519),
-		pub, published, 600, 0, nil, encData, priv,
+		uint16(key_certificate.KEYCERT_SIGN_REDDSA_ED25519),
+		destPub, published, 600, ENCRYPTED_LEASESET_FLAG_OFFLINE_KEYS, &offlineSig, encData, transientPriv,
 	)
 	require.NoError(t, err)
 
 	assert.Equal(t, els1.Signature().Bytes(), els2.Signature().Bytes(),
-		"deterministic Ed25519 produces identical signatures")
+		"deterministic Ed25519 transient signing produces identical signatures")
 }

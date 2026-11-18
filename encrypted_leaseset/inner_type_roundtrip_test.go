@@ -50,7 +50,7 @@ func TestInnerMetaLeaseSetRoundTrip(t *testing.T) {
 	require.NotEmpty(t, encrypted)
 
 	els := &EncryptedLeaseSet{
-		sigType:            key_certificate.KEYCERT_SIGN_ED25519,
+		sigType:            key_certificate.KEYCERT_SIGN_REDDSA_ED25519,
 		published:          published,
 		expires:            600,
 		innerLength:        uint16(len(encrypted)),

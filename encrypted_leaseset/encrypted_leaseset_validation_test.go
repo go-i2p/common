@@ -1,7 +1,6 @@
 package encrypted_leaseset
 
 import (
-	"crypto/ed25519"
 	"encoding/binary"
 	"testing"
 	"time"
@@ -36,8 +35,8 @@ func TestReadEncryptedLeaseSetTooShort(t *testing.T) {
 
 func TestReadEncryptedLeaseSetZeroInnerLength(t *testing.T) {
 	data := make([]byte, 0, 120)
-	// sig_type = Ed25519
-	data = append(data, 0x00, 0x07)
+	// sig_type = Red25519 (11)
+	data = append(data, 0x00, 0x0b)
 	// blinded key (32)
 	data = append(data, make([]byte, 32)...)
 	// published (4)
@@ -112,7 +111,7 @@ func TestEncryptedLeaseSetValidate(t *testing.T) {
 
 	t.Run("wrong key size", func(t *testing.T) {
 		els := &EncryptedLeaseSet{
-			sigType:          key_certificate.KEYCERT_SIGN_ED25519,
+			sigType:          key_certificate.KEYCERT_SIGN_REDDSA_ED25519,
 			blindedPublicKey: make([]byte, 16), // wrong size
 		}
 		assert.ErrorContains(t, els.Validate(), "blinded public key size")
@@ -120,7 +119,7 @@ func TestEncryptedLeaseSetValidate(t *testing.T) {
 
 	t.Run("zero expires", func(t *testing.T) {
 		els := &EncryptedLeaseSet{
-			sigType:          key_certificate.KEYCERT_SIGN_ED25519,
+			sigType:          key_certificate.KEYCERT_SIGN_REDDSA_ED25519,
 			blindedPublicKey: make([]byte, 32),
 			expires:          0,
 		}
@@ -129,7 +128,7 @@ func TestEncryptedLeaseSetValidate(t *testing.T) {
 
 	t.Run("reserved flags set", func(t *testing.T) {
 		els := &EncryptedLeaseSet{
-			sigType:          key_certificate.KEYCERT_SIGN_ED25519,
+			sigType:          key_certificate.KEYCERT_SIGN_REDDSA_ED25519,
 			blindedPublicKey: make([]byte, 32),
 			expires:          600,
 			flags:            0x0004, // reserved bit 2
@@ -139,7 +138,7 @@ func TestEncryptedLeaseSetValidate(t *testing.T) {
 
 	t.Run("empty encrypted data", func(t *testing.T) {
 		els := &EncryptedLeaseSet{
-			sigType:            key_certificate.KEYCERT_SIGN_ED25519,
+			sigType:            key_certificate.KEYCERT_SIGN_REDDSA_ED25519,
 			blindedPublicKey:   make([]byte, 32),
 			expires:            600,
 			encryptedInnerData: []byte{},
@@ -149,7 +148,7 @@ func TestEncryptedLeaseSetValidate(t *testing.T) {
 
 	t.Run("encrypted data below minimum crypto overhead", func(t *testing.T) {
 		els := &EncryptedLeaseSet{
-			sigType:            key_certificate.KEYCERT_SIGN_ED25519,
+			sigType:            key_certificate.KEYCERT_SIGN_REDDSA_ED25519,
 			blindedPublicKey:   make([]byte, 32),
 			expires:            600,
 			innerLength:        50,
@@ -162,28 +161,29 @@ func TestEncryptedLeaseSetValidate(t *testing.T) {
 // TestEncryptedInnerDataMinimumCryptoOverhead verifies that Validate()
 // checks the minimum crypto overhead size of the inner encrypted data.
 func TestEncryptedInnerDataMinimumCryptoOverhead(t *testing.T) {
-	pub, priv, err := ed25519.GenerateKey(nil)
-	assert.NoError(t, err)
+	blindedKey, signingPriv := newTestBlindedKeyPair(t)
 
 	smallData := make([]byte, 60)
-	_, err = NewEncryptedLeaseSet(
-		uint16(key_certificate.KEYCERT_SIGN_ED25519),
-		pub,
+	_, err := NewEncryptedLeaseSet(
+		uint16(key_certificate.KEYCERT_SIGN_REDDSA_ED25519),
+		blindedKey,
 		uint32(time.Now().Unix()),
 		600,
 		0,
 		nil,
 		smallData,
-		priv,
+		signingPriv,
 	)
 	assert.Error(t, err, "encrypted data below minimum crypto overhead should be rejected")
 	assert.Contains(t, err.Error(), "encrypted inner data size")
 }
 
 // TestReadEncryptedLeaseSetRejectsLegacySigTypes verifies that parseSigType
-// rejects valid-but-wrong sig types. Only Ed25519 (7) and RedDSA (11) are allowed.
+// rejects every sig type except RedDSA (11). The blinded public key field "will
+// always be type 11", so even Ed25519 (7) — valid for the unblinded destination
+// key — is rejected here.
 func TestReadEncryptedLeaseSetRejectsLegacySigTypes(t *testing.T) {
-	legacyTypes := []uint16{
+	rejectedTypes := []uint16{
 		0, // DSA_SHA1
 		1, // ECDSA_SHA256_P256
 		2, // ECDSA_SHA384_P384
@@ -191,10 +191,11 @@ func TestReadEncryptedLeaseSetRejectsLegacySigTypes(t *testing.T) {
 		4, // RSA_SHA256_2048
 		5, // RSA_SHA384_3072
 		6, // RSA_SHA512_4096
+		7, // Ed25519 — valid for the unblinded key, not the blinded field
 		8, // Ed25519ph
 		9, // REDDSA placeholder
 	}
-	for _, sigType := range legacyTypes {
+	for _, sigType := range rejectedTypes {
 		data := make([]byte, 200)
 		binary.BigEndian.PutUint16(data[:2], sigType)
 		_, _, err := ReadEncryptedLeaseSet(data)
@@ -205,9 +206,10 @@ func TestReadEncryptedLeaseSetRejectsLegacySigTypes(t *testing.T) {
 }
 
 // TestIsAllowedBlindedSigType verifies the isAllowedBlindedSigType helper
-// accepts only Ed25519 (7) and RedDSA_Ed25519 (11).
+// accepts only RedDSA_Ed25519 (11). Ed25519 (7) is valid for the unblinded
+// destination key but not for the blinded public key field, so it is rejected.
 func TestIsAllowedBlindedSigType(t *testing.T) {
-	assert.True(t, isAllowedBlindedSigType(key_certificate.KEYCERT_SIGN_ED25519))
+	assert.False(t, isAllowedBlindedSigType(key_certificate.KEYCERT_SIGN_ED25519))
 	assert.True(t, isAllowedBlindedSigType(key_certificate.KEYCERT_SIGN_REDDSA_ED25519))
 	assert.False(t, isAllowedBlindedSigType(0))
 	assert.False(t, isAllowedBlindedSigType(1))

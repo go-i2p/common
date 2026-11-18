@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/go-i2p/common/key_certificate"
-	goi2ped25519 "github.com/go-i2p/crypto/ed25519"
 	cryptoRed25519 "github.com/go-i2p/crypto/red25519"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -19,13 +18,10 @@ func TestNewEncryptedLeaseSetRoundTrip(t *testing.T) {
 	ls2, encryptedData, subcredential, published := createTestEncryptionContext(t)
 
 	// The public key the record carries and the key that signs it are a pair.
-	blindedPub, signingPriv, err := goi2ped25519.GenerateEd25519KeyPair()
-	require.NoError(t, err)
-
-	blindedKey := blindedPub.Bytes()
+	blindedKey, signingPriv := newTestBlindedKeyPair(t)
 
 	original, err := NewEncryptedLeaseSet(
-		key_certificate.KEYCERT_SIGN_ED25519,
+		key_certificate.KEYCERT_SIGN_REDDSA_ED25519,
 		blindedKey,
 		published,
 		600,
@@ -61,13 +57,10 @@ func TestNewEncryptedLeaseSetRoundTrip(t *testing.T) {
 func TestEncryptedLeaseSetValidateViaConstructor(t *testing.T) {
 	_, encryptedData, _, published := createTestEncryptionContext(t)
 
-	blindedPub, signingPriv, err := goi2ped25519.GenerateEd25519KeyPair()
-	require.NoError(t, err)
-
-	blindedKey := blindedPub.Bytes()
+	blindedKey, signingPriv := newTestBlindedKeyPair(t)
 
 	els, err := NewEncryptedLeaseSet(
-		key_certificate.KEYCERT_SIGN_ED25519,
+		key_certificate.KEYCERT_SIGN_REDDSA_ED25519,
 		blindedKey,
 		published,
 		600,

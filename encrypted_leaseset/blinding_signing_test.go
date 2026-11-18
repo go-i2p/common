@@ -11,6 +11,7 @@ import (
 
 	"github.com/go-i2p/common/key_certificate"
 	goi2ped25519 "github.com/go-i2p/crypto/ed25519"
+	cryptoRed25519 "github.com/go-i2p/crypto/red25519"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -132,20 +133,19 @@ func TestNewEncryptedLeaseSetRejectsUnblindedSigningKey(t *testing.T) {
 func TestNewEncryptedLeaseSetRejectsForeignKeyPair(t *testing.T) {
 	_, encryptedData, _, published := createTestEncryptionContext(t)
 
-	ownerPub, _, err := goi2ped25519.GenerateEd25519KeyPair()
-	require.NoError(t, err)
-	_, otherPriv, err := goi2ped25519.GenerateEd25519KeyPair()
+	ownerKey, _ := newTestBlindedKeyPair(t)
+	_, otherPriv, err := cryptoRed25519.GenerateRed25519KeyPair()
 	require.NoError(t, err)
 
 	_, err = NewEncryptedLeaseSet(
-		key_certificate.KEYCERT_SIGN_ED25519,
-		ownerPub.Bytes(),
+		key_certificate.KEYCERT_SIGN_REDDSA_ED25519,
+		ownerKey,
 		published,
 		600,
 		0,
 		nil,
 		encryptedData,
-		otherPriv.Bytes(),
+		*otherPriv,
 	)
 	require.Error(t, err, "an unrelated private key must not sign for this public key")
 }
@@ -165,7 +165,7 @@ func TestNewEncryptedLeaseSetOfflineKeysChecksTransientKey(t *testing.T) {
 
 	// The transient key signs, so the record builds and verifies.
 	els, err := NewEncryptedLeaseSet(
-		key_certificate.KEYCERT_SIGN_ED25519,
+		key_certificate.KEYCERT_SIGN_REDDSA_ED25519,
 		destPub,
 		published,
 		600,
@@ -180,7 +180,7 @@ func TestNewEncryptedLeaseSetOfflineKeysChecksTransientKey(t *testing.T) {
 	// The destination's long-term key must NOT be accepted in place of the
 	// transient key, since Verify() looks for the transient one.
 	_, err = NewEncryptedLeaseSet(
-		key_certificate.KEYCERT_SIGN_ED25519,
+		key_certificate.KEYCERT_SIGN_REDDSA_ED25519,
 		destPub,
 		published,
 		600,

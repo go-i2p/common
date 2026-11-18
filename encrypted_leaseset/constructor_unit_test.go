@@ -26,13 +26,11 @@ func TestNewEncryptedLeaseSet(t *testing.T) {
 	// The blinded public key and the signing private key are one key pair:
 	// NewEncryptedLeaseSet refuses to build a record whose signature key does
 	// not correspond to the public key it publishes.
-	blindedPub, signingPriv, err := goi2ped25519.GenerateEd25519KeyPair()
-	require.NoError(t, err)
-	blindedKey := blindedPub.Bytes()
+	blindedKey, signingPriv := newTestBlindedKeyPair(t)
 	expires := uint16(600)
 
 	els, err := NewEncryptedLeaseSet(
-		key_certificate.KEYCERT_SIGN_ED25519,
+		key_certificate.KEYCERT_SIGN_REDDSA_ED25519,
 		blindedKey,
 		published,
 		expires,
@@ -43,7 +41,7 @@ func TestNewEncryptedLeaseSet(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	assert.Equal(t, uint16(key_certificate.KEYCERT_SIGN_ED25519), els.SigType())
+	assert.Equal(t, uint16(key_certificate.KEYCERT_SIGN_REDDSA_ED25519), els.SigType())
 	assert.Equal(t, blindedKey, els.BlindedPublicKey())
 	assert.Equal(t, published, els.Published())
 	assert.Equal(t, expires, els.Expires())
@@ -56,11 +54,10 @@ func TestNewEncryptedLeaseSet(t *testing.T) {
 func TestNewEncryptedLeaseSetFromDestination(t *testing.T) {
 	_, encryptedData, _, published := createTestEncryptionContext(t)
 
-	signingPub, signingPriv, err := goi2ped25519.GenerateEd25519KeyPair()
-	require.NoError(t, err)
-
-	// The destination's inline signing public key must be the one priv signs for.
-	dest := createTestEd25519KeyedDestination(t, signingPub.Bytes())
+	// The blinded field is always type 11, so the destination feeding this path
+	// must declare Red25519 and carry the matching Red25519 public key.
+	blindedKey, signingPriv := newTestBlindedKeyPair(t)
+	dest := createTestRed25519KeyedDestination(t, blindedKey)
 
 	els, err := NewEncryptedLeaseSetFromDestination(
 		dest,
@@ -72,20 +69,18 @@ func TestNewEncryptedLeaseSetFromDestination(t *testing.T) {
 		signingPriv,
 	)
 	require.NoError(t, err)
-	assert.Equal(t, uint16(key_certificate.KEYCERT_SIGN_ED25519), els.SigType())
+	assert.Equal(t, uint16(key_certificate.KEYCERT_SIGN_REDDSA_ED25519), els.SigType())
 	assert.Len(t, els.BlindedPublicKey(), 32)
 }
 
 func TestNewEncryptedLeaseSetWithByteSliceKey(t *testing.T) {
 	_, encryptedData, _, published := createTestEncryptionContext(t)
 
-	blindedPub, signingPriv, err := goi2ped25519.GenerateEd25519KeyPair()
-	require.NoError(t, err)
-	blindedKey := blindedPub.Bytes()
+	blindedKey, signingPriv := newTestBlindedKeyPair(t)
 	signingPrivBytes := signingPriv.Bytes()
 
 	els, err := NewEncryptedLeaseSet(
-		key_certificate.KEYCERT_SIGN_ED25519,
+		key_certificate.KEYCERT_SIGN_REDDSA_ED25519,
 		blindedKey,
 		published,
 		600,
@@ -106,7 +101,7 @@ func TestNewEncryptedLeaseSetReservedFlags(t *testing.T) {
 	_, signingPriv, _ := goi2ped25519.GenerateEd25519KeyPair()
 
 	_, err := NewEncryptedLeaseSet(
-		key_certificate.KEYCERT_SIGN_ED25519,
+		key_certificate.KEYCERT_SIGN_REDDSA_ED25519,
 		blindedKey,
 		uint32(time.Now().Unix()),
 		600,
@@ -127,7 +122,7 @@ func TestNewEncryptedLeaseSetZeroExpires(t *testing.T) {
 	_, signingPriv, _ := goi2ped25519.GenerateEd25519KeyPair()
 
 	_, err := NewEncryptedLeaseSet(
-		key_certificate.KEYCERT_SIGN_ED25519,
+		key_certificate.KEYCERT_SIGN_REDDSA_ED25519,
 		blindedKey,
 		uint32(time.Now().Unix()),
 		0, // invalid
@@ -145,7 +140,7 @@ func TestNewEncryptedLeaseSetEmptyEncryptedData(t *testing.T) {
 	_, signingPriv, _ := goi2ped25519.GenerateEd25519KeyPair()
 
 	_, err := NewEncryptedLeaseSet(
-		key_certificate.KEYCERT_SIGN_ED25519,
+		key_certificate.KEYCERT_SIGN_REDDSA_ED25519,
 		blindedKey,
 		uint32(time.Now().Unix()),
 		600,
@@ -163,7 +158,7 @@ func TestNewEncryptedLeaseSetTooShortEncryptedData(t *testing.T) {
 	_, signingPriv, _ := goi2ped25519.GenerateEd25519KeyPair()
 
 	_, err := NewEncryptedLeaseSet(
-		key_certificate.KEYCERT_SIGN_ED25519,
+		key_certificate.KEYCERT_SIGN_REDDSA_ED25519,
 		blindedKey,
 		uint32(time.Now().Unix()),
 		600,
@@ -181,7 +176,7 @@ func TestNewEncryptedLeaseSetInvalidKeyType(t *testing.T) {
 	encData := make([]byte, ENCRYPTED_LEASESET_MIN_ENCRYPTED_SIZE)
 
 	_, err := NewEncryptedLeaseSet(
-		key_certificate.KEYCERT_SIGN_ED25519,
+		key_certificate.KEYCERT_SIGN_REDDSA_ED25519,
 		blindedKey,
 		uint32(time.Now().Unix()),
 		600,
@@ -191,22 +186,30 @@ func TestNewEncryptedLeaseSetInvalidKeyType(t *testing.T) {
 		"not a key",
 	)
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "unsupported signing key type")
+	assert.Contains(t, err.Error(), "unsupported RedDSA signing key type")
 }
 
+// TestNewEncryptedLeaseSetInvalidKeyLength exercises the Ed25519 signing-key
+// normalization, which for an EncryptedLeaseSet is reached only through the
+// offline transient key (the blinded field is always type 11). A 32-byte slice
+// is a valid Red25519 scalar but the wrong length for an Ed25519 transient key.
 func TestNewEncryptedLeaseSetInvalidKeyLength(t *testing.T) {
 	blindedKey := make([]byte, 32)
 	encData := make([]byte, ENCRYPTED_LEASESET_MIN_ENCRYPTED_SIZE)
 
+	transientPub, _, _ := goi2ped25519.GenerateEd25519KeyPair()
+	_, destPrivKey, _ := goi2ped25519.GenerateEd25519KeyPair()
+	offlineSig := buildOfflineSignature(t, ed25519.PrivateKey(destPrivKey.Bytes()), transientPub.Bytes())
+
 	_, err := NewEncryptedLeaseSet(
-		key_certificate.KEYCERT_SIGN_ED25519,
+		key_certificate.KEYCERT_SIGN_REDDSA_ED25519,
 		blindedKey,
 		uint32(time.Now().Unix()),
 		600,
-		0,
-		nil,
+		ENCRYPTED_LEASESET_FLAG_OFFLINE_KEYS,
+		&offlineSig,
 		encData,
-		make([]byte, 32), // wrong size for Ed25519 private key (should be 64)
+		make([]byte, 32), // wrong size for Ed25519 transient key (should be 64)
 	)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "byte slice signing key must be")
@@ -219,7 +222,7 @@ func TestNewEncryptedLeaseSetOfflineSignatureFlag(t *testing.T) {
 
 	// Flag set but no offline sig
 	_, err := NewEncryptedLeaseSet(
-		key_certificate.KEYCERT_SIGN_ED25519,
+		key_certificate.KEYCERT_SIGN_REDDSA_ED25519,
 		blindedKey,
 		uint32(time.Now().Unix()),
 		600,
@@ -235,21 +238,21 @@ func TestNewEncryptedLeaseSetOfflineSignatureFlag(t *testing.T) {
 // TestConstructorRejectsReservedFlags verifies that reserved flag bits are
 // rejected during construction.
 func TestConstructorRejectsReservedFlags(t *testing.T) {
-	pub, _, err := ed25519.GenerateKey(nil)
-	require.NoError(t, err)
+	blindedKey := make([]byte, 32)
+	_, _ = rand.Read(blindedKey)
 	encData := make([]byte, 80)
 
 	reservedFlags := []uint16{0x0004, 0x0008, 0x0010, 0x8000, 0xFFFC}
 	for _, flags := range reservedFlags {
 		_, err := NewEncryptedLeaseSet(
-			uint16(key_certificate.KEYCERT_SIGN_ED25519),
-			pub,
+			uint16(key_certificate.KEYCERT_SIGN_REDDSA_ED25519),
+			blindedKey,
 			uint32(time.Now().Unix()),
 			600,
 			flags,
 			nil,
 			encData,
-			pub, // wrong key type but will fail on flags first
+			blindedKey, // wrong key type but will fail on flags first
 		)
 		assert.Error(t, err, "flags 0x%04x should be rejected", flags)
 		assert.Contains(t, err.Error(), "reserved flag bits")

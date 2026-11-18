@@ -18,10 +18,10 @@ An EncryptedLeaseSet consists of the following fields (cleartext outer structure
 ```text
 +----+----+----+----+----+----+----+----+
 | sig_type (2 bytes)                    |
-|   - Red25519 (11) or Ed25519 (7)     |
+|   - Red25519 (11) (always type 11)   |
 +----+----+----+----+----+----+----+----+
 | blinded_public_key (variable)         |
-|   - 32 bytes for Ed25519/Red25519    |
+|   - 32 bytes (Red25519)              |
 +----+----+----+----+----+----+----+----+
 | published (4 bytes)                   |
 |   - Seconds since Unix epoch          |
@@ -234,9 +234,11 @@ The inner LeaseSet2 is protected by two-layer ChaCha20 stream cipher:
   byte-correlatable. Verification uses that package's Red25519 `VERIFY` rule (the
   domain-separated `HStar` challenge with the cofactor equation) — deliberately not
   plain Ed25519 verification, even though both keys are Ed25519 curve points.
-- **Ed25519 signing (type 7)**: still accepted for the unblinded case the spec
-  describes ("The unblinded leaseset is signed by the unblinded Ed25519 or
-  Red25519 signing private key ... as usual").
+- **Ed25519 signing (type 7)**: reached only when an offline signature is
+  present — the outer signature is then made with the transient signing key,
+  which the spec mandates be Ed25519 ("If the signing public key is offline, the
+  transient signing public key must also be Ed25519"). Type 7 is never valid for
+  the blinded public key field itself, which is always type 11.
 
 To publish a blinded lease set, pass the blinded Red25519 scalar `a'` (from
 `kdf.DeriveBlindingFactorI2P` plus `red25519.BlindPrivateKey`) as the signing key

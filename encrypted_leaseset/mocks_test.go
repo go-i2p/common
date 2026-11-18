@@ -15,6 +15,7 @@ import (
 	"github.com/go-i2p/common/lease_set2"
 	"github.com/go-i2p/common/offline_signature"
 	"github.com/go-i2p/crypto/kdf"
+	cryptoRed25519 "github.com/go-i2p/crypto/red25519"
 	"github.com/stretchr/testify/require"
 	"go.step.sm/crypto/x25519"
 )
@@ -22,6 +23,19 @@ import (
 // ————————————————————————————————————————————————
 // Shared test helpers for the encrypted_leaseset package
 // ————————————————————————————————————————————————
+
+// newTestBlindedKeyPair returns a genuine Red25519 (type 11) keypair standing in
+// for a blinded key A'/a'. The blinded public key field of an EncryptedLeaseSet
+// is always type 11, so the public key it carries must be the Red25519-derived
+// point that the signing scalar corresponds to — not the raw Ed25519 point.
+func newTestBlindedKeyPair(tb testing.TB) ([]byte, cryptoRed25519.Red25519PrivateKey) {
+	tb.Helper()
+	_, priv, err := cryptoRed25519.GenerateRed25519KeyPair()
+	require.NoError(tb, err)
+	pub, err := priv.Public()
+	require.NoError(tb, err)
+	return pub.Bytes(), *priv
+}
 
 // createTestEd25519Destination creates a destination with Ed25519 signature type for testing.
 func createTestEd25519Destination(t testing.TB) destination.Destination {
@@ -69,6 +83,32 @@ func createTestEd25519KeyedDestination(t testing.TB, pub []byte) destination.Des
 	destBytes[386] = 0x04 // Certificate length = 4
 	destBytes[387] = 0x00
 	destBytes[388] = 0x07 // Signing key type = Ed25519 (7)
+	destBytes[389] = 0x00
+	destBytes[390] = 0x00 // Crypto key type = ElGamal (0)
+
+	dest, _, err := destination.ReadDestination(destBytes)
+	require.NoError(t, err, "Failed to read destination")
+	return dest
+}
+
+// createTestRed25519KeyedDestination builds a destination whose inline signing
+// public key is pub and whose key certificate declares Red25519 (type 11), so a
+// blinded EncryptedLeaseSet can be built from it via
+// NewEncryptedLeaseSetFromDestination. The blinded field is always type 11, so
+// the destination feeding that path must declare type 11.
+func createTestRed25519KeyedDestination(t testing.TB, pub []byte) destination.Destination {
+	t.Helper()
+	require.Len(t, pub, 32, "Red25519 public key must be 32 bytes")
+
+	destBytes := make([]byte, 391)
+	_, _ = rand.Read(destBytes[:384])
+	copy(destBytes[352:384], pub)
+
+	destBytes[384] = 0x05 // Certificate type = KEY
+	destBytes[385] = 0x00
+	destBytes[386] = 0x04 // Certificate length = 4
+	destBytes[387] = 0x00
+	destBytes[388] = 0x0b // Signing key type = Red25519 (11)
 	destBytes[389] = 0x00
 	destBytes[390] = 0x00 // Crypto key type = ElGamal (0)
 
@@ -186,9 +226,9 @@ func createSpecCompliantELS(t *testing.T, innerLen int, flags uint16) []byte {
 
 	data := make([]byte, 0, 109+innerLen)
 
-	// sig_type = Ed25519 (7)
+	// sig_type = Red25519 (11) — the only type the blinded field may carry
 	buf := make([]byte, 2)
-	binary.BigEndian.PutUint16(buf, key_certificate.KEYCERT_SIGN_ED25519)
+	binary.BigEndian.PutUint16(buf, key_certificate.KEYCERT_SIGN_REDDSA_ED25519)
 	data = append(data, buf...)
 
 	// blinded_public_key (32 bytes)
@@ -232,21 +272,19 @@ func createSpecCompliantELS(t *testing.T, innerLen int, flags uint16) []byte {
 // buildMinimalELS builds a valid minimal EncryptedLeaseSet wire format for fuzz seeding.
 func buildMinimalELS(tb testing.TB) []byte {
 	tb.Helper()
-	pub, priv, err := ed25519.GenerateKey(nil)
-	if err != nil {
-		tb.Fatal(err)
-	}
+
+	blindedKey, signingPriv := newTestBlindedKeyPair(tb)
 
 	encData := make([]byte, 80)
 	els, err := NewEncryptedLeaseSet(
-		uint16(key_certificate.KEYCERT_SIGN_ED25519),
-		pub,
+		uint16(key_certificate.KEYCERT_SIGN_REDDSA_ED25519),
+		blindedKey,
 		uint32(time.Now().Unix()),
 		600,
 		0,
 		nil,
 		encData,
-		priv,
+		signingPriv,
 	)
 	if err != nil {
 		tb.Fatal(err)
@@ -273,9 +311,12 @@ func buildMinimalELSWithOfflineFlag(tb testing.TB) []byte {
 
 	offlineSig := buildOfflineSignature(tb, destPriv, transientPub)
 
+	// The blinded field is always type 11; with an offline signature present the
+	// outer signature is made with the transient key, so the blinded public key
+	// blob is not compared against the signing key.
 	encData := make([]byte, 80)
 	els, err := NewEncryptedLeaseSet(
-		uint16(key_certificate.KEYCERT_SIGN_ED25519),
+		uint16(key_certificate.KEYCERT_SIGN_REDDSA_ED25519),
 		destPub,
 		uint32(time.Now().Unix()),
 		600,
