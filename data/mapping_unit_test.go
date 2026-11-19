@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"testing"
 
+	"github.com/go-i2p/logger"
 	"github.com/samber/oops"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -225,6 +226,28 @@ func TestReadMappingSizeZeroInitialized(t *testing.T) {
 		data := []byte{0x00, 0x00}
 		mapping, _, _ := ReadMapping(data)
 		assert.NotNil(t, mapping.vals, "Internal vals pointer should be initialized")
+	})
+
+	// A legal zero-size Mapping must not emit a WARN; it is a valid, expected
+	// encoding handled without error. Logging it at WARN caused log spam.
+	t.Run("size zero does not log at warn level", func(t *testing.T) {
+		var buf bytes.Buffer
+		origOut := log.Out
+		origLevel := logger.Level(log.Level)
+		defer func() {
+			log.SetOutput(origOut)
+			log.SetLevel(origLevel)
+		}()
+		log.SetOutput(&buf)
+		log.SetLevel(logger.DebugLevel)
+
+		data := []byte{0x00, 0x00}
+		_, _, errs := ReadMapping(data)
+		assert.Empty(t, errs, "zero-size mapping should parse without error")
+
+		out := buf.String()
+		assert.NotContains(t, out, "level=warning", "zero-size mapping must not emit a WARN")
+		assert.NotContains(t, out, "level=error", "zero-size mapping must not emit an ERROR")
 	})
 }
 

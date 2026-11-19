@@ -315,7 +315,7 @@ func ReadMapping(bytes []byte) (mapping Mapping, remainder []byte, err []error) 
 	mapping.size = size
 
 	if size.Int() == 0 {
-		log.WithFields(logger.Fields{"pkg": "data", "func": "ReadMapping"}).Warn("Mapping size is zero")
+		log.WithFields(logger.Fields{"pkg": "data", "func": "ReadMapping"}).Debug("Mapping size is zero")
 		emptyVals := make(MappingValues, 0)
 		mapping.vals = &emptyVals
 		return mapping, remainder, err
